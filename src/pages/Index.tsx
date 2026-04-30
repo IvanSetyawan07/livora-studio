@@ -1,16 +1,48 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useEffect } from "react";
+import { Loader } from "@/components/livora/Loader";
+import { Navbar } from "@/components/livora/Navbar";
+import { Hero } from "@/components/livora/Hero";
+import { About } from "@/components/livora/About";
+import { Mission } from "@/components/livora/Mission";
+import { Style } from "@/components/livora/Style";
+import { Scope } from "@/components/livora/Scope";
+import { Projects } from "@/components/livora/Projects";
+import { Furniture } from "@/components/livora/Furniture";
+import { Contact } from "@/components/livora/Contact";
+import { Footer } from "@/components/livora/Footer";
+import { useReveal } from "@/hooks/useReveal";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
+  useReveal();
+
+  useEffect(() => {
+    document.title = "LIVORA — Imagine. Create. Realize. | Interior Design Studio";
+    const meta = document.querySelector('meta[name="description"]') ?? (() => {
+      const m = document.createElement("meta");
+      m.setAttribute("name", "description");
+      document.head.appendChild(m);
+      return m;
+    })();
+    meta.setAttribute("content", "Livora is a one-stop interior ecosystem — design, supply and construction merged seamlessly. Modern, quiet, European.");
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
-    </div>
+    <>
+      <Loader />
+      <Navbar />
+      <main>
+        <Hero />
+        <About />
+        <Mission />
+        <Style />
+        <Scope />
+        <Projects />
+        <Furniture />
+        <Contact />
+      </main>
+      <Footer />
+    </>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
