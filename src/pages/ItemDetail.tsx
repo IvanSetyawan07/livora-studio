@@ -182,7 +182,7 @@ const ItemDetail = () => {
               style={{
                 fontSize: "40px",
                 color: "#1A1A1A",
-                marginTop: "12px",
+                marginTop: "20px",
                 lineHeight: 1.1,
               }}
             >
