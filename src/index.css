@@ -162,6 +162,12 @@
   }
   .ken-burns { animation: ken-burns 18s ease-out forwards; }
 
+  @keyframes kenburns-slide {
+    from { transform: scale(1.05); }
+    to   { transform: scale(1); }
+  }
+  .kenburns-slide { animation: kenburns-slide 5s ease-out forwards; }
+
   .mission-card {
     background: #FFFFFF;
     padding: 40px;
