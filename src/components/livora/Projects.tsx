@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { SectionHeader } from "./SectionHeader";
 import { projects } from "@/data/projects";
 
@@ -10,10 +11,18 @@ export const Projects = () => {
 
   return (
     <section id="projects" className="py-28 md:py-40 container-livora">
-      <SectionHeader
-        eyebrow="05 — Our Projects"
-        title={<>Selected works, <em className="italic">crafted to last.</em></>}
-      />
+      <div className="flex items-end justify-between gap-6 flex-wrap">
+        <SectionHeader
+          eyebrow="05 — Our Projects"
+          title={<>Selected works, <em className="italic">crafted to last.</em></>}
+        />
+        <Link
+          to="/projects"
+          className="reveal mb-12 md:mb-16 text-[11px] uppercase tracking-[0.3em] text-foreground/70 hover:text-foreground underline-grow"
+        >
+          Others →
+        </Link>
+      </div>
 
       <div className="reveal flex gap-2 mb-10 md:mb-14 flex-wrap">
         {categories.map((c) => (
@@ -33,11 +42,9 @@ export const Projects = () => {
 
       <div className="grid md:grid-cols-12 gap-4 md:gap-6">
         {filtered.map((p, i) => (
-          <a
+          <Link
             key={p.name}
-            href={`/projects/${p.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
+            to={`/projects/${p.slug}`}
             className={`reveal group relative block hover-zoom cursor-pointer ${p.span}`}
             style={{ transitionDelay: `${i * 80}ms` }}
           >
@@ -67,7 +74,7 @@ export const Projects = () => {
                 View Project →
               </span>
             </div>
-          </a>
+          </Link>
         ))}
       </div>
     </section>
