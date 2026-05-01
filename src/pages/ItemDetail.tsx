@@ -107,7 +107,7 @@ const ItemDetail = () => {
         {/* SECTION 1 — BREADCRUMB */}
         <nav
           style={{
-            padding: "32px 60px 16px",
+            padding: "100px 60px 16px",
             fontSize: "12px",
             color: "#C9A97A",
             letterSpacing: "0.1em",
