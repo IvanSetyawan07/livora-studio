@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight } from "lucide-react";
 import decorative from "@/assets/scope-decorative.jpg";
 import furniture from "@/assets/scope-furniture.jpg";
 import contractor from "@/assets/scope-contractor.jpg";
@@ -37,33 +36,29 @@ const slides = [
 ];
 
 const AUTOPLAY = 5000;
+const TICK = 50;
 
 export const Scope = () => {
   const [i, setI] = useState(0);
-  const timerRef = useRef<number | null>(null);
-
-  const start = () => {
-    if (timerRef.current) window.clearInterval(timerRef.current);
-    timerRef.current = window.setInterval(() => {
-      setI((p) => (p + 1) % slides.length);
-    }, AUTOPLAY);
-  };
+  const [progress, setProgress] = useState(0);
+  const tickRef = useRef<number | null>(null);
 
   useEffect(() => {
-    start();
+    setProgress(0);
+    if (tickRef.current) window.clearInterval(tickRef.current);
+    const startedAt = Date.now();
+    tickRef.current = window.setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      const pct = Math.min(100, (elapsed / AUTOPLAY) * 100);
+      setProgress(pct);
+      if (elapsed >= AUTOPLAY) {
+        setI((p) => (p + 1) % slides.length);
+      }
+    }, TICK);
     return () => {
-      if (timerRef.current) window.clearInterval(timerRef.current);
+      if (tickRef.current) window.clearInterval(tickRef.current);
     };
-  }, []);
-
-  const next = () => {
-    setI((p) => (p + 1) % slides.length);
-    start();
-  };
-  const prev = () => {
-    setI((p) => (p - 1 + slides.length) % slides.length);
-    start();
-  };
+  }, [i]);
 
   const cur = slides[i];
 
@@ -81,43 +76,48 @@ export const Scope = () => {
         </div>
 
         <div className="grid md:grid-cols-12 gap-8 md:gap-14 items-center">
-          <div className="md:col-span-7 relative overflow-hidden aspect-[5/4]">
-            {slides.map((s, idx) => (
-              <img
-                key={s.n}
-                src={s.img}
-                alt={s.title}
-                width={1280}
-                height={896}
-                loading="lazy"
-                className={`absolute inset-0 h-full w-full object-cover ${
-                  idx === i ? "opacity-100 kenburns-slide" : "opacity-0"
-                }`}
-                style={{
-                  transition: "opacity 0.8s ease, transform 0.8s ease",
-                }}
-              />
-            ))}
+          <div className="md:col-span-7">
+            <div className="relative overflow-hidden aspect-[5/4]">
+              {slides.map((s, idx) => (
+                <img
+                  key={s.n}
+                  src={s.img}
+                  alt={s.title}
+                  width={1280}
+                  height={896}
+                  loading="lazy"
+                  className={`absolute inset-0 h-full w-full object-cover ${
+                    idx === i ? "opacity-100 kenburns-slide" : "opacity-0"
+                  }`}
+                  style={{
+                    transition: "opacity 0.8s ease, transform 0.8s ease",
+                  }}
+                />
+              ))}
+            </div>
 
-            {/* Click zones — left half = prev, right half = next */}
-            <button
-              onClick={prev}
-              aria-label="Previous slide"
-              className="absolute inset-y-0 left-0 w-1/2 z-10 group"
-              style={{
-                cursor:
-                  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'><circle cx='24' cy='24' r='22' fill='rgba(255,255,255,0.85)' stroke='rgba(0,0,0,0.1)'/><path d='M28 16 L20 24 L28 32' fill='none' stroke='%231A1A1A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>\") 24 24, w-resize",
-              }}
-            />
-            <button
-              onClick={next}
-              aria-label="Next slide"
-              className="absolute inset-y-0 right-0 w-1/2 z-10 group"
-              style={{
-                cursor:
-                  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'><circle cx='24' cy='24' r='22' fill='rgba(255,255,255,0.85)' stroke='rgba(0,0,0,0.1)'/><path d='M20 16 L28 24 L20 32' fill='none' stroke='%231A1A1A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>\") 24 24, e-resize",
-              }}
-            />
+            {/* Progress segments below image */}
+            <div className="mt-6 flex gap-3">
+              {slides.map((_, idx) => (
+                <div
+                  key={idx}
+                  className="relative h-px flex-1 bg-background/20 overflow-hidden"
+                >
+                  <div
+                    className="absolute inset-y-0 left-0 bg-background"
+                    style={{
+                      width:
+                        idx < i
+                          ? "100%"
+                          : idx === i
+                          ? `${progress}%`
+                          : "0%",
+                      transition: idx === i ? "width 50ms linear" : "none",
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="md:col-span-5 space-y-8">
