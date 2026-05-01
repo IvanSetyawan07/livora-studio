@@ -1,44 +1,126 @@
 import { useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
 import { getProjectBySlug } from "@/data/projects";
 
 const items = [
   "Accent Chair",
-  "Armless Sofa",
+  "Lounge Sofa",
   "Ottoman",
-  "Arm Rest Sofa",
-  "2-Seater Sofa",
-  "3-Seater Sofa",
-  "Corner Sofa",
-  "Sectional Sofa",
-  "Dining Table",
   "Side Table",
   "Floor Lamp",
+  "Sectional Sofa",
+  "Arm Chair",
   "Console Table",
+  "Dining Table",
+  "Pendant Light",
 ];
 
-const ItemIcon = ({ name }: { name: string }) => (
-  <svg
-    viewBox="0 0 80 80"
-    className="w-full h-20 text-[#C9A97A]"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.25"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-label={name}
-  >
-    {/* Generic furniture silhouette — minimal editorial line */}
-    <rect x="14" y="34" width="52" height="22" rx="3" />
-    <path d="M14 56v8M66 56v8" />
-    <path d="M18 34v-6a4 4 0 0 1 4-4h36a4 4 0 0 1 4 4v6" />
-  </svg>
-);
+const ItemIllustration = ({ name }: { name: string }) => {
+  const stroke = "#C9A97A";
+  const common = {
+    viewBox: "0 0 120 120",
+    fill: "none",
+    stroke,
+    strokeWidth: 1.25,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    className: "w-[120px] h-[120px]",
+    "aria-label": name,
+  };
+
+  switch (name) {
+    case "Accent Chair":
+      return (
+        <svg {...common}>
+          <path d="M40 50c0-10 6-18 20-18s20 8 20 18v22H40z" />
+          <path d="M40 60h40" />
+          <path d="M44 72v18M76 72v18" />
+        </svg>
+      );
+    case "Lounge Sofa":
+      return (
+        <svg {...common}>
+          <path d="M24 60c0-6 4-10 10-10h52c6 0 10 4 10 10v18H24z" />
+          <path d="M28 78v10M92 78v10" />
+          <path d="M34 60h52" />
+        </svg>
+      );
+    case "Ottoman":
+      return (
+        <svg {...common}>
+          <rect x="32" y="56" width="56" height="22" rx="3" />
+          <path d="M38 78v10M82 78v10" />
+        </svg>
+      );
+    case "Side Table":
+      return (
+        <svg {...common}>
+          <path d="M36 50h48" />
+          <path d="M44 50v40M76 50v40" />
+          <path d="M40 90h40" />
+        </svg>
+      );
+    case "Floor Lamp":
+      return (
+        <svg {...common}>
+          <path d="M48 30l24 6-8 22H56z" />
+          <path d="M60 58v36" />
+          <path d="M50 94h20" />
+        </svg>
+      );
+    case "Sectional Sofa":
+      return (
+        <svg {...common}>
+          <path d="M22 58c0-5 3-8 8-8h28v32H22z" />
+          <path d="M58 66h32c5 0 8 3 8 8v8H58z" />
+          <path d="M26 82v8M94 82v8" />
+        </svg>
+      );
+    case "Arm Chair":
+      return (
+        <svg {...common}>
+          <path d="M38 48c0-8 6-14 22-14s22 6 22 14v8" />
+          <path d="M34 56h52v22H34z" />
+          <path d="M40 78v10M80 78v10" />
+        </svg>
+      );
+    case "Console Table":
+      return (
+        <svg {...common}>
+          <path d="M22 52h76" />
+          <path d="M30 52v40M90 52v40" />
+          <path d="M22 64h76" />
+        </svg>
+      );
+    case "Dining Table":
+      return (
+        <svg {...common}>
+          <path d="M20 54h80" />
+          <path d="M28 54v36M92 54v36" />
+        </svg>
+      );
+    case "Pendant Light":
+      return (
+        <svg {...common}>
+          <path d="M60 22v18" />
+          <path d="M44 40h32l-6 22H50z" />
+          <path d="M52 62v6M68 62v6" />
+        </svg>
+      );
+    default:
+      return (
+        <svg {...common}>
+          <rect x="30" y="44" width="60" height="32" rx="3" />
+        </svg>
+      );
+  }
+};
 
 const ProjectDetail = () => {
   const { slug } = useParams();
+  const navigate = useNavigate();
   const project = slug ? getProjectBySlug(slug) : undefined;
 
   useEffect(() => {
@@ -72,127 +154,183 @@ const ProjectDetail = () => {
     );
   }
 
+  const handleBack = () => {
+    navigate("/#projects");
+  };
+
   return (
     <>
       <Navbar />
-      <main className="bg-background">
-        {/* TOP — split layout */}
-        <section className="grid md:grid-cols-5 min-h-screen">
+      <main>
+        {/* SECTION 1 — HERO TITLE */}
+        <section
+          style={{
+            background: "#FAFAF8",
+            padding: "48px 60px 32px 60px",
+          }}
+        >
+          <p
+            className="uppercase mb-4"
+            style={{
+              color: "#C9A97A",
+              fontSize: "11px",
+              letterSpacing: "0.2em",
+            }}
+          >
+            {project.category}
+          </p>
+          <h1
+            className="serif font-light leading-[1.05] text-balance mb-6"
+            style={{ color: "#1A1A1A", fontSize: "56px" }}
+          >
+            {project.name}
+          </h1>
+          <div className="h-px w-full bg-[#1A1A1A]/15" />
+        </section>
+
+        {/* SECTION 2 — SPLIT CONTENT */}
+        <section className="grid md:grid-cols-5">
           {/* LEFT 60% */}
-          <div className="md:col-span-3 relative h-[60vh] md:h-screen">
+          <div className="md:col-span-3">
             <img
               src={project.img}
               alt={`${project.name} — ${project.category}`}
-              className="absolute inset-0 w-full h-full object-cover"
+              style={{
+                width: "100%",
+                height: "600px",
+                objectFit: "cover",
+                display: "block",
+                borderRadius: 0,
+              }}
             />
           </div>
 
           {/* RIGHT 40% */}
           <div
-            className="md:col-span-2 flex flex-col justify-center"
-            style={{ background: "#FAFAF8", padding: "60px 48px" }}
+            className="md:col-span-2 flex flex-col"
+            style={{
+              background: "#FAFAF8",
+              padding: "48px 48px",
+            }}
           >
-            <Link
-              to="/"
-              className="text-[10px] uppercase tracking-[0.3em] text-[#1A1A1A]/60 hover:text-[#1A1A1A] mb-10 inline-block"
-            >
-              ← Back
-            </Link>
-
             <p
-              className="uppercase mb-5"
               style={{
-                color: "#C9A97A",
-                letterSpacing: "0.15em",
-                fontSize: "11px",
+                color: "#4A4A4A",
+                lineHeight: 1.8,
+                fontSize: "15px",
               }}
-            >
-              {project.category}
-            </p>
-
-            <h1
-              className="serif font-light leading-[1.05] text-balance text-5xl md:text-6xl mb-8"
-              style={{ color: "#1A1A1A" }}
-            >
-              {project.name}
-            </h1>
-
-            <div className="h-px w-16 bg-[#1A1A1A]/20 mb-8" />
-
-            <p
-              className="mb-10 leading-[1.8]"
-              style={{ color: "#4A4A4A", fontSize: "15px" }}
             >
               {project.description}
             </p>
 
+            <div className="h-px w-full bg-[#1A1A1A]/15 my-8" />
+
             <div className="grid grid-cols-2 gap-x-6 gap-y-7">
               {[
-                { label: "Location", value: project.location },
-                { label: "Year", value: project.year },
-                { label: "Scope", value: project.scope },
-                { label: "Area", value: project.area },
+                { label: "LOCATION", value: project.location },
+                { label: "YEAR", value: project.year },
+                { label: "SCOPE", value: project.scope },
+                { label: "AREA", value: project.area },
               ].map((d) => (
                 <div key={d.label}>
                   <p
-                    className="uppercase mb-2"
+                    className="uppercase"
                     style={{
                       color: "#C9A97A",
-                      letterSpacing: "0.15em",
                       fontSize: "10px",
+                      letterSpacing: "0.15em",
                     }}
                   >
                     {d.label}
                   </p>
-                  <p style={{ color: "#1A1A1A", fontSize: "15px" }}>{d.value}</p>
+                  <p
+                    style={{
+                      color: "#1A1A1A",
+                      fontSize: "14px",
+                      marginTop: "4px",
+                    }}
+                  >
+                    {d.value}
+                  </p>
                 </div>
               ))}
             </div>
+
+            <div className="flex-1" />
+
+            <button
+              onClick={handleBack}
+              className="self-start mt-10 uppercase hover:opacity-70 transition-opacity"
+              style={{
+                color: "#C9A97A",
+                background: "none",
+                border: "none",
+                fontSize: "12px",
+                letterSpacing: "0.1em",
+                padding: 0,
+                cursor: "pointer",
+              }}
+            >
+              ← Back
+            </button>
           </div>
         </section>
 
-        {/* BOTTOM — Items */}
-        <section className="py-24 md:py-32 container-livora">
+        {/* SECTION 3 — ITEMS IN THIS SPACE */}
+        <section
+          style={{
+            background: "#FFFFFF",
+            padding: "60px",
+          }}
+        >
           <h2
-            className="serif font-light text-4xl md:text-5xl mb-12 md:mb-16"
-            style={{ color: "#1A1A1A" }}
+            className="serif font-light"
+            style={{
+              color: "#1A1A1A",
+              fontSize: "28px",
+              marginBottom: "40px",
+            }}
           >
-            Items in <em className="italic">This Space.</em>
+            Items in This Space
           </h2>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-5">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(5, 1fr)",
+              gap: "20px",
+            }}
+          >
             {items.map((name) => (
               <div
                 key={name}
-                className="group cursor-default"
+                className="item-card"
                 style={{
-                  background: "#FFFFFF",
+                  background: "#FAFAF8",
                   border: "1px solid #E8E4DF",
-                  borderRadius: "8px",
-                  padding: "20px 16px",
+                  borderRadius: "10px",
+                  padding: "28px 16px 20px",
                   textAlign: "center",
-                  boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
                   transition: "all 0.3s ease",
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-4px)";
-                  e.currentTarget.style.boxShadow =
-                    "0 8px 24px rgba(0,0,0,0.10)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow =
-                    "0 2px 12px rgba(0,0,0,0.05)";
-                }}
               >
-                <div className="mb-4 flex items-center justify-center">
-                  <ItemIcon name={name} />
+                <div
+                  style={{
+                    height: "120px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <ItemIllustration name={name} />
                 </div>
                 <p
                   style={{
-                    color: "#1A1A1A",
                     fontSize: "13px",
+                    color: "#1A1A1A",
                     letterSpacing: "0.05em",
+                    marginTop: "16px",
                   }}
                 >
                   {name}

@@ -168,6 +168,12 @@
   }
   .kenburns-slide { animation: kenburns-slide 5s ease-out forwards; }
 
+  .item-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.09) !important;
+    border-color: #C9A97A !important;
+  }
+
   .mission-card {
     background: #FFFFFF;
     padding: 40px;
