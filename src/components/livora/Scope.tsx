@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { SectionHeader } from "./SectionHeader";
 import decorative from "@/assets/scope-decorative.jpg";
 import furniture from "@/assets/scope-furniture.jpg";
 import contractor from "@/assets/scope-contractor.jpg";
@@ -8,36 +7,65 @@ import materials from "@/assets/scope-materials.jpg";
 
 const slides = [
   {
-    n: "a",
+    n: "A",
     title: "Decorative Interior",
     img: decorative,
-    text: "We create interior concepts that bring beauty, comfort and character — turning empty spaces into expressive environments tailored to your story.",
+    text:
+      "Every room has a story waiting to be told. We craft interior concepts that transform bare walls and empty floors into spaces that breathe — designed around your life, your taste, and your vision.",
   },
   {
-    n: "b",
+    n: "B",
     title: "Loose Furniture",
     img: furniture,
-    text: "Carefully selected furniture with design quality, comfort and flexibility — premium pieces sourced to balance value and beauty.",
+    text:
+      "Furniture is more than function — it is the quiet language of a room. We curate pieces of uncompromising craftsmanship, where every curve, grain and stitch invites you to slow down and feel at home.",
   },
   {
-    n: "c",
+    n: "C",
     title: "Interior Contractor & Architecture",
     img: contractor,
-    text: "We handle interior contracting and architectural work with precision — managing the build from blueprint to final brushstroke.",
+    text:
+      "Precision is our promise. From blueprint to final brushstroke, our team builds with disciplined hands and watchful eyes — shaping spaces that hold beauty in every detail and comfort in every corner.",
   },
   {
-    n: "d",
+    n: "D",
     title: "Material Innovation, Accessories & Fittings",
     img: materials,
-    text: "Innovative materials and fittings to enhance both function and finish — sourced directly to meet our standard for quiet excellence.",
+    text:
+      "We source materials and fittings with a connoisseur's eye — innovative, enduring, quietly remarkable. The pieces we choose today become the textures, finishes and memories that define a space for years to come.",
   },
 ];
 
+const AUTOPLAY = 5000;
+
 export const Scope = () => {
   const [i, setI] = useState(0);
+  const timerRef = useRef<number | null>(null);
+
+  const start = () => {
+    if (timerRef.current) window.clearInterval(timerRef.current);
+    timerRef.current = window.setInterval(() => {
+      setI((p) => (p + 1) % slides.length);
+    }, AUTOPLAY);
+  };
+
+  useEffect(() => {
+    start();
+    return () => {
+      if (timerRef.current) window.clearInterval(timerRef.current);
+    };
+  }, []);
+
+  const next = () => {
+    setI((p) => (p + 1) % slides.length);
+    start();
+  };
+  const prev = () => {
+    setI((p) => (p - 1 + slides.length) % slides.length);
+    start();
+  };
+
   const cur = slides[i];
-  const next = () => setI((p) => (p + 1) % slides.length);
-  const prev = () => setI((p) => (p - 1 + slides.length) % slides.length);
 
   return (
     <section id="scope" className="py-28 md:py-40 bg-foreground text-background">
@@ -62,15 +90,72 @@ export const Scope = () => {
                 width={1280}
                 height={896}
                 loading="lazy"
-                className={`absolute inset-0 h-full w-full object-cover transition-all duration-1000 ${idx === i ? "opacity-100 scale-100" : "opacity-0 scale-105"}`}
+                className={`absolute inset-0 h-full w-full object-cover ${
+                  idx === i ? "opacity-100 kenburns-slide" : "opacity-0"
+                }`}
+                style={{
+                  transition: "opacity 0.8s ease, transform 0.8s ease",
+                }}
               />
             ))}
+
+            <div
+              className="absolute flex gap-3"
+              style={{ bottom: "20px", right: "20px" }}
+            >
+              <button
+                onClick={prev}
+                aria-label="Previous"
+                className="flex items-center justify-center transition-colors duration-300"
+                style={{
+                  width: "44px",
+                  height: "44px",
+                  borderRadius: "50%",
+                  background: "rgba(255,255,255,0.15)",
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                  border: "1px solid rgba(255,255,255,0.3)",
+                  color: "white",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "rgba(255,255,255,0.3)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "rgba(255,255,255,0.15)")
+                }
+              >
+                <ArrowLeft size={16} />
+              </button>
+              <button
+                onClick={next}
+                aria-label="Next"
+                className="flex items-center justify-center transition-colors duration-300"
+                style={{
+                  width: "44px",
+                  height: "44px",
+                  borderRadius: "50%",
+                  background: "rgba(255,255,255,0.15)",
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                  border: "1px solid rgba(255,255,255,0.3)",
+                  color: "white",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "rgba(255,255,255,0.3)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "rgba(255,255,255,0.15)")
+                }
+              >
+                <ArrowRight size={16} />
+              </button>
+            </div>
           </div>
 
           <div className="md:col-span-5 space-y-8">
-            <div key={cur.n} className="space-y-5 animate-[fade-in_0.6s_ease-out]">
+            <div key={cur.n} className="space-y-5 animate-[fade-in_0.8s_ease-out]">
               <p className="text-xs tracking-[0.4em] text-background/60 uppercase">
-                {cur.n.toUpperCase()} / 0{slides.length}
+                {cur.n} / 0{slides.length}
               </p>
               <h3 className="serif text-3xl md:text-5xl font-light leading-tight">
                 {cur.title}
@@ -78,35 +163,6 @@ export const Scope = () => {
               <p className="text-background/75 leading-relaxed font-light text-base md:text-lg">
                 {cur.text}
               </p>
-            </div>
-
-            <div className="flex items-center justify-between pt-6 border-t border-background/20">
-              <div className="flex gap-2">
-                {slides.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setI(idx)}
-                    aria-label={`Go to slide ${idx + 1}`}
-                    className={`h-px transition-all duration-500 ${idx === i ? "w-12 bg-background" : "w-6 bg-background/30"}`}
-                  />
-                ))}
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={prev}
-                  aria-label="Previous"
-                  className="w-11 h-11 border border-background/30 flex items-center justify-center hover:bg-background hover:text-foreground transition-colors duration-500"
-                >
-                  <ArrowLeft size={16} />
-                </button>
-                <button
-                  onClick={next}
-                  aria-label="Next"
-                  className="w-11 h-11 border border-background/30 flex items-center justify-center hover:bg-background hover:text-foreground transition-colors duration-500"
-                >
-                  <ArrowRight size={16} />
-                </button>
-              </div>
             </div>
           </div>
         </div>
