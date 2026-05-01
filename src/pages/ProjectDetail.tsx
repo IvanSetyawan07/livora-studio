@@ -169,16 +169,6 @@ const ProjectDetail = () => {
             padding: "48px 60px 32px 60px",
           }}
         >
-          <p
-            className="uppercase mb-4"
-            style={{
-              color: "#C9A97A",
-              fontSize: "11px",
-              letterSpacing: "0.2em",
-            }}
-          >
-            {project.category}
-          </p>
           <h1
             className="serif font-light leading-[1.05] text-balance mb-6"
             style={{ color: "#1A1A1A", fontSize: "56px" }}
@@ -213,6 +203,16 @@ const ProjectDetail = () => {
               padding: "48px 48px",
             }}
           >
+            <p
+              className="uppercase mb-4"
+              style={{
+                color: "#C9A97A",
+                fontSize: "11px",
+                letterSpacing: "0.2em",
+              }}
+            >
+              {project.category}
+            </p>
             <p
               style={{
                 color: "#4A4A4A",
