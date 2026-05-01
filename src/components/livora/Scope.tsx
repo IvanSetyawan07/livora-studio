@@ -99,58 +99,41 @@ export const Scope = () => {
               />
             ))}
 
-            <div
-              className="absolute flex gap-3"
-              style={{ bottom: "20px", right: "20px" }}
-            >
-              <button
-                onClick={prev}
-                aria-label="Previous"
-                className="flex items-center justify-center transition-colors duration-300"
-                style={{
-                  width: "44px",
-                  height: "44px",
-                  borderRadius: "50%",
-                  background: "rgba(255,255,255,0.15)",
-                  backdropFilter: "blur(8px)",
-                  WebkitBackdropFilter: "blur(8px)",
-                  border: "1px solid rgba(255,255,255,0.3)",
-                  color: "white",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "rgba(255,255,255,0.3)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "rgba(255,255,255,0.15)")
-                }
-              >
-                <ArrowLeft size={16} />
-              </button>
-              <button
-                onClick={next}
-                aria-label="Next"
-                className="flex items-center justify-center transition-colors duration-300"
-                style={{
-                  width: "44px",
-                  height: "44px",
-                  borderRadius: "50%",
-                  background: "rgba(255,255,255,0.15)",
-                  backdropFilter: "blur(8px)",
-                  WebkitBackdropFilter: "blur(8px)",
-                  border: "1px solid rgba(255,255,255,0.3)",
-                  color: "white",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "rgba(255,255,255,0.3)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "rgba(255,255,255,0.15)")
-                }
-              >
-                <ArrowRight size={16} />
-              </button>
+            {/* Click zones — left half = prev, right half = next */}
+            <button
+              onClick={prev}
+              aria-label="Previous slide"
+              className="absolute inset-y-0 left-0 w-1/2 z-10 group"
+              style={{
+                cursor:
+                  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'><circle cx='24' cy='24' r='22' fill='rgba(255,255,255,0.85)' stroke='rgba(0,0,0,0.1)'/><path d='M28 16 L20 24 L28 32' fill='none' stroke='%231A1A1A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>\") 24 24, w-resize",
+              }}
+            />
+            <button
+              onClick={next}
+              aria-label="Next slide"
+              className="absolute inset-y-0 right-0 w-1/2 z-10 group"
+              style={{
+                cursor:
+                  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'><circle cx='24' cy='24' r='22' fill='rgba(255,255,255,0.85)' stroke='rgba(0,0,0,0.1)'/><path d='M20 16 L28 24 L20 32' fill='none' stroke='%231A1A1A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>\") 24 24, e-resize",
+              }}
+            />
+          </div>
+
+          <div className="md:col-span-5 space-y-8">
+            <div key={cur.n} className="space-y-5 animate-[fade-in_0.8s_ease-out]">
+              <p className="text-xs tracking-[0.4em] text-background/60 uppercase">
+                {cur.n} / 0{slides.length}
+              </p>
+              <h3 className="serif text-3xl md:text-5xl font-light leading-tight">
+                {cur.title}
+              </h3>
+              <p className="text-background/75 leading-relaxed font-light text-base md:text-lg">
+                {cur.text}
+              </p>
             </div>
           </div>
+        </div>
 
           <div className="md:col-span-5 space-y-8">
             <div key={cur.n} className="space-y-5 animate-[fade-in_0.8s_ease-out]">
