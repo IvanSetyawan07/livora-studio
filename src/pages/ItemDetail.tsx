@@ -103,11 +103,11 @@ const ItemDetail = () => {
   return (
     <>
       <Navbar />
-      <main style={{ background: "#FFFFFF" }}>
+      <main style={{ background: "#FFFFFF", paddingTop: "80px" }}>
         {/* SECTION 1 — BREADCRUMB */}
         <nav
           style={{
-            padding: "24px 60px",
+            padding: "32px 60px 16px",
             fontSize: "12px",
             color: "#C9A97A",
             letterSpacing: "0.1em",

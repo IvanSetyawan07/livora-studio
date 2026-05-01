@@ -62,7 +62,7 @@ const ProjectDetail = () => {
   return (
     <>
       <Navbar />
-      <main>
+      <main style={{ paddingTop: "80px" }}>
         {/* SECTION 1 — HERO TITLE */}
         <section
           style={{
