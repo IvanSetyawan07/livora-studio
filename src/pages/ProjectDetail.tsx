@@ -203,8 +203,9 @@ const ProjectDetail = () => {
             }}
           >
             {items.map((name) => (
-              <div
+              <Link
                 key={name}
+                to={`/items/${slugifyItem(name)}${project.slug ? `?from=${project.slug}` : ""}`}
                 className="item-card"
                 style={{
                   background: "#FAFAF8",
@@ -214,6 +215,9 @@ const ProjectDetail = () => {
                   textAlign: "center",
                   boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
                   transition: "all 0.3s ease",
+                  textDecoration: "none",
+                  display: "block",
+                  cursor: "pointer",
                 }}
               >
                 <div
@@ -236,7 +240,7 @@ const ProjectDetail = () => {
                 >
                   {name}
                 </p>
-              </div>
+              </Link>
             ))}
           </div>
         </section>
