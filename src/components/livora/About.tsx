@@ -69,14 +69,24 @@ export const About = () => (
         {missions.map((m, i) => (
           <div
             key={m.n}
-            className="reveal group bg-secondary/50 border border-border rounded-md p-8 md:p-10 shadow-sm hover:shadow-lg transition-shadow duration-500"
+            className="reveal group mission-card"
             style={{ transitionDelay: `${i * 100}ms` }}
           >
-            <div className="origin-left transition-transform duration-300 ease-out group-hover:scale-[1.05]">
-              <p className="text-xs tracking-[0.3em] text-foreground/50 mb-6">{m.n}</p>
-              <h4 className="serif text-3xl md:text-4xl font-light mb-4">{m.t}</h4>
-              <p className="text-foreground/70 font-light leading-relaxed">{m.d}</p>
-            </div>
+            <p
+              className="text-[11px] uppercase mb-6"
+              style={{ color: "#C9A97A", letterSpacing: "0.15em" }}
+            >
+              {m.n}
+            </p>
+            <h4
+              className="serif text-3xl md:text-4xl font-light mb-4 origin-left transition-transform duration-300 ease-out group-hover:scale-[1.03]"
+              style={{ color: "#1A1A1A" }}
+            >
+              {m.t}
+            </h4>
+            <p className="font-light" style={{ color: "#6B6B6B", lineHeight: 1.7 }}>
+              {m.d}
+            </p>
           </div>
         ))}
       </div>
