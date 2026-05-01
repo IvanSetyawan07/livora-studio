@@ -24,7 +24,8 @@ export const Navbar = () => {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? "bg-background/85 backdrop-blur-md border-b border-border/60 py-4" : "bg-transparent py-6"}`}
+      className={`fixed top-0 left-0 right-0 transition-all duration-500 ${scrolled ? "bg-background/85 backdrop-blur-md border-b border-border/60 py-4" : "bg-transparent py-6"}`}
+      style={{ zIndex: 1000 }}
     >
       <nav className="container-livora flex items-center justify-between">
         <a href="#top" className="serif text-2xl tracking-[0.35em] font-light">
