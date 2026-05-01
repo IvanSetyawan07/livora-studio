@@ -31,10 +31,13 @@ export const Hero = () => {
             <span className="divider-line bg-primary-foreground/60" />
             PT. Langgeng Cipta Ruang
           </p>
-          <h1 className="serif text-[14vw] md:text-[9vw] lg:text-[8.5rem] leading-[0.95] font-light mb-8">
+          <h1
+            className="serif text-[14vw] md:text-[9vw] lg:text-[8.5rem] leading-[0.95] font-light mb-8"
+            style={{ color: "#1A1A1A", textShadow: "0 2px 24px rgba(255,255,255,0.25)" }}
+          >
             Imagine.<br />
             Create.<br />
-            <em className="italic font-light opacity-90">Realize.</em>
+            <em className="italic font-light">Realize.</em>
           </h1>
           <p className="text-base md:text-lg max-w-md font-light tracking-wide opacity-90">
             Create your dream space with us — a single point of contact for design, supply and construction.
