@@ -1,14 +1,6 @@
 import { useState } from "react";
 import { SectionHeader } from "./SectionHeader";
-import hotel from "@/assets/project-hotel.jpg";
-import residential from "@/assets/project-residential.jpg";
-import office from "@/assets/project-office.jpg";
-
-const projects = [
-  { name: "Harmony One", category: "Hotel", location: "Batam", img: hotel, span: "md:col-span-7 md:row-span-2 aspect-[4/5] md:aspect-auto" },
-  { name: "AM House", category: "Residential", location: "PIK 2, Jakarta", img: residential, span: "md:col-span-5 aspect-[4/3]" },
-  { name: "Flytek Sinarmas Tower", category: "Office", location: "Jakarta", img: office, span: "md:col-span-5 aspect-[4/3]" },
-];
+import { projects } from "@/data/projects";
 
 const categories = ["All", "Hotel", "Residential", "Office"];
 
@@ -43,8 +35,10 @@ export const Projects = () => {
         {filtered.map((p, i) => (
           <a
             key={p.name}
-            href="#contact"
-            className={`reveal group relative block hover-zoom ${p.span}`}
+            href={`/projects/${p.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`reveal group relative block hover-zoom cursor-pointer ${p.span}`}
             style={{ transitionDelay: `${i * 80}ms` }}
           >
             <img
@@ -59,6 +53,19 @@ export const Projects = () => {
             <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 text-primary-foreground translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-700">
               <p className="text-[10px] uppercase tracking-[0.4em] mb-2 opacity-80">{p.category} — {p.location}</p>
               <h3 className="serif text-3xl md:text-4xl font-light">{p.name}</h3>
+            </div>
+            <div
+              className="absolute bottom-0 left-0 right-0 px-6 md:px-8 py-5 flex justify-end items-end opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+              style={{
+                background: "linear-gradient(to top, rgba(0,0,0,0.5), transparent)",
+              }}
+            >
+              <span
+                className="uppercase text-white"
+                style={{ fontSize: "13px", letterSpacing: "0.1em" }}
+              >
+                View Project →
+              </span>
             </div>
           </a>
         ))}
