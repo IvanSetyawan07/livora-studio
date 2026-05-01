@@ -62,17 +62,30 @@ const ProjectDetail = () => {
   return (
     <>
       <Navbar />
-      <main style={{ paddingTop: "80px" }}>
-        {/* SECTION 1 — HERO TITLE */}
+      <main style={{ paddingTop: "80px", background: "#FAFAF8" }}>
+        {/* SECTION 1 — BREADCRUMB + HERO TITLE */}
+        <nav
+          style={{
+            padding: "100px 60px 0px 60px",
+            fontSize: "12px",
+            color: "#C9A97A",
+            letterSpacing: "0.1em",
+          }}
+        >
+          <Link to="/projects" className="hover:opacity-70">Projects</Link>
+          <span style={{ margin: "0 10px" }}>/</span>
+          <span style={{ color: "#1A1A1A" }}>{project.name}</span>
+        </nav>
+
         <section
           style={{
             background: "#FAFAF8",
-            padding: "48px 60px 32px 60px",
+            padding: "0 60px 32px 60px",
           }}
         >
           <h1
             className="serif font-light leading-[1.05] text-balance mb-6"
-            style={{ color: "#1A1A1A", fontSize: "56px" }}
+            style={{ color: "#1A1A1A", fontSize: "56px", marginTop: "16px" }}
           >
             {project.name}
           </h1>
@@ -82,7 +95,7 @@ const ProjectDetail = () => {
         {/* SECTION 2 — SPLIT CONTENT */}
         <section className="grid md:grid-cols-5">
           {/* LEFT 60% */}
-          <div className="md:col-span-3">
+          <div className="md:col-span-3" style={{ paddingLeft: "60px", background: "#FAFAF8" }}>
             <img
               src={project.img}
               alt={`${project.name} — ${project.category}`}
