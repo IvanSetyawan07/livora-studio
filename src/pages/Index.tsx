@@ -3,7 +3,7 @@ import { Loader } from "@/components/livora/Loader";
 import { Navbar } from "@/components/livora/Navbar";
 import { Hero } from "@/components/livora/Hero";
 import { About } from "@/components/livora/About";
-import { Mission } from "@/components/livora/Mission";
+
 import { Style } from "@/components/livora/Style";
 import { Scope } from "@/components/livora/Scope";
 import { Projects } from "@/components/livora/Projects";
@@ -33,7 +33,6 @@ const Index = () => {
       <main>
         <Hero />
         <About />
-        <Mission />
         <Style />
         <Scope />
         <Projects />
