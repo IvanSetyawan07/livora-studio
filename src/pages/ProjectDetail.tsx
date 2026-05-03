@@ -293,7 +293,7 @@ const ProjectDetail = () => {
               gap: "20px",
             }}
           >
-            {items.map((name) => (
+            {displayItems.map((name) => (
               <Link
                 key={name}
                 to={`/items/${slugifyItem(name)}${project.slug ? `?from=${project.slug}` : ""}`}
