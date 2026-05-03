@@ -98,11 +98,16 @@ const ProjectDetail = () => {
 
         {/* SECTION 2 — SPLIT CONTENT */}
         <section className="grid md:grid-cols-5">
-          {/* LEFT 60% */}
-          <div className="md:col-span-3" style={{ paddingLeft: "60px", background: "#FAFAF8" }}>
+          {/* LEFT 60% — slideshow */}
+          <div
+            className="md:col-span-3 relative group"
+            style={{ paddingLeft: "60px", background: "#FAFAF8" }}
+          >
             <img
-              src={project.img}
-              alt={`${project.name} — ${project.category}`}
+              key={displayImage}
+              src={displayImage}
+              alt={`${displayTitle} — ${project.category}`}
+              className="transition-opacity duration-500 animate-fade-in"
               style={{
                 width: "100%",
                 height: "600px",
@@ -111,6 +116,75 @@ const ProjectDetail = () => {
                 borderRadius: 0,
               }}
             />
+
+            {hasSlides && slides.length > 1 && (
+              <>
+                <button
+                  onClick={goPrev}
+                  aria-label="Previous slide"
+                  className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                  style={{
+                    left: "76px",
+                    width: "44px",
+                    height: "44px",
+                    borderRadius: "50%",
+                    background: "rgba(255,255,255,0.9)",
+                    color: "#1A1A1A",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    fontSize: "16px",
+                    cursor: "pointer",
+                  }}
+                >
+                  ←
+                </button>
+                <button
+                  onClick={goNext}
+                  aria-label="Next slide"
+                  className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                  style={{
+                    right: "16px",
+                    width: "44px",
+                    height: "44px",
+                    borderRadius: "50%",
+                    background: "rgba(255,255,255,0.9)",
+                    color: "#1A1A1A",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    fontSize: "16px",
+                    cursor: "pointer",
+                  }}
+                >
+                  →
+                </button>
+
+                <div
+                  className="absolute flex gap-2"
+                  style={{
+                    bottom: "16px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    paddingLeft: "60px",
+                  }}
+                >
+                  {slides.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSlideIndex(i)}
+                      aria-label={`Go to slide ${i + 1}`}
+                      style={{
+                        width: i === slideIndex ? "24px" : "8px",
+                        height: "8px",
+                        borderRadius: "999px",
+                        background:
+                          i === slideIndex ? "#C9A97A" : "rgba(255,255,255,0.7)",
+                        border: "none",
+                        cursor: "pointer",
+                        transition: "all 0.3s ease",
+                      }}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* RIGHT 40% */}
