@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
@@ -6,23 +6,15 @@ import { getProjectBySlug } from "@/data/projects";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
 import { slugifyItem } from "@/data/items";
 
-const items = [
-  "Accent Chair",
-  "Lounge Sofa",
-  "Ottoman",
-  "Side Table",
-  "Floor Lamp",
-  "Sectional Sofa",
-  "Arm Chair",
-  "Console Table",
-  "Dining Table",
-  "Pendant Light",
-];
-
 const ProjectDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const project = slug ? getProjectBySlug(slug) : undefined;
+  const [slideIndex, setSlideIndex] = useState(0);
+
+  useEffect(() => {
+    setSlideIndex(0);
+  }, [slug]);
 
   useEffect(() => {
     if (project) {
