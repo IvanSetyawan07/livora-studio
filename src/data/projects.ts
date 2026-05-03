@@ -42,26 +42,29 @@ export const projects: Project[] = [
       "A serene hospitality retreat where warm timber, soft stone, and considered light meet. Every corridor and lounge has been composed to slow the pace of arrival, inviting guests into a sense of quiet luxury that lingers long after departure.",
     slides: [
       {
-        title: "Harmony One — Lobby",
+        title: "Harmony One — Lobby Lounge",
         image: harmonyLobby1,
-        items: [
-          "Lounge Sofa",
-          "Sectional Sofa",
-          "Arm Chair",
-          "Ottoman",
-          "Side Table",
-        ],
+        items: ["Lounge Sofa", "Arm Chair", "Side Table", "Floor Lamp"],
       },
       {
-        title: "Harmony One — Lobby Lounge",
+        title: "Harmony One — Sectional Suite",
         image: harmonyLobby2,
-        items: [
-          "Lounge Sofa",
-          "Sectional Sofa",
-          "Arm Chair",
-          "Ottoman",
-          "Side Table",
-        ],
+        items: ["Sectional Sofa", "Ottoman", "Side Table", "Floor Lamp", "Pendant Light"],
+      },
+      {
+        title: "Harmony One — Reading Corner",
+        image: harmonyLobby3,
+        items: ["Accent Chair", "Side Table", "Floor Lamp", "Ottoman"],
+      },
+      {
+        title: "Harmony One — Dining Hall",
+        image: harmonyLobby4,
+        items: ["Dining Table", "Arm Chair", "Pendant Light", "Console Table"],
+      },
+      {
+        title: "Harmony One — Lounge Bar",
+        image: harmonyLobby5,
+        items: ["Lounge Sofa", "Arm Chair", "Console Table", "Pendant Light", "Side Table"],
       },
     ],
   },
