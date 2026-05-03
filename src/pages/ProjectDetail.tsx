@@ -289,7 +289,7 @@ const ProjectDetail = () => {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(5, 1fr)",
+              gridTemplateColumns: `repeat(${Math.min(Math.max(displayItems.length, 1), 5)}, 1fr)`,
               gap: "20px",
             }}
           >
