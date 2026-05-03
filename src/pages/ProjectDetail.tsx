@@ -87,10 +87,11 @@ const ProjectDetail = () => {
           }}
         >
           <h1
-            className="serif font-light leading-[1.05] text-balance mb-6"
+            className="serif font-light leading-[1.05] text-balance mb-6 transition-opacity duration-500"
             style={{ color: "#1A1A1A", fontSize: "56px", marginTop: "16px" }}
+            key={displayTitle}
           >
-            {project.name}
+            {displayTitle}
           </h1>
           <div className="h-px w-full bg-[#1A1A1A]/15" />
         </section>
