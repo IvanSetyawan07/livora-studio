@@ -51,6 +51,17 @@ const ProjectDetail = () => {
     navigate("/#projects");
   };
 
+  const slides = project.slides ?? [];
+  const hasSlides = slides.length > 0;
+  const currentSlide = hasSlides ? slides[slideIndex % slides.length] : null;
+  const displayTitle = currentSlide?.title ?? project.name;
+  const displayImage = currentSlide?.image ?? project.img;
+  const displayItems = currentSlide?.items ?? [];
+
+  const goPrev = () =>
+    setSlideIndex((i) => (i - 1 + slides.length) % slides.length);
+  const goNext = () => setSlideIndex((i) => (i + 1) % slides.length);
+
   return (
     <>
       <Navbar />
