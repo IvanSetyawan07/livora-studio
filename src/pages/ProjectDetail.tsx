@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
@@ -6,23 +6,15 @@ import { getProjectBySlug } from "@/data/projects";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
 import { slugifyItem } from "@/data/items";
 
-const items = [
-  "Accent Chair",
-  "Lounge Sofa",
-  "Ottoman",
-  "Side Table",
-  "Floor Lamp",
-  "Sectional Sofa",
-  "Arm Chair",
-  "Console Table",
-  "Dining Table",
-  "Pendant Light",
-];
-
 const ProjectDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const project = slug ? getProjectBySlug(slug) : undefined;
+  const [slideIndex, setSlideIndex] = useState(0);
+
+  useEffect(() => {
+    setSlideIndex(0);
+  }, [slug]);
 
   useEffect(() => {
     if (project) {
@@ -59,6 +51,17 @@ const ProjectDetail = () => {
     navigate("/#projects");
   };
 
+  const slides = project.slides ?? [];
+  const hasSlides = slides.length > 0;
+  const currentSlide = hasSlides ? slides[slideIndex % slides.length] : null;
+  const displayTitle = currentSlide?.title ?? project.name;
+  const displayImage = currentSlide?.image ?? project.img;
+  const displayItems = currentSlide?.items ?? [];
+
+  const goPrev = () =>
+    setSlideIndex((i) => (i - 1 + slides.length) % slides.length);
+  const goNext = () => setSlideIndex((i) => (i + 1) % slides.length);
+
   return (
     <>
       <Navbar />
@@ -84,21 +87,27 @@ const ProjectDetail = () => {
           }}
         >
           <h1
-            className="serif font-light leading-[1.05] text-balance mb-6"
+            className="serif font-light leading-[1.05] text-balance mb-6 transition-opacity duration-500"
             style={{ color: "#1A1A1A", fontSize: "56px", marginTop: "16px" }}
+            key={displayTitle}
           >
-            {project.name}
+            {displayTitle}
           </h1>
           <div className="h-px w-full bg-[#1A1A1A]/15" />
         </section>
 
         {/* SECTION 2 — SPLIT CONTENT */}
         <section className="grid md:grid-cols-5">
-          {/* LEFT 60% */}
-          <div className="md:col-span-3" style={{ paddingLeft: "60px", background: "#FAFAF8" }}>
+          {/* LEFT 60% — slideshow */}
+          <div
+            className="md:col-span-3 relative group"
+            style={{ paddingLeft: "60px", background: "#FAFAF8" }}
+          >
             <img
-              src={project.img}
-              alt={`${project.name} — ${project.category}`}
+              key={displayImage}
+              src={displayImage}
+              alt={`${displayTitle} — ${project.category}`}
+              className="transition-opacity duration-500 animate-fade-in"
               style={{
                 width: "100%",
                 height: "600px",
@@ -107,6 +116,75 @@ const ProjectDetail = () => {
                 borderRadius: 0,
               }}
             />
+
+            {hasSlides && slides.length > 1 && (
+              <>
+                <button
+                  onClick={goPrev}
+                  aria-label="Previous slide"
+                  className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                  style={{
+                    left: "76px",
+                    width: "44px",
+                    height: "44px",
+                    borderRadius: "50%",
+                    background: "rgba(255,255,255,0.9)",
+                    color: "#1A1A1A",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    fontSize: "16px",
+                    cursor: "pointer",
+                  }}
+                >
+                  ←
+                </button>
+                <button
+                  onClick={goNext}
+                  aria-label="Next slide"
+                  className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                  style={{
+                    right: "16px",
+                    width: "44px",
+                    height: "44px",
+                    borderRadius: "50%",
+                    background: "rgba(255,255,255,0.9)",
+                    color: "#1A1A1A",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    fontSize: "16px",
+                    cursor: "pointer",
+                  }}
+                >
+                  →
+                </button>
+
+                <div
+                  className="absolute flex gap-2"
+                  style={{
+                    bottom: "16px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    paddingLeft: "60px",
+                  }}
+                >
+                  {slides.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSlideIndex(i)}
+                      aria-label={`Go to slide ${i + 1}`}
+                      style={{
+                        width: i === slideIndex ? "24px" : "8px",
+                        height: "8px",
+                        borderRadius: "999px",
+                        background:
+                          i === slideIndex ? "#C9A97A" : "rgba(255,255,255,0.7)",
+                        border: "none",
+                        cursor: "pointer",
+                        transition: "all 0.3s ease",
+                      }}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* RIGHT 40% */}
@@ -211,11 +289,11 @@ const ProjectDetail = () => {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(5, 1fr)",
+              gridTemplateColumns: `repeat(${Math.min(Math.max(displayItems.length, 1), 5)}, 1fr)`,
               gap: "20px",
             }}
           >
-            {items.map((name) => (
+            {displayItems.map((name) => (
               <Link
                 key={name}
                 to={`/items/${slugifyItem(name)}${project.slug ? `?from=${project.slug}` : ""}`}
