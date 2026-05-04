@@ -206,4 +206,34 @@
     border-top-color: #A8813A;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.13), 0 2px 8px rgba(0, 0, 0, 0.07);
   }
+
+  /* Hero rise-up entrance */
+  @keyframes rise-up {
+    0% { opacity: 0; transform: translateY(60px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .rise-word {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(60px);
+    animation: rise-up 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: transform, opacity;
+  }
+
+  /* Scroll-down indicator */
+  @keyframes chevron-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(8px); }
+  }
+  @keyframes chevron-fade-in {
+    0% { opacity: 0; transform: translateY(8px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .scroll-indicator {
+    animation: chevron-fade-in 0.5s ease-out forwards;
+  }
+  .scroll-indicator-inner {
+    animation: chevron-bounce 1.8s ease-in-out infinite;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
+  }
 }
