@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import decorative from "@/assets/scope-decorative.jpg";
 import furniture from "@/assets/scope-furniture.jpg";
 import contractor from "@/assets/scope-contractor.jpg";
