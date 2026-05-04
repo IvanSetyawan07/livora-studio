@@ -43,6 +43,16 @@ export const Scope = () => {
   const [i, setI] = useState(0);
   const [progress, setProgress] = useState(0);
   const tickRef = useRef<number | null>(null);
+  const [restartKey, setRestartKey] = useState(0);
+
+  const goPrev = () => {
+    setI((p) => (p - 1 + slides.length) % slides.length);
+    setRestartKey((k) => k + 1);
+  };
+  const goNext = () => {
+    setI((p) => (p + 1) % slides.length);
+    setRestartKey((k) => k + 1);
+  };
 
   useEffect(() => {
     setProgress(0);
