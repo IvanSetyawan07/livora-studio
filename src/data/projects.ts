@@ -1,11 +1,10 @@
-import hotel from "@/assets/project-hotel.jpg";
-import residential from "@/assets/project-residential.jpg";
-import office from "@/assets/project-office.jpg";
-import harmonyLobby1 from "@/assets/harmony-lobby-1.jpg";
-import harmonyLobby2 from "@/assets/harmony-lobby-2.jpg";
-import harmonyLobby3 from "@/assets/harmony-lobby-3.jpg";
-import harmonyLobby4 from "@/assets/harmony-lobby-4.jpg";
-import harmonyLobby5 from "@/assets/harmony-lobby-5.jpg";
+import hotel from "@/assets/harmony/harmony-1-depan.png";
+import residential from "@/assets/am-house/am-house.png";
+import office from "@/assets/sinarmas/flytek-sinarmas.png";
+import harmonyLobby1 from "@/assets/harmonylobby.png";
+import harmonyLobby2 from "@/assets/harmony/lounge-harmony.png";
+import harmonyLobby3 from "@/assets/harmony/president-suite-harmony.png";
+
 
 export interface ProjectSlide {
   title: string;
@@ -42,30 +41,21 @@ export const projects: Project[] = [
       "A serene hospitality retreat where warm timber, soft stone, and considered light meet. Every corridor and lounge has been composed to slow the pace of arrival, inviting guests into a sense of quiet luxury that lingers long after departure.",
     slides: [
       {
-        title: "Harmony One — Lobby Lounge",
+        title: "Harmony One — Lobby",
         image: harmonyLobby1,
-        items: ["Lounge Sofa", "Arm Chair", "Side Table", "Floor Lamp"],
+        items: ["Lounge Sofa", "Sofa Three Bench", "Side Table", "Floor Lamp"],
       },
       {
-        title: "Harmony One — Sectional Suite",
+        title: "Harmony One — Launch",
         image: harmonyLobby2,
         items: ["Sectional Sofa", "Ottoman", "Side Table", "Floor Lamp", "Pendant Light"],
       },
       {
-        title: "Harmony One — Reading Corner",
+        title: "Harmony One — President Suite", 
         image: harmonyLobby3,
         items: ["Accent Chair", "Side Table", "Floor Lamp", "Ottoman"],
       },
-      {
-        title: "Harmony One — Dining Hall",
-        image: harmonyLobby4,
-        items: ["Dining Table", "Arm Chair", "Pendant Light", "Console Table"],
-      },
-      {
-        title: "Harmony One — Lounge Bar",
-        image: harmonyLobby5,
-        items: ["Lounge Sofa", "Arm Chair", "Console Table", "Pendant Light", "Side Table"],
-      },
+      
     ],
   },
   {

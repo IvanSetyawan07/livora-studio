@@ -47,9 +47,9 @@ export const Contact = () => {
               <Phone size={18} />
               <span className="underline-grow">+62 812 1860 2045</span>
             </a>
-            <a href="https://www.livora.com" target="_blank" rel="noreferrer" className="flex items-center gap-4 group">
+            <a href="https://livoralcr.com" target="_blank" rel="noreferrer" className="flex items-center gap-4 group">
               <Globe size={18} />
-              <span className="underline-grow">www.livora.com</span>
+              <span className="underline-grow">https://livoralcr.com</span>
             </a>
             <a href="https://instagram.com/livoraid" target="_blank" rel="noreferrer" className="flex items-center gap-4 group">
               <Instagram size={18} />

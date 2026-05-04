@@ -1,3 +1,6 @@
+import sofaLobby from "../../assets/harmony-lobby-2.jpg";
+import sofaWhite from "../../assets/harmony-lobby-3.jpg";
+
 interface Props {
   name: string;
   size?: number;
@@ -28,13 +31,17 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
         </svg>
       );
     case "Lounge Sofa":
-      return (
-        <svg {...common}>
-          <path d="M24 60c0-6 4-10 10-10h52c6 0 10 4 10 10v18H24z" />
-          <path d="M28 78v10M92 78v10" />
-          <path d="M34 60h52" />
-        </svg>
-      );
+  return (
+    <img 
+  src={sofaLobby}
+  alt="Lounge Sofa"
+  style={{
+    width: "100%",
+    height: "100%",
+    objectFit: "contain"
+  }}
+/>
+  );
     case "Ottoman":
       return (
         <svg {...common}>
@@ -66,13 +73,17 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
           <path d="M26 82v8M94 82v8" />
         </svg>
       );
-    case "Arm Chair":
+    case "Sofa Three Bench":
       return (
-        <svg {...common}>
-          <path d="M38 48c0-8 6-14 22-14s22 6 22 14v8" />
-          <path d="M34 56h52v22H34z" />
-          <path d="M40 78v10M80 78v10" />
-        </svg>
+        <img 
+  src={sofaWhite}
+  alt="Sofa Three Bench"
+  style={{
+    width: "100%",
+    height: "100%",
+    objectFit: "contain"
+  }}
+/>
       );
     case "Console Table":
       return (

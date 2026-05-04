@@ -108,8 +108,8 @@ export const items: Item[] = [
     categories: ["Seating", "Living Room"],
   },
   {
-    slug: "arm-chair",
-    name: "Arm Chair",
+    slug: "sofa-three-bench",
+    name: "Sofa Three Bench",
     code: "UP25140",
     category: "SEATING",
     specs: {
