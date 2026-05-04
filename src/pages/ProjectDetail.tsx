@@ -20,10 +20,66 @@ const ProjectDetail = () => {
   const navigate = useNavigate();
   const project = slug ? getProjectBySlug(slug) : undefined;
   const [slideIndex, setSlideIndex] = useState(0);
+  const [showScrollHint, setShowScrollHint] = useState(false);
   useReveal();
+
+  // Always start at top on mount / route change
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+  }, [slug]);
 
   useEffect(() => {
     setSlideIndex(0);
+  }, [slug]);
+
+  // Scroll-down indicator: show after 2s idle, hide on scroll/movement past hero
+  useEffect(() => {
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const clearIdle = () => {
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+        idleTimer = null;
+      }
+    };
+
+    const scheduleShow = () => {
+      clearIdle();
+      if (window.scrollY < 80) {
+        idleTimer = setTimeout(() => {
+          if (window.scrollY < 80) setShowScrollHint(true);
+        }, 2000);
+      }
+    };
+
+    const onActivity = () => {
+      setShowScrollHint(false);
+      scheduleShow();
+    };
+
+    const onScroll = () => {
+      if (window.scrollY > 80) {
+        setShowScrollHint(false);
+        clearIdle();
+      } else {
+        setShowScrollHint(false);
+        scheduleShow();
+      }
+    };
+
+    scheduleShow();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("mousemove", onActivity, { passive: true });
+    window.addEventListener("touchstart", onActivity, { passive: true });
+    window.addEventListener("keydown", onActivity);
+
+    return () => {
+      clearIdle();
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("mousemove", onActivity);
+      window.removeEventListener("touchstart", onActivity);
+      window.removeEventListener("keydown", onActivity);
+    };
   }, [slug]);
 
   useEffect(() => {
