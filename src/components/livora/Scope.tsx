@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+
 import decorative from "@/assets/scope-decorative.jpg";
 import furniture from "@/assets/scope-furniture.jpg";
 import contractor from "@/assets/scope-contractor.jpg";
@@ -88,7 +88,7 @@ export const Scope = () => {
 
         <div className="grid md:grid-cols-12 gap-8 md:gap-14 items-center">
           <div className="md:col-span-7">
-            <div className="relative overflow-hidden aspect-[5/4]">
+            <div className="relative overflow-hidden aspect-[5/4] select-none">
               {slides.map((s, idx) => (
                 <img
                   key={s.n}
@@ -110,18 +110,14 @@ export const Scope = () => {
                 type="button"
                 onClick={goPrev}
                 aria-label="Previous slide"
-                className="scope-arrow absolute left-3 md:left-5 top-1/2 -translate-y-1/2 z-10 h-11 w-11 md:h-12 md:w-12 flex items-center justify-center text-background bg-foreground/30 hover:bg-foreground/50 transition-colors"
-              >
-                <ChevronLeft className="h-5 w-5 md:h-6 md:w-6" strokeWidth={1.5} />
-              </button>
+                className="scope-arrow absolute inset-y-0 left-0 w-1/2 z-10 cursor-w-resize bg-transparent border-0"
+              />
               <button
                 type="button"
                 onClick={goNext}
                 aria-label="Next slide"
-                className="scope-arrow absolute right-3 md:right-5 top-1/2 -translate-y-1/2 z-10 h-11 w-11 md:h-12 md:w-12 flex items-center justify-center text-background bg-foreground/30 hover:bg-foreground/50 transition-colors"
-              >
-                <ChevronRight className="h-5 w-5 md:h-6 md:w-6" strokeWidth={1.5} />
-              </button>
+                className="scope-arrow absolute inset-y-0 right-0 w-1/2 z-10 cursor-e-resize bg-transparent border-0"
+              />
             </div>
 
             {/* Progress segments below image */}
