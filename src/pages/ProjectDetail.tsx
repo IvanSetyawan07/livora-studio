@@ -74,7 +74,47 @@ const ProjectDetail = () => {
   return (
     <>
       <Navbar />
-      <main style={{ paddingTop: "80px", background: "#FAFAF8" }}>
+      <main style={{ background: "#FAFAF8" }}>
+        {/* HERO — full screen */}
+        <section
+          className="relative w-full overflow-hidden"
+          style={{ height: "100vh" }}
+        >
+          <img
+            src={project.img}
+            alt={`${project.name} — hero`}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div
+            className="absolute inset-0"
+            style={{ background: "rgba(0,0,0,0.45)" }}
+          />
+          <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-6">
+            <h1
+              className="serif font-light text-white leading-[1.05] text-balance animate-fade-in"
+              style={{
+                fontSize: "clamp(48px, 8vw, 112px)",
+                animationDuration: "1.2s",
+              }}
+            >
+              {project.name}
+            </h1>
+            <p
+              className="text-white/85 mt-6 animate-fade-in"
+              style={{
+                fontSize: "16px",
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                animationDuration: "1.6s",
+                animationDelay: "0.2s",
+                animationFillMode: "both",
+              }}
+            >
+              {TAGLINES[project.slug] ?? "A composition of light, material, and quiet."}
+            </p>
+          </div>
+        </section>
+
         {/* SECTION 1 — BREADCRUMB + HERO TITLE */}
         <PageBreadcrumb
           items={[
@@ -85,18 +125,19 @@ const ProjectDetail = () => {
         />
 
         <section
+          className="reveal"
           style={{
             background: "#FAFAF8",
             padding: "0 60px 32px 60px",
           }}
         >
-          <h1
+          <h2
             className="serif font-light leading-[1.05] text-balance mb-6 transition-opacity duration-500"
             style={{ color: "#1A1A1A", fontSize: "56px", marginTop: "16px" }}
             key={displayTitle}
           >
             {displayTitle}
-          </h1>
+          </h2>
           <div className="h-px w-full bg-[#1A1A1A]/15" />
         </section>
 
