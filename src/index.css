@@ -168,10 +168,24 @@
   }
   .kenburns-slide { animation: kenburns-slide 5s ease-out forwards; }
 
-  .scope-arrow { outline: none !important; -webkit-tap-highlight-color: transparent; }
+  .scope-arrow {
+    outline: none !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    -webkit-tap-highlight-color: transparent;
+    cursor: default;
+  }
+  .scope-arrow:hover,
   .scope-arrow:focus,
   .scope-arrow:focus-visible,
-  .scope-arrow:active { outline: none !important; box-shadow: none !important; transform: translateY(-50%) !important; background-color: hsl(var(--foreground) / 0.3) !important; }
+  .scope-arrow:active {
+    outline: none !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
 
   .item-card:hover {
     transform: translateY(-5px);
