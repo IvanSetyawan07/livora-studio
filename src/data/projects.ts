@@ -5,7 +5,6 @@ import harmonyLobby1 from "@/assets/harmonylobby.png";
 import harmonyLobby2 from "@/assets/harmony/lounge-harmony.png";
 import harmonyLobby3 from "@/assets/harmony/president-suite-harmony.png";
 
-
 export interface ProjectSlide {
   title: string;
   image: string;
@@ -46,16 +45,15 @@ export const projects: Project[] = [
         items: ["Lounge Sofa", "Sofa Three Bench", "Side Table", "Floor Lamp"],
       },
       {
-        title: "Harmony One — Launch",
+        title: "Harmony One — Lounge",
         image: harmonyLobby2,
         items: ["Sectional Sofa", "Ottoman", "Side Table", "Floor Lamp", "Pendant Light"],
       },
       {
-        title: "Harmony One — President Suite", 
+        title: "Harmony One — President Suite",
         image: harmonyLobby3,
         items: ["Accent Chair", "Side Table", "Floor Lamp", "Ottoman"],
       },
-      
     ],
   },
   {
@@ -100,5 +98,4 @@ export const projects: Project[] = [
   },
 ];
 
-export const getProjectBySlug = (slug: string) =>
-  projects.find((p) => p.slug === slug);
+export const getProjectBySlug = (slug: string) => projects.find((p) => p.slug === slug);
