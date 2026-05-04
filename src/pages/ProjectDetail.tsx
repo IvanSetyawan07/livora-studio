@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
+import { ChevronDown } from "lucide-react";
 import { Navbar } from "@/components/livora/Navbar";
 import { PageBreadcrumb } from "@/components/livora/Breadcrumb";
 import { Footer } from "@/components/livora/Footer";
@@ -19,10 +20,66 @@ const ProjectDetail = () => {
   const navigate = useNavigate();
   const project = slug ? getProjectBySlug(slug) : undefined;
   const [slideIndex, setSlideIndex] = useState(0);
+  const [showScrollHint, setShowScrollHint] = useState(false);
   useReveal();
+
+  // Always start at top on mount / route change
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+  }, [slug]);
 
   useEffect(() => {
     setSlideIndex(0);
+  }, [slug]);
+
+  // Scroll-down indicator: show after 2s idle, hide on scroll/movement past hero
+  useEffect(() => {
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const clearIdle = () => {
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+        idleTimer = null;
+      }
+    };
+
+    const scheduleShow = () => {
+      clearIdle();
+      if (window.scrollY < 80) {
+        idleTimer = setTimeout(() => {
+          if (window.scrollY < 80) setShowScrollHint(true);
+        }, 2000);
+      }
+    };
+
+    const onActivity = () => {
+      setShowScrollHint(false);
+      scheduleShow();
+    };
+
+    const onScroll = () => {
+      if (window.scrollY > 80) {
+        setShowScrollHint(false);
+        clearIdle();
+      } else {
+        setShowScrollHint(false);
+        scheduleShow();
+      }
+    };
+
+    scheduleShow();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("mousemove", onActivity, { passive: true });
+    window.addEventListener("touchstart", onActivity, { passive: true });
+    window.addEventListener("keydown", onActivity);
+
+    return () => {
+      clearIdle();
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("mousemove", onActivity);
+      window.removeEventListener("touchstart", onActivity);
+      window.removeEventListener("keydown", onActivity);
+    };
   }, [slug]);
 
   useEffect(() => {
@@ -91,28 +148,52 @@ const ProjectDetail = () => {
           />
           <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-6">
             <h1
-              className="serif font-light text-white leading-[1.05] text-balance animate-fade-in"
-              style={{
-                fontSize: "clamp(48px, 8vw, 112px)",
-                animationDuration: "1.2s",
-              }}
+              className="serif font-light text-white leading-[1.05] text-balance"
+              style={{ fontSize: "clamp(48px, 8vw, 112px)" }}
             >
-              {project.name}
+              {project.name.split(" ").map((word, i) => (
+                <span
+                  key={i}
+                  className="rise-word"
+                  style={{
+                    animationDelay: `${i * 0.13}s`,
+                    marginRight: "0.25em",
+                  }}
+                >
+                  {word}
+                </span>
+              ))}
             </h1>
             <p
-              className="text-white/85 mt-6 animate-fade-in"
+              className="text-white/85 mt-6 rise-word"
               style={{
                 fontSize: "16px",
                 letterSpacing: "0.18em",
                 textTransform: "uppercase",
-                animationDuration: "1.6s",
-                animationDelay: "0.2s",
-                animationFillMode: "both",
+                animationDelay: `${project.name.split(" ").length * 0.13 + 0.25}s`,
+                animationDuration: "0.9s",
               }}
             >
               {TAGLINES[project.slug] ?? "A composition of light, material, and quiet."}
             </p>
           </div>
+
+          {/* Scroll-down indicator */}
+          {showScrollHint && (
+            <div
+              className="scroll-indicator absolute z-10 pointer-events-none"
+              style={{
+                bottom: "32px",
+                left: "50%",
+                transform: "translateX(-50%)",
+              }}
+              aria-hidden="true"
+            >
+              <div className="scroll-indicator-inner">
+                <ChevronDown size={36} color="#FFFFFF" strokeWidth={1.5} />
+              </div>
+            </div>
+          )}
         </section>
 
         {/* SECTION 1 — BREADCRUMB + HERO TITLE */}
