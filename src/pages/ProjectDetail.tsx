@@ -142,7 +142,7 @@ const ProjectDetail = () => {
         </section>
 
         {/* SECTION 2 — SPLIT CONTENT */}
-        <section className="grid md:grid-cols-5">
+        <section className="grid md:grid-cols-5 reveal" style={{ transitionDelay: "0.1s" }}>
           {/* LEFT 60% — slideshow */}
           <div
             className="md:col-span-3 relative group"
@@ -315,9 +315,11 @@ const ProjectDetail = () => {
 
         {/* SECTION 3 — ITEMS IN THIS SPACE */}
         <section
+          className="reveal"
           style={{
             background: "#FFFFFF",
             padding: "60px",
+            transitionDelay: "0.15s",
           }}
         >
           <h2
