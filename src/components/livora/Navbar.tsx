@@ -1,19 +1,27 @@
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
-const links = [
-  { href: "#about", label: "About" },
-  { href: "#mission", label: "Mission" },
-  { href: "#style", label: "Style" },
-  { href: "#scope", label: "Scope" },
-  { href: "#projects", label: "Projects" },
-  { href: "#furniture", label: "Furniture" },
-  { href: "#contact", label: "Contact" },
+type NavLink = {
+  label: string;
+  to?: string; // route
+  hash?: string; // home section id
+};
+
+const links: NavLink[] = [
+  { label: "About", to: "/about" },
+  { label: "Style", hash: "style" },
+  { label: "Scope", hash: "scope" },
+  { label: "Projects", to: "/projects" },
+  { label: "Furniture", hash: "furniture" },
+  { label: "Contact", hash: "contact" },
 ];
 
 export const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -22,28 +30,68 @@ export const Navbar = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const isActive = (l: NavLink) => {
+    if (l.to) {
+      if (l.to === "/about") return location.pathname.startsWith("/about");
+      if (l.to === "/projects") return location.pathname.startsWith("/projects");
+      return location.pathname === l.to;
+    }
+    if (l.hash) return location.pathname === "/" && location.hash === `#${l.hash}`;
+    return false;
+  };
+
+  const handleHashClick = (hash: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    setOpen(false);
+    if (location.pathname === "/") {
+      const el = document.getElementById(hash);
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+      window.history.replaceState(null, "", `/#${hash}`);
+    } else {
+      navigate(`/#${hash}`);
+    }
+  };
+
+  const renderLink = (l: NavLink, mobile = false) => {
+    const baseCls = mobile
+      ? ""
+      : `underline-grow transition-colors ${
+          isActive(l) ? "text-foreground" : "text-foreground/80 hover:text-foreground"
+        }`;
+
+    if (l.to) {
+      return (
+        <Link to={l.to} className={baseCls} onClick={() => setOpen(false)}>
+          {l.label}
+        </Link>
+      );
+    }
+    return (
+      <a href={`/#${l.hash}`} className={baseCls} onClick={handleHashClick(l.hash!)}>
+        {l.label}
+      </a>
+    );
+  };
+
   return (
     <header
       className={`fixed top-0 left-0 right-0 transition-all duration-500 ${scrolled ? "bg-background/85 backdrop-blur-md border-b border-border/60 py-4" : "bg-transparent py-6"}`}
       style={{ zIndex: 1000 }}
     >
       <nav className="container-livora flex items-center justify-between">
-        <a href="#top" className="serif text-2xl tracking-[0.35em] font-light">
+        <Link to="/" className="serif text-2xl tracking-[0.35em] font-light">
           LIVORA
-        </a>
+        </Link>
 
         <ul className="hidden md:flex items-center gap-8 text-xs uppercase tracking-[0.2em]">
           {links.map((l) => (
-            <li key={l.href}>
-              <a href={l.href} className="underline-grow text-foreground/80 hover:text-foreground transition-colors">
-                {l.label}
-              </a>
-            </li>
+            <li key={l.label}>{renderLink(l)}</li>
           ))}
         </ul>
 
         <a
-          href="#contact"
+          href="/#contact"
+          onClick={handleHashClick("contact")}
           className="hidden md:inline-flex items-center text-xs uppercase tracking-[0.2em] border border-foreground/30 px-5 py-2.5 hover:bg-foreground hover:text-background transition-all duration-500"
         >
           Start Project
@@ -62,9 +110,7 @@ export const Navbar = () => {
         <div className="md:hidden bg-background border-t border-border mt-4">
           <ul className="container-livora py-6 flex flex-col gap-5 text-sm uppercase tracking-[0.2em]">
             {links.map((l) => (
-              <li key={l.href}>
-                <a href={l.href} onClick={() => setOpen(false)}>{l.label}</a>
-              </li>
+              <li key={l.label}>{renderLink(l, true)}</li>
             ))}
           </ul>
         </div>
