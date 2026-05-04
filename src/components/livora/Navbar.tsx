@@ -22,9 +22,11 @@ export const Navbar = () => {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const isLanding = location.pathname === "/";
+  const transparentTop = isLanding && !scrolled;
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
+    const onScroll = () => setScrolled(window.scrollY > 50);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -56,7 +58,11 @@ export const Navbar = () => {
     const baseCls = mobile
       ? ""
       : `underline-grow transition-colors ${
-          isActive(l) ? "text-foreground" : "text-foreground/80 hover:text-foreground"
+          transparentTop
+            ? "text-white/90 hover:text-white"
+            : isActive(l)
+              ? "text-foreground"
+              : "text-foreground/80 hover:text-foreground"
         }`;
 
     if (l.to) {
@@ -75,11 +81,20 @@ export const Navbar = () => {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 transition-all duration-500 ${scrolled ? "bg-background/85 backdrop-blur-md border-b border-border/60 py-4" : "bg-transparent py-6"}`}
+      className={`fixed top-0 left-0 right-0 transition-all duration-500 ${
+        scrolled
+          ? "bg-background/85 backdrop-blur-md border-b border-border/60 py-4"
+          : "bg-transparent border-b border-transparent py-6"
+      }`}
       style={{ zIndex: 1000 }}
     >
       <nav className="container-livora flex items-center justify-between">
-        <Link to="/" className="serif text-2xl tracking-[0.35em] font-light">
+        <Link
+          to="/"
+          className={`serif text-2xl tracking-[0.35em] font-light transition-colors duration-500 ${
+            transparentTop ? "text-white" : "text-foreground"
+          }`}
+        >
           LIVORA
         </Link>
 
@@ -92,7 +107,11 @@ export const Navbar = () => {
         <a
           href="/#contact"
           onClick={handleHashClick("contact")}
-          className="hidden md:inline-flex items-center text-xs uppercase tracking-[0.2em] border border-foreground/30 px-5 py-2.5 hover:bg-foreground hover:text-background transition-all duration-500"
+          className={`hidden md:inline-flex items-center text-xs uppercase tracking-[0.2em] px-5 py-2.5 border transition-all duration-500 ${
+            transparentTop
+              ? "border-white/50 text-white hover:bg-white hover:text-foreground"
+              : "border-foreground/30 text-foreground hover:bg-foreground hover:text-background"
+          }`}
         >
           Start Project
         </a>
@@ -100,7 +119,9 @@ export const Navbar = () => {
         <button
           aria-label="Toggle menu"
           onClick={() => setOpen((v) => !v)}
-          className="md:hidden p-2"
+          className={`md:hidden p-2 transition-colors duration-500 ${
+            transparentTop ? "text-white" : "text-foreground"
+          }`}
         >
           {open ? <X size={22} /> : <Menu size={22} />}
         </button>
