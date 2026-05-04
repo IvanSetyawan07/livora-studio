@@ -105,6 +105,23 @@ export const Scope = () => {
                   }}
                 />
               ))}
+
+              <button
+                type="button"
+                onClick={goPrev}
+                aria-label="Previous slide"
+                className="scope-arrow absolute left-3 md:left-5 top-1/2 -translate-y-1/2 z-10 h-11 w-11 md:h-12 md:w-12 flex items-center justify-center text-background bg-foreground/30 hover:bg-foreground/50 transition-colors"
+              >
+                <ChevronLeft className="h-5 w-5 md:h-6 md:w-6" strokeWidth={1.5} />
+              </button>
+              <button
+                type="button"
+                onClick={goNext}
+                aria-label="Next slide"
+                className="scope-arrow absolute right-3 md:right-5 top-1/2 -translate-y-1/2 z-10 h-11 w-11 md:h-12 md:w-12 flex items-center justify-center text-background bg-foreground/30 hover:bg-foreground/50 transition-colors"
+              >
+                <ChevronRight className="h-5 w-5 md:h-6 md:w-6" strokeWidth={1.5} />
+              </button>
             </div>
 
             {/* Progress segments below image */}
