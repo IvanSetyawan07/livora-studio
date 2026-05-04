@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/livora/Navbar";
+import { PageBreadcrumb } from "@/components/livora/Breadcrumb";
 import { Footer } from "@/components/livora/Footer";
 import { getProjectBySlug } from "@/data/projects";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
@@ -67,18 +68,13 @@ const ProjectDetail = () => {
       <Navbar />
       <main style={{ paddingTop: "80px", background: "#FAFAF8" }}>
         {/* SECTION 1 — BREADCRUMB + HERO TITLE */}
-        <nav
-          style={{
-            padding: "100px 60px 0px 60px",
-            fontSize: "12px",
-            color: "#C9A97A",
-            letterSpacing: "0.1em",
-          }}
-        >
-          <Link to="/projects" className="hover:opacity-70">Projects</Link>
-          <span style={{ margin: "0 10px" }}>/</span>
-          <span style={{ color: "#1A1A1A" }}>{project.name}</span>
-        </nav>
+        <PageBreadcrumb
+          items={[
+            { label: "Home", to: "/" },
+            { label: "Projects", to: "/projects" },
+            { label: project.name },
+          ]}
+        />
 
         <section
           style={{
