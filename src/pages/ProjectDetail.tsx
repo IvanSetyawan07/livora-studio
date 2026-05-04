@@ -6,12 +6,20 @@ import { Footer } from "@/components/livora/Footer";
 import { getProjectBySlug } from "@/data/projects";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
 import { slugifyItem } from "@/data/items";
+import { useReveal } from "@/hooks/useReveal";
+
+const TAGLINES: Record<string, string> = {
+  "harmony-one": "Where elegance meets everyday living.",
+  "am-house": "A quiet sanctuary shaped by warmth and light.",
+  "flytek-sinarmas": "Where focus is framed by refined craftsmanship.",
+};
 
 const ProjectDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const project = slug ? getProjectBySlug(slug) : undefined;
   const [slideIndex, setSlideIndex] = useState(0);
+  useReveal();
 
   useEffect(() => {
     setSlideIndex(0);
