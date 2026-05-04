@@ -2,8 +2,6 @@ import { useEffect } from "react";
 import { Loader } from "@/components/livora/Loader";
 import { Navbar } from "@/components/livora/Navbar";
 import { Hero } from "@/components/livora/Hero";
-import { About } from "@/components/livora/About";
-
 import { Style } from "@/components/livora/Style";
 import { Scope } from "@/components/livora/Scope";
 import { Projects } from "@/components/livora/Projects";
@@ -32,7 +30,6 @@ const Index = () => {
       <Navbar />
       <main>
         <Hero />
-        <About />
         <Style />
         <Scope />
         <Projects />
