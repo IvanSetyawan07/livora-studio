@@ -110,13 +110,13 @@ export const Scope = () => {
                 type="button"
                 onClick={goPrev}
                 aria-label="Previous slide"
-                className="scope-arrow absolute inset-y-0 left-0 w-1/2 z-10 cursor-w-resize bg-transparent border-0"
+                className="scope-arrow absolute inset-y-0 left-0 w-1/2 z-10"
               />
               <button
                 type="button"
                 onClick={goNext}
                 aria-label="Next slide"
-                className="scope-arrow absolute inset-y-0 right-0 w-1/2 z-10 cursor-e-resize bg-transparent border-0"
+                className="scope-arrow absolute inset-y-0 right-0 w-1/2 z-10"
               />
             </div>
 
