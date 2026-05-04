@@ -107,7 +107,11 @@ export const Navbar = () => {
         <a
           href="/#contact"
           onClick={handleHashClick("contact")}
-          className="hidden md:inline-flex items-center text-xs uppercase tracking-[0.2em] border border-foreground/30 px-5 py-2.5 hover:bg-foreground hover:text-background transition-all duration-500"
+          className={`hidden md:inline-flex items-center text-xs uppercase tracking-[0.2em] px-5 py-2.5 border transition-all duration-500 ${
+            transparentTop
+              ? "border-white/50 text-white hover:bg-white hover:text-foreground"
+              : "border-foreground/30 text-foreground hover:bg-foreground hover:text-background"
+          }`}
         >
           Start Project
         </a>
@@ -115,7 +119,9 @@ export const Navbar = () => {
         <button
           aria-label="Toggle menu"
           onClick={() => setOpen((v) => !v)}
-          className="md:hidden p-2"
+          className={`md:hidden p-2 transition-colors duration-500 ${
+            transparentTop ? "text-white" : "text-foreground"
+          }`}
         >
           {open ? <X size={22} /> : <Menu size={22} />}
         </button>
