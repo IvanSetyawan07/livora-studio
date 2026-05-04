@@ -168,6 +168,11 @@
   }
   .kenburns-slide { animation: kenburns-slide 5s ease-out forwards; }
 
+  .scope-arrow { outline: none !important; -webkit-tap-highlight-color: transparent; }
+  .scope-arrow:focus,
+  .scope-arrow:focus-visible,
+  .scope-arrow:active { outline: none !important; box-shadow: none !important; transform: translateY(-50%) !important; background-color: hsl(var(--foreground) / 0.3) !important; }
+
   .item-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.09) !important;
