@@ -58,7 +58,11 @@ export const Navbar = () => {
     const baseCls = mobile
       ? ""
       : `underline-grow transition-colors ${
-          isActive(l) ? "text-foreground" : "text-foreground/80 hover:text-foreground"
+          transparentTop
+            ? "text-white/90 hover:text-white"
+            : isActive(l)
+              ? "text-foreground"
+              : "text-foreground/80 hover:text-foreground"
         }`;
 
     if (l.to) {
