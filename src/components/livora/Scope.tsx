@@ -69,7 +69,7 @@ export const Scope = () => {
     return () => {
       if (tickRef.current) window.clearInterval(tickRef.current);
     };
-  }, [i]);
+  }, [i, restartKey]);
 
   const cur = slides[i];
 
