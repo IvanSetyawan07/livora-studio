@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Navbar } from "@/components/livora/Navbar";
+import { PageBreadcrumb } from "@/components/livora/Breadcrumb";
 import { Footer } from "@/components/livora/Footer";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
 import { getItemBySlug, items, slugifyItem } from "@/data/items";
@@ -105,26 +106,14 @@ const ItemDetail = () => {
       <Navbar />
       <main style={{ background: "#FFFFFF", paddingTop: "80px" }}>
         {/* SECTION 1 — BREADCRUMB */}
-        <nav
-          style={{
-            padding: "100px 60px 16px",
-            fontSize: "12px",
-            color: "#C9A97A",
-            letterSpacing: "0.1em",
-          }}
-        >
-          <Link to="/projects" className="hover:opacity-70">Projects</Link>
-          <span style={{ margin: "0 10px" }}>/</span>
-          {project ? (
-            <>
-              <Link to={`/projects/${project.slug}`} className="hover:opacity-70">
-                {project.name}
-              </Link>
-              <span style={{ margin: "0 10px" }}>/</span>
-            </>
-          ) : null}
-          <span style={{ color: "#1A1A1A" }}>{item.name}</span>
-        </nav>
+        <PageBreadcrumb
+          items={[
+            { label: "Home", to: "/" },
+            { label: "Projects", to: "/projects" },
+            ...(project ? [{ label: project.name, to: `/projects/${project.slug}` }] : []),
+            { label: item.name },
+          ]}
+        />
 
         {/* SECTION 2 — MAIN CONTENT */}
         <section
