@@ -9,6 +9,7 @@ import ProjectDetail from "./pages/ProjectDetail.tsx";
 import ProjectsPage from "./pages/Projects.tsx";
 import ItemDetail from "./pages/ItemDetail.tsx";
 import AboutPage from "./pages/About.tsx";
+import { WhatsAppButton } from "./components/livora/WhatsAppButton.tsx";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <WhatsAppButton />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
