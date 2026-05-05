@@ -15,7 +15,7 @@ export const Furniture = () => (
       </div>
       <div className="reveal md:col-span-6 space-y-6">
         <p className="text-[10px] uppercase tracking-[0.45em] text-foreground/60">
-          <span className="divider-line" /> 06 — Furniture Collection
+          <span className="divider-line" />Furniture Collection
         </p>
         <h2 className="serif text-4xl md:text-6xl font-light leading-[1.05]">
           A wide variety of <em className="italic">textures, forms and tones.</em>

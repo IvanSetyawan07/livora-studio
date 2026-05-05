@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 
 // TODO: Replace with your WhatsApp number in international format (no +, no spaces)
 // Example: "6281234567890"
-const WHATSAPP_NUMBER = "NOMOR_WHATSAPP";
+const WHATSAPP_NUMBER = "6281359569732";
 
 export const WhatsAppButton = () => {
   const { pathname } = useLocation();

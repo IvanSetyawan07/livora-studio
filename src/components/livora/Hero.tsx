@@ -40,7 +40,7 @@ export const Hero = () => {
             className="reveal is-visible text-xs uppercase tracking-[0.45em] mb-6"
             style={{ color: "#FFFFFF", textShadow: "1px 1px 6px rgba(0,0,0,0.6)" }}
           >
-            <span className="divider-line bg-white/70" />
+            <span className="inline-block h-px w-12 bg-background/40 align-middle mr-4" />
             PT. LANGGENG CIPTA RUANG
           </p>
           <h1

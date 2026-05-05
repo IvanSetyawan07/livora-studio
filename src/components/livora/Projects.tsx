@@ -13,7 +13,7 @@ export const Projects = () => {
     <section id="projects" className="py-28 md:py-40 container-livora">
       <div className="flex items-end justify-between gap-6 flex-wrap">
         <SectionHeader
-          eyebrow="05 — Our Projects"
+          eyebrow="Our Projects"
           title={<>Selected works, <em className="italic">crafted to last.</em></>}
         />
         <Link
