@@ -1,4 +1,5 @@
 export interface ItemSpec {
+  dimensions: string;
   material: string;
   finish: string;
   weight: string;
@@ -22,6 +23,7 @@ export const items: Item[] = [
     code: "UP25123",
     category: "SEATING",
     specs: {
+      dimensions: "84 × 92 × 82 cm (W × D × H)",
       material: "Solid Walnut Frame, Boucle Fabric Upholstery",
       finish: "Matte Natural / Charcoal Grey",
       weight: "18 kg",
@@ -36,6 +38,7 @@ export const items: Item[] = [
     code: "UP25201",
     category: "SEATING",
     specs: {
+      dimensions: "220 × 95 × 78 cm (W × D × H)",
       material: "Kiln-dried Hardwood Frame, Linen Blend Upholstery",
       finish: "Sand Beige / Warm Taupe",
       weight: "62 kg",
@@ -50,6 +53,7 @@ export const items: Item[] = [
     code: "UP25305",
     category: "SEATING",
     specs: {
+      dimensions: "60 × 60 × 42 cm (W × D × H)",
       material: "Solid Oak Base, Wool Bouclé Top",
       finish: "Natural Oak / Ivory",
       weight: "9 kg",
@@ -64,6 +68,7 @@ export const items: Item[] = [
     code: "TB25110",
     category: "TABLE",
     specs: {
+      dimensions: "45 × 45 × 55 cm (W × D × H)",
       material: "Travertine Top, Solid Walnut Legs",
       finish: "Honed Travertine / Matte Walnut",
       weight: "14 kg",
@@ -78,6 +83,7 @@ export const items: Item[] = [
     code: "LT25088",
     category: "LIGHTING",
     specs: {
+      dimensions: "38 × 38 × 165 cm (W × D × H)",
       material: "Brushed Brass Stem, Linen Drum Shade",
       finish: "Antique Brass / Warm White",
       weight: "7 kg",
@@ -92,6 +98,7 @@ export const items: Item[] = [
     code: "UP25410",
     category: "SEATING",
     specs: {
+      dimensions: "320 × 180 × 78 cm (W × D × H)",
       material: "Hardwood Frame, Performance Velvet Upholstery",
       finish: "Stone Grey / Soft Camel",
       weight: "98 kg",
@@ -106,6 +113,7 @@ export const items: Item[] = [
     code: "UP25140",
     category: "SEATING",
     specs: {
+      dimensions: "78 × 84 × 80 cm (W × D × H)",
       material: "Solid Ash Frame, Full-Grain Leather",
       finish: "Cognac / Natural Ash",
       weight: "16 kg",
@@ -120,6 +128,7 @@ export const items: Item[] = [
     code: "TB25220",
     category: "TABLE",
     specs: {
+      dimensions: "160 × 38 × 78 cm (W × D × H)",
       material: "Solid Walnut, Brushed Brass Inlay",
       finish: "Matte Walnut / Antique Brass",
       weight: "28 kg",
@@ -134,6 +143,7 @@ export const items: Item[] = [
     code: "TB25330",
     category: "TABLE",
     specs: {
+      dimensions: "240 × 100 × 75 cm (W × D × H)",
       material: "Solid Oak Top, Powder-Coated Steel Base",
       finish: "Natural Oak / Matte Black",
       weight: "82 kg",
@@ -148,6 +158,7 @@ export const items: Item[] = [
     code: "LT25155",
     category: "LIGHTING",
     specs: {
+      dimensions: "45 × 45 × 38 cm (W × D × H)",
       material: "Hand-blown Glass, Brushed Brass Canopy",
       finish: "Smoked Glass / Antique Brass",
       weight: "4 kg",

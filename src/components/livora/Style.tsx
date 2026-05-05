@@ -5,7 +5,7 @@ export const Style = () => (
     <div className="grid md:grid-cols-12 gap-10 md:gap-16 items-center">
       <div className="reveal md:col-span-5 order-2 md:order-1 space-y-6">
         <p className="text-[10px] uppercase tracking-[0.45em] text-foreground/60">
-          <span className="divider-line" />Our Style
+          <span className="divider-line" /> 03 — Our Style
         </p>
         <h2 className="serif text-5xl md:text-7xl font-light leading-[1.02]">
           Modern.<br />Quiet.<br /><em className="italic">European.</em>

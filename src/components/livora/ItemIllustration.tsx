@@ -1,5 +1,5 @@
-import sofaLobby from "../../assets/harmony/sofa-putih.png";
-import sofaWhite from "../../assets/harmony/Sofa-panjang.png";
+import sofaLobby from "../../assets/harmony-lobby-2.jpg";
+import sofaWhite from "../../assets/harmony-lobby-3.jpg";
 
 interface Props {
   name: string;
