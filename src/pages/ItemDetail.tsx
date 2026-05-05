@@ -192,11 +192,8 @@ const ItemDetail = () => {
             <div className="h-px w-full bg-[#1A1A1A]/10" style={{ margin: "28px 0" }} />
 
             <div>
-              <p style={goldLabel}>Dimensions</p>
-              <p style={valueStyle}>{item.specs.dimensions}</p>
-
-              <p style={goldLabel}>Material</p>
-              <p style={valueStyle}>{item.specs.material}</p>
+              <p style={goldLabel}>Texture</p>
+              <p style={valueStyle}>{item.textures.join(", ")}</p>
 
               <p style={goldLabel}>Finish</p>
               <p style={valueStyle}>{item.specs.finish}</p>
