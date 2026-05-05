@@ -14,6 +14,7 @@ export interface Item {
   specs: ItemSpec;
   themes: string[];
   categories: string[];
+  textures: string[];
 }
 
 export const items: Item[] = [
@@ -31,6 +32,7 @@ export const items: Item[] = [
     },
     themes: ["Japandi", "Minimalist", "Warm Modern", "Wabi-Sabi"],
     categories: ["Seating", "Living Room", "Accent Piece"],
+    textures: ["Soft Bouclé", "Warm Walnut", "Matte Finish"],
   },
   {
     slug: "lounge-sofa",
@@ -46,6 +48,7 @@ export const items: Item[] = [
     },
     themes: ["Japandi", "Warm Modern", "Editorial"],
     categories: ["Seating", "Living Room"],
+    textures: ["Soft Linen", "Warm Taupe", "Plush Cushion"],
   },
   {
     slug: "ottoman",
@@ -61,6 +64,7 @@ export const items: Item[] = [
     },
     themes: ["Minimalist", "Wabi-Sabi"],
     categories: ["Seating", "Accent Piece"],
+    textures: ["Cozy Wool", "Natural Oak", "Smooth Bouclé"],
   },
   {
     slug: "side-table",
@@ -76,6 +80,7 @@ export const items: Item[] = [
     },
     themes: ["Japandi", "Minimalist", "Warm Modern"],
     categories: ["Table", "Living Room"],
+    textures: ["Honed Stone", "Smooth Travertine", "Matte Walnut"],
   },
   {
     slug: "floor-lamp",
@@ -91,6 +96,7 @@ export const items: Item[] = [
     },
     themes: ["Warm Modern", "Editorial"],
     categories: ["Lighting", "Living Room"],
+    textures: ["Brushed Brass", "Woven Linen", "Warm Glow"],
   },
   {
     slug: "sectional-sofa",
@@ -106,6 +112,7 @@ export const items: Item[] = [
     },
     themes: ["Warm Modern", "Editorial", "Minimalist"],
     categories: ["Seating", "Living Room"],
+    textures: ["Soft Velvet", "Plush", "Smooth Hardwood"],
   },
   {
     slug: "sofa-three-bench",
@@ -121,6 +128,7 @@ export const items: Item[] = [
     },
     themes: ["Warm Modern", "Editorial"],
     categories: ["Seating", "Accent Piece"],
+    textures: ["Supple Leather", "Grained", "Natural Ash"],
   },
   {
     slug: "console-table",
@@ -136,6 +144,7 @@ export const items: Item[] = [
     },
     themes: ["Japandi", "Minimalist", "Editorial"],
     categories: ["Table", "Entryway"],
+    textures: ["Matte Walnut", "Polished Brass", "Smooth Grain"],
   },
   {
     slug: "dining-table",
@@ -151,6 +160,7 @@ export const items: Item[] = [
     },
     themes: ["Warm Modern", "Minimalist"],
     categories: ["Table", "Dining Room"],
+    textures: ["Natural Oak", "Matte Steel", "Solid Grain"],
   },
   {
     slug: "pendant-light",
@@ -166,6 +176,7 @@ export const items: Item[] = [
     },
     themes: ["Editorial", "Warm Modern"],
     categories: ["Lighting", "Dining Room"],
+    textures: ["Smoked Glass", "Brushed Brass", "Hand-blown"],
   },
 ];
 

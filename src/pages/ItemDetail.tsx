@@ -218,9 +218,16 @@ const ItemDetail = () => {
             </div>
 
             <p style={goldLabel}>Categories</p>
-            <div style={{ marginTop: "10px" }}>
+            <div style={{ marginTop: "10px", marginBottom: "20px" }}>
               {item.categories.map((c) => (
                 <Pill key={c} label={c} />
+              ))}
+            </div>
+
+            <p style={goldLabel}>Textures</p>
+            <div style={{ marginTop: "10px" }}>
+              {item.textures.map((t) => (
+                <Pill key={t} label={t} />
               ))}
             </div>
 
