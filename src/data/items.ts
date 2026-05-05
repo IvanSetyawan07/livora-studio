@@ -14,6 +14,7 @@ export interface Item {
   specs: ItemSpec;
   themes: string[];
   categories: string[];
+  textures: string[];
 }
 
 export const items: Item[] = [
