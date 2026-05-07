@@ -32,7 +32,7 @@ export const Contact = () => {
   return (
     <section id="contact" className="py-28 md:py-40 container-livora">
       <SectionHeader
-        eyebrow="07 — Contact"
+        eyebrow="Contact"
         title={<>Let's <em className="italic">begin</em> your space.</>}
       />
 
