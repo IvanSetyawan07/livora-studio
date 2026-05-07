@@ -79,7 +79,7 @@ export const Scope = () => {
         <div className="reveal mb-12 md:mb-16">
           <p className="text-[10px] md:text-xs uppercase tracking-[0.45em] mb-5 text-background/60">
             <span className="inline-block h-px w-12 bg-background/40 align-middle mr-4" />
-            04 — Scope of Work
+            Scope of Work
           </p>
           <h2 className="serif text-4xl md:text-6xl lg:text-7xl font-light leading-[1.05] text-balance">
             Four disciplines, <em className="italic">one studio.</em>
