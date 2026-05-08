@@ -3,9 +3,10 @@ import sofaLong from "../../assets/harmony/long-sofa.png";
 import chairLeather from "../../assets/harmony/chair.png";
 import chairCotton from "../../assets/harmony/cotton-chair.png";
 import sideTableImg from "../../assets/harmony/table.png";
-import sofaLobby from "../../assets/harmony-lobby-3.jpg";
-import sofaWhite from "../../assets/harmony/long-sofa.png";
-import cozychairs from "../../assets/harmony/chair.png";
+import modularSofaImg from "../../assets/harmony/lobby-long-sofa.png";
+import boucleSofaImg from "../../assets/harmony/lobby-white-sofa.png";
+import coffeeTableImg from "../../assets/harmony/lobby-coffee-table.png";
+import curvedOttomanImg from "../../assets/harmony/lobby-ottoman.png";
 
 
 interface Props {

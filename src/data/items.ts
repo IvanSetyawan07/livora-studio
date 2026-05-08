@@ -180,6 +180,72 @@ export const items: Item[] = [
   },
 ];
 
+  {
+    slug: "modular-sofa",
+    name: "Modular Sofa",
+    code: "UP26101",
+    category: "SEATING",
+    specs: {
+      dimensions: "360 × 105 × 82 cm (W × D × H)",
+      material: "Hardwood Frame, Textured Linen Upholstery, Walnut Accents",
+      finish: "Ivory White / Warm Walnut",
+      weight: "120 kg",
+      availability: "Made to Order — 10–12 weeks lead time",
+    },
+    themes: ["Warm Modern", "Editorial", "Minimalist"],
+    categories: ["Seating", "Lobby", "Living Room"],
+    textures: ["Soft Linen", "Plush Cushion", "Warm Walnut"],
+  },
+  {
+    slug: "boucle-sofa",
+    name: "Boucle Sofa",
+    code: "UP26102",
+    category: "SEATING",
+    specs: {
+      dimensions: "240 × 95 × 78 cm (W × D × H)",
+      material: "Hardwood Frame, Wool Bouclé Upholstery",
+      finish: "Cream Ivory",
+      weight: "70 kg",
+      availability: "Made to Order — 8–10 weeks lead time",
+    },
+    themes: ["Japandi", "Minimalist", "Wabi-Sabi"],
+    categories: ["Seating", "Lobby", "Living Room"],
+    textures: ["Soft Bouclé", "Plush", "Cozy Wool"],
+  },
+  {
+    slug: "coffee-table",
+    name: "Coffee Table",
+    code: "TB26101",
+    category: "TABLE",
+    specs: {
+      dimensions: "140 × 90 × 35 cm (W × D × H)",
+      material: "Woven Rattan Body, Smoked Glass Top, Brushed Brass Stem",
+      finish: "Natural Rattan / Smoked Glass / Antique Brass",
+      weight: "32 kg",
+      availability: "Made to Order — 6–8 weeks lead time",
+    },
+    themes: ["Editorial", "Warm Modern", "Japandi"],
+    categories: ["Table", "Lobby", "Living Room"],
+    textures: ["Woven Rattan", "Smoked Glass", "Brushed Brass"],
+  },
+  {
+    slug: "curved-ottoman",
+    name: "Curved Ottoman",
+    code: "UP26103",
+    category: "SEATING",
+    specs: {
+      dimensions: "110 × 50 × 42 cm (W × D × H)",
+      material: "Foam Core, Wool Bouclé Upholstery",
+      finish: "Cream Ivory",
+      weight: "12 kg",
+      availability: "In Stock",
+    },
+    themes: ["Wabi-Sabi", "Minimalist", "Warm Modern"],
+    categories: ["Seating", "Lobby", "Accent Piece"],
+    textures: ["Soft Bouclé", "Sculpted", "Cozy Wool"],
+  },
+];
+
 export const getItemBySlug = (slug: string) =>
   items.find((i) => i.slug === slug);
 
