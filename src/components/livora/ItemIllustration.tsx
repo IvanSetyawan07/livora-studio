@@ -1,7 +1,12 @@
+
 import sofaLong from "../../assets/harmony/long-sofa.png";
 import chairLeather from "../../assets/harmony/chair.png";
 import chairCotton from "../../assets/harmony/cotton-chair.png";
 import sideTableImg from "../../assets/harmony/table.png";
+import sofaLobby from "../../assets/harmony-lobby-3.jpg";
+import sofaWhite from "../../assets/harmony/long-sofa.png";
+import cozychairs from "../../assets/harmony/chair.png";
+
 
 interface Props {
   name: string;
@@ -33,9 +38,34 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
     case "Accent Chair":
       return <img src={chairLeather} alt="Accent Chair" style={imgStyle} />;
     case "Lounge Sofa":
+
       return <img src={sofaLong} alt="Lounge Sofa" style={imgStyle} />;
     case "Cozy Chair":
       return <img src={chairCotton} alt="Cozy Chair" style={imgStyle} />;
+return (
+    <img 
+  src={sofaLobby}
+  alt="Lounge Sofa"
+  style={{
+    width: "100%",
+    height: "100%",
+    objectFit: "contain"
+  }}
+/>
+  );
+    case "Cozy Chair":
+      return (
+        <img 
+        src={cozychairs}
+        alt="cozychair"
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "contain"
+        }} 
+        />
+      );
+
     case "Side Table":
       return <img src={sideTableImg} alt="Side Table" style={imgStyle} />;
     case "Floor Lamp":

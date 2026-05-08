@@ -5,7 +5,6 @@ import harmonyLobby1 from "@/assets/harmonylobby.png";
 import harmonyLobby2 from "@/assets/harmony/lounge-harmony.png";
 import harmonyLobby3 from "@/assets/harmony/president-suite-harmony.png";
 
-
 export interface ProjectSlide {
   title: string;
   image: string;
@@ -19,7 +18,7 @@ export interface Project {
   location: string;
   year: string;
   scope: string;
-  area: string;
+
   img: string;
   span: string;
   description: string;
@@ -34,7 +33,7 @@ export const projects: Project[] = [
     location: "Batam, Indonesia",
     year: "2026",
     scope: "Interior Design, Furniture, Construction",
-    area: "1.200 m²",
+
     img: hotel,
     span: "md:col-span-7 md:row-span-2 aspect-[4/5] md:aspect-auto",
     description:
@@ -43,17 +42,17 @@ export const projects: Project[] = [
       {
         title: "Harmony One — Lobby",
         image: harmonyLobby1,
-        items: ["Sofa Three Bench", "Lounge Sofa", "Side Table", "Floor Lamp"],
+        items: ["Lounge Sofa", "Sofa Three Bench", "Side Table", "Floor Lamp"],
       },
       {
         title: "Harmony One — Lounge",
         image: harmonyLobby2,
-        items: ["Sectional Sofa", "Cozy Chair", "Side Table", "Floor Lamp", "Pendant Light"],
+        items: ["Sectional Sofa", "Ottoman", "Side Table", "Floor Lamp", "Pendant Light"],
       },
       {
         title: "Harmony One — President Suite",
         image: harmonyLobby3,
-        items: ["Accent Chair", "Side Table", "Floor Lamp", "Cozy Chair"],
+        items: ["Accent Chair", "Side Table", "Floor Lamp", "Ottoman"],
       },
     ],
   },
@@ -64,7 +63,6 @@ export const projects: Project[] = [
     location: "PIK 2, Jakarta",
     year: "2026",
     scope: "Interior Design, Furniture, Construction",
-    area: "640 m²",
     img: residential,
     span: "md:col-span-5 aspect-[4/3]",
     description:
@@ -73,7 +71,7 @@ export const projects: Project[] = [
       {
         title: "AM House — Living Room",
         image: residential,
-        items: ["Lounge Sofa", "Accent Chair", "Side Table", "Floor Lamp", "Cozy Chair"],
+        items: ["Lounge Sofa", "Accent Chair", "Side Table", "Floor Lamp", "Ottoman"],
       },
     ],
   },
@@ -84,7 +82,6 @@ export const projects: Project[] = [
     location: "Jakarta, Indonesia",
     year: "2026",
     scope: "Interior Design, Furniture, Construction",
-    area: "2.400 m²",
     img: office,
     span: "md:col-span-5 aspect-[4/3]",
     description:

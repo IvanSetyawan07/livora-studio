@@ -348,7 +348,7 @@ const ProjectDetail = () => {
                 { label: "LOCATION", value: project.location },
                 { label: "YEAR", value: project.year },
                 { label: "SCOPE", value: project.scope },
-                { label: "AREA", value: project.area },
+
               ].map((d) => (
                 <div key={d.label}>
                   <p
