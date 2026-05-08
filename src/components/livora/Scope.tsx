@@ -78,7 +78,7 @@ export const Scope = () => {
       className="py-28 md:py-40 bg-foreground text-background"
     >
       <div className="container-livora">
-        <div className="reveal mb-12 md:mb-16">
+        <div className="mb-12 md:mb-16">
           <p className="text-[10px] md:text-xs uppercase tracking-[0.45em] mb-5 text-background/60">
             <span className="inline-block h-px w-12 bg-background/40 align-middle mr-4" />
             Scope of Work
