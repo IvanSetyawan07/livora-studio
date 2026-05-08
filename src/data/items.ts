@@ -51,8 +51,8 @@ export const items: Item[] = [
     textures: ["Soft Linen", "Warm Taupe", "Plush Cushion"],
   },
   {
-    slug: "ottoman",
-    name: "Ottoman",
+    slug: "cozy-chair",
+    name: "Cozy Chair",
     code: "UP25305",
     category: "SEATING",
     specs: {

@@ -1,5 +1,6 @@
-import sofaLobby from "../../assets/harmony-lobby-2.jpg";
-import sofaWhite from "../../assets/harmony-lobby-3.jpg";
+import chairCozy from "../../assets/harmony-lobby-3.jpg";
+import sofaWhite from "../../assets/harmony/long-sofa.png";
+import chairCozy from "../../assets/harmony/chair.png";
 
 interface Props {
   name: string;
@@ -33,7 +34,7 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
     case "Lounge Sofa":
   return (
     <img 
-  src={sofaLobby}
+  src={chairCozy}
   alt="Lounge Sofa"
   style={{
     width: "100%",
@@ -42,12 +43,17 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
   }}
 />
   );
-    case "Ottoman":
+    case "Cozy Chair":
       return (
-        <svg {...common}>
-          <rect x="32" y="56" width="56" height="22" rx="3" />
-          <path d="M38 78v10M82 78v10" />
-        </svg>
+        <img 
+  src={chairCozy}
+  alt="Cozy Chair"
+  style={{
+    width: "100%",
+    height: "100%",
+    objectFit: "contain"
+  }}
+/>
       );
     case "Side Table":
       return (
