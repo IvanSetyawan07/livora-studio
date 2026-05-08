@@ -178,8 +178,6 @@ export const items: Item[] = [
     categories: ["Lighting", "Dining Room"],
     textures: ["Smoked Glass", "Brushed Brass", "Hand-blown"],
   },
-];
-
   {
     slug: "modular-sofa",
     name: "Modular Sofa",
