@@ -1,12 +1,19 @@
-import chairCozy from "../../assets/harmony-lobby-3.jpg";
-import sofaWhite from "../../assets/harmony/long-sofa.png";
-import chairCozy from "../../assets/harmony/chair.png";
+import sofaLong from "../../assets/harmony/long-sofa.png";
+import chairLeather from "../../assets/harmony/chair.png";
+import chairCotton from "../../assets/harmony/cotton-chair.png";
+import sideTableImg from "../../assets/harmony/table.png";
 
 interface Props {
   name: string;
   size?: number;
   strokeWidth?: number;
 }
+
+const imgStyle = {
+  width: "100%",
+  height: "100%",
+  objectFit: "contain" as const,
+};
 
 export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props) => {
   const stroke = "#C9A97A";
@@ -24,45 +31,13 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
 
   switch (name) {
     case "Accent Chair":
-      return (
-        <svg {...common}>
-          <path d="M40 50c0-10 6-18 20-18s20 8 20 18v22H40z" />
-          <path d="M40 60h40" />
-          <path d="M44 72v18M76 72v18" />
-        </svg>
-      );
+      return <img src={chairLeather} alt="Accent Chair" style={imgStyle} />;
     case "Lounge Sofa":
-  return (
-    <img 
-  src={chairCozy}
-  alt="Lounge Sofa"
-  style={{
-    width: "100%",
-    height: "100%",
-    objectFit: "contain"
-  }}
-/>
-  );
+      return <img src={sofaLong} alt="Lounge Sofa" style={imgStyle} />;
     case "Cozy Chair":
-      return (
-        <img 
-  src={chairCozy}
-  alt="Cozy Chair"
-  style={{
-    width: "100%",
-    height: "100%",
-    objectFit: "contain"
-  }}
-/>
-      );
+      return <img src={chairCotton} alt="Cozy Chair" style={imgStyle} />;
     case "Side Table":
-      return (
-        <svg {...common}>
-          <path d="M36 50h48" />
-          <path d="M44 50v40M76 50v40" />
-          <path d="M40 90h40" />
-        </svg>
-      );
+      return <img src={sideTableImg} alt="Side Table" style={imgStyle} />;
     case "Floor Lamp":
       return (
         <svg {...common}>
@@ -80,17 +55,7 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
         </svg>
       );
     case "Sofa Three Bench":
-      return (
-        <img 
-  src={sofaWhite}
-  alt="Sofa Three Bench"
-  style={{
-    width: "100%",
-    height: "100%",
-    objectFit: "contain"
-  }}
-/>
-      );
+      return <img src={sofaLong} alt="Sofa Three Bench" style={imgStyle} />;
     case "Console Table":
       return (
         <svg {...common}>
