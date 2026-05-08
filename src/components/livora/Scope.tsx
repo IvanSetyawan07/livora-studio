@@ -115,6 +115,8 @@ export const Scope = () => {
           >
             {slides.map((s, idx) => {
               const isHover = hoverIdx === idx;
+              const isActive = hoverIdx === null && activeIdx === idx;
+              const showDesc = isHover || isActive;
               const isOpenMobile = openMobile === idx;
               return (
                 <li
@@ -127,51 +129,42 @@ export const Scope = () => {
                   onClick={() =>
                     setOpenMobile((p) => (p === idx ? null : idx))
                   }
-                  className="group border-b border-background/15 cursor-pointer transition-all duration-300 ease-out"
+                  className="group border-b border-background/20 cursor-pointer"
                   style={{
                     opacity: visibleItems[idx] ? 1 : 0,
                     transform: visibleItems[idx]
                       ? "translateY(0)"
                       : "translateY(30px)",
                     transition:
-                      "opacity 0.6s ease-out, transform 0.6s ease-out, background-color 0.3s ease-out",
-                    backgroundColor: isHover
-                      ? "hsl(var(--background) / 0.04)"
-                      : "transparent",
+                      "opacity 0.6s ease-out, transform 0.6s ease-out",
                   }}
                 >
-                  <div className="flex items-center gap-6 md:gap-10 py-7 md:py-9 px-2 md:px-4">
-                    <span className="text-xs md:text-sm tracking-[0.3em] text-background/50 font-light w-8 shrink-0">
+                  <div className="flex items-start gap-6 md:gap-10 py-8 md:py-10">
+                    <span className="text-[11px] md:text-xs tracking-[0.3em] text-background/50 font-light w-8 shrink-0 pt-3">
                       {String(idx + 1).padStart(2, "0")}
                     </span>
 
                     <div className="flex-1 min-w-0">
-                      <h3
-                        className="serif text-2xl md:text-4xl leading-tight transition-all duration-300 ease-out"
-                        style={{
-                          fontWeight: isHover ? 500 : 300,
-                          letterSpacing: isHover ? "0" : "-0.005em",
-                        }}
-                      >
+                      <h3 className="serif text-2xl md:text-[32px] leading-tight font-light text-background">
                         {s.title}
                       </h3>
 
-                      {/* Description (desktop hover / mobile tap) */}
+                      {/* Description (active or hover, mobile tap) */}
                       <div
                         className="overflow-hidden"
                         style={{
                           maxHeight:
-                            isHover || isOpenMobile ? "180px" : "0px",
-                          opacity: isHover || isOpenMobile ? 1 : 0,
+                            showDesc || isOpenMobile ? "200px" : "0px",
+                          opacity: showDesc || isOpenMobile ? 1 : 0,
                           transform:
-                            isHover || isOpenMobile
+                            showDesc || isOpenMobile
                               ? "translateY(0)"
                               : "translateY(6px)",
                           transition:
                             "max-height 0.4s ease-out, opacity 0.3s ease-out, transform 0.3s ease-out",
                         }}
                       >
-                        <p className="mt-3 text-sm md:text-base text-background/70 font-light leading-relaxed max-w-2xl">
+                        <p className="mt-3 text-sm text-background/65 font-light leading-[1.6] max-w-2xl">
                           {s.text}
                         </p>
                       </div>
@@ -195,7 +188,7 @@ export const Scope = () => {
                     </div>
 
                     <ArrowRight
-                      className="shrink-0 text-background transition-all duration-300 ease-out"
+                      className="shrink-0 text-background mt-3 transition-all duration-300 ease-out"
                       style={{
                         opacity: isHover ? 1 : 0,
                         transform: isHover
@@ -211,12 +204,9 @@ export const Scope = () => {
             })}
           </ul>
 
-          {/* Right: Image panel 40% */}
+          {/* Right: Image panel */}
           <div className="hidden md:block md:col-span-5 md:sticky md:top-24">
-            <div
-              className="relative aspect-[4/5] overflow-hidden rounded-sm"
-              style={{ boxShadow: "0 20px 60px -20px rgba(0,0,0,0.45)" }}
-            >
+            <div className="relative aspect-[3/4] overflow-hidden rounded-[4px]">
               {slides.map((s, idx) => (
                 <img
                   key={s.n}
