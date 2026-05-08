@@ -38,7 +38,7 @@ const slides = [
 ];
 
 export const Scope = () => {
-  const [activeIdx, setActiveIdx] = useState<number>(0);
+  const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const [visibleItems, setVisibleItems] = useState<boolean[]>(
     () => slides.map(() => false)
   );
@@ -90,7 +90,7 @@ export const Scope = () => {
 
         <div
           className="border-t border-background/20"
-          onMouseLeave={() => setActiveIdx(0)}
+          onMouseLeave={() => setActiveIdx(null)}
         >
           {slides.map((s, idx) => {
             const isActive = activeIdx === idx;
