@@ -38,7 +38,7 @@ const slides = [
 ];
 
 export const Scope = () => {
-  const [activeIdx, setActiveIdx] = useState<number>(0);
+  const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const [visibleItems, setVisibleItems] = useState<boolean[]>(
     () => slides.map(() => false)
   );
