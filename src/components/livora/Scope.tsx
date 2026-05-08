@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ArrowRight } from "lucide-react";
 
 import decorative from "@/assets/scope-decorative.jpg";
 import furniture from "@/assets/scope-furniture.jpg";
@@ -36,45 +37,60 @@ const slides = [
   },
 ];
 
-const AUTOPLAY = 5000;
-const TICK = 50;
-
 export const Scope = () => {
-  const [i, setI] = useState(0);
-  const [progress, setProgress] = useState(0);
-  const tickRef = useRef<number | null>(null);
-  const [restartKey, setRestartKey] = useState(0);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const [openMobile, setOpenMobile] = useState<number | null>(null);
+  const [visibleItems, setVisibleItems] = useState<boolean[]>(
+    () => slides.map(() => false)
+  );
+  const [parallaxY, setParallaxY] = useState(0);
 
-  const goPrev = () => {
-    setI((p) => (p - 1 + slides.length) % slides.length);
-    setRestartKey((k) => k + 1);
-  };
-  const goNext = () => {
-    setI((p) => (p + 1) % slides.length);
-    setRestartKey((k) => k + 1);
-  };
+  const listRef = useRef<HTMLUListElement | null>(null);
+  const itemRefs = useRef<(HTMLLIElement | null)[]>([]);
 
+  // Stagger entrance via IntersectionObserver
   useEffect(() => {
-    setProgress(0);
-    if (tickRef.current) window.clearInterval(tickRef.current);
-    const startedAt = Date.now();
-    tickRef.current = window.setInterval(() => {
-      const elapsed = Date.now() - startedAt;
-      const pct = Math.min(100, (elapsed / AUTOPLAY) * 100);
-      setProgress(pct);
-      if (elapsed >= AUTOPLAY) {
-        setI((p) => (p + 1) % slides.length);
-      }
-    }, TICK);
-    return () => {
-      if (tickRef.current) window.clearInterval(tickRef.current);
-    };
-  }, [i, restartKey]);
+    const observers: IntersectionObserver[] = [];
+    itemRefs.current.forEach((el, idx) => {
+      if (!el) return;
+      const obs = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              setTimeout(() => {
+                setVisibleItems((prev) => {
+                  if (prev[idx]) return prev;
+                  const copy = [...prev];
+                  copy[idx] = true;
+                  return copy;
+                });
+              }, idx * 80);
+              obs.disconnect();
+            }
+          });
+        },
+        { threshold: 0.2 }
+      );
+      obs.observe(el);
+      observers.push(obs);
+    });
+    return () => observers.forEach((o) => o.disconnect());
+  }, []);
 
-  const cur = slides[i];
+  const currentImageIdx = hoverIdx ?? activeIdx;
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLUListElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const rel = (e.clientY - rect.top) / rect.height; // 0..1
+    setParallaxY((rel - 0.5) * 20); // ±10px
+  };
 
   return (
-    <section id="scope" className="py-28 md:py-40 bg-foreground text-background">
+    <section
+      id="scope"
+      className="py-28 md:py-40 bg-foreground text-background"
+    >
       <div className="container-livora">
         <div className="reveal mb-12 md:mb-16">
           <p className="text-[10px] md:text-xs uppercase tracking-[0.45em] mb-5 text-background/60">
@@ -86,75 +102,138 @@ export const Scope = () => {
           </h2>
         </div>
 
-        <div className="grid md:grid-cols-12 gap-8 md:gap-14 items-center">
-          <div className="md:col-span-7">
-            <div className="relative overflow-hidden aspect-[5/4] select-none">
+        <div className="grid md:grid-cols-12 gap-8 md:gap-14 md:items-start">
+          {/* Left: List 60% */}
+          <ul
+            ref={listRef}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={() => {
+              setHoverIdx(null);
+              setParallaxY(0);
+            }}
+            className="md:col-span-7 border-t border-background/15"
+          >
+            {slides.map((s, idx) => {
+              const isHover = hoverIdx === idx;
+              const isOpenMobile = openMobile === idx;
+              return (
+                <li
+                  key={s.n}
+                  ref={(el) => (itemRefs.current[idx] = el)}
+                  onMouseEnter={() => {
+                    setHoverIdx(idx);
+                    setActiveIdx(idx);
+                  }}
+                  onClick={() =>
+                    setOpenMobile((p) => (p === idx ? null : idx))
+                  }
+                  className="group border-b border-background/15 cursor-pointer transition-all duration-300 ease-out"
+                  style={{
+                    opacity: visibleItems[idx] ? 1 : 0,
+                    transform: visibleItems[idx]
+                      ? "translateY(0)"
+                      : "translateY(30px)",
+                    transition:
+                      "opacity 0.6s ease-out, transform 0.6s ease-out, background-color 0.3s ease-out",
+                    backgroundColor: isHover
+                      ? "hsl(var(--background) / 0.04)"
+                      : "transparent",
+                  }}
+                >
+                  <div className="flex items-center gap-6 md:gap-10 py-7 md:py-9 px-2 md:px-4">
+                    <span className="text-xs md:text-sm tracking-[0.3em] text-background/50 font-light w-8 shrink-0">
+                      {String(idx + 1).padStart(2, "0")}
+                    </span>
+
+                    <div className="flex-1 min-w-0">
+                      <h3
+                        className="serif text-2xl md:text-4xl leading-tight transition-all duration-300 ease-out"
+                        style={{
+                          fontWeight: isHover ? 500 : 300,
+                          letterSpacing: isHover ? "0" : "-0.005em",
+                        }}
+                      >
+                        {s.title}
+                      </h3>
+
+                      {/* Description (desktop hover / mobile tap) */}
+                      <div
+                        className="overflow-hidden"
+                        style={{
+                          maxHeight:
+                            isHover || isOpenMobile ? "180px" : "0px",
+                          opacity: isHover || isOpenMobile ? 1 : 0,
+                          transform:
+                            isHover || isOpenMobile
+                              ? "translateY(0)"
+                              : "translateY(6px)",
+                          transition:
+                            "max-height 0.4s ease-out, opacity 0.3s ease-out, transform 0.3s ease-out",
+                        }}
+                      >
+                        <p className="mt-3 text-sm md:text-base text-background/70 font-light leading-relaxed max-w-2xl">
+                          {s.text}
+                        </p>
+                      </div>
+
+                      {/* Mobile-only image */}
+                      <div
+                        className="md:hidden overflow-hidden"
+                        style={{
+                          maxHeight: isOpenMobile ? "320px" : "0px",
+                          opacity: isOpenMobile ? 1 : 0,
+                          transition:
+                            "max-height 0.4s ease-out, opacity 0.3s ease-out",
+                        }}
+                      >
+                        <img
+                          src={s.img}
+                          alt={s.title}
+                          className="mt-4 w-full aspect-[4/3] object-cover rounded-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <ArrowRight
+                      className="shrink-0 text-background transition-all duration-300 ease-out"
+                      style={{
+                        opacity: isHover ? 1 : 0,
+                        transform: isHover
+                          ? "translateX(0)"
+                          : "translateX(-10px)",
+                      }}
+                      size={22}
+                      strokeWidth={1.25}
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* Right: Image panel 40% */}
+          <div className="hidden md:block md:col-span-5 md:sticky md:top-24">
+            <div
+              className="relative aspect-[4/5] overflow-hidden rounded-sm"
+              style={{ boxShadow: "0 20px 60px -20px rgba(0,0,0,0.45)" }}
+            >
               {slides.map((s, idx) => (
                 <img
                   key={s.n}
                   src={s.img}
                   alt={s.title}
-                  width={1280}
-                  height={896}
                   loading="lazy"
-                  className={`absolute inset-0 h-full w-full object-cover ${
-                    idx === i ? "opacity-100 kenburns-slide" : "opacity-0"
-                  }`}
+                  className="absolute inset-0 h-full w-full object-cover"
                   style={{
-                    transition: "opacity 0.8s ease, transform 0.8s ease",
+                    opacity: idx === currentImageIdx ? 1 : 0,
+                    transform: `translateY(${
+                      idx === currentImageIdx ? parallaxY : 0
+                    }px) scale(1.04)`,
+                    transition:
+                      "opacity 0.4s ease-out, transform 0.5s ease-out",
                   }}
                 />
               ))}
-
-              <button
-                type="button"
-                onClick={goPrev}
-                aria-label="Previous slide"
-                className="scope-arrow absolute inset-y-0 left-0 w-1/2 z-10"
-              />
-              <button
-                type="button"
-                onClick={goNext}
-                aria-label="Next slide"
-                className="scope-arrow absolute inset-y-0 right-0 w-1/2 z-10"
-              />
-            </div>
-
-            {/* Progress segments below image */}
-            <div className="mt-6 flex gap-3">
-              {slides.map((_, idx) => (
-                <div
-                  key={idx}
-                  className="relative h-px flex-1 bg-background/20 overflow-hidden"
-                >
-                  <div
-                    className="absolute inset-y-0 left-0 bg-background"
-                    style={{
-                      width:
-                        idx < i
-                          ? "100%"
-                          : idx === i
-                          ? `${progress}%`
-                          : "0%",
-                      transition: idx === i ? "width 50ms linear" : "none",
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="md:col-span-5 space-y-8">
-            <div key={cur.n} className="space-y-5 animate-[fade-in_0.8s_ease-out]">
-              <p className="text-xs tracking-[0.4em] text-background/60 uppercase">
-                {cur.n} / 0{slides.length}
-              </p>
-              <h3 className="serif text-3xl md:text-5xl font-light leading-tight">
-                {cur.title}
-              </h3>
-              <p className="text-background/75 leading-relaxed font-light text-base md:text-lg">
-                {cur.text}
-              </p>
             </div>
           </div>
         </div>
