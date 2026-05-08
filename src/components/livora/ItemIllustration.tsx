@@ -7,6 +7,9 @@ import modularSofaImg from "../../assets/harmony/lobby-long-sofa.png";
 import boucleSofaImg from "../../assets/harmony/lobby-white-sofa.png";
 import coffeeTableImg from "../../assets/harmony/lobby-coffee-table.png";
 import curvedOttomanImg from "../../assets/harmony/lobby-ottoman.png";
+import loungeBoucleSofaImg from "../../assets/harmony/lounge-boucle-sofa.png";
+import loungeLeatherChairImg from "../../assets/harmony/lounge-leather-chair.png";
+import loungeMarbleTableImg from "../../assets/harmony/lounge-marble-table.png";
 
 
 interface Props {
@@ -51,6 +54,12 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
       return <img src={coffeeTableImg} alt="Coffee Table" style={imgStyle} />;
     case "Curved Ottoman":
       return <img src={curvedOttomanImg} alt="Curved Ottoman" style={imgStyle} />;
+    case "Boucle Lounge Sofa":
+      return <img src={loungeBoucleSofaImg} alt="Boucle Lounge Sofa" style={imgStyle} />;
+    case "Leather Lounge Chair":
+      return <img src={loungeLeatherChairImg} alt="Leather Lounge Chair" style={imgStyle} />;
+    case "Marble Coffee Table":
+      return <img src={loungeMarbleTableImg} alt="Marble Coffee Table" style={imgStyle} />;
     case "Side Table":
       return <img src={sideTableImg} alt="Side Table" style={imgStyle} />;
     case "Floor Lamp":

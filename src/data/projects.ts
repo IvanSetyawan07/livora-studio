@@ -47,7 +47,7 @@ export const projects: Project[] = [
       {
         title: "Harmony One — Lounge",
         image: harmonyLobby2,
-        items: ["Sectional Sofa", "Ottoman", "Side Table", "Floor Lamp", "Pendant Light"],
+        items: ["Boucle Lounge Sofa", "Leather Lounge Chair", "Marble Coffee Table"],
       },
       {
         title: "Harmony One — President Suite",
