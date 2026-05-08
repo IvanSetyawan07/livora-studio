@@ -204,12 +204,9 @@ export const Scope = () => {
             })}
           </ul>
 
-          {/* Right: Image panel 40% */}
+          {/* Right: Image panel */}
           <div className="hidden md:block md:col-span-5 md:sticky md:top-24">
-            <div
-              className="relative aspect-[4/5] overflow-hidden rounded-sm"
-              style={{ boxShadow: "0 20px 60px -20px rgba(0,0,0,0.45)" }}
-            >
+            <div className="relative aspect-[3/4] overflow-hidden rounded-[4px]">
               {slides.map((s, idx) => (
                 <img
                   key={s.n}
