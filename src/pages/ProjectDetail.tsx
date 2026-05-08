@@ -10,7 +10,7 @@ import { slugifyItem } from "@/data/items";
 import { useReveal } from "@/hooks/useReveal";
 
 const TAGLINES: Record<string, string> = {
-  "harmony-one": "Where elegance meets everyday living.",
+  "harmony-one": "BATAM.",
   "am-house": "A quiet sanctuary shaped by warmth and light.",
   "flytek-sinarmas": "Where focus is framed by refined craftsmanship.",
 };
@@ -124,8 +124,7 @@ const ProjectDetail = () => {
   const displayImage = currentSlide?.image ?? project.img;
   const displayItems = currentSlide?.items ?? [];
 
-  const goPrev = () =>
-    setSlideIndex((i) => (i - 1 + slides.length) % slides.length);
+  const goPrev = () => setSlideIndex((i) => (i - 1 + slides.length) % slides.length);
   const goNext = () => setSlideIndex((i) => (i + 1) % slides.length);
 
   return (
@@ -133,19 +132,13 @@ const ProjectDetail = () => {
       <Navbar />
       <main style={{ background: "#FAFAF8" }}>
         {/* HERO — full screen */}
-        <section
-          className="relative w-full overflow-hidden"
-          style={{ height: "100vh" }}
-        >
+        <section className="relative w-full overflow-hidden" style={{ height: "100vh" }}>
           <img
             src={project.img}
             alt={`${project.name} — hero`}
             className="absolute inset-0 w-full h-full object-cover"
           />
-          <div
-            className="absolute inset-0"
-            style={{ background: "rgba(0,0,0,0.45)" }}
-          />
+          <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.45)" }} />
           <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-6">
             <h1
               className="serif font-light text-white leading-[1.05] text-balance"
@@ -198,11 +191,7 @@ const ProjectDetail = () => {
 
         {/* SECTION 1 — BREADCRUMB + HERO TITLE */}
         <PageBreadcrumb
-          items={[
-            { label: "Home", to: "/" },
-            { label: "Projects", to: "/projects" },
-            { label: project.name },
-          ]}
+          items={[{ label: "Home", to: "/" }, { label: "Projects", to: "/projects" }, { label: project.name }]}
         />
 
         <section
@@ -225,10 +214,7 @@ const ProjectDetail = () => {
         {/* SECTION 2 — SPLIT CONTENT */}
         <section className="grid md:grid-cols-5 reveal" style={{ transitionDelay: "0.1s" }}>
           {/* LEFT 60% — slideshow */}
-          <div
-            className="md:col-span-3 relative group"
-            style={{ paddingLeft: "60px", background: "#FAFAF8" }}
-          >
+          <div className="md:col-span-3 relative group" style={{ paddingLeft: "60px", background: "#FAFAF8" }}>
             <img
               key={displayImage}
               src={displayImage}
@@ -300,8 +286,7 @@ const ProjectDetail = () => {
                         width: i === slideIndex ? "24px" : "8px",
                         height: "8px",
                         borderRadius: "999px",
-                        background:
-                          i === slideIndex ? "#C9A97A" : "rgba(255,255,255,0.7)",
+                        background: i === slideIndex ? "#C9A97A" : "rgba(255,255,255,0.7)",
                         border: "none",
                         cursor: "pointer",
                         transition: "all 0.3s ease",
@@ -348,7 +333,6 @@ const ProjectDetail = () => {
                 { label: "LOCATION", value: project.location },
                 { label: "YEAR", value: project.year },
                 { label: "SCOPE", value: project.scope },
-
               ].map((d) => (
                 <div key={d.label}>
                   <p
