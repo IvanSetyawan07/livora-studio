@@ -188,7 +188,7 @@ export const Scope = () => {
                     </div>
 
                     <ArrowRight
-                      className="shrink-0 text-background transition-all duration-300 ease-out"
+                      className="shrink-0 text-background mt-3 transition-all duration-300 ease-out"
                       style={{
                         opacity: isHover ? 1 : 0,
                         transform: isHover
