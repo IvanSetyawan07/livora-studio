@@ -90,7 +90,7 @@ export const Scope = () => {
 
         <div
           className="border-t border-background/20"
-          onMouseLeave={() => setActiveIdx(0)}
+          onMouseLeave={() => setActiveIdx(null)}
         >
           {slides.map((s, idx) => {
             const isActive = activeIdx === idx;
