@@ -43,30 +43,14 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
       return <img src={sofaLong} alt="Lounge Sofa" style={imgStyle} />;
     case "Cozy Chair":
       return <img src={chairCotton} alt="Cozy Chair" style={imgStyle} />;
-return (
-    <img 
-  src={sofaLobby}
-  alt="Lounge Sofa"
-  style={{
-    width: "100%",
-    height: "100%",
-    objectFit: "contain"
-  }}
-/>
-  );
-    case "Cozy Chair":
-      return (
-        <img 
-        src={cozychairs}
-        alt="cozychair"
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "contain"
-        }} 
-        />
-      );
-
+    case "Modular Sofa":
+      return <img src={modularSofaImg} alt="Modular Sofa" style={imgStyle} />;
+    case "Boucle Sofa":
+      return <img src={boucleSofaImg} alt="Boucle Sofa" style={imgStyle} />;
+    case "Coffee Table":
+      return <img src={coffeeTableImg} alt="Coffee Table" style={imgStyle} />;
+    case "Curved Ottoman":
+      return <img src={curvedOttomanImg} alt="Curved Ottoman" style={imgStyle} />;
     case "Side Table":
       return <img src={sideTableImg} alt="Side Table" style={imgStyle} />;
     case "Floor Lamp":
