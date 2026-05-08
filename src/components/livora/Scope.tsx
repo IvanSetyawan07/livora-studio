@@ -38,18 +38,12 @@ const slides = [
 ];
 
 export const Scope = () => {
-  const [activeIdx, setActiveIdx] = useState(0);
-  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
-  const [openMobile, setOpenMobile] = useState<number | null>(null);
+  const [activeIdx, setActiveIdx] = useState<number>(0);
   const [visibleItems, setVisibleItems] = useState<boolean[]>(
     () => slides.map(() => false)
   );
-  const [parallaxY, setParallaxY] = useState(0);
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  const listRef = useRef<HTMLUListElement | null>(null);
-  const itemRefs = useRef<(HTMLLIElement | null)[]>([]);
-
-  // Stagger entrance via IntersectionObserver
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
     itemRefs.current.forEach((el, idx) => {
@@ -78,14 +72,6 @@ export const Scope = () => {
     return () => observers.forEach((o) => o.disconnect());
   }, []);
 
-  const currentImageIdx = hoverIdx ?? activeIdx;
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLUListElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const rel = (e.clientY - rect.top) / rect.height; // 0..1
-    setParallaxY((rel - 0.5) * 20); // ±10px
-  };
-
   return (
     <section
       id="scope"
@@ -102,130 +88,145 @@ export const Scope = () => {
           </h2>
         </div>
 
-        <div className="grid md:grid-cols-12 gap-8 md:gap-14 md:items-start">
-          {/* Left: List 60% */}
-          <ul
-            ref={listRef}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={() => {
-              setHoverIdx(null);
-              setParallaxY(0);
-            }}
-            className="md:col-span-7 border-t border-background/15"
-          >
-            {slides.map((s, idx) => {
-              const isHover = hoverIdx === idx;
-              const isActive = hoverIdx === null && activeIdx === idx;
-              const showDesc = isHover || isActive;
-              const isOpenMobile = openMobile === idx;
-              return (
-                <li
-                  key={s.n}
-                  ref={(el) => (itemRefs.current[idx] = el)}
-                  onMouseEnter={() => {
-                    setHoverIdx(idx);
-                    setActiveIdx(idx);
-                  }}
-                  onClick={() =>
-                    setOpenMobile((p) => (p === idx ? null : idx))
-                  }
-                  className="group border-b border-background/20 cursor-pointer"
+        <div
+          className="border-t border-background/20"
+          onMouseLeave={() => setActiveIdx(0)}
+        >
+          {slides.map((s, idx) => {
+            const isActive = activeIdx === idx;
+            return (
+              <div
+                key={s.n}
+                ref={(el) => (itemRefs.current[idx] = el)}
+                onMouseEnter={() => setActiveIdx(idx)}
+                onClick={() => setActiveIdx(idx)}
+                className="group relative border-b border-background/20 cursor-pointer overflow-hidden"
+                style={{
+                  opacity: visibleItems[idx] ? 1 : 0,
+                  transform: visibleItems[idx]
+                    ? "translateY(0)"
+                    : "translateY(30px)",
+                  transition:
+                    "opacity 0.6s ease-out, transform 0.6s ease-out",
+                }}
+              >
+                {/* Expanding image background */}
+                <div
+                  className="absolute inset-0 overflow-hidden pointer-events-none"
                   style={{
-                    opacity: visibleItems[idx] ? 1 : 0,
-                    transform: visibleItems[idx]
-                      ? "translateY(0)"
-                      : "translateY(30px)",
-                    transition:
-                      "opacity 0.6s ease-out, transform 0.6s ease-out",
+                    opacity: isActive ? 1 : 0,
+                    transition: "opacity 0.6s ease-out",
                   }}
                 >
-                  <div className="flex items-start gap-6 md:gap-10 py-8 md:py-10">
-                    <span className="text-[11px] md:text-xs tracking-[0.3em] text-background/50 font-light w-8 shrink-0 pt-3">
+                  <div
+                    className="absolute right-0 top-0 h-full"
+                    style={{
+                      width: isActive ? "70%" : "0%",
+                      transition:
+                        "width 0.7s cubic-bezier(0.22, 1, 0.36, 1)",
+                    }}
+                  >
+                    <img
+                      src={s.img}
+                      alt={s.title}
+                      className="h-full w-full object-cover"
+                      style={{
+                        transform: isActive ? "scale(1)" : "scale(1.1)",
+                        transition:
+                          "transform 1.2s cubic-bezier(0.22, 1, 0.36, 1)",
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-foreground/35" />
+                    {/* Soft fade to dark on the left edge for text legibility */}
+                    <div className="absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-foreground to-transparent" />
+                  </div>
+                </div>
+
+                {/* Row content */}
+                <div
+                  className="relative grid grid-cols-12 items-center gap-4 md:gap-8 px-2 md:px-4"
+                  style={{
+                    minHeight: isActive ? "260px" : "120px",
+                    transition:
+                      "min-height 0.7s cubic-bezier(0.22, 1, 0.36, 1)",
+                  }}
+                >
+                  {/* Number circle */}
+                  <div className="col-span-2 md:col-span-1 flex justify-start">
+                    <span
+                      className="flex items-center justify-center rounded-full border border-background/40 text-[11px] md:text-xs tracking-wider font-light text-background/80 transition-all duration-500"
+                      style={{
+                        width: isActive ? 44 : 36,
+                        height: isActive ? 44 : 36,
+                        borderColor: isActive
+                          ? "hsl(var(--background) / 0.7)"
+                          : "hsl(var(--background) / 0.35)",
+                      }}
+                    >
                       {String(idx + 1).padStart(2, "0")}
                     </span>
+                  </div>
 
-                    <div className="flex-1 min-w-0">
-                      <h3 className="serif text-2xl md:text-[32px] leading-tight font-light text-background">
-                        {s.title}
-                      </h3>
-
-                      {/* Description (active or hover, mobile tap) */}
-                      <div
-                        className="overflow-hidden"
-                        style={{
-                          maxHeight:
-                            showDesc || isOpenMobile ? "200px" : "0px",
-                          opacity: showDesc || isOpenMobile ? 1 : 0,
-                          transform:
-                            showDesc || isOpenMobile
-                              ? "translateY(0)"
-                              : "translateY(6px)",
-                          transition:
-                            "max-height 0.4s ease-out, opacity 0.3s ease-out, transform 0.3s ease-out",
-                        }}
-                      >
-                        <p className="mt-3 text-sm text-background/65 font-light leading-[1.6] max-w-2xl">
-                          {s.text}
-                        </p>
-                      </div>
-
-                      {/* Mobile-only image */}
-                      <div
-                        className="md:hidden overflow-hidden"
-                        style={{
-                          maxHeight: isOpenMobile ? "320px" : "0px",
-                          opacity: isOpenMobile ? 1 : 0,
-                          transition:
-                            "max-height 0.4s ease-out, opacity 0.3s ease-out",
-                        }}
-                      >
-                        <img
-                          src={s.img}
-                          alt={s.title}
-                          className="mt-4 w-full aspect-[4/3] object-cover rounded-sm"
-                        />
-                      </div>
-                    </div>
-
-                    <ArrowRight
-                      className="shrink-0 text-background mt-3 transition-all duration-300 ease-out"
+                  {/* Description column (visible only when active) */}
+                  <div className="col-span-10 md:col-span-3">
+                    <div
                       style={{
-                        opacity: isHover ? 1 : 0,
-                        transform: isHover
-                          ? "translateX(0)"
-                          : "translateX(-10px)",
+                        opacity: isActive ? 1 : 0,
+                        transform: isActive
+                          ? "translateY(0)"
+                          : "translateY(8px)",
+                        transition:
+                          "opacity 0.5s ease-out 0.15s, transform 0.5s ease-out 0.15s",
+                        pointerEvents: isActive ? "auto" : "none",
                       }}
-                      size={22}
-                      strokeWidth={1.25}
+                    >
+                      <p className="text-sm text-background/85 font-light leading-[1.6] max-w-xs">
+                        {s.text}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Big serif title */}
+                  <div className="hidden md:flex md:col-span-7 items-center justify-center">
+                    <h3
+                      className="serif font-light leading-none text-background text-center transition-all duration-700 ease-out"
+                      style={{
+                        fontSize: isActive
+                          ? "clamp(56px, 8vw, 120px)"
+                          : "clamp(28px, 3vw, 44px)",
+                        letterSpacing: "-0.02em",
+                        opacity: 1,
+                      }}
+                    >
+                      {s.title}
+                    </h3>
+                  </div>
+
+                  {/* Mobile title */}
+                  <div className="md:hidden col-span-12 -mt-2">
+                    <h3 className="serif font-light text-background text-2xl leading-tight">
+                      {s.title}
+                    </h3>
+                  </div>
+
+                  {/* Arrow */}
+                  <div className="hidden md:flex md:col-span-1 justify-end pr-2">
+                    <ArrowRight
+                      className="text-background transition-all duration-500 ease-out"
+                      style={{
+                        opacity: isActive ? 1 : 0.25,
+                        transform: isActive
+                          ? "translateX(0) scale(1)"
+                          : "translateX(-12px) scale(0.7)",
+                      }}
+                      size={isActive ? 56 : 28}
+                      strokeWidth={1}
                     />
                   </div>
-                </li>
-              );
-            })}
-          </ul>
-
-          {/* Right: Image panel */}
-          <div className="hidden md:block md:col-span-5 md:sticky md:top-24">
-            <div className="relative aspect-[3/4] overflow-hidden rounded-[4px]">
-              {slides.map((s, idx) => (
-                <img
-                  key={s.n}
-                  src={s.img}
-                  alt={s.title}
-                  loading="lazy"
-                  className="absolute inset-0 h-full w-full object-cover"
-                  style={{
-                    opacity: idx === currentImageIdx ? 1 : 0,
-                    transform: `translateY(${
-                      idx === currentImageIdx ? parallaxY : 0
-                    }px) scale(1.04)`,
-                    transition:
-                      "opacity 0.4s ease-out, transform 0.5s ease-out",
-                  }}
-                />
-              ))}
-            </div>
-          </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
