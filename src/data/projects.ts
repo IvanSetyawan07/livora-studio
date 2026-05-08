@@ -52,7 +52,7 @@ export const projects: Project[] = [
       {
         title: "Harmony One — President Suite",
         image: harmonyLobby3,
-        items: ["Accent Chair", "Side Table", "Floor Lamp", "Ottoman"],
+        items: ["Olive Swivel Chair", "Brass Drum Coffee Table", "Boucle Sofa"],
       },
     ],
   },
