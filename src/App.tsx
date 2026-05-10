@@ -10,7 +10,10 @@ import ProjectsPage from "./pages/Projects.tsx";
 import ItemDetail from "./pages/ItemDetail.tsx";
 import AboutPage from "./pages/About.tsx";
 import { WhatsAppButton } from "./components/livora/WhatsAppButton.tsx";
+
 import ScrollToTop from "./components/ScrollToTop.tsx";
+import ERD from "./pages/ERD";
+
 
 const queryClient = new QueryClient();
 
@@ -22,6 +25,7 @@ const App = () => (
       <BrowserRouter>
         <ScrollToTop />
         <Routes>
+          <Route path="/erd" element={<ERD />} />
           <Route path="/" element={<Index />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
