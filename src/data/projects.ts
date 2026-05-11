@@ -115,7 +115,7 @@ export const projects: Project[] = [
       {
         title: "House Cihampelas — Living Room",
         image: cihampelasLiving,
-        items: ["Freyja Sofa", "Curved Modular Sofa", "Walnut Boucle Armchair", "Coffee Table"],
+        items: ["Freyja Sofa", "Dwarf Sofa", "Coffee Table"],
       },
     ],
   },
