@@ -47,6 +47,8 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
       return <img src={chairLeather} alt="Accent Chair" style={imgStyle} />;
     case "Freyja Sofa":
       return <img src={freyjaSofaImg} alt="Freyja Sofa" style={imgStyle} />;
+    case "Dwarf Sofa":
+      return <img src={dwarfSofaImg} alt="Dwarf Sofa" style={imgStyle} />;
     case "Lounge Sofa":
 
       return <img src={sofaLong} alt="Lounge Sofa" style={imgStyle} />;
