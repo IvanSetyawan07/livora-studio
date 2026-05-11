@@ -13,6 +13,7 @@ import loungeMarbleTableImg from "../../assets/harmony/lounge-marble-table.png";
 import suiteGreenChairImg from "../../assets/harmony/suite-green-chair.png";
 import suiteBrassTableImg from "../../assets/harmony/suite-brass-table.png";
 import freyjaSofaImg from "../../assets/cihampelas/freyja-sofa.png";
+import dwarfSofaImg from "../../assets/cihampelas/dwarf-sofa.png";
 
 
 interface Props {
