@@ -223,7 +223,9 @@ const ProjectDetail = () => {
               style={{
                 width: "100%",
                 height: "600px",
-                objectFit: "cover",
+                objectFit: "contain",
+                objectPosition: "center",
+                background: "#F0EDE7",
                 display: "block",
                 borderRadius: 0,
               }}
