@@ -4,6 +4,9 @@ import office from "@/assets/sinarmas/flytek-sinarmas.png";
 import harmonyLobby1 from "@/assets/harmonylobby.png";
 import harmonyLobby2 from "@/assets/harmony/lounge-harmony.png";
 import harmonyLobby3 from "@/assets/harmony/president-suite-harmony.png";
+import amLiving from "@/assets/am-house/am-house-living.png";
+import amOffice from "@/assets/am-house/am-house-office.png";
+import amFoyer from "@/assets/am-house/am-house-foyer.png";
 
 export interface ProjectSlide {
   title: string;
@@ -70,8 +73,18 @@ export const projects: Project[] = [
     slides: [
       {
         title: "AM House — Living Room",
-        image: residential,
-        items: ["Lounge Sofa", "Accent Chair", "Side Table", "Floor Lamp", "Ottoman"],
+        image: amLiving,
+        items: ["Modular Sofa", "Wingback Lounge Chair", "Swivel Tub Chair", "Round Coffee Table"],
+      },
+      {
+        title: "AM House — Study",
+        image: amOffice,
+        items: ["Executive Desk", "Dining Table", "Upholstered Dining Chair", "Sculptural Pendant Light"],
+      },
+      {
+        title: "AM House — Foyer",
+        image: amFoyer,
+        items: ["Fluted Accent Chair", "Pedestal Side Table", "Marble Plinth", "Round Area Rug"],
       },
     ],
   },
