@@ -13,6 +13,8 @@ import { WhatsAppButton } from "./components/livora/WhatsAppButton.tsx";
 
 import ScrollToTop from "./components/ScrollToTop.tsx";
 import ERD from "./pages/ERD";
+import Furniture, { CartDrawer } from "./pages/Furniture.tsx";
+import { CartProvider } from "./context/CartContext.tsx";
 
 
 const queryClient = new QueryClient();
@@ -22,20 +24,24 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <ScrollToTop />
-        <Routes>
-          <Route path="/erd" element={<ERD />} />
-          <Route path="/" element={<Index />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/projects" element={<ProjectsPage />} />
-          <Route path="/projects/:slug" element={<ProjectDetail />} />
-          <Route path="/items/:slug" element={<ItemDetail />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <WhatsAppButton />
-      </BrowserRouter>
+      <CartProvider>
+        <BrowserRouter>
+          <ScrollToTop />
+          <Routes>
+            <Route path="/erd" element={<ERD />} />
+            <Route path="/" element={<Index />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/projects/:slug" element={<ProjectDetail />} />
+            <Route path="/items/:slug" element={<ItemDetail />} />
+            <Route path="/furniture" element={<Furniture />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <CartDrawer />
+          <WhatsAppButton />
+        </BrowserRouter>
+      </CartProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
