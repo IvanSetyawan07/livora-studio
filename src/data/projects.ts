@@ -73,6 +73,11 @@ export const projects: Project[] = [
     slides: [
       {
         title: "AM House — Living Room",
+        image: residential,
+        items: ["Lounge Sofa", "Accent Chair", "Side Table", "Floor Lamp", "Ottoman"],
+      },
+      {
+        title: "AM House — Living Area",
         image: amLiving,
         items: ["Modular Sofa", "Wingback Lounge Chair", "Swivel Tub Chair", "Round Coffee Table"],
       },
