@@ -111,29 +111,26 @@ export const Scope = () => {
                 }}
               >
                 {/* Expanding image background */}
-                <div
-                  className="absolute inset-0 overflow-hidden pointer-events-none"
-                  style={{
-                    opacity: isActive ? 1 : 0,
-                    transition: "opacity 0.6s ease-out",
-                  }}
-                >
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
                   <div
-                    className="absolute right-0 top-0 h-full"
+                    className="absolute right-0 top-0 h-full w-[70%] will-change-[clip-path,opacity]"
                     style={{
-                      width: isActive ? "70%" : "0%",
+                      clipPath: isActive
+                        ? "inset(0 0 0 0)"
+                        : "inset(0 0 0 100%)",
+                      opacity: isActive ? 1 : 0,
                       transition:
-                        "width 0.7s cubic-bezier(0.22, 1, 0.36, 1)",
+                        "clip-path 900ms cubic-bezier(0.65, 0, 0.35, 1), opacity 500ms ease-out",
                     }}
                   >
                     <img
                       src={s.img}
                       alt={s.title}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover will-change-transform"
                       style={{
-                        transform: isActive ? "scale(1)" : "scale(1.1)",
+                        transform: isActive ? "scale(1)" : "scale(1.08)",
                         transition:
-                          "transform 1.2s cubic-bezier(0.22, 1, 0.36, 1)",
+                          "transform 1400ms cubic-bezier(0.22, 1, 0.36, 1)",
                       }}
                     />
                     <div className="absolute inset-0 bg-foreground/35" />
