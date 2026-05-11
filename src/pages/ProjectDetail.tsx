@@ -168,7 +168,7 @@ const ProjectDetail = () => {
                 animationDuration: "0.9s",
               }}
             >
-              {TAGLINES[project.slug] ?? "A composition of light, material, and quiet."}
+              {TAGLINES[project.slug] ?? "Cihampelas"}
             </p>
           </div>
 
