@@ -82,7 +82,7 @@ export const projects: Project[] = [
         items: ["Modular Sofa", "Wingback Lounge Chair", "Swivel Tub Chair", "Round Coffee Table"],
       },
       {
-        title: "AM House — Study",
+        title: "AM House — Working Room",
         image: amOffice,
         items: ["Executive Desk", "Dining Table", "Upholstered Dining Chair", "Sculptural Pendant Light"],
       },
