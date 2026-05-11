@@ -7,6 +7,7 @@ import harmonyLobby3 from "@/assets/harmony/president-suite-harmony.png";
 import amLiving from "@/assets/am-house/am-house-living.png";
 import amOffice from "@/assets/am-house/am-house-office.png";
 import amFoyer from "@/assets/am-house/am-house-foyer.png";
+import cihampelas from "@/assets/cihampelas/house-cihampelas.png";
 
 export interface ProjectSlide {
   title: string;
@@ -90,6 +91,25 @@ export const projects: Project[] = [
         title: "AM House — Foyer",
         image: amFoyer,
         items: ["Fluted Accent Chair", "Pedestal Side Table", "Marble Plinth", "Round Area Rug"],
+      },
+    ],
+  },
+  {
+    slug: "house-cihampelas",
+    name: "House Cihampelas",
+    category: "Residential",
+    location: "Cihampelas, Bandung",
+    year: "2026",
+    scope: "Interior Design, Furniture, Construction",
+    img: cihampelas,
+    span: "md:col-span-5 aspect-[4/3]",
+    description:
+      "A contemporary two-storey residence framed by lush tropical greenery. Expansive glazing, warm timber accents, and considered outdoor living spaces blur the line between architecture and garden — quiet, modern, and unmistakably Bandung.",
+    slides: [
+      {
+        title: "House Cihampelas — Façade & Garden",
+        image: cihampelas,
+        items: ["Outdoor Lounge Chair", "Round Coffee Table", "Modular Sofa", "Floor Lamp"],
       },
     ],
   },
