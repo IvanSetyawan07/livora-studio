@@ -136,7 +136,8 @@ const ProjectDetail = () => {
           <img
             src={project.img}
             alt={`${project.name} — hero`}
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-contain"
+            style={{ background: "#1A1A1A" }}
           />
           <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.45)" }} />
           <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-6">
@@ -223,9 +224,7 @@ const ProjectDetail = () => {
               style={{
                 width: "100%",
                 height: "600px",
-                objectFit: "contain",
-                objectPosition: "center",
-                background: "#F0EDE7",
+                objectFit: "cover",
                 display: "block",
                 borderRadius: 0,
               }}
