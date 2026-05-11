@@ -12,6 +12,7 @@ import loungeLeatherChairImg from "../../assets/harmony/lounge-leather-chair.png
 import loungeMarbleTableImg from "../../assets/harmony/lounge-marble-table.png";
 import suiteGreenChairImg from "../../assets/harmony/suite-green-chair.png";
 import suiteBrassTableImg from "../../assets/harmony/suite-brass-table.png";
+import freyjaSofaImg from "../../assets/cihampelas/freyja-sofa.png";
 
 
 interface Props {
@@ -43,6 +44,8 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
   switch (name) {
     case "Accent Chair":
       return <img src={chairLeather} alt="Accent Chair" style={imgStyle} />;
+    case "Freyja Sofa":
+      return <img src={freyjaSofaImg} alt="Freyja Sofa" style={imgStyle} />;
     case "Lounge Sofa":
 
       return <img src={sofaLong} alt="Lounge Sofa" style={imgStyle} />;
