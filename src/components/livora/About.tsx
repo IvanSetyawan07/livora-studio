@@ -2,8 +2,8 @@ import aboutImg from "@/assets/about-livora.jpg";
 import { SectionHeader } from "./SectionHeader";
 
 const missions = [
-  { n: "01", t: "Simplify", d: "the complex journey of interior designing." },
-  { n: "02", t: "Deliver", d: "top-class quality and adaptive design, furniture and installation." },
+  { n: "01", t: "Integrate", d: "the complex journey of interior designing." },
+  { n: "02", t: "Construct", d: "top-class quality and adaptive design, furniture and installation." },
   { n: "03", t: "Create", d: "long-lasting and meaningful impact in every space." },
 ];
 
@@ -11,7 +11,11 @@ export const About = () => (
   <section id="about" className="py-28 md:py-40 container-livora">
     <SectionHeader
       eyebrow="01 — About Us"
-      title={<>A single point of contact for <em className="italic">your dream space.</em></>}
+      title={
+        <>
+          A single point of contact for <em className="italic">your dream space.</em>
+        </>
+      }
     />
 
     {/* ROW 1 — About */}
@@ -28,15 +32,13 @@ export const About = () => (
       </div>
       <div className="reveal md:col-span-5 md:pt-8 space-y-8">
         <p className="text-base md:text-lg leading-relaxed text-foreground/80 font-light">
-          At Livora, we believe creating your dream space shouldn't be a complex struggle.
-          Most paths to a beautiful interior are blocked by disconnected services. We were
-          founded to solve that fundamental problem.
+          At Livora, we believe creating your dream space shouldn't be a complex struggle. Most paths to a beautiful
+          interior are blocked by disconnected services. We were founded to solve that fundamental problem.
         </p>
         <p className="text-base md:text-lg leading-relaxed text-foreground/80 font-light">
-          We act as your <span className="text-foreground">Designers</span> — tailoring spaces
-          to your needs; your <span className="text-foreground">Importers</span> — sourcing
-          high-quality materials directly; and your <span className="text-foreground">Contractors</span> —
-          ensuring every detail is installed to perfection.
+          We act as your <span className="text-foreground">Designers</span> — tailoring spaces to your needs; your{" "}
+          <span className="text-foreground">Importers</span> — sourcing high-quality materials directly; and your{" "}
+          <span className="text-foreground">Contractors</span> — ensuring every detail is installed to perfection.
         </p>
       </div>
     </div>
@@ -48,8 +50,8 @@ export const About = () => (
         Vision
       </p>
       <h3 className="serif text-3xl md:text-5xl font-light italic leading-snug text-foreground/90">
-        "To be the leading One-Stop ecosystem for interior creation — where design, supply
-        and construction merge seamlessly."
+        "To be the leading One-Stop ecosystem for interior creation — where design, supply and construction merge
+        seamlessly."
       </h3>
     </div>
 
@@ -67,15 +69,8 @@ export const About = () => (
 
       <div className="grid md:grid-cols-3 gap-6 md:gap-8">
         {missions.map((m, i) => (
-          <div
-            key={m.n}
-            className="reveal group mission-card"
-            style={{ transitionDelay: `${i * 100}ms` }}
-          >
-            <p
-              className="text-[11px] uppercase mb-6"
-              style={{ color: "#C9A97A", letterSpacing: "0.15em" }}
-            >
+          <div key={m.n} className="reveal group mission-card" style={{ transitionDelay: `${i * 100}ms` }}>
+            <p className="text-[11px] uppercase mb-6" style={{ color: "#C9A97A", letterSpacing: "0.15em" }}>
               {m.n}
             </p>
             <h4

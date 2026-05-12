@@ -7,8 +7,8 @@ import { PageBreadcrumb } from "@/components/livora/Breadcrumb";
 import { useReveal } from "@/hooks/useReveal";
 
 const missions = [
-  { t: "Simplify", d: "the complex journey of interior designing." },
-  { t: "Deliver", d: "top-class quality and adaptive design, furniture and installation." },
+  { t: "Integrate", d: "the complex journey of interior designing." },
+  { t: "Construct", d: "top-class quality and adaptive design, furniture and installation." },
   { t: "Create", d: "long-lasting and meaningful impact in every space." },
 ];
 
@@ -62,15 +62,14 @@ const AboutPage = () => {
             </div>
             <div className="reveal md:col-span-5 md:pt-8 space-y-8">
               <p className="text-base md:text-lg leading-relaxed text-foreground/80 font-light">
-                At Livora, we believe creating your dream space shouldn't be a complex struggle.
-                Most paths to a beautiful interior are blocked by disconnected services. We were
-                founded to solve that fundamental problem.
+                At Livora, we believe creating your dream space shouldn't be a complex struggle. Most paths to a
+                beautiful interior are blocked by disconnected services. We were founded to solve that fundamental
+                problem.
               </p>
               <p className="text-base md:text-lg leading-relaxed text-foreground/80 font-light">
-                We act as your <span className="text-foreground">Designers</span> — tailoring spaces
-                to your needs; your <span className="text-foreground">Importers</span> — sourcing
-                high-quality materials directly; and your <span className="text-foreground">Contractors</span> —
-                ensuring every detail is installed to perfection.
+                We act as your <span className="text-foreground">Designers</span> — tailoring spaces to your needs; your{" "}
+                <span className="text-foreground">Importers</span> — sourcing high-quality materials directly; and your{" "}
+                <span className="text-foreground">Contractors</span> — ensuring every detail is installed to perfection.
               </p>
             </div>
           </div>
@@ -82,8 +81,8 @@ const AboutPage = () => {
               Vision
             </p>
             <h3 className="serif text-3xl md:text-5xl font-light italic leading-snug text-foreground/90">
-              "To be the leading One-Stop ecosystem for interior creation — where design, supply
-              and construction merge seamlessly."
+              "To be the leading One-Stop ecosystem for interior creation — where design, supply and construction merge
+              seamlessly."
             </h3>
           </div>
 
@@ -101,11 +100,7 @@ const AboutPage = () => {
 
             <div className="grid md:grid-cols-3 gap-6 md:gap-8">
               {missions.map((m, i) => (
-                <div
-                  key={m.t}
-                  className="reveal group mission-card"
-                  style={{ transitionDelay: `${i * 100}ms` }}
-                >
+                <div key={m.t} className="reveal group mission-card" style={{ transitionDelay: `${i * 100}ms` }}>
                   <h4
                     className="serif text-3xl md:text-4xl font-light mb-4 origin-left transition-transform duration-300 ease-out group-hover:scale-[1.03]"
                     style={{ color: "#1A1A1A" }}
