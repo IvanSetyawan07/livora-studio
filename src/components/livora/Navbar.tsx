@@ -22,7 +22,7 @@ export const Navbar = () => {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const cart = useCart();
+  
   const isLanding = location.pathname === "/";
   const transparentTop = isLanding && !scrolled;
 
