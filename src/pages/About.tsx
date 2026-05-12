@@ -257,9 +257,8 @@ const AboutPage = () => {
                 <span className="divider-line" />
                 Our Team
               </p>
-              <h2 className="serif text-4xl md:text-6xl font-light leading-[1.05]">
-                <span className="block font-semibold">Meet the</span>
-                <span className="block font-semibold">Livora Team</span>
+              <h2 className="serif text-4xl md:text-6xl lg:text-7xl font-light leading-[1.05] text-balance">
+                Meet the <em className="italic">Livora Team.</em>
               </h2>
               <p className="mt-6 max-w-2xl text-base md:text-lg text-foreground/70 font-light leading-relaxed">
                 Our team is as passionate as our mission — dedicated to delivering exceptional property experiences.
