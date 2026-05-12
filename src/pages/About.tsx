@@ -221,41 +221,8 @@ const AboutPage = () => {
                 })}
               </div>
 
-              {/* Controls */}
-              <div className="flex items-center justify-between mt-6">
-                <div className="flex gap-2">
-                  {teamMembers.map((_, i) => (
-                    <button
-                      key={i}
-                      aria-label={`Go to slide ${i + 1}`}
-                      onClick={() => {
-                        const el = trackRef.current;
-                        const card = el?.querySelector<HTMLElement>("[data-card]");
-                        if (el && card) el.scrollTo({ left: i * (card.offsetWidth + 24), behavior: "smooth" });
-                      }}
-                      className={`h-1.5 rounded-full transition-all duration-300 ${
-                        i === activeIndex ? "w-8 bg-foreground" : "w-3 bg-foreground/25 hover:bg-foreground/50"
-                      }`}
-                    />
-                  ))}
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    aria-label="Previous"
-                    onClick={() => scrollByCard(-1)}
-                    className="h-11 w-11 rounded-full border border-foreground/20 flex items-center justify-center hover:bg-foreground hover:text-background hover:border-foreground transition-all duration-300 hover:-translate-x-0.5"
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </button>
-                  <button
-                    aria-label="Next"
-                    onClick={() => scrollByCard(1)}
-                    className="h-11 w-11 rounded-full border border-foreground/20 flex items-center justify-center hover:bg-foreground hover:text-background hover:border-foreground transition-all duration-300 hover:translate-x-0.5"
-                  >
-                    <ChevronRight className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
+              {/* Swiper-style scrollbar */}
+              <SwiperScrollbar trackRef={trackRef} />
             </div>
           </section>
 
