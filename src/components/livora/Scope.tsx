@@ -11,37 +11,31 @@ const slides = [
     n: "A",
     title: "Decorative Interior",
     img: decorative,
-    text:
-      "Every room has a story waiting to be told. We craft interior concepts that transform bare walls and empty floors into spaces that breathe — designed around your life, your taste, and your vision.",
+    text: "Every room has a story waiting to be told. We craft interior concepts that transform bare walls and empty floors into spaces that breathe — designed around your life, your taste, and your vision.",
   },
   {
     n: "B",
     title: "Loose Furniture",
     img: furniture,
-    text:
-      "Furniture is more than function — it is the quiet language of a room. We curate pieces of uncompromising craftsmanship, where every curve, grain and stitch invites you to slow down and feel at home.",
+    text: "Furniture is more than function — it is the quiet language of a room. We curate pieces of uncompromising craftsmanship, where every curve, grain and stitch invites you to slow down and feel at home.",
   },
   {
     n: "C",
     title: "Interior Contractor & Architecture",
     img: contractor,
-    text:
-      "Precision is our promise. From blueprint to final brushstroke, our team builds with disciplined hands and watchful eyes — shaping spaces that hold beauty in every detail and comfort in every corner.",
+    text: "Precision is our promise. From blueprint to final brushstroke, our team builds with disciplined hands and watchful eyes — shaping spaces that hold beauty in every detail and comfort in every corner.",
   },
   {
     n: "D",
     title: "Material Innovation, Accessories & Fittings",
     img: materials,
-    text:
-      "We source materials and fittings with a connoisseur's eye — innovative, enduring, quietly remarkable. The pieces we choose today become the textures, finishes and memories that define a space for years to come.",
+    text: "We source materials and fittings with a connoisseur's eye — innovative, enduring, quietly remarkable. The pieces we choose today become the textures, finishes and memories that define a space for years to come.",
   },
 ];
 
 export const Scope = () => {
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
-  const [visibleItems, setVisibleItems] = useState<boolean[]>(
-    () => slides.map(() => false)
-  );
+  const [visibleItems, setVisibleItems] = useState<boolean[]>(() => slides.map(() => false));
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
@@ -64,7 +58,7 @@ export const Scope = () => {
             }
           });
         },
-        { threshold: 0.2 }
+        { threshold: 0.2 },
       );
       obs.observe(el);
       observers.push(obs);
@@ -73,10 +67,7 @@ export const Scope = () => {
   }, []);
 
   return (
-    <section
-      id="scope"
-      className="py-28 md:py-40 bg-foreground text-background"
-    >
+    <section id="scope" className="py-28 md:py-40 bg-foreground text-background">
       <div className="container-livora">
         <div className="mb-12 md:mb-16">
           <p className="text-[10px] md:text-xs uppercase tracking-[0.45em] mb-5 text-background/60">
@@ -88,10 +79,7 @@ export const Scope = () => {
           </h2>
         </div>
 
-        <div
-          className="border-t border-background/20"
-          onMouseLeave={() => setActiveIdx(null)}
-        >
+        <div className="border-t border-background/20" onMouseLeave={() => setActiveIdx(null)}>
           {slides.map((s, idx) => {
             const isActive = activeIdx === idx;
             return (
@@ -103,11 +91,8 @@ export const Scope = () => {
                 className="group relative border-b border-background/20 cursor-pointer overflow-hidden"
                 style={{
                   opacity: visibleItems[idx] ? 1 : 0,
-                  transform: visibleItems[idx]
-                    ? "translateY(0)"
-                    : "translateY(30px)",
-                  transition:
-                    "opacity 0.6s ease-out, transform 0.6s ease-out",
+                  transform: visibleItems[idx] ? "translateY(0)" : "translateY(30px)",
+                  transition: "opacity 0.6s ease-out, transform 0.6s ease-out",
                 }}
               >
                 {/* Expanding image background */}
@@ -115,12 +100,9 @@ export const Scope = () => {
                   <div
                     className="absolute right-0 top-0 h-full w-[70%] will-change-[clip-path,opacity]"
                     style={{
-                      clipPath: isActive
-                        ? "inset(0 0 0 0)"
-                        : "inset(0 0 0 100%)",
+                      clipPath: isActive ? "inset(0 0 0 0)" : "inset(0 0 0 100%)",
                       opacity: isActive ? 1 : 0,
-                      transition:
-                        "clip-path 900ms cubic-bezier(0.65, 0, 0.35, 1), opacity 500ms ease-out",
+                      transition: "clip-path 900ms cubic-bezier(0.65, 0, 0.35, 1), opacity 500ms ease-out",
                     }}
                   >
                     <img
@@ -129,8 +111,7 @@ export const Scope = () => {
                       className="h-full w-full object-cover will-change-transform"
                       style={{
                         transform: isActive ? "scale(1)" : "scale(1.08)",
-                        transition:
-                          "transform 1400ms cubic-bezier(0.22, 1, 0.36, 1)",
+                        transition: "transform 1400ms cubic-bezier(0.22, 1, 0.36, 1)",
                       }}
                     />
                     <div className="absolute inset-0 bg-foreground/35" />
@@ -144,8 +125,7 @@ export const Scope = () => {
                   className="relative grid grid-cols-12 items-center gap-4 md:gap-8 px-2 md:px-4"
                   style={{
                     minHeight: isActive ? "260px" : "120px",
-                    transition:
-                      "min-height 0.7s cubic-bezier(0.22, 1, 0.36, 1)",
+                    transition: "min-height 0.7s cubic-bezier(0.22, 1, 0.36, 1)",
                   }}
                 >
                   {/* Number circle */}
@@ -155,9 +135,7 @@ export const Scope = () => {
                       style={{
                         width: isActive ? 44 : 36,
                         height: isActive ? 44 : 36,
-                        borderColor: isActive
-                          ? "hsl(var(--background) / 0.7)"
-                          : "hsl(var(--background) / 0.35)",
+                        borderColor: isActive ? "hsl(var(--background) / 0.7)" : "hsl(var(--background) / 0.35)",
                       }}
                     >
                       {String(idx + 1).padStart(2, "0")}
@@ -169,17 +147,12 @@ export const Scope = () => {
                     <div
                       style={{
                         opacity: isActive ? 1 : 0,
-                        transform: isActive
-                          ? "translateY(0)"
-                          : "translateY(8px)",
-                        transition:
-                          "opacity 0.5s ease-out 0.15s, transform 0.5s ease-out 0.15s",
+                        transform: isActive ? "translateY(0)" : "translateY(8px)",
+                        transition: "opacity 0.5s ease-out 0.15s, transform 0.5s ease-out 0.15s",
                         pointerEvents: isActive ? "auto" : "none",
                       }}
                     >
-                      <p className="text-sm text-background/85 font-light leading-[1.6] max-w-xs">
-                        {s.text}
-                      </p>
+                      <p className="text-sm text-background/85 font-light leading-[1.6] max-w-xs">{s.text}</p>
                     </div>
                   </div>
 
@@ -188,9 +161,7 @@ export const Scope = () => {
                     <h3
                       className="serif font-light leading-none text-background text-center transition-all duration-700 ease-out"
                       style={{
-                        fontSize: isActive
-                          ? "clamp(56px, 8vw, 120px)"
-                          : "clamp(28px, 3vw, 44px)",
+                        fontSize: isActive ? "clamp(56px, 8vw, 120px)" : "clamp(28px, 3vw, 44px)",
                         letterSpacing: "-0.02em",
                         opacity: 1,
                       }}
@@ -201,24 +172,7 @@ export const Scope = () => {
 
                   {/* Mobile title */}
                   <div className="md:hidden col-span-12 -mt-2">
-                    <h3 className="serif font-light text-background text-2xl leading-tight">
-                      {s.title}
-                    </h3>
-                  </div>
-
-                  {/* Arrow */}
-                  <div className="hidden md:flex md:col-span-1 justify-end pr-2">
-                    <ArrowRight
-                      className="text-background transition-all duration-500 ease-out"
-                      style={{
-                        opacity: isActive ? 1 : 0.25,
-                        transform: isActive
-                          ? "translateX(0) scale(1)"
-                          : "translateX(-12px) scale(0.7)",
-                      }}
-                      size={isActive ? 56 : 28}
-                      strokeWidth={1}
-                    />
+                    <h3 className="serif font-light text-background text-2xl leading-tight">{s.title}</h3>
                   </div>
                 </div>
               </div>
