@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+
 import { Link } from "react-router-dom";
 import aboutImg from "@/assets/about-livora.jpg";
 import { Navbar } from "@/components/livora/Navbar";
@@ -28,19 +28,101 @@ const teamMembers = [
   { name: "Nadia Kusuma", role: "Accounting Assistant", img: "women/5" },
 ];
 
+const SwiperScrollbar = ({ trackRef }: { trackRef: React.RefObject<HTMLDivElement> }) => {
+  const [thumb, setThumb] = useState({ width: 20, left: 0 });
+  const barRef = useRef<HTMLDivElement>(null);
+  const drag = useRef({ down: false, startX: 0, startLeft: 0 });
+
+  const update = () => {
+    const el = trackRef.current;
+    const bar = barRef.current;
+    if (!el || !bar) return;
+    const ratio = el.clientWidth / el.scrollWidth;
+    const width = Math.max(ratio * 100, 8);
+    const max = el.scrollWidth - el.clientWidth;
+    const progress = max > 0 ? el.scrollLeft / max : 0;
+    const left = progress * (100 - width);
+    setThumb({ width, left });
+  };
+
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener("resize", update);
+    return () => {
+      el.removeEventListener("scroll", update);
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    const bar = barRef.current;
+    const el = trackRef.current;
+    if (!bar || !el) return;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    drag.current = { down: true, startX: e.clientX, startLeft: thumb.left };
+    e.preventDefault();
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!drag.current.down) return;
+    const bar = barRef.current;
+    const el = trackRef.current;
+    if (!bar || !el) return;
+    const barW = bar.clientWidth;
+    const dx = e.clientX - drag.current.startX;
+    const dxPct = (dx / barW) * 100;
+    const newLeft = Math.min(Math.max(drag.current.startLeft + dxPct, 0), 100 - thumb.width);
+    const max = el.scrollWidth - el.clientWidth;
+    const progress = newLeft / (100 - thumb.width || 1);
+    el.scrollLeft = progress * max;
+  };
+  const onPointerUp = () => {
+    drag.current.down = false;
+  };
+
+  return (
+    <div
+      ref={barRef}
+      className="swiper-scrollbar core-team_scrollbar__g2y6z relative mt-8 h-1 rounded-full bg-foreground/10"
+      onPointerDown={(e) => {
+        const bar = barRef.current;
+        const el = trackRef.current;
+        if (!bar || !el) return;
+        const rect = bar.getBoundingClientRect();
+        const clickPct = ((e.clientX - rect.left) / rect.width) * 100;
+        const targetLeft = Math.min(Math.max(clickPct - thumb.width / 2, 0), 100 - thumb.width);
+        const max = el.scrollWidth - el.clientWidth;
+        const progress = targetLeft / (100 - thumb.width || 1);
+        el.scrollTo({ left: progress * max, behavior: "smooth" });
+      }}
+    >
+      <div
+        role="scrollbar"
+        aria-orientation="horizontal"
+        className="absolute top-0 h-full rounded-full bg-foreground cursor-grab active:cursor-grabbing transition-colors hover:bg-foreground/80"
+        style={{ width: `${thumb.width}%`, left: `${thumb.left}%` }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      />
+    </div>
+  );
+};
+
 const AboutPage = () => {
   useReveal();
   const trackRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const dragState = useRef({ down: false, startX: 0, startScroll: 0, moved: false });
 
-  const scrollByCard = (dir: 1 | -1) => {
-    const el = trackRef.current;
-    if (!el) return;
-    const card = el.querySelector<HTMLElement>("[data-card]");
-    const step = card ? card.offsetWidth + 24 : el.clientWidth * 0.8;
-    el.scrollBy({ left: dir * step, behavior: "smooth" });
-  };
+
 
   const onScroll = () => {
     const el = trackRef.current;
@@ -221,41 +303,8 @@ const AboutPage = () => {
                 })}
               </div>
 
-              {/* Controls */}
-              <div className="flex items-center justify-between mt-6">
-                <div className="flex gap-2">
-                  {teamMembers.map((_, i) => (
-                    <button
-                      key={i}
-                      aria-label={`Go to slide ${i + 1}`}
-                      onClick={() => {
-                        const el = trackRef.current;
-                        const card = el?.querySelector<HTMLElement>("[data-card]");
-                        if (el && card) el.scrollTo({ left: i * (card.offsetWidth + 24), behavior: "smooth" });
-                      }}
-                      className={`h-1.5 rounded-full transition-all duration-300 ${
-                        i === activeIndex ? "w-8 bg-foreground" : "w-3 bg-foreground/25 hover:bg-foreground/50"
-                      }`}
-                    />
-                  ))}
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    aria-label="Previous"
-                    onClick={() => scrollByCard(-1)}
-                    className="h-11 w-11 rounded-full border border-foreground/20 flex items-center justify-center hover:bg-foreground hover:text-background hover:border-foreground transition-all duration-300 hover:-translate-x-0.5"
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </button>
-                  <button
-                    aria-label="Next"
-                    onClick={() => scrollByCard(1)}
-                    className="h-11 w-11 rounded-full border border-foreground/20 flex items-center justify-center hover:bg-foreground hover:text-background hover:border-foreground transition-all duration-300 hover:translate-x-0.5"
-                  >
-                    <ChevronRight className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
+              {/* Swiper-style scrollbar */}
+              <SwiperScrollbar trackRef={trackRef} />
             </div>
           </section>
 
