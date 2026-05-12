@@ -9,6 +9,7 @@ import amOffice from "@/assets/am-house/am-house-office.png";
 import amFoyer from "@/assets/am-house/am-house-foyer.png";
 import cihampelas from "@/assets/cihampelas/house-cihampelas.png";
 import cihampelasLiving from "@/assets/cihampelas/living-room.png";
+import cihampelasKitchen from "@/assets/cihampelas/kitchen.png";
 
 export interface ProjectSlide {
   title: string;
@@ -116,6 +117,11 @@ export const projects: Project[] = [
         title: "House Cihampelas — Living Room",
         image: cihampelasLiving,
         items: ["Freyja Sofa", "Dwarf Sofa", "Coffee Table"],
+      },
+      {
+        title: "House Cihampelas — Kitchen",
+        image: cihampelasKitchen,
+        items: ["Kitchen Cabinet", "Marble Countertop", "Pendant Light"],
       },
     ],
   },
