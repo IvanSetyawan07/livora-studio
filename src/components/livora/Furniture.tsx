@@ -20,19 +20,20 @@ export const Furniture = () => (
       </Link>
       <div className="reveal md:col-span-6 space-y-6">
         <p className="text-[10px] uppercase tracking-[0.45em] text-foreground/60">
-          <span className="divider-line" />Furniture Collection
+          <span className="divider-line" />
+          Furniture Collection
         </p>
         <h2 className="serif text-4xl md:text-6xl font-light leading-[1.05]">
           A wide variety of <em className="italic">textures, forms and tones.</em>
         </h2>
         <p className="text-foreground/75 leading-relaxed font-light text-base md:text-lg max-w-lg">
-          From high-quality suppliers across Europe and Asia, our collection is curated
-          for the balance between premium craftsmanship and considered value.
+          From high-quality suppliers across Europe and Asia, our collection is curated for the balance between premium
+          craftsmanship and considered value.
         </p>
         <div className="grid grid-cols-3 gap-6 pt-6 border-t border-border">
           {[
-            { n: "120+", l: "Suppliers" },
-            { n: "40+", l: "Collections" },
+            { n: "∞", l: "Suppliers" },
+            { n: "∞", l: "Collections" },
             { n: "∞", l: "Possibilities" },
           ].map((s) => (
             <div key={s.l}>
