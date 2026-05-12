@@ -198,9 +198,6 @@ const ItemDetail = () => {
               <p style={goldLabel}>Finish</p>
               <p style={valueStyle}>{item.specs.finish}</p>
 
-              <p style={goldLabel}>Weight</p>
-              <p style={valueStyle}>{item.specs.weight}</p>
-
               <p style={goldLabel}>Availability</p>
               <p style={{ ...valueStyle, marginBottom: 0 }}>{item.specs.availability}</p>
             </div>
