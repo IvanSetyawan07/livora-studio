@@ -107,33 +107,6 @@ export const Navbar = () => {
         </ul>
 
         <div className="flex items-center gap-3 md:gap-5">
-          <a
-            href="/#contact"
-            onClick={handleHashClick("contact")}
-            className={`hidden md:inline-flex items-center text-xs uppercase tracking-[0.2em] px-5 py-2.5 border transition-all duration-500 ${
-              transparentTop
-                ? "border-white/50 text-white hover:bg-white hover:text-foreground"
-                : "border-foreground/30 text-foreground hover:bg-foreground hover:text-background"
-            }`}
-          >
-            Start Project
-          </a>
-
-          <button
-            aria-label="Open cart"
-            onClick={() => cart.setOpen(true)}
-            className={`relative p-2 transition-colors duration-500 ${
-              transparentTop ? "text-white" : "text-foreground"
-            }`}
-          >
-            <ShoppingBag size={20} strokeWidth={1.5} />
-            {cart.count > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-foreground text-background text-[10px] font-medium flex items-center justify-center">
-                {cart.count}
-              </span>
-            )}
-          </button>
-
           <button
             aria-label="Toggle menu"
             onClick={() => setOpen((v) => !v)}
