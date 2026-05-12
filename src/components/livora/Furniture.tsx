@@ -1,9 +1,14 @@
+import { Link } from "react-router-dom";
 import furnitureImg from "@/assets/furniture-collection.jpg";
 
 export const Furniture = () => (
   <section id="furniture" className="relative py-28 md:py-40 bg-secondary/40">
     <div className="container-livora grid md:grid-cols-12 gap-10 md:gap-16 items-center">
-      <div className="reveal md:col-span-6 hover-zoom">
+      <Link
+        to="/furniture"
+        aria-label="Explore furniture collection"
+        className="reveal md:col-span-6 hover-zoom block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
         <img
           src={furnitureImg}
           alt="Curated furniture collection"
@@ -12,7 +17,7 @@ export const Furniture = () => (
           loading="lazy"
           className="w-full aspect-[4/3] object-cover"
         />
-      </div>
+      </Link>
       <div className="reveal md:col-span-6 space-y-6">
         <p className="text-[10px] uppercase tracking-[0.45em] text-foreground/60">
           <span className="divider-line" />Furniture Collection
