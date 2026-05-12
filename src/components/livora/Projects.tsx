@@ -7,7 +7,9 @@ const categories = ["All", "Hotel", "Residential", "Office"];
 
 export const Projects = () => {
   const [filter, setFilter] = useState("All");
-  const filtered = projects.filter((p) => filter === "All" || p.category === filter);
+  const filtered = projects
+    .filter((p) => filter === "All" || p.category === filter)
+    .slice(0, 3);
 
   return (
     <section id="projects" className="py-28 md:py-40 container-livora">
