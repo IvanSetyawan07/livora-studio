@@ -122,13 +122,7 @@ const AboutPage = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const dragState = useRef({ down: false, startX: 0, startScroll: 0, moved: false });
 
-  const scrollByCard = (dir: 1 | -1) => {
-    const el = trackRef.current;
-    if (!el) return;
-    const card = el.querySelector<HTMLElement>("[data-card]");
-    const step = card ? card.offsetWidth + 24 : el.clientWidth * 0.8;
-    el.scrollBy({ left: dir * step, behavior: "smooth" });
-  };
+
 
   const onScroll = () => {
     const el = trackRef.current;
