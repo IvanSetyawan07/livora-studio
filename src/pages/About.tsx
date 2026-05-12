@@ -13,8 +13,60 @@ const missions = [
   { t: "Create", d: "long-lasting and meaningful impact in every space." },
 ];
 
+const teamMembers = [
+  { name: "Andreas Wijaya", role: "Founder & Chief Executive Officer", img: "men/11" },
+  { name: "Putri Anggraini", role: "Chief Operating Officer", img: "women/12" },
+  { name: "Rizky Hartono", role: "Chief Financial Officer", img: "men/13" },
+  { name: "Sarah Lestari", role: "Chief of Staff", img: "women/14" },
+  { name: "Dimas Pratama", role: "Director of Agent Success", img: "men/15" },
+  { name: "Bayu Nugroho", role: "Chief Technology Officer", img: "men/16" },
+  { name: "Maya Setiawan", role: "Director of Growth", img: "women/17" },
+  { name: "Reza Saputra", role: "Regional Manager", img: "men/18" },
+  { name: "Intan Permata", role: "Property Data Manager", img: "women/19" },
+  { name: "Clara Halim", role: "Executive Assistant", img: "women/20" },
+  { name: "Yoga Prasetyo", role: "Agent Support", img: "men/3" },
+  { name: "Nadia Kusuma", role: "Accounting Assistant", img: "women/5" },
+];
+
 const AboutPage = () => {
   useReveal();
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const dragState = useRef({ down: false, startX: 0, startScroll: 0, moved: false });
+
+  const scrollByCard = (dir: 1 | -1) => {
+    const el = trackRef.current;
+    if (!el) return;
+    const card = el.querySelector<HTMLElement>("[data-card]");
+    const step = card ? card.offsetWidth + 24 : el.clientWidth * 0.8;
+    el.scrollBy({ left: dir * step, behavior: "smooth" });
+  };
+
+  const onScroll = () => {
+    const el = trackRef.current;
+    if (!el) return;
+    const card = el.querySelector<HTMLElement>("[data-card]");
+    const step = card ? card.offsetWidth + 24 : 1;
+    setActiveIndex(Math.round(el.scrollLeft / step));
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    const el = trackRef.current;
+    if (!el) return;
+    dragState.current = { down: true, startX: e.clientX, startScroll: el.scrollLeft, moved: false };
+    el.setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    const el = trackRef.current;
+    if (!el || !dragState.current.down) return;
+    const dx = e.clientX - dragState.current.startX;
+    if (Math.abs(dx) > 4) dragState.current.moved = true;
+    el.scrollLeft = dragState.current.startScroll - dx;
+  };
+  const onPointerUp = (e: React.PointerEvent) => {
+    dragState.current.down = false;
+    try { trackRef.current?.releasePointerCapture(e.pointerId); } catch {}
+  };
 
   useEffect(() => {
     document.title = "About — LIVORA";
