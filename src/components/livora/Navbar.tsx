@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { Menu, ShoppingBag, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useCart } from "@/context/CartContext";
 
 type NavLink = {
   label: string;
