@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import aboutImg from "@/assets/about-livora.jpg";
 import { Navbar } from "@/components/livora/Navbar";
