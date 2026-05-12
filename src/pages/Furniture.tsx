@@ -1,70 +1,90 @@
 import { useMemo, useState } from "react";
-import { Armchair, Sofa, BedDouble, Table2, Library, Sparkles, Plus, Minus, Trash2, ShoppingBag, X } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Armchair, Sofa as SofaIcon, Table2, Circle, ArrowLeft, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  categories,
-  formatRupiah,
-  furnitureProducts,
-  type FurnitureCategory,
-  type FurnitureProduct,
-} from "@/data/furniture";
+import { ItemIllustration } from "@/components/livora/ItemIllustration";
+import { items as allItems, type Item } from "@/data/items";
 import { useCart } from "@/context/CartContext";
+import { formatRupiah } from "@/data/furniture";
 
-const iconFor = (cat: FurnitureCategory) => {
-  switch (cat) {
-    case "Chair":
-      return Armchair;
-    case "Sofa":
-      return Sofa;
-    case "Bed":
-      return BedDouble;
-    case "Table":
-      return Table2;
-    case "Accessories":
-      return Library;
-    case "Custom":
-      return Sparkles;
-  }
+/* -------------------- Themes (only items that have illustrations) -------------------- */
+
+type ThemeKey = "Chair" | "Sofa" | "Table" | "Ottoman";
+
+const themeMap: Record<ThemeKey, { icon: typeof Armchair; slugs: string[]; tagline: string }> = {
+  Chair: {
+    icon: Armchair,
+    tagline: "Sculpted seating for quiet moments.",
+    slugs: ["accent-chair", "cozy-chair", "leather-lounge-chair", "olive-swivel-chair"],
+  },
+  Sofa: {
+    icon: SofaIcon,
+    tagline: "Generous silhouettes built for slow living.",
+    slugs: [
+      "lounge-sofa",
+      "sofa-three-bench",
+      "modular-sofa",
+      "boucle-sofa",
+      "boucle-lounge-sofa",
+      "freyja-sofa",
+      "dwarf-sofa",
+    ],
+  },
+  Table: {
+    icon: Table2,
+    tagline: "Considered surfaces in stone, brass, and wood.",
+    slugs: ["side-table", "coffee-table", "marble-coffee-table", "brass-drum-coffee-table"],
+  },
+  Ottoman: {
+    icon: Circle,
+    tagline: "Soft, sculptural accents.",
+    slugs: ["curved-ottoman"],
+  },
 };
 
-const ProductCard = ({
-  product,
+const itemBySlug = (slug: string): Item | undefined =>
+  allItems.find((i) => i.slug === slug);
+
+/* -------------------- Theme card -------------------- */
+
+const ThemeCard = ({
+  themeKey,
   onOpen,
 }: {
-  product: FurnitureProduct;
-  onOpen: (p: FurnitureProduct) => void;
+  themeKey: ThemeKey;
+  onOpen: (k: ThemeKey) => void;
 }) => {
-  const Icon = iconFor(product.category);
+  const { icon: Icon, tagline, slugs } = themeMap[themeKey];
+  const previewSlug = slugs[0];
   return (
     <button
-      onClick={() => onOpen(product)}
+      onClick={() => onOpen(themeKey)}
       className="group text-left bg-card border border-border hover:border-foreground/40 transition-all duration-500 hover:-translate-y-1 hover:shadow-[var(--shadow-elegant)] flex flex-col"
     >
       <div className="relative aspect-[4/3] bg-secondary/60 overflow-hidden flex items-center justify-center">
-        <Icon
-          className="w-20 h-20 text-foreground/30 transition-transform duration-700 group-hover:scale-110"
-          strokeWidth={1}
-        />
+        {previewSlug ? (
+          <div className="w-1/2 h-1/2 transition-transform duration-700 group-hover:scale-110">
+            <ItemIllustration name={itemBySlug(previewSlug)?.name ?? ""} size={240} />
+          </div>
+        ) : (
+          <Icon className="w-20 h-20 text-foreground/30" strokeWidth={1} />
+        )}
         <span className="absolute top-4 left-4 text-[10px] uppercase tracking-[0.3em] text-foreground/60 bg-background/80 px-2.5 py-1">
-          {product.category}
+          Theme
         </span>
       </div>
       <div className="p-6 flex flex-col gap-3 flex-1">
-        <h3 className="serif text-2xl font-light leading-tight">{product.name}</h3>
-        <p className="text-sm text-foreground/65 font-light">{product.short}</p>
+        <h3 className="serif text-2xl font-light leading-tight">{themeKey}</h3>
+        <p className="text-sm text-foreground/65 font-light">{tagline}</p>
         <div className="mt-auto pt-4 flex items-end justify-between border-t border-border/60">
-          <p className="serif text-lg font-light">
-            {product.isCustom ? "By Inquiry" : formatRupiah(product.price)}
+          <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/60">
+            {slugs.length} {slugs.length === 1 ? "piece" : "pieces"}
           </p>
           <span className="text-[10px] uppercase tracking-[0.3em] text-foreground/60 group-hover:text-foreground transition-colors">
-            {product.isCustom ? "Request →" : "View →"}
+            Explore →
           </span>
         </div>
       </div>
@@ -72,136 +92,45 @@ const ProductCard = ({
   );
 };
 
-const ProductModal = ({
-  product,
-  onClose,
-  onCustomRequest,
-}: {
-  product: FurnitureProduct | null;
-  onClose: () => void;
-  onCustomRequest: () => void;
-}) => {
-  const cart = useCart();
-  if (!product) return null;
-  const Icon = iconFor(product.category);
+/* -------------------- Item card -------------------- */
 
-  const handleAdd = () => {
-    cart.add({ id: product.id, name: product.name, price: product.price });
-    toast.success("Item added to cart!", { description: product.name });
-    onClose();
-  };
+const ItemCard = ({ item }: { item: Item }) => (
+  <Link
+    to={`/items/${item.slug}`}
+    className="group text-left bg-card border border-border hover:border-foreground/40 transition-all duration-500 hover:-translate-y-1 hover:shadow-[var(--shadow-elegant)] flex flex-col"
+  >
+    <div className="relative aspect-[4/3] bg-secondary/60 overflow-hidden flex items-center justify-center">
+      <div className="w-2/3 h-2/3 transition-transform duration-700 group-hover:scale-110">
+        <ItemIllustration name={item.name} size={260} />
+      </div>
+      <span className="absolute top-4 left-4 text-[10px] uppercase tracking-[0.3em] text-foreground/60 bg-background/80 px-2.5 py-1">
+        {item.category}
+      </span>
+    </div>
+    <div className="p-6 flex flex-col gap-3 flex-1">
+      <h3 className="serif text-2xl font-light leading-tight">{item.name}</h3>
+      <p className="text-sm text-foreground/65 font-light">{item.specs.material}</p>
+      <div className="mt-auto pt-4 flex items-end justify-between border-t border-border/60">
+        <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/60">{item.code}</p>
+        <span className="text-[10px] uppercase tracking-[0.3em] text-foreground/60 group-hover:text-foreground transition-colors">
+          View →
+        </span>
+      </div>
+    </div>
+  </Link>
+);
 
-  return (
-    <Dialog open={!!product} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-3xl p-0 overflow-hidden">
-        <div className="grid md:grid-cols-2">
-          <div className="relative aspect-square bg-secondary/60 flex items-center justify-center">
-            <Icon className="w-32 h-32 text-foreground/30" strokeWidth={1} />
-            <span className="absolute top-5 left-5 text-[10px] uppercase tracking-[0.3em] text-foreground/60 bg-background/80 px-2.5 py-1">
-              {product.category}
-            </span>
-          </div>
-          <div className="p-8 md:p-10 flex flex-col gap-5">
-            <DialogHeader>
-              <DialogTitle className="serif text-3xl font-light leading-tight text-left">
-                {product.name}
-              </DialogTitle>
-            </DialogHeader>
-            <p className="text-foreground/70 font-light leading-relaxed text-sm">
-              {product.description}
-            </p>
-            <div className="space-y-3 text-xs border-t border-b border-border py-5">
-              <div className="grid grid-cols-[110px_1fr] gap-2">
-                <span className="uppercase tracking-[0.25em] text-foreground/60">Dimensions</span>
-                <span className="text-foreground/85">{product.dimensions}</span>
-              </div>
-              <div className="grid grid-cols-[110px_1fr] gap-2">
-                <span className="uppercase tracking-[0.25em] text-foreground/60">Material</span>
-                <span className="text-foreground/85">{product.material}</span>
-              </div>
-              <div className="grid grid-cols-[110px_1fr] gap-2">
-                <span className="uppercase tracking-[0.25em] text-foreground/60">Price</span>
-                <span className="serif text-lg">
-                  {product.isCustom ? "By Inquiry" : formatRupiah(product.price)}
-                </span>
-              </div>
-            </div>
-            {product.isCustom ? (
-              <Button
-                onClick={() => {
-                  onClose();
-                  onCustomRequest();
-                }}
-                className="rounded-none h-12 text-xs uppercase tracking-[0.25em]"
-              >
-                Request Custom
-              </Button>
-            ) : (
-              <Button
-                onClick={handleAdd}
-                className="rounded-none h-12 text-xs uppercase tracking-[0.25em]"
-              >
-                Add to Cart
-              </Button>
-            )}
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-const CustomInquiryModal = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast.success("Inquiry sent", { description: "We'll get back to you within 24 hours." });
-    onClose();
-  };
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg p-0 overflow-hidden">
-        <div className="p-8 md:p-10">
-          <DialogHeader>
-            <DialogTitle className="serif text-3xl font-light text-left">
-              Request a Custom Piece
-            </DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-foreground/65 font-light mt-2">
-            Share your brief — dimensions, materials, references — and we'll respond with a proposal.
-          </p>
-          <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-            <div>
-              <Label className="text-[10px] uppercase tracking-[0.3em] text-foreground/60">Name</Label>
-              <Input required className="rounded-none mt-2 h-11" />
-            </div>
-            <div>
-              <Label className="text-[10px] uppercase tracking-[0.3em] text-foreground/60">Email</Label>
-              <Input required type="email" className="rounded-none mt-2 h-11" />
-            </div>
-            <div>
-              <Label className="text-[10px] uppercase tracking-[0.3em] text-foreground/60">Brief</Label>
-              <Textarea required rows={4} className="rounded-none mt-2" />
-            </div>
-            <Button type="submit" className="w-full rounded-none h-12 text-xs uppercase tracking-[0.25em]">
-              Send Inquiry
-            </Button>
-          </form>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
+/* -------------------- Page -------------------- */
 
 const Furniture = () => {
-  const [active, setActive] = useState<(typeof categories)[number]>("All");
-  const [selected, setSelected] = useState<FurnitureProduct | null>(null);
-  const [customOpen, setCustomOpen] = useState(false);
+  const [activeTheme, setActiveTheme] = useState<ThemeKey | null>(null);
 
-  const filtered = useMemo(
-    () =>
-      active === "All" ? furnitureProducts : furnitureProducts.filter((p) => p.category === active),
-    [active]
-  );
+  const themedItems = useMemo(() => {
+    if (!activeTheme) return [];
+    return themeMap[activeTheme].slugs
+      .map(itemBySlug)
+      .filter((i): i is Item => Boolean(i));
+  }, [activeTheme]);
 
   return (
     <main className="min-h-screen bg-background">
@@ -214,59 +143,56 @@ const Furniture = () => {
             Livora | Furniture
           </p>
           <h1 className="serif text-5xl md:text-7xl font-light leading-[1.05] text-balance">
-            Our Furniture <em className="italic">Collection</em>
+            {activeTheme ? (
+              <>
+                <em className="italic">{activeTheme}</em> Collection
+              </>
+            ) : (
+              <>
+                Our Furniture <em className="italic">Collection</em>
+              </>
+            )}
           </h1>
           <p className="mt-6 text-foreground/70 font-light max-w-xl mx-auto">
-            Handcrafted pieces curated for considered living — from quiet seating to statement tables.
+            {activeTheme
+              ? themeMap[activeTheme].tagline
+              : "Browse by theme — choose a category to explore the curated pieces inside."}
           </p>
         </div>
       </section>
 
-      {/* Filter Bar */}
-      <section className="sticky top-[72px] z-40 bg-background/90 backdrop-blur-md border-b border-border">
-        <div className="container-livora py-5 flex flex-wrap items-center justify-center gap-2 md:gap-3">
-          {categories.map((c) => {
-            const isActive = c === active;
-            return (
-              <button
-                key={c}
-                onClick={() => setActive(c)}
-                className={`text-[10px] md:text-xs uppercase tracking-[0.25em] px-4 py-2.5 border transition-all duration-300 ${
-                  isActive
-                    ? "bg-foreground text-background border-foreground"
-                    : "border-border text-foreground/70 hover:border-foreground hover:text-foreground"
-                }`}
-              >
-                {c}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Grid */}
+      {/* Content */}
       <section className="py-16 md:py-24">
         <div className="container-livora">
-          <div
-            key={active}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 animate-fade-in"
-          >
-            {filtered.map((p) => (
-              <ProductCard key={p.id} product={p} onOpen={setSelected} />
-            ))}
-          </div>
+          {!activeTheme ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 animate-fade-in">
+              {(Object.keys(themeMap) as ThemeKey[]).map((k) => (
+                <ThemeCard key={k} themeKey={k} onOpen={setActiveTheme} />
+              ))}
+            </div>
+          ) : (
+            <div className="animate-fade-in">
+              <button
+                onClick={() => setActiveTheme(null)}
+                className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-foreground/65 hover:text-foreground transition-colors mb-10"
+              >
+                <ArrowLeft size={14} /> Back to Themes
+              </button>
+              <div
+                key={activeTheme}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"
+              >
+                {themedItems.map((item) => (
+                  <ItemCard key={item.slug} item={item} />
+                ))}
+              </div>
+            </div>
+          )}
           <p className="text-center text-[10px] uppercase tracking-[0.35em] text-foreground/55 mt-20">
             Lember berkualitas <span className="mx-2">·</span> Lumber yg dibuat dengan baik
           </p>
         </div>
       </section>
-
-      <ProductModal
-        product={selected}
-        onClose={() => setSelected(null)}
-        onCustomRequest={() => setCustomOpen(true)}
-      />
-      <CustomInquiryModal open={customOpen} onClose={() => setCustomOpen(false)} />
 
       <Footer />
     </main>
