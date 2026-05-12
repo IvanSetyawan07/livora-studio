@@ -184,53 +184,78 @@ const AboutPage = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                { name: "Andreas Wijaya", role: "Founder & Chief Executive Officer", img: "men/11" },
-                { name: "Putri Anggraini", role: "Chief Operating Officer", img: "women/12" },
-                { name: "Rizky Hartono", role: "Chief Financial Officer", img: "men/13" },
-                { name: "Sarah Lestari", role: "Chief of Staff", img: "women/14" },
-                { name: "Dimas Pratama", role: "Director of Agent Success", img: "men/15" },
-                { name: "Bayu Nugroho", role: "Chief Technology Officer", img: "men/16" },
-                { name: "Maya Setiawan", role: "Director of Growth", img: "women/17" },
-                { name: "Reza Saputra", role: "Regional Manager", img: "men/18" },
-                { name: "Intan Permata", role: "Property Data Manager", img: "women/19" },
-                { name: "Clara Halim", role: "Executive Assistant", img: "women/20" },
-                { name: "Yoga Prasetyo", role: "Agent Support", img: "men/3" },
-                { name: "Nadia Kusuma", role: "Accounting Assistant", img: "women/5" },
-              ].map((m, i) => (
-                <div
-                  key={m.name}
-                  className="reveal group cursor-pointer transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-lg rounded-xl p-3"
-                  style={{ transitionDelay: `${i * 40}ms` }}
-                >
-                  <div className="overflow-hidden rounded-xl aspect-[3/4] mb-4 bg-muted">
-                    <img
-                      src={`https://randomuser.me/api/portraits/${m.img}.jpg`}
-                      alt={m.name}
-                      loading="lazy"
-                      className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                    />
-                  </div>
-                  <h4 className="font-semibold text-[16px] text-foreground">{m.name}</h4>
-                  <p className="text-[14px] mt-1" style={{ color: "#6B7280" }}>{m.role}</p>
-                </div>
-              ))}
-            </div>
+            <div className="relative">
+              <div
+                ref={trackRef}
+                onScroll={onScroll}
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerCancel={onPointerUp}
+                className="flex gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-6 -mx-6 md:-mx-10 px-6 md:px-10 cursor-grab active:cursor-grabbing select-none"
+                style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+              >
+                {teamMembers.map((m, i) => {
+                  const isActive = i === activeIndex;
+                  return (
+                    <div
+                      key={m.name}
+                      data-card
+                      className={`group snap-start shrink-0 w-[70%] sm:w-[45%] md:w-[32%] lg:w-[23%] transition-all duration-500 ease-out ${
+                        isActive ? "scale-[1.03]" : "scale-100 opacity-80"
+                      }`}
+                    >
+                      <div className="overflow-hidden rounded-xl aspect-[3/4] mb-4 bg-muted shadow-sm group-hover:shadow-xl transition-shadow duration-500">
+                        <img
+                          src={`https://randomuser.me/api/portraits/${m.img}.jpg`}
+                          alt={m.name}
+                          loading="lazy"
+                          draggable={false}
+                          className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                        />
+                      </div>
+                      <h4 className="font-semibold text-[16px] text-foreground">{m.name}</h4>
+                      <p className="text-[14px] mt-1" style={{ color: "#6B7280" }}>{m.role}</p>
+                    </div>
+                  );
+                })}
+              </div>
 
-            <div className="mt-14 flex flex-wrap gap-4 justify-center">
-              <a
-                href="#"
-                className="inline-flex items-center justify-center px-6 py-3 text-[11px] uppercase tracking-[0.3em] border border-foreground/30 text-foreground hover:bg-foreground hover:text-background transition-colors rounded-md"
-              >
-                Learn More About Our Agents
-              </a>
-              <a
-                href="#contact"
-                className="inline-flex items-center justify-center px-6 py-3 text-[11px] uppercase tracking-[0.3em] bg-foreground text-background hover:bg-foreground/90 transition-colors rounded-md"
-              >
-                Join Our Team
-              </a>
+              {/* Controls */}
+              <div className="flex items-center justify-between mt-6">
+                <div className="flex gap-2">
+                  {teamMembers.map((_, i) => (
+                    <button
+                      key={i}
+                      aria-label={`Go to slide ${i + 1}`}
+                      onClick={() => {
+                        const el = trackRef.current;
+                        const card = el?.querySelector<HTMLElement>("[data-card]");
+                        if (el && card) el.scrollTo({ left: i * (card.offsetWidth + 24), behavior: "smooth" });
+                      }}
+                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                        i === activeIndex ? "w-8 bg-foreground" : "w-3 bg-foreground/25 hover:bg-foreground/50"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    aria-label="Previous"
+                    onClick={() => scrollByCard(-1)}
+                    className="h-11 w-11 rounded-full border border-foreground/20 flex items-center justify-center hover:bg-foreground hover:text-background hover:border-foreground transition-all duration-300 hover:-translate-x-0.5"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <button
+                    aria-label="Next"
+                    onClick={() => scrollByCard(1)}
+                    className="h-11 w-11 rounded-full border border-foreground/20 flex items-center justify-center hover:bg-foreground hover:text-background hover:border-foreground transition-all duration-300 hover:translate-x-0.5"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
             </div>
           </section>
 
