@@ -64,7 +64,7 @@ export const projects: Project[] = [
   },
   {
     slug: "am-house",
-    name: "AM House",
+    name: "Project Pantai Indah Kapuk",
     category: "Residential",
     location: "PIK 2, Jakarta",
     year: "2026",
