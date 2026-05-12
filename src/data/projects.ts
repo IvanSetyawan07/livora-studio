@@ -64,7 +64,7 @@ export const projects: Project[] = [
   },
   {
     slug: "am-house",
-    name: "Project House PIK 2",
+    name: "Project House PIK II",
     category: "Residential",
     location: "PIK 2, Jakarta",
     year: "2026",
