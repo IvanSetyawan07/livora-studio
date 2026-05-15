@@ -10,6 +10,10 @@ import amFoyer from "@/assets/am-house/am-house-foyer.png";
 import cihampelas from "@/assets/cihampelas/house-cihampelas.png";
 import cihampelasLiving from "@/assets/cihampelas/living-room.png";
 import cihampelasKitchen from "@/assets/cihampelas/kitchen.png";
+import tanLeatherSwivelChairImg from "@/assets/am-house/living-room/tan-leather-swivel-chair.png";
+import pleatedDiningChairImg from "@/assets/am-house/living-room/pleated-dining-chair.png";
+import sageModularSectionalSofaImg from "@/assets/am-house/living-room/sage-modular-sectional-sofa.png";
+import nestingCoffeeTablesImg from "@/assets/am-house/living-room/nesting-coffee-tables.png";
 
 export interface ProjectSlide {
   title: string;
