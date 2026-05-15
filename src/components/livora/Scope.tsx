@@ -98,7 +98,7 @@ export const Scope = () => {
                 {/* Expanding image background */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
                   <div
-                    className="absolute right-0 top-0 h-full w-[70%] will-change-[clip-path,opacity]"
+                    className={`absolute right-0 top-0 h-full will-change-[clip-path,opacity] ${idx === 3 ? "w-[78%]" : "w-[70%]"}`}
                     style={{
                       clipPath: isActive ? "inset(0 0 0 0)" : "inset(0 0 0 100%)",
                       opacity: isActive ? 1 : 0,
@@ -126,7 +126,7 @@ export const Scope = () => {
                 <div
                   className="relative grid grid-cols-12 items-center gap-4 md:gap-8 px-2 md:px-4"
                   style={{
-                    minHeight: isActive ? "260px" : "120px",
+                    minHeight: isActive ? (idx === 3 ? "520px" : "260px") : "120px",
                     transition: "min-height 0.7s cubic-bezier(0.22, 1, 0.36, 1)",
                   }}
                 >
