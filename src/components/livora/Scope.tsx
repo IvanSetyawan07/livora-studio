@@ -111,7 +111,7 @@ export const Scope = () => {
                       className="h-full w-full will-change-transform"
                       style={{
                         objectFit: "cover",
-                        objectPosition: idx === 3 ? "center bottom" : "center",
+                        objectPosition: idx === 3 ? "center top" : "center",
                         transform: isActive ? "scale(1)" : "scale(1.08)",
                         transition: "transform 1400ms cubic-bezier(0.22, 1, 0.36, 1)",
                       }}
