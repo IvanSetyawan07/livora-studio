@@ -17,6 +17,9 @@ import dwarfSofaImg from "../../assets/cihampelas/dwarf-sofa.png";
 import modularSectionalSofaImg from "../../assets/am-house/living-room/modular-sectional-sofa.png";
 import woodenLoungeChairImg from "../../assets/am-house/living-room/wooden-lounge-chair.png";
 import nestingCoffeeTablesImg from "../../assets/am-house/living-room/nesting-coffee-tables.png";
+import tanLeatherSwivelChairImg from "../../assets/am-house/living-room/tan-leather-swivel-chair.png";
+import pleatedDiningChairImg from "../../assets/am-house/living-room/pleated-dining-chair.png";
+import sageModularSectionalSofaImg from "../../assets/am-house/living-room/sage-modular-sectional-sofa.png";
 
 interface Props {
   name: string;
@@ -64,6 +67,12 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
       return <img src={woodenLoungeChairImg} alt="Wooden Lounge Chair" style={imgStyle} />;
     case "Nesting Coffee Tables":
       return <img src={nestingCoffeeTablesImg} alt="Nesting Coffee Tables" style={imgStyle} />;
+    case "Tan Leather Swivel Wingback Chair":
+      return <img src={tanLeatherSwivelChairImg} alt="Tan Leather Swivel Wingback Chair" style={imgStyle} />;
+    case "Pleated Dining Chair":
+      return <img src={pleatedDiningChairImg} alt="Pleated Dining Chair" style={imgStyle} />;
+    case "Sage Modular Sectional Sofa":
+      return <img src={sageModularSectionalSofaImg} alt="Sage Modular Sectional Sofa" style={imgStyle} />;
     case "Boucle Sofa":
       return <img src={boucleSofaImg} alt="Boucle Sofa" style={imgStyle} />;
     case "Coffee Table":

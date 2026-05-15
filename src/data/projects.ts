@@ -82,7 +82,7 @@ export const projects: Project[] = [
       {
         title: "Project House PIK II — Living Room & Dining Room ",
         image: amLiving,
-        items: ["Modular Sectional Sofa", "Wingback Lounge Chair", "Swivel Tub Chair", "Round Coffee Table"],
+        items: ["Sage Modular Sectional Sofa", "Tan Leather Swivel Wingback Chair", "Pleated Dining Chair", "Nesting Coffee Tables"],
       },
       {
         title: "Project House PIK II — Working Room",
