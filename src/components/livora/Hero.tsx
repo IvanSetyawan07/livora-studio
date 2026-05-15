@@ -19,7 +19,7 @@ export const Hero = () => {
           src={heroImg}
           alt="Modern quiet luxury interior by Livora"
           className="h-[120%] w-full object-cover ken-burns"
-          style={{ objectPosition: "center 75%" }}
+          style={{ objectPosition: "center bottom" }}
           width={1920}
           height={1280}
         />
