@@ -75,22 +75,22 @@ export const projects: Project[] = [
       "A private family residence designed around natural light and intimate gathering. Layered neutrals, sculpted millwork, and curated furniture pieces give the home a timeless calm — equal parts editorial and lived-in.",
     slides: [
       {
-        title: "AM House — Living Room",
+        title: "Project House PIK II — Living Room",
         image: residential,
         items: ["Modular Sectional Sofa", "Accent Chair", "Side Table", "Wooden Lounge Chair", "Nesting Coffee Tables"],
       },
       {
-        title: "AM House — Living Room & Dining Room ",
+        title: "Project House PIK II — Living Room & Dining Room ",
         image: amLiving,
         items: ["Modular Sectional Sofa", "Wingback Lounge Chair", "Swivel Tub Chair", "Round Coffee Table"],
       },
       {
-        title: "AM House — Working Room",
+        title: "Project House PIK II — Working Room",
         image: amOffice,
         items: ["Executive Desk", "Dining Table", "Upholstered Dining Chair", "Sculptural Pendant Light"],
       },
       {
-        title: "AM House — Foyer",
+        title: "Project House PIK II — Foyer",
         image: amFoyer,
         items: ["Fluted Accent Chair", "Pedestal Side Table", "Marble Plinth", "Round Area Rug"],
       },
