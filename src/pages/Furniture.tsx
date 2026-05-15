@@ -18,25 +18,40 @@ const themeMap: Record<ThemeKey, { icon: typeof Armchair; slugs: string[]; tagli
   Chair: {
     icon: Armchair,
     tagline: "Sculpted seating for quiet moments.",
-    slugs: ["accent-chair", "cozy-chair", "leather-lounge-chair", "olive-swivel-chair"],
+    slugs: [
+      "accent-chair",
+      "cozy-chair",
+      "leather-lounge-chair",
+      "olive-swivel-chair",
+      "wooden-lounge-chair",
+      "tan-leather-swivel-wingback-chair",
+      "pleated-dining-chair",
+    ],
   },
   Sofa: {
     icon: SofaIcon,
     tagline: "Generous silhouettes built for slow living.",
     slugs: [
       "lounge-sofa",
-      "sofa-three-bench",
       "modular-sofa",
       "boucle-sofa",
       "boucle-lounge-sofa",
       "freyja-sofa",
       "dwarf-sofa",
+      "modular-sectional-sofa",
+      "sage-modular-sectional-sofa",
     ],
   },
   Table: {
     icon: Table2,
     tagline: "Considered surfaces in stone, brass, and wood.",
-    slugs: ["side-table", "coffee-table", "marble-coffee-table", "brass-drum-coffee-table"],
+    slugs: [
+      "side-table",
+      "coffee-table",
+      "marble-coffee-table",
+      "brass-drum-coffee-table",
+      "nesting-coffee-tables",
+    ],
   },
   Ottoman: {
     icon: Circle,
