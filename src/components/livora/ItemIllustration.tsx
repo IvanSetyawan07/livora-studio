@@ -14,7 +14,9 @@ import suiteGreenChairImg from "../../assets/harmony/suite-green-chair.png";
 import suiteBrassTableImg from "../../assets/harmony/suite-brass-table.png";
 import freyjaSofaImg from "../../assets/cihampelas/freyja-sofa.png";
 import dwarfSofaImg from "../../assets/cihampelas/dwarf-sofa.png";
-import modularSectionalSofaImg from "../../assets/am-house/living-room/ChatGPT Image May 15, 2026, 02_21_29 PM.png";
+import modularSectionalSofaImg from "../../assets/am-house/living-room/modular-sectional-sofa.png";
+import woodenLoungeChairImg from "../../assets/am-house/living-room/wooden-lounge-chair.png";
+import nestingCoffeeTablesImg from "../../assets/am-house/living-room/nesting-coffee-tables.png";
 
 interface Props {
   name: string;
@@ -58,6 +60,10 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
       return <img src={modularSofaImg} alt="Modular Sofa" style={imgStyle} />;
     case "Modular Sectional Sofa":
       return <img src={modularSectionalSofaImg} alt="Modular Sectional Sofa" style={imgStyle} />;
+    case "Wooden Lounge Chair":
+      return <img src={woodenLoungeChairImg} alt="Wooden Lounge Chair" style={imgStyle} />;
+    case "Nesting Coffee Tables":
+      return <img src={nestingCoffeeTablesImg} alt="Nesting Coffee Tables" style={imgStyle} />;
     case "Boucle Sofa":
       return <img src={boucleSofaImg} alt="Boucle Sofa" style={imgStyle} />;
     case "Coffee Table":
