@@ -17,6 +17,9 @@ import dwarfSofaImg from "../../assets/cihampelas/dwarf-sofa.png";
 import modularSectionalSofaImg from "../../assets/am-house/living-room/modular-sectional-sofa.png";
 import woodenLoungeChairImg from "../../assets/am-house/living-room/wooden-lounge-chair.png";
 import nestingCoffeeTablesImg from "../../assets/am-house/living-room/nesting-coffee-tables.png";
+import tanLeatherSwivelChairImg from "../../assets/am-house/living-room/tan-leather-swivel-chair.png";
+import pleatedDiningChairImg from "../../assets/am-house/living-room/pleated-dining-chair.png";
+import sageModularSectionalSofaImg from "../../assets/am-house/living-room/sage-modular-sectional-sofa.png";
 
 interface Props {
   name: string;
