@@ -67,6 +67,12 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
       return <img src={woodenLoungeChairImg} alt="Wooden Lounge Chair" style={imgStyle} />;
     case "Nesting Coffee Tables":
       return <img src={nestingCoffeeTablesImg} alt="Nesting Coffee Tables" style={imgStyle} />;
+    case "Tan Leather Swivel Wingback Chair":
+      return <img src={tanLeatherSwivelChairImg} alt="Tan Leather Swivel Wingback Chair" style={imgStyle} />;
+    case "Pleated Dining Chair":
+      return <img src={pleatedDiningChairImg} alt="Pleated Dining Chair" style={imgStyle} />;
+    case "Sage Modular Sectional Sofa":
+      return <img src={sageModularSectionalSofaImg} alt="Sage Modular Sectional Sofa" style={imgStyle} />;
     case "Boucle Sofa":
       return <img src={boucleSofaImg} alt="Boucle Sofa" style={imgStyle} />;
     case "Coffee Table":
