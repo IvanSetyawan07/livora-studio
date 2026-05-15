@@ -67,6 +67,22 @@ export const items: Item[] = [
     textures: ["Cozy Wool", "Natural Oak", "Smooth Bouclé"],
   },
   {
+    slug: "modular-sectional-sofa",
+    name: "Modular sectional sofa",
+    code: "TB25110",
+    category: "TABLE",
+    specs: {
+      dimensions: "45 × 45 × 55 cm (W × D × H)",
+      material: "Travertine Top, Solid Walnut Legs",
+      finish: "Honed Travertine / Matte Walnut",
+      weight: "14 kg",
+      availability: "Made to Order — 4–6 weeks lead time",
+    },
+    themes: ["Japandi", "Minimalist", "Warm Modern"],
+    categories: ["Table", "Living Room"],
+    textures: ["Honed Stone", "Smooth Travertine", "Matte Walnut"],
+  },
+  {
     slug: "side-table",
     name: "Side Table",
     code: "TB25110",

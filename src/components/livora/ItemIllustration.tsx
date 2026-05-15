@@ -14,7 +14,7 @@ import suiteGreenChairImg from "../../assets/harmony/suite-green-chair.png";
 import suiteBrassTableImg from "../../assets/harmony/suite-brass-table.png";
 import freyjaSofaImg from "../../assets/cihampelas/freyja-sofa.png";
 import dwarfSofaImg from "../../assets/cihampelas/dwarf-sofa.png";
-
+import modularSectionalSofaImg from "../../assets/am-house/living-room/ChatGPT Image May 15, 2026, 02_21_29 PM.png";
 
 interface Props {
   name: string;
@@ -56,6 +56,8 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
       return <img src={chairCotton} alt="Cozy Chair" style={imgStyle} />;
     case "Modular Sofa":
       return <img src={modularSofaImg} alt="Modular Sofa" style={imgStyle} />;
+    case "Modular Sectional Sofa":
+      return <img src={modularSectionalSofaImg} alt="Modular Sectional Sofa" style={imgStyle} />;
     case "Boucle Sofa":
       return <img src={boucleSofaImg} alt="Boucle Sofa" style={imgStyle} />;
     case "Coffee Table":
@@ -82,7 +84,7 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
           <path d="M50 94h20" />
         </svg>
       );
-    case "Sectional Sofa":
+    case "Modular Sectional Sofa":
       return (
         <svg {...common}>
           <path d="M22 58c0-5 3-8 8-8h28v32H22z" />

@@ -77,12 +77,12 @@ export const projects: Project[] = [
       {
         title: "AM House — Living Room",
         image: residential,
-        items: ["Lounge Sofa", "Accent Chair", "Side Table", "Floor Lamp", "Ottoman"],
+        items: ["Modular Sectional Sofa", "Accent Chair", "Side Table", "Floor Lamp", "Ottoman"],
       },
       {
         title: "AM House — Living Room & Dining Room ",
         image: amLiving,
-        items: ["Modular Sofa", "Wingback Lounge Chair", "Swivel Tub Chair", "Round Coffee Table"],
+        items: ["Modular Sectional Sofa", "Wingback Lounge Chair", "Swivel Tub Chair", "Round Coffee Table"],
       },
       {
         title: "AM House — Working Room",
