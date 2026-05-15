@@ -108,9 +108,10 @@ export const Scope = () => {
                     <img
                       src={s.img}
                       alt={s.title}
-                      className="h-full w-full object-cover will-change-transform"
+                      className="h-full w-full will-change-transform"
                       style={{
-                        objectPosition: idx === 3 ? "center top" : "center",
+                        objectFit: idx === 3 ? "contain" : "cover",
+                        objectPosition: idx === 3 ? "right center" : "center",
                         transform: isActive ? "scale(1)" : "scale(1.08)",
                         transition: "transform 1400ms cubic-bezier(0.22, 1, 0.36, 1)",
                       }}
