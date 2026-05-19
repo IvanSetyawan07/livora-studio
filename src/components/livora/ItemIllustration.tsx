@@ -20,6 +20,11 @@ import nestingCoffeeTablesImg from "../../assets/am-house/living-room/nesting-co
 import tanLeatherSwivelChairImg from "../../assets/am-house/living-room/tan-leather-swivel-chair.png";
 import pleatedDiningChairImg from "../../assets/am-house/living-room/pleated-dining-chair.png";
 import sageModularSectionalSofaImg from "../../assets/am-house/living-room/sage-modular-sectional-sofa.png";
+import cocoChair from "../../assets/am-house/working-room/chair2.png";
+import workChair from "../../assets/am-house/working-room/kursikerja.png";
+import cocoTable from "../../assets/am-house/working-room/table2.png";
+import whiteChair from "../../assets/am-house/working-room/white-chair.png";
+
 
 interface Props {
   name: string;
@@ -48,6 +53,14 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
   };
 
   switch (name) {
+    case "Coco Chair":
+      return <img src={cocoChair} alt="Coco Chair" style={imgStyle} />;
+    case "Coco Table":
+      return <img src={cocoTable} alt="Coco Table" style={imgStyle} />;
+    case "White Chair":
+      return <img src={whiteChair} alt="White Chair" style={imgStyle} />;
+    case "Work Chair":
+      return <img src={workChair} alt="Work Chair" style={imgStyle} />;
     case "Accent Chair":
       return <img src={chairLeather} alt="Accent Chair" style={imgStyle} />;
     case "Freyja Sofa":
@@ -55,7 +68,6 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
     case "Dwarf Sofa":
       return <img src={dwarfSofaImg} alt="Dwarf Sofa" style={imgStyle} />;
     case "Lounge Sofa":
-
       return <img src={sofaLong} alt="Lounge Sofa" style={imgStyle} />;
     case "Cozy Chair":
       return <img src={chairCotton} alt="Cozy Chair" style={imgStyle} />;

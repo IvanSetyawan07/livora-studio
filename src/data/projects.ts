@@ -87,7 +87,7 @@ export const projects: Project[] = [
       {
         title: "Project House PIK II — Working Room",
         image: amOffice,
-        items: ["Executive Desk", "Dining Table", "Upholstered Dining Chair", "Sculptural Pendant Light"],
+        items: ["Work Chair", "Coco Table", "White Chair", "Coco Chair"],
       },
       {
         title: "Project House PIK II — Foyer",
