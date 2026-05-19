@@ -4,7 +4,6 @@ import { Link } from "react-router-dom";
 import aboutImg from "@/assets/about-livora.jpg";
 import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
-import { PageBreadcrumb } from "@/components/livora/Breadcrumb";
 import { useReveal } from "@/hooks/useReveal";
 
 const missions = [
@@ -170,7 +169,6 @@ const AboutPage = () => {
     <>
       <Navbar />
       <main style={{ paddingTop: "80px", background: "hsl(var(--background))" }}>
-        <PageBreadcrumb items={[{ label: "Home", to: "/" }, { label: "About" }]} />
 
         <section className="container-livora pt-8 pb-28 md:pb-40">
           {/* About Us */}

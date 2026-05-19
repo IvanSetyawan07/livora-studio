@@ -24,7 +24,7 @@ import cocoChair from "../../assets/am-house/working-room/chair2.png";
 import workChair from "../../assets/am-house/working-room/kursikerja.png";
 import cocoTable from "../../assets/am-house/working-room/table2.png";
 import whiteChair from "../../assets/am-house/working-room/white-chair.png";
-
+import whiteTable from "../../assets/am-house/working-room/kursi3.png";
 
 interface Props {
   name: string;
@@ -53,6 +53,8 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
   };
 
   switch (name) {
+    case "White Table":
+      return <img src={whiteTable} alt="White Table" style={imgStyle} />;
     case "Coco Chair":
       return <img src={cocoChair} alt="Coco Chair" style={imgStyle} />;
     case "Coco Table":

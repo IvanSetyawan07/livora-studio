@@ -31,6 +31,17 @@ export const furnitureProducts: FurnitureProduct[] = [
     price: 1_200_000,
   },
   {
+    id: "work-chair",
+    name: "Work Chair",
+    category: "Chair",
+    short: "Ergonomic design, adjustable height",
+    description:
+      "A comfortable work chair with ergonomic support and adjustable height settings.",
+    dimensions: "80 × 85 × 90 cm",
+    material: "Full-Grain Leather, Solid Wood Frame",
+    price: 3_500_000,
+  },
+  {
     id: "lounge-armchair",
     name: "Lounge Armchair",
     category: "Chair",

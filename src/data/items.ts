@@ -19,6 +19,22 @@ export interface Item {
 
 export const items: Item[] = [
   {
+    slug: "white-table",
+    name: "White Table",
+    code: "UP25126",
+    category: "TABLE",
+    specs: {
+      dimensions: "220 × 95 × 78 cm (W × D × H)",
+      material: "Kiln-dried Hardwood Frame, Linen Blend Upholstery",
+      finish: "Sand Beige / Warm Taupe",
+      weight: "62 kg",
+      availability: "Made to Order — 8–10 weeks lead time",
+    },
+    themes: ["Japandi", "Warm Modern", "Editorial"],
+    categories: ["Table", "Living Room"],
+    textures: ["Soft Linen", "Warm Taupe", "Plush Cushion"],
+  },
+  {
     slug: "coco-table",
     name: "Coco Table",
     code: "TB25124",
