@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Armchair, Sofa as SofaIcon, Table2, Circle, ArrowLeft, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
+import { Armchair, Sofa as SofaIcon, Table2, ArrowLeft, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
@@ -14,7 +14,7 @@ import sofaTheme from "@/assets/furniture/sofa-theme.png";
 
 /* -------------------- Themes (only items that have illustrations) -------------------- */
 
-type ThemeKey = "Chair" | "Sofa" | "Table" | "Ottoman";
+type ThemeKey = "Chair" | "Sofa" | "Table" ;
 
 const themeMap: Record<ThemeKey, { icon: typeof Armchair; slugs: string[]; tagline: string; image?: string }> = {
   Chair: {
@@ -22,6 +22,9 @@ const themeMap: Record<ThemeKey, { icon: typeof Armchair; slugs: string[]; tagli
     tagline: "Sculpted seating for quiet moments.",
     image: chairTheme,
     slugs: [
+      "white-chair",
+      "coco-chair",
+      "work-chair",
       "accent-chair",
       "cozy-chair",
       "leather-lounge-chair",
@@ -41,7 +44,6 @@ const themeMap: Record<ThemeKey, { icon: typeof Armchair; slugs: string[]; tagli
       "boucle-sofa",
       "boucle-lounge-sofa",
       "freyja-sofa",
-      "dwarf-sofa",
       "modular-sectional-sofa",
       "sage-modular-sectional-sofa",
     ],
@@ -50,17 +52,12 @@ const themeMap: Record<ThemeKey, { icon: typeof Armchair; slugs: string[]; tagli
     icon: Table2,
     tagline: "Considered surfaces in stone, brass, and wood.",
     slugs: [
-      "side-table",
+      "coco-table",
       "coffee-table",
       "marble-coffee-table",
       "brass-drum-coffee-table",
       "nesting-coffee-tables",
     ],
-  },
-  Ottoman: {
-    icon: Circle,
-    tagline: "Soft, sculptural accents.",
-    slugs: ["curved-ottoman"],
   },
 };
 

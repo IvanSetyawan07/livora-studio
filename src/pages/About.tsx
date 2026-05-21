@@ -13,18 +13,16 @@ const missions = [
 ];
 
 const teamMembers = [
-  { name: "Andreas Wijaya", role: "Founder & Chief Executive Officer", img: "men/11" },
-  { name: "Putri Anggraini", role: "Chief Operating Officer", img: "women/12" },
-  { name: "Rizky Hartono", role: "Chief Financial Officer", img: "men/13" },
-  { name: "Sarah Lestari", role: "Chief of Staff", img: "women/14" },
-  { name: "Dimas Pratama", role: "Director of Agent Success", img: "men/15" },
-  { name: "Bayu Nugroho", role: "Chief Technology Officer", img: "men/16" },
-  { name: "Maya Setiawan", role: "Director of Growth", img: "women/17" },
-  { name: "Reza Saputra", role: "Regional Manager", img: "men/18" },
-  { name: "Intan Permata", role: "Property Data Manager", img: "women/19" },
-  { name: "Clara Halim", role: "Executive Assistant", img: "women/20" },
-  { name: "Yoga Prasetyo", role: "Agent Support", img: "men/3" },
-  { name: "Nadia Kusuma", role: "Accounting Assistant", img: "women/5" },
+  { name: ".....", role: "Founder & Chief Executive Officer", img: "" },
+  { name: ".....", role: "Chief Operating Officer", img: "" },
+  { name: ".....", role: "Chief Financial Officer", img: "" },
+  { name: ".....", role: "Chief of Staff", img: "" },
+  { name: ".....", role: "Director of Agent Success", img: "" },
+  { name: ".....", role: "Chief Technology Officer", img: "" },
+  { name: ".....", role: "Director of Growth", img: "" },
+  { name: ".....", role: "Regional Manager", img: "" },
+  { name: ".....", role: "Property Data Manager", img: "" },
+
 ];
 
 const SwiperScrollbar = ({ trackRef }: { trackRef: React.RefObject<HTMLDivElement> }) => {

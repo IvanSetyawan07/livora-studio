@@ -51,6 +51,22 @@ export const items: Item[] = [
     textures: ["Woven Rattan", "Smoked Glass", "Brushed Brass"],
   },
   {
+    slug: "accent-chair",
+    name: "Accent Chair",
+    code: "UP25122",
+    category: "SEATING",
+    specs: {
+      dimensions: "84 × 92 × 82 cm (W × D × H)",
+      material: "Solid Walnut Frame, Boucle Fabric Upholstery",
+      finish: "Matte Natural / Charcoal Grey",
+      weight: "18 kg",
+      availability: "Made to Order — 6–8 weeks lead time",
+    },
+    themes: ["Japandi", "Minimalist", "Warm Modern", "Wabi-Sabi"],
+    categories: ["Seating", "Living Room", "Accent Piece"],
+    textures: ["Soft Bouclé", "Warm Walnut", "Matte Finish"],
+  },
+  {
     slug: "work-chair",
     name: "Work Chair",
     code: "UP25123",
