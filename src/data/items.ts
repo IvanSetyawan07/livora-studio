@@ -98,22 +98,7 @@ export const items: Item[] = [
     categories: ["Seating", "Living Room", "Accent Piece"],
     textures: ["Soft Bouclé", "Warm Walnut", "Matte Finish"],
   },
-  {
-    slug: "lounge-sofa",
-    name: "Lounge Sofa",
-    code: "UP25201",
-    category: "SEATING",
-    specs: {
-      dimensions: "220 × 95 × 78 cm (W × D × H)",
-      material: "Kiln-dried Hardwood Frame, Linen Blend Upholstery",
-      finish: "Sand Beige / Warm Taupe",
-      weight: "62 kg",
-      availability: "Made to Order — 8–10 weeks lead time",
-    },
-    themes: ["Japandi", "Warm Modern", "Editorial"],
-    categories: ["Seating", "Living Room"],
-    textures: ["Soft Linen", "Warm Taupe", "Plush Cushion"],
-  },
+  
   {
     slug: "cozy-chair",
     name: "Cozy Chair",

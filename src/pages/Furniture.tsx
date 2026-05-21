@@ -101,7 +101,7 @@ const ThemeCard = ({
           <span className="text-[10px] uppercase tracking-[0.3em] text-foreground/60 group-hover:text-foreground transition-colors">
             Explore →
           </span>
-        </div>
+        </div> 
       </div>
     </button>
   );
