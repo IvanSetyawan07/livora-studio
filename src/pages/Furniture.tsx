@@ -9,15 +9,18 @@ import { ItemIllustration } from "@/components/livora/ItemIllustration";
 import { items as allItems, type Item } from "@/data/items";
 import { useCart } from "@/context/CartContext";
 import { formatRupiah } from "@/data/furniture";
+import chairTheme from "@/assets/furniture/chair-theme.png";
+import sofaTheme from "@/assets/furniture/sofa-theme.png";
 
 /* -------------------- Themes (only items that have illustrations) -------------------- */
 
 type ThemeKey = "Chair" | "Sofa" | "Table" | "Ottoman";
 
-const themeMap: Record<ThemeKey, { icon: typeof Armchair; slugs: string[]; tagline: string }> = {
+const themeMap: Record<ThemeKey, { icon: typeof Armchair; slugs: string[]; tagline: string; image?: string }> = {
   Chair: {
     icon: Armchair,
     tagline: "Sculpted seating for quiet moments.",
+    image: chairTheme,
     slugs: [
       "accent-chair",
       "cozy-chair",
@@ -31,6 +34,7 @@ const themeMap: Record<ThemeKey, { icon: typeof Armchair; slugs: string[]; tagli
   Sofa: {
     icon: SofaIcon,
     tagline: "Generous silhouettes built for slow living.",
+    image: sofaTheme,
     slugs: [
       "lounge-sofa",
       "modular-sofa",
@@ -72,7 +76,7 @@ const ThemeCard = ({
   themeKey: ThemeKey;
   onOpen: (k: ThemeKey) => void;
 }) => {
-  const { icon: Icon, tagline, slugs } = themeMap[themeKey];
+  const { icon: Icon, tagline, slugs, image } = themeMap[themeKey];
   const previewSlug = slugs[0];
   return (
     <button
@@ -80,7 +84,13 @@ const ThemeCard = ({
       className="group text-left bg-card border border-border hover:border-foreground/40 transition-all duration-500 hover:-translate-y-1 hover:shadow-[var(--shadow-elegant)] flex flex-col"
     >
       <div className="relative aspect-[4/3] bg-secondary/60 overflow-hidden flex items-center justify-center">
-        {previewSlug ? (
+        {image ? (
+          <img
+            src={image}
+            alt={themeKey}
+            className="w-full h-full object-contain p-6 transition-transform duration-700 group-hover:scale-110"
+          />
+        ) : previewSlug ? (
           <div className="w-1/2 h-1/2 transition-transform duration-700 group-hover:scale-110">
             <ItemIllustration name={itemBySlug(previewSlug)?.name ?? ""} size={240} />
           </div>
