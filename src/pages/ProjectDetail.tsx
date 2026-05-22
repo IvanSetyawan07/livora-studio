@@ -11,7 +11,7 @@ import { useReveal } from "@/hooks/useReveal";
 
 const TAGLINES: Record<string, string> = {
   "harmony-one": "BATAM.",
-  "am-house": "A quiet sanctuary shaped by warmth and light.",
+  "am-house": "PONDOK INDAH KAPUK 2",
   "flytek-sinarmas": "Where focus is framed by refined craftsmanship.",
 };
 

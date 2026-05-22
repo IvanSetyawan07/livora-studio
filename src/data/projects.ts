@@ -10,6 +10,9 @@ import amFoyer from "@/assets/am-house/am-house-foyer.png";
 import cihampelas from "@/assets/cihampelas/house-cihampelas.png";
 import cihampelasLiving from "@/assets/cihampelas/living-room.png";
 import cihampelasKitchen from "@/assets/cihampelas/kitchen.png";
+import cihampelasLiving2 from "@/assets/cihampelas/living-area.png";
+import cihampelasLivingRoom from "@/assets/cihampelas/living-room1.png";
+import cihampelasFoyer from "@/assets/cihampelas/foyer.png";
 
 export interface ProjectSlide {
   title: string;
@@ -108,10 +111,11 @@ export const projects: Project[] = [
     description:
       "A contemporary two-storey residence framed by lush tropical greenery. Expansive glazing, warm timber accents, and considered outdoor living spaces blur the line between architecture and garden — quiet, modern, and unmistakably Bandung.",
     slides: [
+      
       {
-        title: "House Cihampelas — Façade & Garden",
-        image: cihampelas,
-        items: ["Outdoor Lounge Chair", "Round Coffee Table", "Modular Sofa", "Floor Lamp"],
+        title: "House Cihampelas — Living Area",
+        image: cihampelasLiving2,
+        items: ["Dwarf Sofa", "Living Room Table", "Three-Seat Sofa"],
       },
       {
         title: "House Cihampelas — Living Room",
@@ -119,9 +123,19 @@ export const projects: Project[] = [
         items: ["Freyja Sofa", "Dwarf Sofa", "Coffee Table"],
       },
       {
+        title: "House Cihampelas — Living Room 2",
+        image: cihampelasLivingRoom,
+        items: ["Valora Wing Chair", "Nesting Coffee Tables", "Milano Sofa"],
+      },
+      {
+        title: "House Cihampelas — Foyer",
+        image: cihampelasFoyer,
+        items: ["Pedestal Side Table", "Lunara Swivel Chair"],
+      },
+      {
         title: "House Cihampelas — Kitchen",
         image: cihampelasKitchen,
-        items: ["Kitchen Cabinet", "Marble Countertop", "Pendant Light"],
+        items: [""],
       },
     ],
   },
