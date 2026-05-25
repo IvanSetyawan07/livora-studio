@@ -8,6 +8,10 @@ export const Contact = () => {
         eyebrow="Contact"
         title={<>Let's <em className="italic">begin</em> your story.</>}
       />
+      <p className="reveal -mt-8 mb-12 md:mb-16 text-base md:text-lg text-foreground/70 font-light max-w-xl">
+        We'd love to hear about your ideas and explore how we can bring them to life.
+      </p>
+
 
       <div className="grid md:grid-cols-2 gap-10 md:gap-16 mt-8">
         {/* Left — Map */}
