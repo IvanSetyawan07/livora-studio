@@ -12,18 +12,18 @@ const missions = [
   { t: "Create", d: "long-lasting and meaningful impact in every space." },
 ];
 
-const teamMembers = [
-  { name: ".....", role: "Founder & Chief Executive Officer", img: "" },
-  { name: ".....", role: "Chief Operating Officer", img: "" },
-  { name: ".....", role: "Chief Financial Officer", img: "" },
-  { name: ".....", role: "Chief of Staff", img: "" },
-  { name: ".....", role: "Director of Agent Success", img: "" },
-  { name: ".....", role: "Chief Technology Officer", img: "" },
-  { name: ".....", role: "Director of Growth", img: "" },
-  { name: ".....", role: "Regional Manager", img: "" },
-  { name: ".....", role: "Property Data Manager", img: "" },
+// const teamMembers = [
+//   { name: ".....", role: "Founder & Chief Executive Officer", img: "" },
+//   { name: ".....", role: "Chief Operating Officer", img: "" },
+//   { name: ".....", role: "Chief Financial Officer", img: "" },
+//   { name: ".....", role: "Chief of Staff", img: "" },
+//   { name: ".....", role: "Director of Agent Success", img: "" },
+//   { name: ".....", role: "Chief Technology Officer", img: "" },
+//   { name: ".....", role: "Director of Growth", img: "" },
+//   { name: ".....", role: "Regional Manager", img: "" },
+//   { name: ".....", role: "Property Data Manager", img: "" },
 
-];
+// ];
 
 const SwiperScrollbar = ({ trackRef }: { trackRef: React.RefObject<HTMLDivElement> }) => {
   const [thumb, setThumb] = useState({ width: 20, left: 0 });
@@ -247,7 +247,7 @@ const AboutPage = () => {
           </div>
 
           {/* Meet the Livora Team */}
-          <section className="mt-24 md:mt-32 -mx-6 md:-mx-10 px-6 md:px-10 py-20 md:py-28" style={{ background: "#F9F9F9" }}>
+          {/* <section className="mt-24 md:mt-32 -mx-6 md:-mx-10 px-6 md:px-10 py-20 md:py-28" style={{ background: "#F9F9F9" }}>
             <div className="reveal mb-12 md:mb-16">
               <p className="text-[10px] uppercase tracking-[0.4em] text-foreground/50 mb-5">
                 <span className="divider-line" />
@@ -299,9 +299,9 @@ const AboutPage = () => {
               </div>
 
               {/* Swiper-style scrollbar */}
-              <SwiperScrollbar trackRef={trackRef} />
+              {/* <SwiperScrollbar trackRef={trackRef} />
             </div>
-          </section>
+          </section> */} 
 
           <div className="mt-20">
             <Link

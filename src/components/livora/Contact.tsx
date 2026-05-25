@@ -43,9 +43,9 @@ export const Contact = () => {
               <MapPin size={18} className="mt-1 shrink-0" />
               <span className="underline-grow">Jl. Bangka Raya No.45, Jakarta Selatan</span>
             </a>
-            <a href="tel:+6281218602045" className="flex items-center gap-4 group">
+            <a href="tel:+6281218602045" className="flex items- center gap-4 group">
               <Phone size={18} />
-              <span className="underline-grow">+62 812 1860 2045</span>
+              <span className="underline-grow">+62 821 204 3307</span>
             </a>
             <a href="https://livoralcr.com" target="_blank" rel="noreferrer" className="flex items-center gap-4 group">
               <Globe size={18} />

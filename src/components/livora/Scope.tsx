@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 
-import decorative from "@/assets/scope-decorative.jpg";
+import decorative from "@/assets/scope-deocrative.png";
 import furniture from "@/assets/scope-furniture.jpg";
 import contractor from "@/assets/scope-contractor.jpg";
 import materials from "@/assets/scope-materials.jpg";

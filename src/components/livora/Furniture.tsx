@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import furnitureImg from "@/assets/furniture-collection.jpg";
+import furnitureImg from "@/assets/furniture-hompage.png";
 
 export const Furniture = () => (
   <section id="furniture" className="relative py-28 md:py-40 bg-secondary/40">
