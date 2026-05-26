@@ -32,6 +32,11 @@ import valoraWingChair from "../../assets/cihampelas/Valora Wing Chair.png";
 import milanoSofa from "../../assets/cihampelas/Milano Sofa.png";
 import lunaraSwivelChair from "../../assets/cihampelas/Lunara Swivel Chair.png";
 import pedestalSideTable from "../../assets/cihampelas/Pedestal Side Table.png";
+import tubularCurvedSofa from "../../assets/harmony/Tubular Curved Sofa.png";
+import barrelChair from "../../assets/harmony/Barrel Chair.png";
+import executiveLoungeChair from "../../assets/harmony/Executive Lounge Chair.png";
+import swivelAccentChair from "../../assets/harmony/Swivel Accent Chair.png";
+
 interface Props {
   name: string;
   size?: number;
@@ -59,12 +64,20 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
   };
 
   switch (name) {
+    case "Swivel Accent Chair":
+      return <img src={swivelAccentChair} alt="Swivel Accent Chair" style={imgStyle} />;
+    case "Executive Lounge Chair":
+      return <img src={executiveLoungeChair} alt="Executive Lounge Chair" style={imgStyle} />;
+    case "Barrel Chair":
+      return <img src={barrelChair} alt="Barrel Chair" style={imgStyle} />;
     case "Pedestal Side Table":
       return <img src={pedestalSideTable} alt="Pedestal Side Table" style={imgStyle} />;
     case "Lunara Swivel Chair":
       return <img src={lunaraSwivelChair} alt="Lunara Swivel Chair" style={imgStyle} />;
     case "Milano Sofa":
       return <img src={milanoSofa} alt="Milano Sofa" style={imgStyle} />;
+    case "Tubular Curved Sofa":
+      return <img src={tubularCurvedSofa} alt="Tubular Curved Sofa" style={imgStyle} />;
     case "Valora Wing Chair":
       return <img src={valoraWingChair} alt="Valora Wing Chair" style={imgStyle} />;
     case "L-Arm Chair":

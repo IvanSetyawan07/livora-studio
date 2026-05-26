@@ -32,6 +32,9 @@ const themeMap: Record<ThemeKey, { icon: typeof Armchair; slugs: string[]; tagli
       "wooden-lounge-chair",
       "tan-leather-swivel-wingback-chair",
       "pleated-dining-chair",
+      "barrel-chair",
+      "swivel-accent-chair",
+      "executive-lounge-chair",
     ],
   },
   Sofa: {
@@ -46,6 +49,7 @@ const themeMap: Record<ThemeKey, { icon: typeof Armchair; slugs: string[]; tagli
       "freyja-sofa",
       "modular-sectional-sofa",
       "sage-modular-sectional-sofa",
+      "tubular-curved-sofa",
     ],
   },
   Table: {

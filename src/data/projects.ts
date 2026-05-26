@@ -51,17 +51,17 @@ export const projects: Project[] = [
       {
         title: "Harmony One — Lobby",
         image: harmonyLobby1,
-        items: ["Modular Sofa", "Boucle Sofa", "Coffee Table", "Curved Ottoman"],
+        items: ["Modular Sofa", "Tubular Curved Sofa", "Coffee Table", "Curved Ottoman", "Barrel Chair"],
       },
       {
         title: "Harmony One — Lounge",
         image: harmonyLobby2,
-        items: ["Boucle Lounge Sofa", "Leather Lounge Chair", "Marble Coffee Table"],
+        items: ["Boucle Lounge Sofa", "Leather Lounge Chair", "Marble Coffee Table", "Executive Lounge Chair"],
       },
       {
         title: "Harmony One — President Suite",
         image: harmonyLobby3,
-        items: ["Olive Swivel Chair", "Brass Drum Coffee Table", "Boucle Sofa"],
+        items: ["Swivel Accent Chair", "Brass Drum Coffee Table", "Boucle Sofa"],
       },
     ],
   },
@@ -135,7 +135,7 @@ export const projects: Project[] = [
       {
         title: "House Cihampelas — Kitchen",
         image: cihampelasKitchen,
-        items: [""],
+        items: [],
       },
     ],
   },
@@ -154,7 +154,7 @@ export const projects: Project[] = [
       {
         title: "Flytek Sinarmas Tower — Executive Floor",
         image: office,
-        items: ["Arm Chair", "Console Table", "Pendant Light", "Side Table", "Floor Lamp"],
+        items: [],
       },
     ],
   },
