@@ -10,16 +10,17 @@ import ProjectsPage from "./pages/Projects.tsx";
 import ItemDetail from "./pages/ItemDetail.tsx";
 import AboutPage from "./pages/About.tsx";
 import { WhatsAppButton } from "./components/livora/WhatsAppButton.tsx";
-
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Dashboard from './pages/Dashboard';
 import ScrollToTop from "./components/ScrollToTop.tsx";
 import ERD from "./pages/ERD";
 import Furniture, { CartDrawer } from "./pages/Furniture.tsx";
 import { CartProvider } from "./context/CartContext.tsx";
 
-
 const queryClient = new QueryClient();
 
-const App = () => (
+function App() {
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -44,6 +45,15 @@ const App = () => (
       </CartProvider>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  return ( 
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Routes>
+    </BrowserRouter>
+  );
+  }
 
 export default App;
