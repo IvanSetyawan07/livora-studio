@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, User } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 type NavLink = {
@@ -106,6 +106,17 @@ export const Navbar = () => {
         </ul>
 
         <div className="flex items-center gap-3 md:gap-5">
+          <Link
+            to="/login"
+            aria-label="Login"
+            className={`p-2 transition-colors duration-500 ${
+              transparentTop
+                ? "text-white/90 hover:text-white"
+                : "text-foreground/80 hover:text-foreground"
+            }`}
+          >
+            <User size={20} />
+          </Link>
           <button
             aria-label="Toggle menu"
             onClick={() => setOpen((v) => !v)}

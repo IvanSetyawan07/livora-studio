@@ -1,55 +1,45 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { api, authStorage } from "@/lib/api";
+
+type User = { id: number; name: string; email: string };
 
 export default function Dashboard() {
-    const navigate = useNavigate();
-    const [user, setUser] = useState(null);
-    useEffect(() => {
-        getUser();
-    }, []);
+  const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
 
-    const getUser = async () => {
-        const token = localStorage.getItem('token');
-        try {
-            const response = await axios.get(
-                'http://127.0.0.1:8000/api/user',
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                }
-            );
-            setUser(response.data);
-        } catch (error) {
-            console.log(error);
-            alert('Anda harus login terlebih dahulu');
-            navigate('/login');
-        }
-    };
-    const logout = async () => {
-        const token = localStorage.getItem('token');
-        await axios.post(
-            'http://127.0.0.1:8000/api/logout',
-            {},
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            }
-        );
-        localStorage.removeItem('token');
-        navigate('/login');
-    };
-    return (
-        <div style={{ padding: '40px' }}>
-            <h1>Dashboard</h1>
-            <h2>
-                Hello, {user?.name}!
-            </h2>
-            <button onClick={logout}>
-                Logout
-            </button>
-        </div>
-    );
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get("/me");
+        setUser(data);
+      } catch {
+        alert("Anda harus login terlebih dahulu");
+        navigate("/login");
+      }
+    })();
+  }, [navigate]);
+
+  const logout = async () => {
+    try {
+      await api.post("/logout");
+    } catch {
+      /* ignore */
+    }
+    authStorage.clear();
+    navigate("/login");
+  };
+
+  return (
+    <div className="min-h-screen bg-background p-10">
+      <h1 className="serif text-3xl mb-4">Dashboard</h1>
+      <h2 className="text-lg mb-6">Hello, {user?.name ?? "..."}!</h2>
+      <button
+        onClick={logout}
+        className="bg-foreground text-background px-4 py-2 rounded text-sm uppercase tracking-[0.2em]"
+      >
+        Logout
+      </button>
+    </div>
+  );
 }
