@@ -207,26 +207,24 @@ const Furniture = () => {
           {filteredItems.length === 0 ? (
             <p className="text-sm text-muted-foreground">No items match these filters.</p>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {filteredItems.map((it: any) => (
                 <Link
                   key={it.id}
                   to={`/items/${it.slug}`}
                   onClick={() => trackClick("item", it.id)}
-                  className="bg-card border border-border hover:border-foreground/40 transition rounded overflow-hidden"
+                  className="group bg-white border border-[#E8E4DF] rounded-2xl p-6 flex flex-col items-center text-center shadow-sm hover:shadow-xl hover:border-[#C9A97A] hover:-translate-y-1.5 transition-all duration-500"
                 >
-                  <div className="aspect-square bg-secondary/60 grid place-items-center overflow-hidden">
+                  <div className="aspect-square w-full grid place-items-center overflow-hidden">
                     {it.image ? (
-                      <img src={imgUrl(it.image)} alt={it.title} className="max-w-[80%] max-h-[80%] object-contain" />
+                      <img src={imgUrl(it.image)} alt={it.title} className="max-w-[85%] max-h-[85%] object-contain transition-transform duration-700 group-hover:scale-105" />
                     ) : (
                       <ItemIllustration name={it.title} size={200} />
                     )}
                   </div>
-                  <div className="p-4">
-                    <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/60">{it.type?.name || "Item"}</p>
-                    <h3 className="serif text-lg mt-1">{it.title}</h3>
-                    <p className="text-xs text-muted-foreground">{it.code}</p>
-                  </div>
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/55 mt-4">{it.type?.name || "Item"}</p>
+                  <h3 className="serif text-lg mt-1.5 text-[#C9A97A] group-hover:text-[#1A1A1A] transition-colors">{it.title}</h3>
+                  {it.code && <p className="text-xs text-muted-foreground mt-1">{it.code}</p>}
                 </Link>
               ))}
             </div>
