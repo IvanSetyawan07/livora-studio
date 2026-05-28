@@ -4,6 +4,7 @@ import { SectionHeader } from "./SectionHeader";
 import { projects as staticProjects } from "@/data/projects";
 import { api } from "@/lib/api";
 import { imgUrl, trackClick } from "@/lib/adminApi";
+import { useReveal } from "@/hooks/useReveal";
 
 const categories = ["All", "Hotel", "Residential", "Office"];
 
@@ -12,12 +13,15 @@ type Hi = { id: number; slug: string; title: string; subtitle?: string; location
 export const Projects = () => {
   const [filter, setFilter] = useState("All");
   const [apiHighlights, setApiHighlights] = useState<Hi[] | null>(null);
+  const [hovered, setHovered] = useState<number | null>(null);
 
   useEffect(() => {
     api.get("/landing/highlights")
       .then((r) => setApiHighlights(r.data))
       .catch(() => setApiHighlights([]));
   }, []);
+
+  useReveal([apiHighlights?.length, filter]);
 
   // If admin has selected highlights, use them. Otherwise fall back to legacy static.
   const useApi = apiHighlights && apiHighlights.length > 0;
@@ -65,23 +69,28 @@ export const Projects = () => {
                 key={p.id}
                 to={`/projects/${p.slug}`}
                 onClick={() => trackClick("project", p.id)}
-                className={`reveal group relative block hover-zoom cursor-pointer ${
+                onMouseEnter={() => setHovered(p.id)}
+                onMouseLeave={() => setHovered(null)}
+                className={`reveal group relative block overflow-hidden cursor-pointer ${
                   i === 0 ? "md:col-span-8 aspect-[16/10]" : "md:col-span-4 aspect-[4/5]"
-                }`}
+                } ${hovered !== null && hovered !== p.id ? "opacity-60" : "opacity-100"} transition-opacity duration-500`}
                 style={{ transitionDelay: `${i * 80}ms` }}
               >
                 <img
                   src={imgUrl(p.hero_image)}
                   alt={`${p.title} — ${p.scope?.name || ""}`}
                   loading="lazy"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-110"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 text-primary-foreground translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-700">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 text-primary-foreground transition-all duration-700">
                   <p className="text-[10px] uppercase tracking-[0.4em] mb-2 opacity-80">
                     {p.scope?.name || ""}{p.location ? ` — ${p.location}` : ""}
                   </p>
                   <h3 className="serif text-3xl md:text-4xl font-light">{p.title}</h3>
+                  <span className="inline-block mt-3 text-[10px] uppercase tracking-[0.3em] opacity-0 -translate-x-2 group-hover:opacity-90 group-hover:translate-x-0 transition-all duration-500">
+                    View Project →
+                  </span>
                 </div>
               </Link>
             ))
