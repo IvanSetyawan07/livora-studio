@@ -1,6 +1,8 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { Armchair, Sofa as SofaIcon, Table2, ArrowLeft, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
+import { api } from "@/lib/api";
+import { imgUrl, trackClick } from "@/lib/adminApi";
 import { toast } from "sonner";
 import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
@@ -150,6 +152,38 @@ const ItemCard = ({ item }: { item: Item }) => (
 
 const Furniture = () => {
   const [activeTheme, setActiveTheme] = useState<ThemeKey | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Admin (API) data
+  const [apiItems, setApiItems] = useState<any[] | null>(null);
+  const [themes, setThemes] = useState<any[]>([]);
+  const [cats, setCats] = useState<any[]>([]);
+  const [types, setTypes] = useState<any[]>([]);
+
+  const themeQ = searchParams.get("theme") || "";
+  const catQ = searchParams.get("category") || "";
+  const typeQ = searchParams.get("type") || "";
+
+  useEffect(() => {
+    api.get("/taxonomies/themes").then((r) => setThemes(r.data)).catch(() => {});
+    api.get("/taxonomies/categories").then((r) => setCats(r.data)).catch(() => {});
+    api.get("/taxonomies/furniture-types").then((r) => setTypes(r.data)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const params: any = {};
+    if (themeQ) params.theme = themeQ;
+    if (catQ) params.category = catQ;
+    if (typeQ) params.type = typeQ;
+    api.get("/items", { params }).then((r) => setApiItems(r.data)).catch(() => setApiItems([]));
+  }, [themeQ, catQ, typeQ]);
+
+  const setFilter = (key: "theme" | "category" | "type", val: string) => {
+    const sp = new URLSearchParams(searchParams);
+    if (sp.get(key) === val) sp.delete(key);
+    else sp.set(key, val);
+    setSearchParams(sp);
+  };
 
   const themedItems = useMemo(() => {
     if (!activeTheme) return [];
@@ -161,6 +195,7 @@ const Furniture = () => {
   return (
     <main className="min-h-screen bg-background">
       <Navbar />
+
 
       {/* Hero */}
       <section className="pt-40 pb-16 md:pt-48 md:pb-24 border-b border-border">
@@ -186,6 +221,49 @@ const Furniture = () => {
           </p>
         </div>
       </section>
+
+      {/* Studio Collection (admin-managed) */}
+      {apiItems && apiItems.length > 0 && (
+        <section className="py-14 md:py-20 border-b border-border">
+          <div className="container-livora">
+            <p className="text-[10px] uppercase tracking-[0.45em] text-foreground/60 mb-3">Studio Collection</p>
+            <h2 className="serif text-3xl md:text-5xl font-light leading-[1.05] mb-10">
+              From the <em className="italic">Livora studio.</em>
+            </h2>
+
+            {/* Filters */}
+            <div className="space-y-3 mb-10">
+              {types.length > 0 && (
+                <Chips label="Type" options={types} active={typeQ} onClick={(v) => setFilter("type", v)} />
+              )}
+              {themes.length > 0 && (
+                <Chips label="Theme" options={themes} active={themeQ} onClick={(v) => setFilter("theme", v)} />
+              )}
+              {cats.length > 0 && (
+                <Chips label="Category" options={cats} active={catQ} onClick={(v) => setFilter("category", v)} />
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              {apiItems.map((it: any) => (
+                <Link key={it.id} to={`/items/${it.slug}`} onClick={() => trackClick("item", it.id)}
+                  className="bg-card border border-border hover:border-foreground/40 transition rounded overflow-hidden">
+                  <div className="aspect-[4/3] bg-secondary/60 grid place-items-center overflow-hidden">
+                    {it.image
+                      ? <img src={imgUrl(it.image)} alt={it.title} className="w-full h-full object-cover" />
+                      : <ItemIllustration name={it.title} size={200} />}
+                  </div>
+                  <div className="p-4">
+                    <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/60">{it.type?.name || "Item"}</p>
+                    <h3 className="serif text-lg mt-1">{it.title}</h3>
+                    <p className="text-xs text-muted-foreground">{it.code}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Content */}
       <section className="py-16 md:py-24">
@@ -220,12 +298,34 @@ const Furniture = () => {
         </div>
       </section>
 
+
       <Footer />
     </main>
   );
 };
 
 export default Furniture;
+
+function Chips({ label, options, active, onClick }: { label: string; options: any[]; active: string; onClick: (slug: string) => void }) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-[10px] uppercase tracking-[0.3em] text-foreground/60 mr-2">{label}</span>
+      {options.map((o) => (
+        <button
+          key={o.id}
+          onClick={() => onClick(o.slug)}
+          className={`text-[10px] uppercase tracking-[0.25em] px-4 py-2 border transition-all ${
+            active === o.slug
+              ? "bg-foreground text-background border-foreground"
+              : "border-border text-foreground/70 hover:border-foreground hover:text-foreground"
+          }`}
+        >
+          {o.name}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /* -------------------- Cart Drawer (mounted globally via Navbar) -------------------- */
 
