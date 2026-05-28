@@ -306,6 +306,27 @@ const Furniture = () => {
 
 export default Furniture;
 
+function Chips({ label, options, active, onClick }: { label: string; options: any[]; active: string; onClick: (slug: string) => void }) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-[10px] uppercase tracking-[0.3em] text-foreground/60 mr-2">{label}</span>
+      {options.map((o) => (
+        <button
+          key={o.id}
+          onClick={() => onClick(o.slug)}
+          className={`text-[10px] uppercase tracking-[0.25em] px-4 py-2 border transition-all ${
+            active === o.slug
+              ? "bg-foreground text-background border-foreground"
+              : "border-border text-foreground/70 hover:border-foreground hover:text-foreground"
+          }`}
+        >
+          {o.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /* -------------------- Cart Drawer (mounted globally via Navbar) -------------------- */
 
 export const CartDrawer = () => {
