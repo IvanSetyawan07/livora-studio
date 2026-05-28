@@ -168,12 +168,12 @@ const ProjectDetail = () => {
     );
   }
 
-  // ---- Static fallback (legacy) ----
-  if (!apiTried) {
-    return <main className="min-h-screen grid place-items-center"><p className="text-sm text-muted-foreground">Loading…</p></main>;
-  }
+  // ---- Static fallback (legacy) — render immediately while API loads ----
   const project = slug ? getProjectBySlug(slug) : undefined;
   if (!project) {
+    if (!apiTried) {
+      return <main className="min-h-screen grid place-items-center"><p className="text-sm text-muted-foreground">Loading…</p></main>;
+    }
     return (
       <main className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
