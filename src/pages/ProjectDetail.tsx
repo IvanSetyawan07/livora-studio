@@ -144,17 +144,19 @@ const ProjectDetail = () => {
             {items.length === 0 ? (
               <p className="text-sm text-muted-foreground">Belum ada item ditandai untuk foto ini.</p>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-5">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {items.map((it) => (
                   <Link key={it.id} to={`/items/${it.slug}`} onClick={() => trackClick("item", it.id)}
-                    className="bg-[#FAFAF8] border border-[#E8E4DF] rounded-[10px] p-4 text-center hover:-translate-y-1 transition">
-                    <div className="aspect-square bg-white grid place-items-center rounded">
+                    className="group bg-white border border-[#E8E4DF] rounded-2xl p-6 flex flex-col items-center text-center shadow-sm hover:shadow-xl hover:border-[#C9A97A] hover:-translate-y-1.5 transition-all duration-500">
+                    <div className="aspect-square w-full grid place-items-center overflow-hidden">
                       {it.image
-                        ? <img src={imgUrl(it.image)} className="max-w-[80%] max-h-[80%] object-contain" alt={it.title} />
+                        ? <img src={imgUrl(it.image)} className="max-w-[85%] max-h-[85%] object-contain transition-transform duration-700 group-hover:scale-105" alt={it.title} />
                         : <ItemIllustration name={it.title} />}
                     </div>
-                    <p className="text-sm mt-3">{it.title}</p>
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-foreground/50 mt-1">{it.type?.name}</p>
+                    <p className="serif text-base mt-4 text-[#C9A97A] group-hover:text-[#1A1A1A] transition-colors">{it.title}</p>
+                    {it.type?.name && (
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-foreground/45 mt-1">{it.type.name}</p>
+                    )}
                   </Link>
                 ))}
               </div>
@@ -254,15 +256,15 @@ const ProjectDetail = () => {
           {items.length === 0 ? (
             <p className="text-sm text-muted-foreground">Belum ada item untuk foto ini.</p>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-5">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {items.map((name) => (
                 <Link key={name} to={`/items/${slugifyItem(name)}?from=${project.slug}`}
                   onClick={() => trackClick("item" as any, 0)}
-                  className="bg-[#FAFAF8] border border-[#E8E4DF] rounded-[10px] p-4 text-center hover:-translate-y-1 transition">
-                  <div className="aspect-square bg-white grid place-items-center rounded">
+                  className="group bg-white border border-[#E8E4DF] rounded-2xl p-6 flex flex-col items-center text-center shadow-sm hover:shadow-xl hover:border-[#C9A97A] hover:-translate-y-1.5 transition-all duration-500">
+                  <div className="aspect-square w-full grid place-items-center overflow-hidden">
                     <ItemIllustration name={name} />
                   </div>
-                  <p className="text-sm mt-3">{name}</p>
+                  <p className="serif text-base mt-4 text-[#C9A97A] group-hover:text-[#1A1A1A] transition-colors">{name}</p>
                 </Link>
               ))}
             </div>
