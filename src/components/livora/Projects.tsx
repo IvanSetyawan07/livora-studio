@@ -4,6 +4,7 @@ import { SectionHeader } from "./SectionHeader";
 import { projects as staticProjects } from "@/data/projects";
 import { api } from "@/lib/api";
 import { imgUrl, trackClick } from "@/lib/adminApi";
+import { useReveal } from "@/hooks/useReveal";
 
 const categories = ["All", "Hotel", "Residential", "Office"];
 
@@ -12,12 +13,15 @@ type Hi = { id: number; slug: string; title: string; subtitle?: string; location
 export const Projects = () => {
   const [filter, setFilter] = useState("All");
   const [apiHighlights, setApiHighlights] = useState<Hi[] | null>(null);
+  const [hovered, setHovered] = useState<number | null>(null);
 
   useEffect(() => {
     api.get("/landing/highlights")
       .then((r) => setApiHighlights(r.data))
       .catch(() => setApiHighlights([]));
   }, []);
+
+  useReveal([apiHighlights?.length, filter]);
 
   // If admin has selected highlights, use them. Otherwise fall back to legacy static.
   const useApi = apiHighlights && apiHighlights.length > 0;
