@@ -152,6 +152,38 @@ const ItemCard = ({ item }: { item: Item }) => (
 
 const Furniture = () => {
   const [activeTheme, setActiveTheme] = useState<ThemeKey | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Admin (API) data
+  const [apiItems, setApiItems] = useState<any[] | null>(null);
+  const [themes, setThemes] = useState<any[]>([]);
+  const [cats, setCats] = useState<any[]>([]);
+  const [types, setTypes] = useState<any[]>([]);
+
+  const themeQ = searchParams.get("theme") || "";
+  const catQ = searchParams.get("category") || "";
+  const typeQ = searchParams.get("type") || "";
+
+  useEffect(() => {
+    api.get("/taxonomies/themes").then((r) => setThemes(r.data)).catch(() => {});
+    api.get("/taxonomies/categories").then((r) => setCats(r.data)).catch(() => {});
+    api.get("/taxonomies/furniture-types").then((r) => setTypes(r.data)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const params: any = {};
+    if (themeQ) params.theme = themeQ;
+    if (catQ) params.category = catQ;
+    if (typeQ) params.type = typeQ;
+    api.get("/items", { params }).then((r) => setApiItems(r.data)).catch(() => setApiItems([]));
+  }, [themeQ, catQ, typeQ]);
+
+  const setFilter = (key: "theme" | "category" | "type", val: string) => {
+    const sp = new URLSearchParams(searchParams);
+    if (sp.get(key) === val) sp.delete(key);
+    else sp.set(key, val);
+    setSearchParams(sp);
+  };
 
   const themedItems = useMemo(() => {
     if (!activeTheme) return [];
@@ -163,6 +195,7 @@ const Furniture = () => {
   return (
     <main className="min-h-screen bg-background">
       <Navbar />
+
 
       {/* Hero */}
       <section className="pt-40 pb-16 md:pt-48 md:pb-24 border-b border-border">
