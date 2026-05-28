@@ -215,9 +215,9 @@ const Furniture = () => {
                   onClick={() => trackClick("item", it.id)}
                   className="bg-card border border-border hover:border-foreground/40 transition rounded overflow-hidden"
                 >
-                  <div className="aspect-[4/3] bg-secondary/60 grid place-items-center overflow-hidden">
+                  <div className="aspect-square bg-secondary/60 grid place-items-center overflow-hidden">
                     {it.image ? (
-                      <img src={imgUrl(it.image)} alt={it.title} className="w-full h-full object-contain p-6" />
+                      <img src={imgUrl(it.image)} alt={it.title} className="max-w-[80%] max-h-[80%] object-contain" />
                     ) : (
                       <ItemIllustration name={it.title} size={200} />
                     )}
