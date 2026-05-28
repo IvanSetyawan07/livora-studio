@@ -150,7 +150,7 @@ const ProjectDetail = () => {
                     className="bg-[#FAFAF8] border border-[#E8E4DF] rounded-[10px] p-4 text-center hover:-translate-y-1 transition">
                     <div className="aspect-square bg-white grid place-items-center rounded">
                       {it.image
-                        ? <img src={imgUrl(it.image)} className="w-full h-full object-contain p-4" alt={it.title} />
+                        ? <img src={imgUrl(it.image)} className="max-w-[80%] max-h-[80%] object-contain" alt={it.title} />
                         : <ItemIllustration name={it.title} />}
                     </div>
                     <p className="text-sm mt-3">{it.title}</p>
