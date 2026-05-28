@@ -15,8 +15,9 @@ export default function Register() {
     try {
       const { data } = await api.post("/register", { name, email, password });
       if (data?.token) authStorage.setToken(data.token);
+      if (data?.user) localStorage.setItem("user", JSON.stringify(data.user));
       alert("Register berhasil");
-      navigate("/dashboard");
+      navigate("/");
     } catch (error: any) {
       console.log("Register error:", error?.response?.data ?? error);
       const msg =
