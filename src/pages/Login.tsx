@@ -19,7 +19,12 @@ export default function Login() {
     try {
       const { data } = await api.post("/login", { email, password });
       authStorage.setToken(data.token);
-      navigate("/dashboard");
+      localStorage.setItem("user", JSON.stringify(data.user));
+      if (data.user?.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
     } catch {
       alert("Email atau password salah");
 
