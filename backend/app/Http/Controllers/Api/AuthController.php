@@ -20,6 +20,7 @@ class AuthController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => $validated['password'], // auto-hash via $casts
+            'role' => 'user'
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
