@@ -43,14 +43,4 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
-    public function __construct(array $attributes = [])
-    {
-        parent::__construct($attributes);
-
-        User::create([
-            'name' => 'Admin',
-            'email' => 'admin@gmail.com',
-            'password' => 'admin123',
-        ]);
-    }
 }
