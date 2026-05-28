@@ -70,7 +70,7 @@ const ItemDetail = () => {
             <div className="flex items-center justify-center" style={{ background: "#FAFAF8", padding: "60px" }}>
               <div className="w-full aspect-square bg-white border border-[#E8E4DF] rounded-xl grid place-items-center overflow-hidden">
                 {it.image
-                  ? <img src={imgUrl(it.image)} alt={it.title} className="w-full h-full object-contain p-10" />
+                  ? <img src={imgUrl(it.image)} alt={it.title} className="w-full h-full object-cover" />
                   : <ItemIllustration name={it.title} size={280} strokeWidth={1.1} />}
               </div>
             </div>
