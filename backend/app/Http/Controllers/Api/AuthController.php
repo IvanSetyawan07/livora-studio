@@ -19,7 +19,7 @@ class AuthController extends Controller
         $user = \App\Models\User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => bcrypt($validated['password'])
+            'password' => $validated['password'], // auto-hash via $casts
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
