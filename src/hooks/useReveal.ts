@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 
-export function useReveal(deps: any[] = []) {
+export function useReveal() {
   useEffect(() => {
-    const els = document.querySelectorAll<HTMLElement>(".reveal:not(.is-visible)");
+    const els = document.querySelectorAll<HTMLElement>(".reveal");
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
@@ -16,6 +16,5 @@ export function useReveal(deps: any[] = []) {
     );
     els.forEach((el) => io.observe(el));
     return () => io.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
+  }, []);
 }

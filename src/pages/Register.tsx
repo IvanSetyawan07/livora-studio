@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, authStorage } from "@/lib/api";
-import { toast } from "sonner";
+
 export default function Register() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
@@ -14,10 +14,10 @@ export default function Register() {
     setLoading(true);
     try {
       const { data } = await api.post("/register", { name, email, password });
-      // if (data?.token) authStorage.setToken(data.token);
-      // if (data?.user) localStorage.setItem("user", JSON.stringify(data.user));
-      toast.success("Register berhasil ! Silakan login.");
-      navigate("/login");
+      if (data?.token) authStorage.setToken(data.token);
+      if (data?.user) localStorage.setItem("user", JSON.stringify(data.user));
+      alert("Register berhasil");
+      navigate("/");
     } catch (error: any) {
       console.log("Register error:", error?.response?.data ?? error);
       const msg =
@@ -25,7 +25,7 @@ export default function Register() {
         (error?.response?.data?.errors
           ? Object.values(error.response.data.errors).flat().join("\n")
           : "Register gagal");
-      toast.error(msg);
+      alert(msg);
     } finally {
       setLoading(false);
     }

@@ -13,13 +13,7 @@ import { WhatsAppButton } from "./components/livora/WhatsAppButton.tsx";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
-import AdminLayout from "./pages/admin/AdminLayout";
-import AdminOverview from "./pages/admin/AdminOverview";
-import AdminProjects from "./pages/admin/AdminProjects";
-import AdminItems from "./pages/admin/AdminItems";
-import AdminTaxonomies from "./pages/admin/AdminTaxonomies";
-import AdminLanding from "./pages/admin/AdminLanding";
-import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminDashboard from "./pages/AdminDashboard";
 import ScrollToTop from "./components/ScrollToTop.tsx";
 import ERD from "./pages/ERD";
 import Furniture, { CartDrawer } from "./pages/Furniture.tsx";
@@ -47,14 +41,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<AdminOverview />} />
-                <Route path="projects" element={<AdminProjects />} />
-                <Route path="items" element={<AdminItems />} />
-                <Route path="taxonomies" element={<AdminTaxonomies />} />
-                <Route path="landing" element={<AdminLanding />} />
-                <Route path="analytics" element={<AdminAnalytics />} />
-              </Route>
+              <Route path="/admin" element={<AdminDashboard />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
