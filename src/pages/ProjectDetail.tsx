@@ -22,12 +22,11 @@ type ApiProject = {
 const ProjectDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
-  useReveal();
-
   const [apiProject, setApiProject] = useState<ApiProject | null>(null);
   const [apiTried, setApiTried] = useState(false);
   const [slideIndex, setSlideIndex] = useState(0);
   const mountedAt = useRef<number>(Date.now());
+  useReveal([apiProject?.id, apiTried]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
