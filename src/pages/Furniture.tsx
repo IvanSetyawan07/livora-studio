@@ -222,6 +222,49 @@ const Furniture = () => {
         </div>
       </section>
 
+      {/* Studio Collection (admin-managed) */}
+      {apiItems && apiItems.length > 0 && (
+        <section className="py-14 md:py-20 border-b border-border">
+          <div className="container-livora">
+            <p className="text-[10px] uppercase tracking-[0.45em] text-foreground/60 mb-3">Studio Collection</p>
+            <h2 className="serif text-3xl md:text-5xl font-light leading-[1.05] mb-10">
+              From the <em className="italic">Livora studio.</em>
+            </h2>
+
+            {/* Filters */}
+            <div className="space-y-3 mb-10">
+              {types.length > 0 && (
+                <Chips label="Type" options={types} active={typeQ} onClick={(v) => setFilter("type", v)} />
+              )}
+              {themes.length > 0 && (
+                <Chips label="Theme" options={themes} active={themeQ} onClick={(v) => setFilter("theme", v)} />
+              )}
+              {cats.length > 0 && (
+                <Chips label="Category" options={cats} active={catQ} onClick={(v) => setFilter("category", v)} />
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              {apiItems.map((it: any) => (
+                <Link key={it.id} to={`/items/${it.slug}`} onClick={() => trackClick("item", it.id)}
+                  className="bg-card border border-border hover:border-foreground/40 transition rounded overflow-hidden">
+                  <div className="aspect-[4/3] bg-secondary/60 grid place-items-center overflow-hidden">
+                    {it.image
+                      ? <img src={imgUrl(it.image)} alt={it.title} className="w-full h-full object-cover" />
+                      : <ItemIllustration name={it.title} size={200} />}
+                  </div>
+                  <div className="p-4">
+                    <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/60">{it.type?.name || "Item"}</p>
+                    <h3 className="serif text-lg mt-1">{it.title}</h3>
+                    <p className="text-xs text-muted-foreground">{it.code}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Content */}
       <section className="py-16 md:py-24">
         <div className="container-livora">
@@ -254,6 +297,7 @@ const Furniture = () => {
           </p>
         </div>
       </section>
+
 
       <Footer />
     </main>
