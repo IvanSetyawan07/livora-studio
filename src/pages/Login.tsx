@@ -14,13 +14,21 @@ export default function Login() {
     try {
       const { data } = await api.post("/login", { email, password });
       authStorage.setToken(data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      if (data.user?.role === "admin") {
-        navigate("/admin");
+
+      // Ambil role terbaru dari /me biar pasti akurat
+      const me = await api.get("/me");
+      const user = me.data;
+      localStorage.setItem("user", JSON.stringify(user));
+
+      console.log("Logged in user:", user);
+
+      if (user?.role === "admin") {
+        navigate("/admin", { replace: true });
       } else {
-        navigate("/");
+        navigate("/", { replace: true });
       }
-    } catch {
+    } catch (err: any) {
+      console.log("Login error:", err?.response?.data ?? err);
       alert("Email atau password salah");
     } finally {
       setLoading(false);
