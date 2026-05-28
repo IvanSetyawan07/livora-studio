@@ -17,33 +17,10 @@ export default function Login() {
     setLoading(true);
 
     try {
-
-      const response: any = await api.post(
-        "/login",
-        {
-          email,
-          password,
-        }
-      );
-
-      authStorage.setToken(response.data.token);
-
-      const role = response.data.user.role;
-
-      if (role === "admin") {
-
-        navigate("/admin-dashboard");
-
-      } else {
-
-        navigate("/dashboard");
-
-      }
-
-    } catch (error) {
-
-      console.error(error);
-
+      const { data } = await api.post("/login", { email, password });
+      authStorage.setToken(data.token);
+      navigate("/dashboard");
+    } catch {
       alert("Email atau password salah");
 
     } finally {
