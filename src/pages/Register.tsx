@@ -17,9 +17,14 @@ export default function Register() {
       if (data?.token) authStorage.setToken(data.token);
       alert("Register berhasil");
       navigate("/dashboard");
-    } catch (error) {
-      console.log(error);
-      alert("Register gagal");
+    } catch (error: any) {
+      console.log("Register error:", error?.response?.data ?? error);
+      const msg =
+        error?.response?.data?.message ||
+        (error?.response?.data?.errors
+          ? Object.values(error.response.data.errors).flat().join("\n")
+          : "Register gagal");
+      alert(msg);
     } finally {
       setLoading(false);
     }
