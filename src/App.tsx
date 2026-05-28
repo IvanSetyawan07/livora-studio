@@ -13,6 +13,7 @@ import { WhatsAppButton } from "./components/livora/WhatsAppButton.tsx";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 import ScrollToTop from "./components/ScrollToTop.tsx";
 import ERD from "./pages/ERD";
 import Furniture, { CartDrawer } from "./pages/Furniture.tsx";
