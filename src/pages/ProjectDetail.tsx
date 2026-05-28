@@ -181,6 +181,14 @@ const ProjectDetail = () => {
       </main>
     );
   }
+  document.title = `${project.name} — LIVORA`;
+  const slides = project.slides ?? [];
+  const hasSlides = slides.length > 0;
+  const current = hasSlides ? slides[slideIndex % slides.length] : null;
+  const displayTitle = current?.title || project.name;
+  const displayImage = current?.image || project.img;
+  const items = current?.items ?? [];
+
   return (
     <>
       <Navbar />
@@ -193,26 +201,72 @@ const ProjectDetail = () => {
             <p className="text-white/85 mt-6 uppercase" style={{ letterSpacing: "0.18em" }}>{project.location}</p>
           </div>
         </section>
+
         <PageBreadcrumb items={[{ label: "Home", to: "/" }, { label: "Projects", to: "/projects" }, { label: project.name }]} />
-        <section className="px-[60px] py-10">
-          <p className="text-foreground/70 max-w-3xl">{project.description}</p>
-          <div className="mt-8 grid grid-cols-3 gap-6 max-w-3xl">
-            <Stat label="Location" value={project.location} />
-            <Stat label="Year" value={project.year} />
-            <Stat label="Scope" value={project.scope} />
+
+        <section className="reveal" style={{ background: "#FAFAF8", padding: "0 60px 32px 60px" }}>
+          <h2 className="serif font-light leading-[1.05] mb-6" style={{ color: "#1A1A1A", fontSize: "56px", marginTop: "16px" }}>
+            {displayTitle}
+          </h2>
+          <div className="h-px w-full bg-[#1A1A1A]/15" />
+        </section>
+
+        <section className="grid md:grid-cols-5 reveal">
+          <div className="md:col-span-3 relative group" style={{ paddingLeft: "60px", background: "#FAFAF8" }}>
+            <img key={displayImage} src={displayImage} alt={displayTitle}
+              className="transition-opacity duration-500"
+              style={{ width: "100%", height: "600px", objectFit: "cover", display: "block" }} />
+            {hasSlides && slides.length > 1 && (
+              <>
+                <button onClick={() => setSlideIndex((i) => (i - 1 + slides.length) % slides.length)}
+                  className="absolute top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/90 grid place-items-center opacity-0 group-hover:opacity-100 transition"
+                  style={{ left: "76px" }}>←</button>
+                <button onClick={() => setSlideIndex((i) => (i + 1) % slides.length)}
+                  className="absolute top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/90 grid place-items-center opacity-0 group-hover:opacity-100 transition"
+                  style={{ right: "16px" }}>→</button>
+              </>
+            )}
+          </div>
+
+          <div className="md:col-span-2 flex flex-col" style={{ background: "#FAFAF8", padding: "48px" }}>
+            <p className="uppercase mb-4" style={{ color: "#C9A97A", fontSize: "11px", letterSpacing: "0.2em" }}>
+              {project.scope}
+            </p>
+            <p style={{ color: "#4A4A4A", lineHeight: 1.8, fontSize: "15px", whiteSpace: "pre-wrap" }}>
+              {project.description}
+            </p>
+            <div className="h-px w-full bg-[#1A1A1A]/15 my-8" />
+            <div className="grid grid-cols-2 gap-x-6 gap-y-7">
+              <Stat label="LOCATION" value={project.location} />
+              <Stat label="YEAR" value={project.year} />
+              <Stat label="SCOPE" value={project.scope} />
+            </div>
+            <div className="flex-1" />
+            <button onClick={() => navigate("/projects")} className="self-start mt-10 uppercase hover:opacity-70"
+              style={{ color: "#C9A97A", background: "none", border: "none", fontSize: "12px", letterSpacing: "0.1em" }}>
+              ← Back
+            </button>
           </div>
         </section>
-        <section style={{ background: "#FFFFFF", padding: "60px" }}>
-          <h2 className="serif text-2xl mb-8">Items in This Space</h2>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-5">
-            {(project.slides?.[0]?.items ?? []).map((name) => (
-              <Link key={name} to={`/items/${slugifyItem(name)}?from=${project.slug}`}
-                className="bg-[#FAFAF8] border border-[#E8E4DF] rounded-[10px] p-4 text-center">
-                <div className="h-[120px] flex items-center justify-center"><ItemIllustration name={name} /></div>
-                <p className="text-sm mt-3">{name}</p>
-              </Link>
-            ))}
-          </div>
+
+        <section className="reveal" style={{ background: "#FFFFFF", padding: "60px" }}>
+          <h2 className="serif font-light mb-10" style={{ color: "#1A1A1A", fontSize: "28px" }}>Items in This Space</h2>
+          {items.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Belum ada item untuk foto ini.</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-5">
+              {items.map((name) => (
+                <Link key={name} to={`/items/${slugifyItem(name)}?from=${project.slug}`}
+                  onClick={() => trackClick("item" as any, 0)}
+                  className="bg-[#FAFAF8] border border-[#E8E4DF] rounded-[10px] p-4 text-center hover:-translate-y-1 transition">
+                  <div className="aspect-square bg-white grid place-items-center rounded">
+                    <ItemIllustration name={name} />
+                  </div>
+                  <p className="text-sm mt-3">{name}</p>
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
       </main>
       <Footer />
