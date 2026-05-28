@@ -1,6 +1,8 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { Armchair, Sofa as SofaIcon, Table2, ArrowLeft, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
+import { api } from "@/lib/api";
+import { imgUrl, trackClick } from "@/lib/adminApi";
 import { toast } from "sonner";
 import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
