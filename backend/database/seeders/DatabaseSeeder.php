@@ -16,5 +16,9 @@ class DatabaseSeeder extends Seeder
                 'role' => 'admin',
             ]
         );
+
+        $this->call([
+            LivoraSeeder::class,
+        ]);
     }
 }
