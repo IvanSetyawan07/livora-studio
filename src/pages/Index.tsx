@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
-
+import { Loader } from "@/components/livora/Loader";
 import { Navbar } from "@/components/livora/Navbar";
 import { Hero } from "@/components/livora/Hero";
 import { Style } from "@/components/livora/Style";
@@ -40,6 +40,7 @@ const Index = () => {
 
   return (
     <>
+      <Loader />
       <Navbar />
       <main>
         <Hero />
