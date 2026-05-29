@@ -251,6 +251,7 @@ const ItemDetail = () => {
               gap: "20px",
               overflowX: "auto",
               paddingBottom: "8px",
+              paddingTop: "8px",
             }}
           >
             {related.map((r) => (
