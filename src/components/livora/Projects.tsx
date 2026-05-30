@@ -47,22 +47,28 @@ export const Projects = () => {
         ))}
       </div>
 
-      <div className="grid md:grid-cols-12 gap-4 md:gap-6">
+      <div className="grid md:grid-cols-12 md:auto-rows-[320px] gap-6">
         {filtered.map((p, i) => (
           <Link
             key={p.name}
             to={`/projects/${p.slug}`}
-            className={`reveal group relative block hover-zoom cursor-pointer ${p.span}`}
+            className={`reveal group relative block overflow-hidden cursor-pointer
+  ${
+    i === 0
+      ? "md:col-span-8 md:row-span-2"
+      : "md:col-span-4 md:row-span-1"
+  }
+  ${i > 0 ? "h-[280px]" : ""}
+`}
+            
             style={{ transitionDelay: `${i * 80}ms` }}
           >
             <img
-              src={p.img}
-              alt={`${p.name} — ${p.category}`}
-              width={1280}
-              height={896}
-              loading="lazy"
-              className="w-full h-full object-cover"
-            />
+  src={p.img}
+  alt={`${p.name} — ${p.category}`}
+  loading="lazy"
+  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+/>
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
             <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 text-primary-foreground translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-700">
               <p className="text-[10px] uppercase tracking-[0.4em] mb-2 opacity-80">{p.category} — {p.location}</p>
