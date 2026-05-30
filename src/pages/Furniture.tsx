@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Armchair, Sofa as SofaIcon, Table2, ArrowLeft, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
+import { Armchair, Sofa as SofaIcon, Table2, LayoutGrid, ArrowLeft, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
 import { Button } from "@/components/ui/button";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
-import { items as allItems, type Item } from "@/data/items";
+import { type Item } from "@/data/items";
+import { useAllItems } from "@/lib/itemsApi";
 import { useCart } from "@/context/CartContext";
 import { formatRupiah } from "@/data/furniture";
 import chairTheme from "@/assets/furniture/chair-theme.png";
@@ -14,7 +15,7 @@ import sofaTheme from "@/assets/furniture/sofa-theme.png";
 
 /* -------------------- Themes (only items that have illustrations) -------------------- */
 
-type ThemeKey = "Chair" | "Sofa" | "Table" ;
+type ThemeKey = "Chair" | "Sofa" | "Table" | "All";
 
 const themeMap: Record<ThemeKey, { icon: typeof Armchair; slugs: string[]; tagline: string; image?: string }> = {
   Chair: {
