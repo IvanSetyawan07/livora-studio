@@ -28,62 +28,86 @@ interface ApiProject {
 const FALLBACK_IMG = "/placeholder.svg";
 
 export const mapApiProject = (p: ApiProject): Project => {
-  const hero = imgUrl(p.hero_image) || FALLBACK_IMG;
-  const slides =
-    (p.photos ?? []).map((ph) => ({
-      title: ph.title ? `${p.title} — ${ph.title}` : p.title,
-      image: imgUrl(ph.image) || hero,
-      items: (ph.items ?? []).map((it) => it.title),
-    })) ?? [];
+  const staticMatch = staticProjects.find((s) => s.slug === p.slug);
+  const isValidStoragePath = p.hero_image?.startsWith("/storage/");
+  const hero = (isValidStoragePath ? imgUrl(p.hero_image) : null)
+    || staticMatch?.img
+    || FALLBACK_IMG;
+
+  const slides = (p.photos ?? []).map((ph) => ({
+    title: ph.title ? `${p.title} — ${ph.title}` : p.title,
+    image: imgUrl(ph.image) || hero,
+    items: (ph.items ?? []).map((it) => it.title),
+  }));
 
   return {
     slug: p.slug,
     name: p.title,
-    category: p.scope?.name ?? "Project",
-    location: p.location ?? "",
-    year: p.year ?? "",
-    scope: p.scope?.name ?? "",
+    category: p.scope?.name ?? staticMatch?.category ?? "Project",
+    location: p.location ?? staticMatch?.location ?? "",
+    year: p.year ?? staticMatch?.year ?? "",
+    scope: p.scope?.name ?? staticMatch?.scope ?? "",
     img: hero,
-    span: "md:col-span-4 aspect-[4/5]",
-    description: p.description ?? "",
-    slides,
+    span: staticMatch?.span ?? "md:col-span-4 aspect-[4/5]",
+    description: p.description ?? staticMatch?.description ?? "",
+    slides: slides.length ? slides : (staticMatch?.slides ?? []),
   };
 };
 
-const mergeBySlug = (a: Project[], b: Project[]) => {
-  const seen = new Set<string>();
-  const out: Project[] = [];
-  for (const p of [...a, ...b]) {
-    if (seen.has(p.slug)) continue;
-    seen.add(p.slug);
-    out.push(p);
-  }
-  return out;
+// Satu store terpusat agar semua hook sinkron
+let cachedAll: Project[] = staticProjects;
+let cachedHighlights: Project[] = staticProjects.slice(0, 3);
+const listeners = new Set<() => void>();
+let fetched = false;
+
+const notify = () => listeners.forEach((fn) => fn());
+
+const fetchAll = () => {
+  if (fetched) return;
+  fetched = true;
+
+  // Fetch semua project
+  api.get<ApiProject[]>("/projects").then((r) => {
+    const apiProjects = r.data.map(mapApiProject);
+    const seen = new Set(staticProjects.map((p) => p.slug));
+    const extras = apiProjects.filter((p) => !seen.has(p.slug));
+    cachedAll = [...staticProjects, ...extras];
+    notify();
+  }).catch(() => {});
+
+  // Fetch highlights — resolve img dari cachedAll atau static
+  api.get<ApiProject[]>("/landing/highlights").then((r) => {
+    if (!r.data.length) return;
+    cachedHighlights = r.data.map((p) => {
+      const mapped = mapApiProject(p);
+      // Ambil img dari static jika tersedia
+      const staticMatch = staticProjects.find((s) => s.slug === p.slug);
+      return staticMatch ? { ...mapped, img: staticMatch.img } : mapped;
+    }).slice(0, 3);
+    notify();
+  }).catch(() => {});
 };
 
 export const useAllProjects = () => {
-  const [list, setList] = useState<Project[]>(staticProjects);
+  const [, setTick] = useState(0);
   useEffect(() => {
-    api
-      .get<ApiProject[]>("/projects")
-      .then((r) => setList(mergeBySlug(staticProjects, r.data.map(mapApiProject))))
-      .catch(() => {});
+    const rerender = () => setTick((t) => t + 1);
+    listeners.add(rerender);
+    fetchAll();
+    return () => { listeners.delete(rerender); };
   }, []);
-  return list;
+  return cachedAll;
 };
 
 export const useHighlightProjects = () => {
-  const [list, setList] = useState<Project[]>(staticProjects.slice(0, 3));
+  const [, setTick] = useState(0);
   useEffect(() => {
-    api
-      .get<ApiProject[]>("/landing/highlights")
-      .then((r) => {
-        const api = r.data.map(mapApiProject);
-        if (api.length) setList(api.slice(0, 3));
-      })
-      .catch(() => {});
+    const rerender = () => setTick((t) => t + 1);
+    listeners.add(rerender);
+    fetchAll();
+    return () => { listeners.delete(rerender); };
   }, []);
-  return list;
+  return cachedHighlights;
 };
 
 export const useProjectBySlug = (slug?: string) => {

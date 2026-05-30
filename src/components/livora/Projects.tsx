@@ -7,14 +7,26 @@ export const Projects = () => {
   const highlights = useHighlightProjects();
   const all = useAllProjects();
   const [filter, setFilter] = useState("All");
+
   const categories = useMemo(
     () => ["All", ...Array.from(new Set(all.map((p) => p.category).filter(Boolean)))],
     [all],
   );
-  const source = filter === "All" ? highlights : all;
-  const filtered = source
-    .filter((p) => filter === "All" || p.category === filter)
-    .slice(0, 3);
+
+  // Ketika "All": pakai highlights, tapi merge dengan all agar img statis ter-resolve
+  const filtered = useMemo(() => {
+  if (filter === "All") {
+    console.log("highlights:", highlights.map(h => h.slug));
+    console.log("all:", all.map(a => a.slug));
+    const result = highlights.map((h) => {
+      const fromAll = all.find((a) => a.slug === h.slug);
+      console.log(h.slug, "→ img:", (fromAll ?? h).img);
+      return fromAll ?? h;
+    }).slice(0, 3);
+    return result;
+  }
+  return all.filter((p) => p.category === filter).slice(0, 3);
+}, [filter, highlights, all]);
 
   return (
     <section id="projects" className="py-28 md:py-40 container-livora">
@@ -47,49 +59,38 @@ export const Projects = () => {
         ))}
       </div>
 
-      <div className="grid md:grid-cols-12 md:auto-rows-[320px] gap-6">
-        {filtered.map((p, i) => (
-          <Link
-            key={p.name}
-            to={`/projects/${p.slug}`}
-            className={`reveal group relative block overflow-hidden cursor-pointer
-  ${
-    i === 0
-      ? "md:col-span-8 md:row-span-2"
-      : "md:col-span-4 md:row-span-1"
-  }
-  ${i > 0 ? "h-[280px]" : ""}
-`}
-            
-            style={{ transitionDelay: `${i * 80}ms` }}
-          >
-            <img
-  src={p.img}
-  alt={`${p.name} — ${p.category}`}
-  loading="lazy"
-  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-/>
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-            <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 text-primary-foreground translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-700">
-              <p className="text-[10px] uppercase tracking-[0.4em] mb-2 opacity-80">{p.category} — {p.location}</p>
-              <h3 className="serif text-3xl md:text-4xl font-light">{p.name}</h3>
-            </div>
-            <div
-              className="absolute bottom-0 left-0 right-0 px-6 md:px-8 py-5 flex justify-end items-end opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-              style={{
-                background: "linear-gradient(to top, rgba(0,0,0,0.5), transparent)",
-              }}
-            >
-              <span
-                className="uppercase text-white"
-                style={{ fontSize: "13px", letterSpacing: "0.1em" }}
-              >
-                View Project →
-              </span>
-            </div>
-          </Link>
-        ))}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
+  {filtered.map((p, i) => (
+    <Link
+      key={p.slug}
+      to={`/projects/${p.slug}`}
+      className={`reveal group relative block overflow-hidden cursor-pointer ${
+        i === 0 ? "md:col-span-3 md:row-span-2 aspect-[4/5] md:aspect-auto md:h-full min-h-[400px]" : "md:col-span-2 aspect-[4/3]"
+      }`}
+      style={{ transitionDelay: `${i * 80}ms` }}
+    >
+      <img
+        src={p.img}
+        alt={`${p.name} — ${p.category}`}
+        loading="lazy"
+        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+      <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 text-primary-foreground translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-700">
+        <p className="text-[10px] uppercase tracking-[0.4em] mb-2 opacity-80">{p.category} — {p.location}</p>
+        <h3 className="serif text-3xl md:text-4xl font-light">{p.name}</h3>
       </div>
+      <div
+        className="absolute bottom-0 left-0 right-0 px-6 md:px-8 py-5 flex justify-end items-end opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.5), transparent)" }}
+      >
+        <span className="uppercase text-white" style={{ fontSize: "13px", letterSpacing: "0.1em" }}>
+          View Project →
+        </span>
+      </div>
+    </Link>
+  ))}
+</div>
     </section>
   );
 };

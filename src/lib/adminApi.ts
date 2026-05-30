@@ -5,7 +5,16 @@ export const BACKEND_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 
 export const imgUrl = (path?: string | null) => {
   if (!path) return "";
-  if (path.startsWith("http")) return path;
+
+  if (path.startsWith("http")) {
+    return path;
+  }
+
+  // gambar seed dari frontend
+  if (path.startsWith("/seed/")) {
+    return path;
+  }
+
   return BACKEND_ORIGIN + path;
 };
 
