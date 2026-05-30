@@ -4,16 +4,17 @@ import { Navbar } from "@/components/livora/Navbar";
 import { PageBreadcrumb } from "@/components/livora/Breadcrumb";
 import { Footer } from "@/components/livora/Footer";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
-import { getItemBySlug, items, slugifyItem } from "@/data/items";
-import { getProjectBySlug } from "@/data/projects";
+import { items } from "@/data/items";
+import { useItemBySlug } from "@/lib/itemsApi";
+import { useProjectBySlug } from "@/lib/projectsApi";
 
 const ItemDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const projectSlug = searchParams.get("from");
-  const project = projectSlug ? getProjectBySlug(projectSlug) : undefined;
-  const item = slug ? getItemBySlug(slug) : undefined;
+  const { project } = useProjectBySlug(projectSlug ?? undefined);
+  const { item, loading } = useItemBySlug(slug);
   const [activeTag, setActiveTag] = useState<string | null>(null);
 
   useEffect(() => {
