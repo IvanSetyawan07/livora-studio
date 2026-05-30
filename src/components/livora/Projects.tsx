@@ -1,13 +1,18 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { SectionHeader } from "./SectionHeader";
-import { projects } from "@/data/projects";
-
-const categories = ["All", "Hotel", "Residential", "Office"];
+import { useHighlightProjects, useAllProjects } from "@/lib/projectsApi";
 
 export const Projects = () => {
+  const highlights = useHighlightProjects();
+  const all = useAllProjects();
   const [filter, setFilter] = useState("All");
-  const filtered = projects
+  const categories = useMemo(
+    () => ["All", ...Array.from(new Set(all.map((p) => p.category).filter(Boolean)))],
+    [all],
+  );
+  const source = filter === "All" ? highlights : all;
+  const filtered = source
     .filter((p) => filter === "All" || p.category === filter)
     .slice(0, 3);
 

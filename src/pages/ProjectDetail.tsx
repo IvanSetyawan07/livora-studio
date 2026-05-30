@@ -4,7 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { Navbar } from "@/components/livora/Navbar";
 import { PageBreadcrumb } from "@/components/livora/Breadcrumb";
 import { Footer } from "@/components/livora/Footer";
-import { getProjectBySlug } from "@/data/projects";
+import { useProjectBySlug } from "@/lib/projectsApi";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
 import { slugifyItem } from "@/data/items";
 import { useReveal } from "@/hooks/useReveal";
@@ -18,7 +18,7 @@ const TAGLINES: Record<string, string> = {
 const ProjectDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const project = slug ? getProjectBySlug(slug) : undefined;
+  const { project, loading } = useProjectBySlug(slug);
   const [slideIndex, setSlideIndex] = useState(0);
   const [showScrollHint, setShowScrollHint] = useState(false);
   useReveal();
@@ -104,7 +104,9 @@ const ProjectDetail = () => {
     return (
       <main className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <p className="serif text-4xl font-light mb-4">Project not found</p>
+          <p className="serif text-4xl font-light mb-4">
+            {loading ? "Loading…" : "Project not found"}
+          </p>
           <Link to="/" className="text-xs uppercase tracking-[0.3em] underline-grow">
             Back to home
           </Link>

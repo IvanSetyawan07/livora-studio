@@ -1,13 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
-import { projects } from "@/data/projects";
-
-const categories = ["All", "Hotel", "Residential", "Office"];
+import { useAllProjects } from "@/lib/projectsApi";
 
 const ProjectsPage = () => {
+  const projects = useAllProjects();
   const [filter, setFilter] = useState("All");
+  const categories = useMemo(
+    () => ["All", ...Array.from(new Set(projects.map((p) => p.category).filter(Boolean)))],
+    [projects],
+  );
   const filtered = projects.filter((p) => filter === "All" || p.category === filter);
 
   useEffect(() => {
