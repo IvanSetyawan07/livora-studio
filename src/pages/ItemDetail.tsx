@@ -146,9 +146,18 @@ const ItemDetail = () => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                overflow: "hidden",
               }}
             >
-              <ItemIllustration name={item.name} size={280} strokeWidth={1.1} />
+              {item.image ? (
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              ) : (
+                <ItemIllustration name={item.name} size={280} strokeWidth={1.1} />
+              )}
             </div>
           </div>
 
