@@ -23,11 +23,11 @@ export interface ProjectSlide {
 export interface Project {
   slug: string;
   name: string;
+  subtitle?: string;  // ← tambah ini
   category: string;
   location: string;
   year: string;
   scope: string;
-
   img: string;
   span: string;
   description: string;

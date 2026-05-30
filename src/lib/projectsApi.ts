@@ -43,6 +43,7 @@ export const mapApiProject = (p: ApiProject): Project => {
   return {
     slug: p.slug,
     name: p.title,
+    subtitle: p.subtitle ?? staticMatch?.subtitle ?? "",
     category: p.scope?.name ?? staticMatch?.category ?? "Project",
     location: p.location ?? staticMatch?.location ?? "",
     year: p.year ?? staticMatch?.year ?? "",
@@ -80,7 +81,6 @@ const fetchAll = () => {
     if (!r.data.length) return;
     cachedHighlights = r.data.map((p) => {
       const mapped = mapApiProject(p);
-      // Ambil img dari static jika tersedia
       const staticMatch = staticProjects.find((s) => s.slug === p.slug);
       return staticMatch ? { ...mapped, img: staticMatch.img } : mapped;
     }).slice(0, 3);
@@ -113,22 +113,17 @@ export const useHighlightProjects = () => {
 export const useProjectBySlug = (slug?: string) => {
   const fromStatic = slug ? staticProjects.find((p) => p.slug === slug) : undefined;
   const [project, setProject] = useState<Project | undefined>(fromStatic);
-  const [loading, setLoading] = useState(!fromStatic);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!slug) return;
-    if (fromStatic) {
-      setProject(fromStatic);
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     api
       .get<ApiProject>(`/projects/${slug}`)
       .then((r) => setProject(mapApiProject(r.data)))
-      .catch(() => setProject(undefined))
+      .catch(() => setProject(fromStatic ?? undefined))
       .finally(() => setLoading(false));
-  }, [slug, fromStatic]);
+  }, [slug]);
 
   return { project, loading };
 };

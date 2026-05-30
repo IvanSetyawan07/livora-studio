@@ -7,7 +7,6 @@ import { Footer } from "@/components/livora/Footer";
 import { useProjectBySlug } from "@/lib/projectsApi";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
 import { slugifyItem } from "@/data/items";
-import { useReveal } from "@/hooks/useReveal";
 
 const TAGLINES: Record<string, string> = {
   "harmony-one": "BATAM.",
@@ -21,7 +20,6 @@ const ProjectDetail = () => {
   const { project, loading } = useProjectBySlug(slug);
   const [slideIndex, setSlideIndex] = useState(0);
   const [showScrollHint, setShowScrollHint] = useState(false);
-  useReveal();
 
   // Always start at top on mount / route change
   useEffect(() => {
@@ -31,6 +29,25 @@ const ProjectDetail = () => {
   useEffect(() => {
     setSlideIndex(0);
   }, [slug]);
+
+  // useReveal — re-run setelah project load dari API
+  useEffect(() => {
+    if (!project) return;
+    const els = document.querySelectorAll<HTMLElement>(".reveal");
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add("is-visible");
+            io.unobserve(e.target);
+          }
+        });
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -60px 0px" }
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [project]); // ← re-run setiap kali project berubah
 
   // Scroll-down indicator: show after 2s idle, hide on scroll/movement past hero
   useEffect(() => {
@@ -100,13 +117,19 @@ const ProjectDetail = () => {
     }
   }, [project]);
 
+  if (loading) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-background">
+        <p className="serif text-4xl font-light">Loading…</p>
+      </main>
+    );
+  }
+
   if (!project) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <p className="serif text-4xl font-light mb-4">
-            {loading ? "Loading…" : "Project not found"}
-          </p>
+          <p className="serif text-4xl font-light mb-4">Project not found</p>
           <Link to="/" className="text-xs uppercase tracking-[0.3em] underline-grow">
             Back to home
           </Link>
@@ -170,7 +193,7 @@ const ProjectDetail = () => {
                 animationDuration: "0.9s",
               }}
             >
-              {TAGLINES[project.slug] ?? "Cihampelas"}
+              {TAGLINES[project.slug] ?? project.subtitle ?? ""}
             </p>
           </div>
 
