@@ -4,16 +4,17 @@ import { Navbar } from "@/components/livora/Navbar";
 import { PageBreadcrumb } from "@/components/livora/Breadcrumb";
 import { Footer } from "@/components/livora/Footer";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
-import { getItemBySlug, items, slugifyItem } from "@/data/items";
-import { getProjectBySlug } from "@/data/projects";
+import { items } from "@/data/items";
+import { useItemBySlug } from "@/lib/itemsApi";
+import { useProjectBySlug } from "@/lib/projectsApi";
 
 const ItemDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const projectSlug = searchParams.get("from");
-  const project = projectSlug ? getProjectBySlug(projectSlug) : undefined;
-  const item = slug ? getItemBySlug(slug) : undefined;
+  const { project } = useProjectBySlug(projectSlug ?? undefined);
+  const { item, loading } = useItemBySlug(slug);
   const [activeTag, setActiveTag] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,7 +40,9 @@ const ItemDetail = () => {
     return (
       <main className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <p className="serif text-4xl font-light mb-4">Item not found</p>
+          <p className="serif text-4xl font-light mb-4">
+            {loading ? "Loading…" : "Item not found"}
+          </p>
           <Link to="/" className="text-xs uppercase tracking-[0.3em] underline-grow">
             Back to home
           </Link>
@@ -143,9 +146,18 @@ const ItemDetail = () => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                overflow: "hidden",
               }}
             >
-              <ItemIllustration name={item.name} size={280} strokeWidth={1.1} />
+              {item.image ? (
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              ) : (
+                <ItemIllustration name={item.name} size={280} strokeWidth={1.1} />
+              )}
             </div>
           </div>
 

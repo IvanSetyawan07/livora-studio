@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Armchair, Sofa as SofaIcon, Table2, ArrowLeft, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
+import { Armchair, Sofa as SofaIcon, Table2, LayoutGrid, ArrowLeft, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
 import { Button } from "@/components/ui/button";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
-import { items as allItems, type Item } from "@/data/items";
+import { type Item } from "@/data/items";
+import { useAllItems } from "@/lib/itemsApi";
 import { useCart } from "@/context/CartContext";
 import { formatRupiah } from "@/data/furniture";
 import chairTheme from "@/assets/furniture/chair-theme.png";
@@ -14,7 +15,7 @@ import sofaTheme from "@/assets/furniture/sofa-theme.png";
 
 /* -------------------- Themes (only items that have illustrations) -------------------- */
 
-type ThemeKey = "Chair" | "Sofa" | "Table" ;
+type ThemeKey = "Chair" | "Sofa" | "Table" | "All";
 
 const themeMap: Record<ThemeKey, { icon: typeof Armchair; slugs: string[]; tagline: string; image?: string }> = {
   Chair: {
@@ -63,22 +64,32 @@ const themeMap: Record<ThemeKey, { icon: typeof Armchair; slugs: string[]; tagli
       "nesting-coffee-tables",
     ],
   },
+  All: {
+    icon: LayoutGrid,
+    tagline: "Every piece in our collection, in one place.",
+    slugs: [],
+  },
 };
 
-const itemBySlug = (slug: string): Item | undefined =>
-  allItems.find((i) => i.slug === slug);
+const findItem = (slug: string, all: Item[]): Item | undefined =>
+  all.find((i) => i.slug === slug);
 
 /* -------------------- Theme card -------------------- */
 
 const ThemeCard = ({
   themeKey,
   onOpen,
+  allItems,
+  count,
 }: {
   themeKey: ThemeKey;
   onOpen: (k: ThemeKey) => void;
+  allItems: Item[];
+  count: number;
 }) => {
   const { icon: Icon, tagline, slugs, image } = themeMap[themeKey];
   const previewSlug = slugs[0];
+  const previewItem = previewSlug ? findItem(previewSlug, allItems) : undefined;
   return (
     <button
       onClick={() => onOpen(themeKey)}
@@ -91,9 +102,9 @@ const ThemeCard = ({
             alt={themeKey}
             className="w-full h-full object-contain p-6 transition-transform duration-700 group-hover:scale-110"
           />
-        ) : previewSlug ? (
+        ) : previewItem ? (
           <div className="w-1/2 h-1/2 transition-transform duration-700 group-hover:scale-110">
-            <ItemIllustration name={itemBySlug(previewSlug)?.name ?? ""} size={240} />
+            <ItemIllustration name={previewItem.name} size={240} />
           </div>
         ) : (
           <Icon className="w-20 h-20 text-foreground/30" strokeWidth={1} />
@@ -107,12 +118,12 @@ const ThemeCard = ({
         <p className="text-sm text-foreground/65 font-light">{tagline}</p>
         <div className="mt-auto pt-4 flex items-end justify-between border-t border-border/60">
           <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-            {slugs.length} {slugs.length === 1 ? "piece" : "pieces"}
+            {count} {count === 1 ? "piece" : "pieces"}
           </p>
           <span className="text-[10px] uppercase tracking-[0.3em] text-foreground/60 group-hover:text-foreground transition-colors">
             Explore →
           </span>
-        </div> 
+        </div>
       </div>
     </button>
   );
@@ -126,9 +137,17 @@ const ItemCard = ({ item }: { item: Item }) => (
     className="group text-left bg-card border border-border hover:border-foreground/40 transition-all duration-500 hover:-translate-y-1 hover:shadow-[var(--shadow-elegant)] flex flex-col"
   >
     <div className="relative aspect-[4/3] bg-secondary/60 overflow-hidden flex items-center justify-center">
-      <div className="w-2/3 h-2/3 transition-transform duration-700 group-hover:scale-110">
-        <ItemIllustration name={item.name} size={260} />
-      </div>
+      {item.image ? (
+        <img
+          src={item.image}
+          alt={item.name}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+        />
+      ) : (
+        <div className="w-2/3 h-2/3 transition-transform duration-700 group-hover:scale-110">
+          <ItemIllustration name={item.name} size={260} />
+        </div>
+      )}
       <span className="absolute top-4 left-4 text-[10px] uppercase tracking-[0.3em] text-foreground/60 bg-background/80 px-2.5 py-1">
         {item.category}
       </span>
@@ -149,14 +168,27 @@ const ItemCard = ({ item }: { item: Item }) => (
 /* -------------------- Page -------------------- */
 
 const Furniture = () => {
+  const allItems = useAllItems();
   const [activeTheme, setActiveTheme] = useState<ThemeKey | null>(null);
 
-  const themedItems = useMemo(() => {
-    if (!activeTheme) return [];
-    return themeMap[activeTheme].slugs
-      .map(itemBySlug)
+  const itemsForTheme = (key: ThemeKey): Item[] => {
+    if (key === "All") return allItems;
+    const staticOnes = themeMap[key].slugs
+      .map((s) => findItem(s, allItems))
       .filter((i): i is Item => Boolean(i));
-  }, [activeTheme]);
+    // Also include API items whose category/type matches the theme name
+    const extra = allItems.filter(
+      (i) =>
+        !themeMap[key].slugs.includes(i.slug) &&
+        i.category.toUpperCase().includes(key.toUpperCase()),
+    );
+    return [...staticOnes, ...extra];
+  };
+
+  const themedItems = useMemo(
+    () => (activeTheme ? itemsForTheme(activeTheme) : []),
+    [activeTheme, allItems],
+  );
 
   return (
     <main className="min-h-screen bg-background">
@@ -193,7 +225,13 @@ const Furniture = () => {
           {!activeTheme ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 animate-fade-in">
               {(Object.keys(themeMap) as ThemeKey[]).map((k) => (
-                <ThemeCard key={k} themeKey={k} onOpen={setActiveTheme} />
+                <ThemeCard
+                  key={k}
+                  themeKey={k}
+                  onOpen={setActiveTheme}
+                  allItems={allItems}
+                  count={itemsForTheme(k).length}
+                />
               ))}
             </div>
           ) : (
