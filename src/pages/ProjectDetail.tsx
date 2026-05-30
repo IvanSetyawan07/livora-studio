@@ -104,7 +104,9 @@ const ProjectDetail = () => {
     return (
       <main className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <p className="serif text-4xl font-light mb-4">Project not found</p>
+          <p className="serif text-4xl font-light mb-4">
+            {loading ? "Loading…" : "Project not found"}
+          </p>
           <Link to="/" className="text-xs uppercase tracking-[0.3em] underline-grow">
             Back to home
           </Link>
