@@ -160,14 +160,27 @@ const ItemCard = ({ item }: { item: Item }) => (
 /* -------------------- Page -------------------- */
 
 const Furniture = () => {
+  const allItems = useAllItems();
   const [activeTheme, setActiveTheme] = useState<ThemeKey | null>(null);
 
-  const themedItems = useMemo(() => {
-    if (!activeTheme) return [];
-    return themeMap[activeTheme].slugs
-      .map(itemBySlug)
+  const itemsForTheme = (key: ThemeKey): Item[] => {
+    if (key === "All") return allItems;
+    const staticOnes = themeMap[key].slugs
+      .map((s) => findItem(s, allItems))
       .filter((i): i is Item => Boolean(i));
-  }, [activeTheme]);
+    // Also include API items whose category/type matches the theme name
+    const extra = allItems.filter(
+      (i) =>
+        !themeMap[key].slugs.includes(i.slug) &&
+        i.category.toUpperCase().includes(key.toUpperCase()),
+    );
+    return [...staticOnes, ...extra];
+  };
+
+  const themedItems = useMemo(
+    () => (activeTheme ? itemsForTheme(activeTheme) : []),
+    [activeTheme, allItems],
+  );
 
   return (
     <main className="min-h-screen bg-background">
@@ -204,7 +217,13 @@ const Furniture = () => {
           {!activeTheme ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 animate-fade-in">
               {(Object.keys(themeMap) as ThemeKey[]).map((k) => (
-                <ThemeCard key={k} themeKey={k} onOpen={setActiveTheme} />
+                <ThemeCard
+                  key={k}
+                  themeKey={k}
+                  onOpen={setActiveTheme}
+                  allItems={allItems}
+                  count={itemsForTheme(k).length}
+                />
               ))}
             </div>
           ) : (
