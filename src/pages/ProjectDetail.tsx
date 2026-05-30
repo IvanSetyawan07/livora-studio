@@ -18,7 +18,7 @@ const TAGLINES: Record<string, string> = {
 const ProjectDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const project = slug ? getProjectBySlug(slug) : undefined;
+  const { project, loading } = useProjectBySlug(slug);
   const [slideIndex, setSlideIndex] = useState(0);
   const [showScrollHint, setShowScrollHint] = useState(false);
   useReveal();
