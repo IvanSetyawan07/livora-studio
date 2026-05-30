@@ -79,12 +79,17 @@ const findItem = (slug: string, all: Item[]): Item | undefined =>
 const ThemeCard = ({
   themeKey,
   onOpen,
+  allItems,
+  count,
 }: {
   themeKey: ThemeKey;
   onOpen: (k: ThemeKey) => void;
+  allItems: Item[];
+  count: number;
 }) => {
   const { icon: Icon, tagline, slugs, image } = themeMap[themeKey];
   const previewSlug = slugs[0];
+  const previewItem = previewSlug ? findItem(previewSlug, allItems) : undefined;
   return (
     <button
       onClick={() => onOpen(themeKey)}
@@ -97,9 +102,9 @@ const ThemeCard = ({
             alt={themeKey}
             className="w-full h-full object-contain p-6 transition-transform duration-700 group-hover:scale-110"
           />
-        ) : previewSlug ? (
+        ) : previewItem ? (
           <div className="w-1/2 h-1/2 transition-transform duration-700 group-hover:scale-110">
-            <ItemIllustration name={itemBySlug(previewSlug)?.name ?? ""} size={240} />
+            <ItemIllustration name={previewItem.name} size={240} />
           </div>
         ) : (
           <Icon className="w-20 h-20 text-foreground/30" strokeWidth={1} />
@@ -113,12 +118,12 @@ const ThemeCard = ({
         <p className="text-sm text-foreground/65 font-light">{tagline}</p>
         <div className="mt-auto pt-4 flex items-end justify-between border-t border-border/60">
           <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-            {slugs.length} {slugs.length === 1 ? "piece" : "pieces"}
+            {count} {count === 1 ? "piece" : "pieces"}
           </p>
           <span className="text-[10px] uppercase tracking-[0.3em] text-foreground/60 group-hover:text-foreground transition-colors">
             Explore →
           </span>
-        </div> 
+        </div>
       </div>
     </button>
   );
