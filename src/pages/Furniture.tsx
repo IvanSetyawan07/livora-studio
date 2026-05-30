@@ -73,17 +73,6 @@ const themeMap: Record<ThemeKey, { icon: typeof Armchair; slugs: string[]; tagli
 
 const itemBySlug = (slug: string, all: Item[]): Item | undefined =>
   all.find((i) => i.slug === slug);
-      "coco-table",
-      "coffee-table",
-      "marble-coffee-table",
-      "brass-drum-coffee-table",
-      "nesting-coffee-tables",
-    ],
-  },
-};
-
-const itemBySlug = (slug: string): Item | undefined =>
-  allItems.find((i) => i.slug === slug);
 
 /* -------------------- Theme card -------------------- */
 
