@@ -15,6 +15,7 @@ export interface Item {
   themes: string[];
   categories: string[];
   textures: string[];
+  image?: string; // optional URL (for admin-created items)
 }
 
 export const items: Item[] = [
