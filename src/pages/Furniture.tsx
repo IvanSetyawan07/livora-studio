@@ -137,9 +137,17 @@ const ItemCard = ({ item }: { item: Item }) => (
     className="group text-left bg-card border border-border hover:border-foreground/40 transition-all duration-500 hover:-translate-y-1 hover:shadow-[var(--shadow-elegant)] flex flex-col"
   >
     <div className="relative aspect-[4/3] bg-secondary/60 overflow-hidden flex items-center justify-center">
-      <div className="w-2/3 h-2/3 transition-transform duration-700 group-hover:scale-110">
-        <ItemIllustration name={item.name} size={260} />
-      </div>
+      {item.image ? (
+        <img
+          src={item.image}
+          alt={item.name}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+        />
+      ) : (
+        <div className="w-2/3 h-2/3 transition-transform duration-700 group-hover:scale-110">
+          <ItemIllustration name={item.name} size={260} />
+        </div>
+      )}
       <span className="absolute top-4 left-4 text-[10px] uppercase tracking-[0.3em] text-foreground/60 bg-background/80 px-2.5 py-1">
         {item.category}
       </span>
