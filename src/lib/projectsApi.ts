@@ -29,16 +29,21 @@ const FALLBACK_IMG = "/placeholder.svg";
 
 export const mapApiProject = (p: ApiProject): Project => {
   const staticMatch = staticProjects.find((s) => s.slug === p.slug);
-  const isValidStoragePath = p.hero_image?.startsWith("/storage/");
-  const hero = (isValidStoragePath ? imgUrl(p.hero_image) : null)
-    || staticMatch?.img
+
+  // Prioritas gambar: static local → storage Laravel → fallback
+  const hero = staticMatch?.img
+    || (p.hero_image?.startsWith("/storage/") ? imgUrl(p.hero_image) : null)
     || FALLBACK_IMG;
 
-  const slides = (p.photos ?? []).map((ph) => ({
-    title: ph.title ? `${p.title} — ${ph.title}` : p.title,
-    image: imgUrl(ph.image) || hero,
-    items: (ph.items ?? []).map((it) => it.title),
-  }));
+  // Prioritas slides: kalau ada photos dari API, pakai tapi ambil gambar dari static dulu
+  // Kalau tidak ada photos, pakai slides static
+  const slides = (p.photos ?? []).length > 0
+    ? (p.photos ?? []).map((ph, i) => ({
+        title: ph.title ?? p.title,
+        image: staticMatch?.slides?.[i]?.image || imgUrl(ph.image) || hero,
+        items: (ph.items ?? []).map((it) => it.title),
+      }))
+    : (staticMatch?.slides ?? []);
 
   return {
     slug: p.slug,
@@ -51,7 +56,7 @@ export const mapApiProject = (p: ApiProject): Project => {
     img: hero,
     span: staticMatch?.span ?? "md:col-span-4 aspect-[4/5]",
     description: p.description ?? staticMatch?.description ?? "",
-    slides: slides.length ? slides : (staticMatch?.slides ?? []),
+    slides,
   };
 };
 
