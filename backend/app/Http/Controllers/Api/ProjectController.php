@@ -11,7 +11,7 @@ class ProjectController extends Controller
 {
     public function index(Request $r)
     {
-        $q = Project::with(['scope','photos']);
+        $q = Project::with(['scope','photos.items.type']);
         if ($scope = $r->query('scope')) {
             $q->whereHas('scope', fn($s) => $s->where('slug', $scope));
         }

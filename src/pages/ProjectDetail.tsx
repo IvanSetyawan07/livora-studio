@@ -18,6 +18,7 @@ const ProjectDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { project, loading } = useProjectBySlug(slug);
+  
   const [slideIndex, setSlideIndex] = useState(0);
   const [showScrollHint, setShowScrollHint] = useState(false);
 
@@ -117,13 +118,13 @@ const ProjectDetail = () => {
     }
   }, [project]);
 
-  if (loading) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-background">
-        <p className="serif text-4xl font-light">Loading…</p>
-      </main>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <main className="min-h-screen flex items-center justify-center bg-background">
+  //       <p className="serif text-4xl font-light">Loading…</p>
+  //     </main>
+  //   );
+  // }
 
   if (!project) {
     return (

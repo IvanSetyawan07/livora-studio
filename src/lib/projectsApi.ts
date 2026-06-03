@@ -72,16 +72,23 @@ const fetchAll = () => {
   if (fetched) return;
   fetched = true;
 
-  // Fetch semua project
+  // Fetch semua project — API sebagai sumber utama
   api.get<ApiProject[]>("/projects").then((r) => {
-    const apiProjects = r.data.map(mapApiProject);
-    const seen = new Set(staticProjects.map((p) => p.slug));
-    const extras = apiProjects.filter((p) => !seen.has(p.slug));
-    cachedAll = [...staticProjects, ...extras];
+    if (r.data.length > 0) {
+      // Pakai data API, tapi enriched dengan data static (gambar, slides, dll)
+      cachedAll = r.data.map(mapApiProject);
+    } else {
+      // Fallback ke static kalau API kosong
+      cachedAll = staticProjects;
+    }
     notify();
-  }).catch(() => {});
+  }).catch(() => {
+    // Kalau API error, fallback ke static
+    cachedAll = staticProjects;
+    notify();
+  });
 
-  // Fetch highlights — resolve img dari cachedAll atau static
+  // Fetch highlights
   api.get<ApiProject[]>("/landing/highlights").then((r) => {
     if (!r.data.length) return;
     cachedHighlights = r.data.map((p) => {
@@ -92,7 +99,6 @@ const fetchAll = () => {
     notify();
   }).catch(() => {});
 };
-
 export const useAllProjects = () => {
   const [, setTick] = useState(0);
   useEffect(() => {
