@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 import { Navbar } from "@/components/livora/Navbar";
@@ -7,6 +7,7 @@ import { Footer } from "@/components/livora/Footer";
 import { useProjectBySlug } from "@/lib/projectsApi";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
 import { slugifyItem } from "@/data/items";
+import { trackClick, trackView } from "@/lib/adminApi";
 
 const TAGLINES: Record<string, string> = {
   "harmony-one": "BATAM.",
