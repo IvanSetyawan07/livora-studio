@@ -39,6 +39,7 @@ export const mapApiItem = (it: ApiItem): Item => {
     categories: (it.categories ?? []).map((c) => c.name),
     textures: textures.length ? textures : ["Premium"],
     image: imgUrl(it.image) || undefined,
+    apiId: it.id,
   };
 };
 

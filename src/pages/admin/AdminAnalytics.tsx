@@ -92,19 +92,26 @@ export default function AdminAnalytics() {
 }
 
 function ChartCard({ title, data, dataKey, color }: any) {
+  const hasData = Array.isArray(data) && data.length > 0;
   return (
     <div className="bg-card border border-border rounded-lg p-6">
       <h2 className="serif text-xl mb-4">{title}</h2>
       <div style={{ width: "100%", height: 260 }}>
-        <ResponsiveContainer>
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-            <XAxis dataKey="title" tick={{ fontSize: 10 }} />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey={dataKey} fill={color} />
-          </BarChart>
-        </ResponsiveContainer>
+        {hasData ? (
+          <ResponsiveContainer>
+            <BarChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <XAxis dataKey="title" tick={{ fontSize: 10 }} />
+              <YAxis allowDecimals={false} />
+              <Tooltip />
+              <Bar dataKey={dataKey} fill={color} />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+            Belum ada data. Klik beberapa item / project di halaman publik untuk mulai melihat statistik.
+          </div>
+        )}
       </div>
     </div>
   );

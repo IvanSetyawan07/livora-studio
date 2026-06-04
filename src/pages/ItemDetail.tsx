@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Navbar } from "@/components/livora/Navbar";
 import { PageBreadcrumb } from "@/components/livora/Breadcrumb";
@@ -7,6 +7,7 @@ import { ItemIllustration } from "@/components/livora/ItemIllustration";
 import { items } from "@/data/items";
 import { useItemBySlug } from "@/lib/itemsApi";
 import { useProjectBySlug } from "@/lib/projectsApi";
+import { trackClick, trackView } from "@/lib/adminApi";
 
 const ItemDetail = () => {
   const { slug } = useParams();
@@ -35,6 +36,19 @@ const ItemDetail = () => {
     }
     window.scrollTo(0, 0);
   }, [item]);
+
+  // Analytics: track click on mount, total view duration on unmount
+  const startRef = useRef<number>(Date.now());
+  useEffect(() => {
+    const id = item?.apiId;
+    if (!id) return;
+    startRef.current = Date.now();
+    trackClick("item", id);
+    return () => {
+      const sec = Math.round((Date.now() - startRef.current) / 1000);
+      trackView("item", id, sec);
+    };
+  }, [item?.apiId]);
 
   if (!item) {
     return (

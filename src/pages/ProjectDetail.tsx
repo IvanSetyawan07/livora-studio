@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 import { Navbar } from "@/components/livora/Navbar";
@@ -7,6 +7,7 @@ import { Footer } from "@/components/livora/Footer";
 import { useProjectBySlug } from "@/lib/projectsApi";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
 import { slugifyItem } from "@/data/items";
+import { trackClick, trackView } from "@/lib/adminApi";
 
 const TAGLINES: Record<string, string> = {
   "harmony-one": "BATAM.",
@@ -30,6 +31,20 @@ const ProjectDetail = () => {
   useEffect(() => {
     setSlideIndex(0);
   }, [slug]);
+
+  // Analytics: track click on mount, view duration on unmount
+  const startRef = useRef<number>(Date.now());
+  useEffect(() => {
+    const id = project?.apiId;
+    if (!id) return;
+    startRef.current = Date.now();
+    trackClick("project", id);
+    return () => {
+      const sec = Math.round((Date.now() - startRef.current) / 1000);
+      trackView("project", id, sec);
+    };
+  }, [project?.apiId]);
+
 
   // useReveal — re-run setelah project load dari API
   useEffect(() => {

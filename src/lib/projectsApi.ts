@@ -57,6 +57,7 @@ export const mapApiProject = (p: ApiProject): Project => {
     span: staticMatch?.span ?? "md:col-span-4 aspect-[4/5]",
     description: p.description ?? staticMatch?.description ?? "",
     slides,
+    apiId: p.id,
   };
 };
 
