@@ -32,6 +32,20 @@ const ProjectDetail = () => {
     setSlideIndex(0);
   }, [slug]);
 
+  // Analytics: track click on mount, view duration on unmount
+  const startRef = useRef<number>(Date.now());
+  useEffect(() => {
+    const id = project?.apiId;
+    if (!id) return;
+    startRef.current = Date.now();
+    trackClick("project", id);
+    return () => {
+      const sec = Math.round((Date.now() - startRef.current) / 1000);
+      trackView("project", id, sec);
+    };
+  }, [project?.apiId]);
+
+
   // useReveal — re-run setelah project load dari API
   useEffect(() => {
     if (!project) return;
