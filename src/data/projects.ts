@@ -32,6 +32,7 @@ export interface Project {
   span: string;
   description: string;
   slides: ProjectSlide[];
+  apiId?: number; // backend id for analytics tracking
 }
 
 export const projects: Project[] = [
