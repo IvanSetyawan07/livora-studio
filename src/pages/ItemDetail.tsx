@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Navbar } from "@/components/livora/Navbar";
 import { PageBreadcrumb } from "@/components/livora/Breadcrumb";
@@ -7,6 +7,7 @@ import { ItemIllustration } from "@/components/livora/ItemIllustration";
 import { items } from "@/data/items";
 import { useItemBySlug } from "@/lib/itemsApi";
 import { useProjectBySlug } from "@/lib/projectsApi";
+import { trackClick, trackView } from "@/lib/adminApi";
 
 const ItemDetail = () => {
   const { slug } = useParams();
