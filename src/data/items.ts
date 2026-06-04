@@ -16,6 +16,7 @@ export interface Item {
   categories: string[];
   textures: string[];
   image?: string; // optional URL (for admin-created items)
+  apiId?: number; // backend id for analytics tracking
 }
 
 export const items: Item[] = [
