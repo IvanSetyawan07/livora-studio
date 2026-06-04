@@ -37,6 +37,19 @@ const ItemDetail = () => {
     window.scrollTo(0, 0);
   }, [item]);
 
+  // Analytics: track click on mount, total view duration on unmount
+  const startRef = useRef<number>(Date.now());
+  useEffect(() => {
+    const id = item?.apiId;
+    if (!id) return;
+    startRef.current = Date.now();
+    trackClick("item", id);
+    return () => {
+      const sec = Math.round((Date.now() - startRef.current) / 1000);
+      trackView("item", id, sec);
+    };
+  }, [item?.apiId]);
+
   if (!item) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-background">
