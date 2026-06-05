@@ -99,7 +99,6 @@ function ItemForm({ item, types, themes, cats, onClose, onSaved }: any) {
   const [catIds, setCatIds] = useState<number[]>(item?.categories?.map((c: any) => c.id) || []);
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
-  const [size, setSize] = useState(item?.size || "");
 
   const tog = (arr: number[], setArr: any, id: number) =>
     setArr(arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]);
@@ -109,7 +108,6 @@ function ItemForm({ item, types, themes, cats, onClose, onSaved }: any) {
     setSaving(true);
     try {
       const fd = new FormData();
-      fd.append("Size", size); // dummy, biar bisa masukin file
       fd.append("title", title);
       fd.append("code", code);
       fd.append("texture", texture);
