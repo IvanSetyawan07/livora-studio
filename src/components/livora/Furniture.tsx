@@ -156,61 +156,98 @@ const WhatAreYouLookingForSection = () => {
               >
                 {/* Category Card */}
                 <Link
-                  to={`/furniture?category=${category.slug}`}
-                  className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <motion.div
-                    whileHover={{ scale: 1.02, y: -4 }}
-                    className="space-y-3"
-                  >
-                    {/* Placeholder Image */}
-                    <div className="relative w-full aspect-square rounded-md overflow-hidden bg-secondary border border-border">
-                      <div className="w-full h-full bg-gradient-to-br from-foreground/5 to-foreground/10 flex items-center justify-center">
-                        <span className="text-foreground/30 text-xs uppercase tracking-wider">
-                          {category.label}
-                        </span>
-                      </div>
-                    </div>
+                to={`/furniture?category=${category.slug}`}
+                className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+              <motion.div
+              whileHover={{ scale: 1.02, y: -4 }}
+              className="space-y-3"
+              >
+    {/* Image Card - Style dengan hover border gold */}
 
-                    {/* Label */}
-                    <h4 className="text-sm font-light text-foreground text-center group-hover:text-accent transition-colors">
-                      {category.label}
-                    </h4>
-                  </motion.div>
-                </Link>
+<div
+  style={{
+    marginTop: "7px",
+    background: "#FAFAF8",
+    border: "1px solid #E8E4DF",
+    borderRadius: "10px",
+    padding: "28px 16px 20px",
+    textAlign: "center",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
+    transition: "all 0.3s ease",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: "200px",
+    width: "200px",
+    cursor: "pointer",
+  }}
+  onMouseEnter={(e) => {
+    e.currentTarget.style.border = "1px solid #C9A97A"; // Tipis ✅ (seperti Image 2)
+    e.currentTarget.style.boxShadow = "0 4px 12px rgba(201, 169, 122, 0.08)";
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.border = "1px solid #E8E4DF";
+    e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.04)";
+  }}
+>
+  <span className="text-foreground/30 text-xs uppercase tracking-wider">
+    {category.label}
+  </span>
+</div>
+
+    {/* Label */}
+    <h4 className="text-sm font-light text-foreground text-center group-hover:text-accent transition-colors">
+      {category.label}
+    </h4>
+  </motion.div>
+</Link>
               </motion.div>
             ))}
           </div>
         </div>
 
         {/* Navigation Buttons */}
-        {(canScrollLeft || canScrollRight) && (
-          <div className="flex gap-3 px-8 md:px-16 lg:px-20 pt-6 justify-start">
-            {canScrollLeft && (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => scroll("left")}
-                className="w-10 h-10 rounded-full border border-accent/60 bg-transparent hover:bg-accent/10 flex items-center justify-center text-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label="Scroll left"
-              >
-                ←
-              </motion.button>
-            )}
+{(canScrollLeft || canScrollRight) && (
+  <div className="flex gap-4 px-8 md:px-16 lg:px-20 pt-8 justify-start">
+    {canScrollLeft && (
+      <button
+        onClick={() => scroll("left")}
+        className="uppercase hover:opacity-70 transition-opacity"
+        style={{
+          color: "#C9A97A",
+          background: "none",
+          border: "none",
+          fontSize: "12px",
+          letterSpacing: "0.1em",
+          padding: 0,
+          cursor: "pointer",
+        }}
+        aria-label="Scroll left"
+      >
+      </button>
+    )}
 
-            {canScrollRight && (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => scroll("right")}
-                className="w-10 h-10 rounded-full border border-accent/60 bg-transparent hover:bg-accent/10 flex items-center justify-center text-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label="Scroll right"
-              >
-                →
-              </motion.button>
-            )}
-          </div>
-        )}
+    {canScrollRight && (
+      <button
+        onClick={() => scroll("right")}
+        className="uppercase hover:opacity-70 transition-opacity"
+        style={{
+          color: "#C9A97A",
+          background: "none",
+          border: "none",
+          fontSize: "12px",
+          letterSpacing: "0.1em",
+          padding: 0,
+          cursor: "pointer",
+        }}
+        aria-label="Scroll right"
+      >
+       
+      </button>
+    )}
+  </div>
+)}
       </div>
     </motion.div>
   );
