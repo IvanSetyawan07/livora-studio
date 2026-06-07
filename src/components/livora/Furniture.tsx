@@ -1,259 +1,172 @@
 import { Link } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import accessories from "@/assets/landing-furniture/accecories.png";
+import beds from "@/assets/landing-furniture/bed.png";
+import chairs from "@/assets/landing-furniture/chair.png";
+import sofas from "@/assets/landing-furniture/sofa.png";
+import tables from "@/assets/landing-furniture/table.png";
+import newArrival from "@/assets/landing-furniture/new-arrival.png";
 import furnitureImg from "@/assets/furniture-hompage.png";
 
-// Categories untuk "What are you looking for?"
 const categories = [
-  { id: 1, label: "New arrivals", slug: "new-arrivals" },
-  { id: 2, label: "Sofas", slug: "sofas" },
-  { id: 3, label: "Chairs", slug: "chairs" },
-  { id: 4, label: "Tables", slug: "tables" },
-  { id: 5, label: "Beds", slug: "beds" },
-  { id: 6, label: "Storage", slug: "storage" },
-  { id: 7, label: "New arrivals", slug: "new-arrivals" },
-  { id: 8, label: "Sofas", slug: "sofas" },
-  { id: 9, label: "Chairs", slug: "chairs" },
-  { id: 10, label: "Tables", slug: "tables" },
-  { id: 11, label: "Beds", slug: "beds" },
-  { id: 12, label: "Storage", slug: "storage" },
+  { id: 1, label: "New arrivals", slug: "newArrivals", image: newArrival },
+  { id: 2, label: "Sofas", slug: "sofas", image: sofas },
+  { id: 3, label: "Chairs", slug: "chairs", image: chairs },
+  { id: 4, label: "Tables", slug: "tables", image: tables },
+  { id: 5, label: "Beds", slug: "beds", image: beds },
+  { id: 6, label: "Accessories", slug: "accessories", image: accessories },
 ];
 
-// What Are You Looking For Sub-Component
 const WhatAreYouLookingForSection = () => {
-  const scrollRef = useRef(null);
   const containerRef = useRef(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
-  
-  // Animation states
-  const [hasEntered, setHasEntered] = useState(false); // Track entrance
-  const [shouldExit, setShouldExit] = useState(false); // Track exit
+  const [hasEntered, setHasEntered] = useState(false);
+  const [shouldExit, setShouldExit] = useState(false);
 
-  const checkScroll = () => {
-    if (scrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
-    }
-  };
-
-  useEffect(() => {
-    checkScroll();
-    const scrollElement = scrollRef.current;
-    if (scrollElement) {
-      scrollElement.addEventListener("scroll", checkScroll);
-      window.addEventListener("resize", checkScroll);
-      return () => {
-        scrollElement.removeEventListener("scroll", checkScroll);
-        window.removeEventListener("resize", checkScroll);
-      };
-    }
-  }, []);
-
-  // Handle page load entrance animation
   useEffect(() => {
     setHasEntered(true);
   }, []);
 
-  // Handle scroll exit animation
   useEffect(() => {
     const handleScroll = () => {
       if (!containerRef.current) return;
-
       const rect = containerRef.current.getBoundingClientRect();
       const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
-
-      // Section is out of view
-      if (!isVisible) {
-        setShouldExit(true);
-      } else {
-        setShouldExit(false);
-      }
+      setShouldExit(!isVisible);
     };
-
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const scroll = (direction) => {
-    if (scrollRef.current) {
-      const scrollAmount = 300;
-      scrollRef.current.scrollBy({
-        left: direction === "left" ? -scrollAmount : scrollAmount,
-        behavior: "smooth",
-      });
-    }
-  };
-
   return (
-    <motion.div
-      ref={containerRef}
-      initial={{ x: "-100%" }}
-      animate={{
-        x: hasEntered && !shouldExit ? 0 : "-100%",
-      }}
-      transition={{ type: "spring", stiffness: 80, damping: 20 }}
-      className="w-full bg-secondary/20 border-t border-border"
-    >
-      <div className="py-16 md:py-20">
-        {/* Heading */}
-        <div className="px-8 md:px-16 lg:px-20 pb-8 md:pb-10">
-          <h3 className="serif text-3xl md:text-4xl font-light text-foreground">
-            What are you looking for?
-          </h3>
-        </div>
+    <>
+      {/* HEADING */}
+      <div className="px-8 md:px-14 lg:px-20 pb-8 md:pb-12">
+        <h3 className="serif text-4xl md:text-5xl font-light text-foreground">
+          What are you looking for?
+        </h3>
+      </div>
 
-        {/* Scroll Container */}
-        <div className="relative w-full">
-          {/* Left Overflow Indicator */}
-          {canScrollLeft && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="absolute left-0 top-0 bottom-0 w-20 md:w-32 bg-gradient-to-r from-secondary/20 to-transparent pointer-events-none z-10"
-            />
-          )}
+      {/* GRID + LABELS - ANIMASI SLIDE */}
+      <motion.div
+        ref={containerRef}
+        initial={{ x: "-100%" }}
+        animate={{
+          x: hasEntered && !shouldExit ? 0 : "-100%",
+        }}
+        transition={{ type: "spring", stiffness: 80, damping: 20 }}
+        className="w-full bg-secondary/20"
+      >
+        <div
+          className="category-scroll overflow-x-auto"
+          style={{
+            overflowX: hasEntered && !shouldExit ? "auto" : "hidden",
+          }}
+        >
+          <style>{`
+            .category-scroll::-webkit-scrollbar {
+              height: 1px;
+            }
+            .category-scroll::-webkit-scrollbar-track {
+              background: #D9D4CE;
+            }
+            .category-scroll::-webkit-scrollbar-thumb {
+              background: #1A1A1A;
+              border-radius: 2px;
+            }
+            .category-scroll::-webkit-scrollbar-thumb:hover {
+              background: #000000;
+            }
+            html, body {
+              scrollbar-width: thin;
+            }
+          `}</style>
 
-          {/* Right Overflow Indicator */}
-          {canScrollRight && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="absolute right-0 top-0 bottom-0 w-20 md:w-32 bg-gradient-to-l from-secondary/20 to-transparent pointer-events-none z-10"
-            />
-          )}
+          <div className="px-8 md:px-14 lg:px-20 pb-8 md:pb-12">
+            {/* Grid Container */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(6, 1fr)",
+                gap: "28px",
+                marginTop: "32px",
+                minWidth: "100%",
+                paddingBottom: "20px",
+              }}
+            >
+              {categories.map((category, idx) => (
+                <motion.div
+                  key={category.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.05, duration: 0.4 }}
+                  className="cursor-pointer group reveal"
+                >
+                  <Link
+                    to={`/furniture?category=${category.slug}`}
+                    className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <motion.div
+                      whileHover={{ scale: 1.02, y: -6 }}
+                      className="space-y-5"
+                    >
+                      {/* Image Card */}
+                      <div
+                        style={{
+                          background: "#FAFAF8",
+                          border: "1px solid #E8E4DF",
+                          borderRadius: "10px",
+                          overflow: "hidden",
+                          height: "340px",
+                          width: "300px",
+                          boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
+                          transition: "all 0.3s ease",
+                          cursor: "pointer",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = "#C9A97A";
+                          e.currentTarget.style.boxShadow =
+                            "0 4px 12px rgba(201, 169, 122, 0.12)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = "#E8E4DF";
+                          e.currentTarget.style.boxShadow =
+                            "0 2px 10px rgba(0,0,0,0.04)";
+                        }}
+                      >
+                        <img
+                          src={category.image}
+                          alt={category.label}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
 
-          {/* Scroll Content */}
-          <div
-            ref={scrollRef}
-            className="flex gap-4 md:gap-6 overflow-x-auto overflow-y-hidden px-8 md:px-16 lg:px-20 pb-2 scrollbar-thin scrollbar-thumb-foreground/40 scrollbar-track-transparent"
-            onScroll={checkScroll}
-          >
-            <style>{`
-              div::-webkit-scrollbar {
-                height: 3px;
-              }
-              div::-webkit-scrollbar-track {
-                background: transparent;
-              }
-              div::-webkit-scrollbar-thumb {
-                background: #1A1A1A;
-                border-radius: 2px;
-              }
-              div::-webkit-scrollbar-thumb:hover {
-                background: #000000;
-              }
-            `}</style>
-
-            {categories.map((category, idx) => (
-              <motion.div
-                key={category.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05, duration: 0.4 }}
-                className="flex-shrink-0 w-40 md:w-48 cursor-pointer group reveal"
-              >
-                {/* Category Card */}
-                <Link
-                to={`/furniture?category=${category.slug}`}
-                className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-              <motion.div
-              whileHover={{ scale: 1.02, y: -4 }}
-              className="space-y-3"
-              >
-    {/* Image Card - Style dengan hover border gold */}
-
-<div
-  style={{
-    marginTop: "7px",
-    background: "#FAFAF8",
-    border: "1px solid #E8E4DF",
-    borderRadius: "10px",
-    padding: "28px 16px 20px",
-    textAlign: "center",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
-    transition: "all 0.3s ease",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    height: "200px",
-    width: "200px",
-    cursor: "pointer",
-  }}
-  onMouseEnter={(e) => {
-    e.currentTarget.style.border = "1px solid #C9A97A"; // Tipis ✅ (seperti Image 2)
-    e.currentTarget.style.boxShadow = "0 4px 12px rgba(201, 169, 122, 0.08)";
-  }}
-  onMouseLeave={(e) => {
-    e.currentTarget.style.border = "1px solid #E8E4DF";
-    e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.04)";
-  }}
->
-  <span className="text-foreground/30 text-xs uppercase tracking-wider">
-    {category.label}
-  </span>
-</div>
-
-    {/* Label */}
-    <h4 className="text-sm font-light text-foreground text-center group-hover:text-accent transition-colors">
-      {category.label}
-    </h4>
-  </motion.div>
-</Link>
-              </motion.div>
-            ))}
+                      {/* Label */}
+                      <motion.h4
+                        initial={{ opacity: 0 }}
+                        animate={{
+                          opacity: hasEntered && !shouldExit ? 1 : 0,
+                        }}
+                        transition={{
+                          delay: 0.3,
+                          duration: 0.4,
+                        }}
+                        className="text-base md:text-lg font-light text-foreground text-center group-hover:text-accent transition-colors"
+                      >
+                        {category.label}
+                      </motion.h4>
+                    </motion.div>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
-
-        {/* Navigation Buttons */}
-{(canScrollLeft || canScrollRight) && (
-  <div className="flex gap-4 px-8 md:px-16 lg:px-20 pt-8 justify-start">
-    {canScrollLeft && (
-      <button
-        onClick={() => scroll("left")}
-        className="uppercase hover:opacity-70 transition-opacity"
-        style={{
-          color: "#C9A97A",
-          background: "none",
-          border: "none",
-          fontSize: "12px",
-          letterSpacing: "0.1em",
-          padding: 0,
-          cursor: "pointer",
-        }}
-        aria-label="Scroll left"
-      >
-      </button>
-    )}
-
-    {canScrollRight && (
-      <button
-        onClick={() => scroll("right")}
-        className="uppercase hover:opacity-70 transition-opacity"
-        style={{
-          color: "#C9A97A",
-          background: "none",
-          border: "none",
-          fontSize: "12px",
-          letterSpacing: "0.1em",
-          padding: 0,
-          cursor: "pointer",
-        }}
-        aria-label="Scroll right"
-      >
-       
-      </button>
-    )}
-  </div>
-)}
-      </div>
-    </motion.div>
+      </motion.div>
+    </>
   );
 };
 
-// Main Furniture Component
 export const Furniture = () => (
   <section id="furniture" className="relative bg-secondary/40">
     {/* Furniture Collection Section */}
@@ -279,11 +192,13 @@ export const Furniture = () => (
             Furniture Collection
           </p>
           <h2 className="serif text-4xl md:text-6xl font-light leading-[1.05]">
-            A wide variety of <em className="italic">textures, forms and tones.</em>
+            A wide variety of{" "}
+            <em className="italic">textures, forms and tones.</em>
           </h2>
           <p className="text-foreground/75 leading-relaxed font-light text-base md:text-lg max-w-lg">
-            From high-quality suppliers across Europe and Asia, our collection is curated for the balance between
-            premium craftsmanship and considered value.
+            From high-quality suppliers across Europe and Asia, our collection
+            is curated for the balance between premium craftsmanship and
+            considered value.
           </p>
           <div className="grid grid-cols-3 gap-6 pt-6 border-t border-border">
             {[
@@ -293,7 +208,9 @@ export const Furniture = () => (
             ].map((s) => (
               <div key={s.l}>
                 <p className="serif text-3xl md:text-4xl font-light">{s.n}</p>
-                <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/60 mt-1">{s.l}</p>
+                <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/60 mt-1">
+                  {s.l}
+                </p>
               </div>
             ))}
           </div>
