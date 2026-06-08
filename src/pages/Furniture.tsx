@@ -146,7 +146,6 @@ const Furniture = () => {
         "chairs": "Chair",
         "tables": "Table",
         "beds": "Chair", // atau buat theme baru untuk Beds
-        "storage": "All",
       };
       
       const theme = themeKeyMap[categoryParam];
