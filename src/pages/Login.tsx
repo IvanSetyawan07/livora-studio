@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 import { api, authStorage } from "@/lib/api";
-import loginBg from "@/assets/login-background.png";
+import loginBg from "@/assets/Login-background.png";
 
 export default function Login() {
 

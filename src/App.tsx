@@ -22,7 +22,8 @@ import AdminLanding from "./pages/admin/AdminLanding";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import ScrollToTop from "./components/ScrollToTop.tsx";
 import ERD from "./pages/ERD";
-import Furniture, { CartDrawer } from "./pages/Furniture.tsx";
+import Furniture from "./pages/Furniture.tsx";
+import { CartDrawer } from "@/components/livora/CartDrawer.tsx";
 import { CartProvider } from "./context/CartContext.tsx";
 
 const queryClient = new QueryClient();

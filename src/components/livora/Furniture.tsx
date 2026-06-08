@@ -10,7 +10,7 @@ import newArrival from "@/assets/landing-furniture/new-arrival.png";
 import furnitureImg from "@/assets/furniture-hompage.png";
 
 const categories = [
-  { id: 1, label: "New arrivals", slug: "newArrivals", image: newArrival },
+  { id: 1, label: "New arrivals", slug: "new-arrivals", image: newArrival },
   { id: 2, label: "Sofas", slug: "sofas", image: sofas },
   { id: 3, label: "Chairs", slug: "chairs", image: chairs },
   { id: 4, label: "Tables", slug: "tables", image: tables },

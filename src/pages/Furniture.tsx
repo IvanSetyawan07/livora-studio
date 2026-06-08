@@ -247,7 +247,3 @@ const Furniture = () => {
 };
 
 export default Furniture;
-
-export const CartDrawer = () => {
-  // ... rest of CartDrawer code remains the same
-};
