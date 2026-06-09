@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom"; // ← ADD useSearchParams
 import { Armchair, Sofa as SofaIcon, Table2, LayoutGrid, ArrowLeft, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -99,36 +99,63 @@ const ThemeCard = ({
 const ItemCard = ({ item }: { item: Item }) => (
   <Link
     to={`/items/${item.slug}`}
-    className="group text-left bg-card border border-border hover:border-foreground/40 transition-all duration-500 hover:-translate-y-1 hover:shadow-[var(--shadow-elegant)] flex flex-col"
+    className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
   >
-    <div className="relative aspect-[4/3] bg-secondary/60 overflow-hidden flex items-center justify-center">
+    {/* Card (image only, BoConcept-style) */}
+    <div
+      className="item-card"
+      style={{
+        background: "#FAFAF8",
+        border: "1px solid #E8E4DF",
+        borderRadius: "10px",
+        overflow: "hidden",
+        aspectRatio: "1 / 1",
+        boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
+        transition: "all 0.3s ease",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = "#C9A97A";
+        e.currentTarget.style.boxShadow = "0 4px 12px rgba(201,169,122,0.12)";
+        e.currentTarget.style.transform = "translateY(-4px)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = "#E8E4DF";
+        e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.04)";
+        e.currentTarget.style.transform = "translateY(0)";
+      }}
+    >
       {item.image ? (
         <img
           src={item.image}
           alt={item.name}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
       ) : (
-        <div className="w-2/3 h-2/3 transition-transform duration-700 group-hover:scale-110">
+        <div className="w-2/3 h-2/3 transition-transform duration-500 group-hover:scale-105">
           <ItemIllustration name={item.name} size={260} />
         </div>
       )}
-      <span className="absolute top-4 left-4 text-[10px] uppercase tracking-[0.3em] text-foreground/60 bg-background/80 px-2.5 py-1">
-        {item.category}
-      </span>
     </div>
-    <div className="p-6 flex flex-col gap-3 flex-1">
-      <h3 className="serif text-2xl font-light leading-tight">{item.name}</h3>
-      <p className="text-sm text-foreground/65 font-light">{item.specs.material}</p>
-      <div className="mt-auto pt-4 flex items-end justify-between border-t border-border/60">
-        <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/60">{item.code}</p>
-        <span className="text-[10px] uppercase tracking-[0.3em] text-foreground/60 group-hover:text-foreground transition-colors">
-          View →
-        </span>
-      </div>
+
+    {/* Caption OUTSIDE the card (BoConcept style) */}
+    <div className="mt-4 px-1">
+      <h3 className="text-sm font-normal text-foreground leading-snug">
+        {item.name}
+      </h3>
+      <p className="text-xs text-foreground/60 mt-1.5">
+        Material · {item.specs.material}
+      </p>
+      <p className="text-[11px] uppercase tracking-[0.15em] text-foreground/50 mt-1">
+        {item.code}
+      </p>
     </div>
   </Link>
 );
+
 
 const Furniture = () => {
   const allItems = useAllItems();
@@ -227,12 +254,23 @@ const Furniture = () => {
               </button>
               <div
                 key={activeTheme}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"
+                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-10"
               >
-                {themedItems.map((item) => (
-                  <ItemCard key={item.slug} item={item} />
+                {themedItems.map((item, idx) => (
+                  <React.Fragment key={item.slug}>
+                    {idx === 4 && (
+                      <div
+                        className="hidden lg:block col-span-2 row-span-2 bg-secondary/40 border border-border rounded-[10px]"
+                        style={{ minHeight: "100%" }}
+                        aria-hidden="true"
+                      />
+                    )}
+                    <ItemCard item={item} />
+                  </React.Fragment>
                 ))}
+
               </div>
+
             </div>
           )}
           {/* <p className="text-center text-[10px] uppercase tracking-[0.35em] text-foreground/55 mt-20">
