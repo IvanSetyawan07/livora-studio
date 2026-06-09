@@ -184,15 +184,17 @@ const Furniture = () => {
 
   const itemsForTheme = (key: ThemeKey): Item[] => {
     if (key === "All") return allItems;
-    const staticOnes = themeMap[key].slugs
-      .map((s) => findItem(s, allItems))
+    // Match by item name containing the theme keyword (Sofa / Chair / Table).
+    // This ensures every sofa/chair/table appears in its category, regardless
+    // of the legacy `category` field (which is "SEATING" for sofas & chairs).
+    const keyword = key.toLowerCase();
+    const matched = allItems.filter((i) => i.name.toLowerCase().includes(keyword));
+    // Preserve curated order from themeMap.slugs first, then append the rest.
+    const ordered = themeMap[key].slugs
+      .map((s) => matched.find((i) => i.slug === s))
       .filter((i): i is Item => Boolean(i));
-    const extra = allItems.filter(
-      (i) =>
-        !themeMap[key].slugs.includes(i.slug) &&
-        i.category.toUpperCase().includes(key.toUpperCase()),
-    );
-    return [...staticOnes, ...extra];
+    const rest = matched.filter((i) => !ordered.includes(i));
+    return [...ordered, ...rest];
   };
 
   const themedItems = useMemo(
