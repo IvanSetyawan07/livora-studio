@@ -257,19 +257,18 @@ const Furniture = () => {
                 className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-10"
               >
                 {themedItems.map((item, idx) => (
-                  <>
-                    {/* Insert big empty banner after the 4th item (spans 2x2) */}
+                  <React.Fragment key={item.slug}>
                     {idx === 4 && (
                       <div
-                        key="banner"
                         className="hidden lg:block col-span-2 row-span-2 bg-secondary/40 border border-border rounded-[10px]"
                         style={{ minHeight: "100%" }}
                         aria-hidden="true"
                       />
                     )}
-                    <ItemCard key={item.slug} item={item} />
-                  </>
+                    <ItemCard item={item} />
+                  </React.Fragment>
                 ))}
+
               </div>
 
             </div>
