@@ -36,6 +36,10 @@ import tubularCurvedSofa from "../../assets/harmony/Tubular Curved Sofa.png";
 import barrelChair from "../../assets/harmony/Barrel Chair.png";
 import executiveLoungeChair from "../../assets/harmony/Executive Lounge Chair.png";
 import swivelAccentChair from "../../assets/harmony/Swivel Accent Chair.png";
+import consoleTableImg from "../../assets/items/console-table.jpg";
+import diningTableImg from "../../assets/items/dining-table.jpg";
+import floorLampImg from "../../assets/items/floor-lamp.jpg";
+import pendantLightImg from "../../assets/items/pendant-light.jpg";
 
 interface Props {
   name: string;
