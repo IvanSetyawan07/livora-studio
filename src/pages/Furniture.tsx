@@ -235,9 +235,9 @@ const Furniture = () => {
               </div>
             </div>
           )}
-          <p className="text-center text-[10px] uppercase tracking-[0.35em] text-foreground/55 mt-20">
+          {/* <p className="text-center text-[10px] uppercase tracking-[0.35em] text-foreground/55 mt-20">
             Lember berkualitas <span className="mx-2">·</span> Lumber yg dibuat dengan baik
-          </p>
+          </p> */}
         </div>
       </section>
 
