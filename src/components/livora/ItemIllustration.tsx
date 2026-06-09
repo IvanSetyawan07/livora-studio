@@ -143,46 +143,15 @@ export const ItemIllustration = ({ name, size = 120, strokeWidth = 1.25 }: Props
     case "Side Table":
       return <img src={sideTableImg} alt="Side Table" style={imgStyle} />;
     case "Floor Lamp":
-      return (
-        <svg {...common}>
-          <path d="M48 30l24 6-8 22H56z" />
-          <path d="M60 58v36" />
-          <path d="M50 94h20" />
-        </svg>
-      );
-    case "Modular Sectional Sofa":
-      return (
-        <svg {...common}>
-          <path d="M22 58c0-5 3-8 8-8h28v32H22z" />
-          <path d="M58 66h32c5 0 8 3 8 8v8H58z" />
-          <path d="M26 82v8M94 82v8" />
-        </svg>
-      );
+      return <img src={floorLampImg} alt="Floor Lamp" style={imgStyle} />;
     case "Sofa Three Bench":
       return <img src={sofaLong} alt="Sofa Three Bench" style={imgStyle} />;
     case "Console Table":
-      return (
-        <svg {...common}>
-          <path d="M22 52h76" />
-          <path d="M30 52v40M90 52v40" />
-          <path d="M22 64h76" />
-        </svg>
-      );
+      return <img src={consoleTableImg} alt="Console Table" style={imgStyle} />;
     case "Dining Table":
-      return (
-        <svg {...common}>
-          <path d="M20 54h80" />
-          <path d="M28 54v36M92 54v36" />
-        </svg>
-      );
+      return <img src={diningTableImg} alt="Dining Table" style={imgStyle} />;
     case "Pendant Light":
-      return (
-        <svg {...common}>
-          <path d="M60 22v18" />
-          <path d="M44 40h32l-6 22H50z" />
-          <path d="M52 62v6M68 62v6" />
-        </svg>
-      );
+      return <img src={pendantLightImg} alt="Pendant Light" style={imgStyle} />;
     default:
       return (
         <svg {...common}>
