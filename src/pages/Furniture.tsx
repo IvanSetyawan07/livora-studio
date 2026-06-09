@@ -99,36 +99,63 @@ const ThemeCard = ({
 const ItemCard = ({ item }: { item: Item }) => (
   <Link
     to={`/items/${item.slug}`}
-    className="group text-left bg-card border border-border hover:border-foreground/40 transition-all duration-500 hover:-translate-y-1 hover:shadow-[var(--shadow-elegant)] flex flex-col"
+    className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
   >
-    <div className="relative aspect-[4/3] bg-secondary/60 overflow-hidden flex items-center justify-center">
+    {/* Card (image only, BoConcept-style) */}
+    <div
+      className="item-card"
+      style={{
+        background: "#FAFAF8",
+        border: "1px solid #E8E4DF",
+        borderRadius: "10px",
+        overflow: "hidden",
+        aspectRatio: "1 / 1",
+        boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
+        transition: "all 0.3s ease",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = "#C9A97A";
+        e.currentTarget.style.boxShadow = "0 4px 12px rgba(201,169,122,0.12)";
+        e.currentTarget.style.transform = "translateY(-4px)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = "#E8E4DF";
+        e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.04)";
+        e.currentTarget.style.transform = "translateY(0)";
+      }}
+    >
       {item.image ? (
         <img
           src={item.image}
           alt={item.name}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
       ) : (
-        <div className="w-2/3 h-2/3 transition-transform duration-700 group-hover:scale-110">
+        <div className="w-2/3 h-2/3 transition-transform duration-500 group-hover:scale-105">
           <ItemIllustration name={item.name} size={260} />
         </div>
       )}
-      <span className="absolute top-4 left-4 text-[10px] uppercase tracking-[0.3em] text-foreground/60 bg-background/80 px-2.5 py-1">
-        {item.category}
-      </span>
     </div>
-    <div className="p-6 flex flex-col gap-3 flex-1">
-      <h3 className="serif text-2xl font-light leading-tight">{item.name}</h3>
-      <p className="text-sm text-foreground/65 font-light">{item.specs.material}</p>
-      <div className="mt-auto pt-4 flex items-end justify-between border-t border-border/60">
-        <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/60">{item.code}</p>
-        <span className="text-[10px] uppercase tracking-[0.3em] text-foreground/60 group-hover:text-foreground transition-colors">
-          View →
-        </span>
-      </div>
+
+    {/* Caption OUTSIDE the card (BoConcept style) */}
+    <div className="mt-4 px-1">
+      <h3 className="text-sm font-normal text-foreground leading-snug">
+        {item.name}
+      </h3>
+      <p className="text-xs text-foreground/60 mt-1.5">
+        Material · {item.specs.material}
+      </p>
+      <p className="text-[11px] uppercase tracking-[0.15em] text-foreground/50 mt-1">
+        {item.code}
+      </p>
     </div>
   </Link>
 );
+
 
 const Furniture = () => {
   const allItems = useAllItems();
