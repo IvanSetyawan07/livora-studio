@@ -20,6 +20,7 @@ import AdminItems from "./pages/admin/AdminItems";
 import AdminTaxonomies from "./pages/admin/AdminTaxonomies";
 import AdminLanding from "./pages/admin/AdminLanding";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminBanners from "./pages/admin/AdminBanners";
 import ScrollToTop from "./components/ScrollToTop.tsx";
 import ERD from "./pages/ERD";
 import Furniture from "./pages/Furniture.tsx";
@@ -55,6 +56,7 @@ function App() {
                 <Route path="taxonomies" element={<AdminTaxonomies />} />
                 <Route path="landing" element={<AdminLanding />} />
                 <Route path="analytics" element={<AdminAnalytics />} />
+                <Route path="banners" element={<AdminBanners />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
