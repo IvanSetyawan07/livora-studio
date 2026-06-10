@@ -9,6 +9,7 @@ import { ItemIllustration } from "@/components/livora/ItemIllustration";
 import { type Item } from "@/data/items";
 import { useAllItems } from "@/lib/itemsApi";
 import { useCart } from "@/context/CartContext";
+import { getAllBanners, subscribeBanners } from "@/lib/themeBanners";
 import { formatRupiah } from "@/data/furniture";
 import chairTheme from "@/assets/furniture/chair-theme.png";
 import sofaTheme from "@/assets/furniture/sofa-theme.png";
