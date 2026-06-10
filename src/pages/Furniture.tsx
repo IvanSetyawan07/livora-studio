@@ -272,22 +272,23 @@ const Furniture = () => {
                 src={activeTheme === "Chair" ? featuredChair : featuredSofa}
                 alt="Featured"
                 /> */}
-                {themedItems.map((item, idx) => (
-                  <React.Fragment key={item.slug}>
-                    {idx === 4 && (
-                      <div
-                        className="hidden lg:block col-span-2 row-span-2 bg-secondary/40 border border-border rounded-[10px] overflow-hidden relative"
-                        style={{ minHeight: "100%" }}
-                      >
-                        {activeBanner ? (
-                          <>
-                            <img
-                              src={activeBanner.image}
-                              alt={activeBanner.title || `${activeTheme} banner`}
-                              className="w-full h-full object-cover"
-                            />
-                            {activeBanner.title && (
-                              <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/60 to-transparent">
+                {(() => {
+                  // Banner inserted at position 4 if enough items, else at the end.
+                  const bannerIndex = themedItems.length >= 5 ? 4 : themedItems.length;
+                  const renderBanner = () => (
+                    <div
+                      key="__banner__"
+                      className="col-span-2 row-span-2 bg-secondary/40 border border-border rounded-[10px] overflow-hidden relative min-h-[260px] md:min-h-[400px]"
+                    >
+                      {activeBanner ? (
+                        <>
+                          <img
+                            src={activeBanner.image}
+                            alt={activeBanner.title || `${activeTheme} banner`}
+                            className="w-full h-full object-cover"
+                          />
+                          {activeBanner.title && (
+                            <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/60 to-transparent">
                                 <p className="serif text-2xl text-white font-light">
                                   {activeBanner.title}
                                 </p>
