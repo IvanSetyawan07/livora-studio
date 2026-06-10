@@ -12,6 +12,10 @@ import { useCart } from "@/context/CartContext";
 import { formatRupiah } from "@/data/furniture";
 import chairTheme from "@/assets/furniture/chair-theme.png";
 import sofaTheme from "@/assets/furniture/sofa-theme.png";
+import featuredChair from "@/assets/hero-chair.png";
+import featuredBed from "@/assets/hero-bed.png";
+import featuredSofa from "@/assets/hero-sofa.png";
+import featuredTable from "@/assets/hero-table.png";
 
 type ThemeKey = "Chair" | "Sofa" | "Table" | "All";
 
@@ -255,9 +259,13 @@ const Furniture = () => {
                 <ArrowLeft size={14} /> Back to Themes
               </button>
               <div
-                key={activeTheme}
                 className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-10"
               >
+                {/* <img
+                
+                src={activeTheme === "Chair" ? featuredChair : featuredSofa}
+                alt="Featured"
+                /> */}
                 {themedItems.map((item, idx) => (
                   <React.Fragment key={item.slug}>
                     {idx === 4 && (
