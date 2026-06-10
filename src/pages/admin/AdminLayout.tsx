@@ -8,6 +8,7 @@ import {
   Tags,
   Star,
   BarChart3,
+  Image as ImageIcon,
   LogOut,
 } from "lucide-react";
 
@@ -17,6 +18,7 @@ const nav = [
   { to: "/admin/items", label: "Items / Furniture", icon: Sofa },
   { to: "/admin/taxonomies", label: "Taxonomies", icon: Tags },
   { to: "/admin/landing", label: "Landing Highlights", icon: Star },
+  { to: "/admin/banners", label: "Theme Banners", icon: ImageIcon },
   { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
