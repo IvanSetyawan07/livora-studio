@@ -273,9 +273,8 @@ const Furniture = () => {
                 alt="Featured"
                 /> */}
                 {(() => {
-                  // Banner inserted at position 4 if enough items, else at the end.
                   const bannerIndex = themedItems.length >= 5 ? 4 : themedItems.length;
-                  const renderBanner = () => (
+                  const banner = (
                     <div
                       key="__banner__"
                       className="col-span-2 row-span-2 bg-secondary/40 border border-border rounded-[10px] overflow-hidden relative min-h-[260px] md:min-h-[400px]"
@@ -289,21 +288,26 @@ const Furniture = () => {
                           />
                           {activeBanner.title && (
                             <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/60 to-transparent">
-                                <p className="serif text-2xl text-white font-light">
-                                  {activeBanner.title}
-                                </p>
-                              </div>
-                            )}
-                          </>
-                        ) : null}
-                      </div>
-                    )}
-                    <ItemCard item={item} />
-                  </React.Fragment>
-                ))}
-
+                              <p className="serif text-2xl text-white font-light">
+                                {activeBanner.title}
+                              </p>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xs uppercase tracking-[0.3em] text-foreground/40">
+                          {activeTheme} Banner
+                        </div>
+                      )}
+                    </div>
+                  );
+                  const nodes: React.ReactNode[] = themedItems.map((item) => (
+                    <ItemCard key={item.slug} item={item} />
+                  ));
+                  nodes.splice(bannerIndex, 0, banner);
+                  return nodes;
+                })()}
               </div>
-
             </div>
           )}
           {/* <p className="text-center text-[10px] uppercase tracking-[0.35em] text-foreground/55 mt-20">
