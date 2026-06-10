@@ -207,6 +207,11 @@ const Furniture = () => {
     [activeTheme, allItems],
   );
 
+  // Admin-managed banner image for this theme (localStorage-backed CRUD)
+  const [banners, setBanners] = useState(getAllBanners());
+  useEffect(() => subscribeBanners(() => setBanners(getAllBanners())), []);
+  const activeBanner = activeTheme ? banners[activeTheme] : undefined;
+
   return (
     <main className="min-h-screen bg-background">
       <Navbar />
@@ -271,10 +276,26 @@ const Furniture = () => {
                   <React.Fragment key={item.slug}>
                     {idx === 4 && (
                       <div
-                        className="hidden lg:block col-span-2 row-span-2 bg-secondary/40 border border-border rounded-[10px]"
+                        className="hidden lg:block col-span-2 row-span-2 bg-secondary/40 border border-border rounded-[10px] overflow-hidden relative"
                         style={{ minHeight: "100%" }}
-                        aria-hidden="true"
-                      />
+                      >
+                        {activeBanner ? (
+                          <>
+                            <img
+                              src={activeBanner.image}
+                              alt={activeBanner.title || `${activeTheme} banner`}
+                              className="w-full h-full object-cover"
+                            />
+                            {activeBanner.title && (
+                              <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/60 to-transparent">
+                                <p className="serif text-2xl text-white font-light">
+                                  {activeBanner.title}
+                                </p>
+                              </div>
+                            )}
+                          </>
+                        ) : null}
+                      </div>
                     )}
                     <ItemCard item={item} />
                   </React.Fragment>
