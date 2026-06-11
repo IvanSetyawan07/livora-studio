@@ -306,12 +306,12 @@ const activeBanner = activeTheme ? banners[activeTheme] : undefined;
                     const banner = (
                       <div
                         key="__banner__"
-                        className="col-span-2 row-span-2 bg-secondary/40 border border-border rounded-[10px] overflow-hidden relative min-h-[260px] md:min-h-[400px]"
+                        className="col-span-2 row-span-2 bg-secondary/40 border border-border rounded-[10px] overflow-hidden relative h-full w-full"
                       >
                         <img
                           src={activeBanner.image}
                           alt={activeBanner.title || `${activeTheme} banner`}
-                          className="w-full h-full object-cover"
+                          className="absolute inset-0 w-full h-full object-cover"
                         />
                         {activeBanner.title && (
                           <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/60 to-transparent">
