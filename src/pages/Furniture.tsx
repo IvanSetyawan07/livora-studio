@@ -208,10 +208,35 @@ const Furniture = () => {
   );
 
   // Admin-managed banner image for this theme (localStorage-backed CRUD)
-  const [banners, setBanners] = useState(getAllBanners());
-  useEffect(() => subscribeBanners(() => setBanners(getAllBanners())), []);
-  const activeBanner = activeTheme ? banners[activeTheme] : undefined;
+ const [banners, setBanners] = useState(() => getAllBanners()); // lazy init
 
+useEffect(() => {
+  // Pastikan data fresh setiap mount (misal: balik dari admin page)
+  setBanners(getAllBanners());
+
+  // Subscribe cross-component changes
+  const unsub = subscribeBanners(() => setBanners(getAllBanners()));
+
+  // Safety net: refresh saat user kembali ke tab ini
+  const onFocus = () => setBanners(getAllBanners());
+  window.addEventListener("focus", onFocus);
+
+  return () => {
+    unsub();
+    window.removeEventListener("focus", onFocus);
+  };
+}, []);
+
+// Refresh setiap activeTheme berubah (user klik kategori)
+useEffect(() => {
+  setBanners(getAllBanners());
+}, [activeTheme]);
+
+const activeBanner = activeTheme ? banners[activeTheme] : undefined;
+  console.log("localStorage raw:", localStorage.getItem("livora.themeBanners.v1"));
+  console.log("banners state:", banners);
+  console.log("activeTheme:", activeTheme);
+  console.log("activeBanner:", activeBanner)
   return (
     <main className="min-h-screen bg-background">
       <Navbar />

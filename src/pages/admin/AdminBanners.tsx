@@ -6,6 +6,7 @@ import {
   ThemeBannerKey,
   ThemeBanner,
   getAllBanners,
+  getBanner,      // ← tambahkan ini
   saveBanner,
   deleteBanner,
   subscribeBanners,
@@ -18,34 +19,36 @@ export default function AdminBanners() {
   useEffect(() => subscribeBanners(() => setBanners(getAllBanners())), []);
 
   const handleUpload = async (key: ThemeBannerKey, file: File | null) => {
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("File harus berupa gambar");
-      return;
-    }
-    if (file.size > 4 * 1024 * 1024) {
-      toast.error("Ukuran gambar maks 4MB");
-      return;
-    }
-    try {
-      const dataUrl = await fileToDataUrl(file);
-      const existing = banners[key];
-      saveBanner(key, {
-        image: dataUrl,
-        title: existing?.title ?? "",
-        updatedAt: Date.now(),
-      });
-      toast.success(`Banner ${key} disimpan`);
-    } catch {
-      toast.error("Gagal membaca file");
-    }
-  };
+  if (!file) return;
+  if (!file.type.startsWith("image/")) {
+    toast.error("File harus berupa gambar");
+    return;
+  }
+  if (file.size > 4 * 1024 * 1024) {
+    toast.error("Ukuran gambar maks 4MB");
+    return;
+  }
+  try {
+    const dataUrl = await fileToDataUrl(file);
+    // ✅ Baca fresh dari localStorage, bukan dari stale state
+    const existing = getBanner(key);
+    saveBanner(key, {
+      image: dataUrl,
+      title: existing?.title ?? "",
+      updatedAt: Date.now(),
+    });
+    toast.success(`Banner ${key} disimpan`);
+  } catch {
+    toast.error("Gagal membaca file");
+  }
+};
 
-  const handleTitleChange = (key: ThemeBannerKey, title: string) => {
-    const existing = banners[key];
-    if (!existing) return;
-    saveBanner(key, { ...existing, title, updatedAt: Date.now() });
-  };
+const handleTitleChange = (key: ThemeBannerKey, title: string) => {
+  // ✅ Baca fresh dari localStorage
+  const existing = getBanner(key);
+  if (!existing) return;
+  saveBanner(key, { ...existing, title, updatedAt: Date.now() });
+};
 
   const handleDelete = (key: ThemeBannerKey) => {
     if (!confirm(`Hapus banner ${key}?`)) return;
