@@ -297,7 +297,7 @@ const activeBanner = activeTheme ? banners[activeTheme] : undefined;
           </h1>
           <p className="mt-6 text-foreground/70 font-light max-w-xl mx-auto">
             {activeTheme
-              ? themeMap[activeTheme].tagline
+              ? (activeTheme === "All" ? allMeta : getMeta(activeTheme)).tagline
               : "Browse by theme — choose a category to explore the curated pieces inside."}
           </p>
         </div>
