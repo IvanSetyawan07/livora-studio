@@ -37,8 +37,8 @@ export interface Project {
 
 export const projects: Project[] = [
   {
-    slug: "harmony-one",
-    name: "Harmony One",
+    slug: "harmoni-one",
+    name: "Harmoni One",
     category: "Hotel",
     location: "Batam, Indonesia",
     year: "2026",
@@ -50,17 +50,17 @@ export const projects: Project[] = [
       "A serene hospitality retreat where warm timber, soft stone, and considered light meet. Every corridor and lounge has been composed to slow the pace of arrival, inviting guests into a sense of quiet luxury that lingers long after departure.",
     slides: [
       {
-        title: "Harmony One — Lobby",
+        title: "Harmoni One — Lobby",
         image: harmonyLobby1,
         items: ["Modular Sofa", "Tubular Curved Sofa", "Coffee Table", "Curved Ottoman", "Barrel Chair"],
       },
       {
-        title: "Harmony One — Lounge",
+        title: "Harmoni One — Lounge",
         image: harmonyLobby2,
         items: ["Boucle Lounge Sofa", "Leather Lounge Chair", "Marble Coffee Table", "Executive Lounge Chair"],
       },
       {
-        title: "Harmony One — President Suite",
+        title: "Harmoni One — President Suite",
         image: harmonyLobby3,
         items: ["Swivel Accent Chair", "Brass Drum Coffee Table", "Boucle Sofa"],
       },

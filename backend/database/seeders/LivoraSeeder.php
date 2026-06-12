@@ -52,7 +52,7 @@ class LivoraSeeder extends Seeder
 
         $projectsData = [
             [
-                'title' => 'Harmony One',
+                'title' => 'Harmoni One',
                 'subtitle' => 'Batam',
                 'description' => "Hotel\n\nA serene hospitality retreat where warm timber, soft stone, and considered light meet. Every corridor and lounge has been composed to slow the pace of arrival, inviting guests into a sense of quiet luxury that lingers long after departure.",
                 'location' => 'Batam, Indonesia',
@@ -61,9 +61,9 @@ class LivoraSeeder extends Seeder
                 'is_highlighted' => true,
                 'sort_order' => 1,
                 'photos' => [
-                    ['title' => 'Harmony One — Lobby', 'caption' => 'Modular Sofa, Tubular Curved Sofa, Coffee Table'],
-                    ['title' => 'Harmony One — Lounge', 'caption' => 'Boucle Lounge Sofa, Leather Lounge Chair'],
-                    ['title' => 'Harmony One — President Suite', 'caption' => 'Swivel Accent Chair, Brass Drum Coffee Table'],
+                    ['title' => 'Harmoni One — Lobby', 'caption' => 'Modular Sofa, Tubular Curved Sofa, Coffee Table'],
+                    ['title' => 'Harmoni One — Lounge', 'caption' => 'Boucle Lounge Sofa, Leather Lounge Chair'],
+                    ['title' => 'Harmoni One — President Suite', 'caption' => 'Swivel Accent Chair, Brass Drum Coffee Table'],
                 ],
             ],
             [

@@ -10,7 +10,7 @@ import { slugifyItem } from "@/data/items";
 import { trackClick, trackView } from "@/lib/adminApi";
 
 const TAGLINES: Record<string, string> = {
-  "harmony-one": "BATAM.",
+  "harmoni-one": "BATAM.",
   "am-house": "PONDOK INDAH KAPUK 2",
   "flytek-sinarmas": "Where focus is framed by refined craftsmanship.",
 };
