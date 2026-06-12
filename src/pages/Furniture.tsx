@@ -179,38 +179,58 @@ const ItemCard = ({ item }: { item: Item }) => (
 
 const Furniture = () => {
   const allItems = useAllItems();
-  const [searchParams] = useSearchParams(); // ← ADD THIS
+  const [searchParams] = useSearchParams();
   const [activeTheme, setActiveTheme] = useState<ThemeKey | null>(null);
 
-  // ✅ READ CATEGORY FROM URL
+  // Fetch furniture types dari backend (admin Taxonomies)
+  const [types, setTypes] = useState<FurnitureType[]>([]);
+  useEffect(() => {
+    api
+      .get<FurnitureType[]>("/taxonomies/furniture-types")
+      .then((r) => setTypes(r.data ?? []))
+      .catch(() => setTypes([]));
+  }, []);
+
+  // Daftar theme keys: "All" + setiap type dari backend.
+  // Fallback ke preset bawaan jika backend belum termuat.
+  const themeKeys: ThemeKey[] = useMemo(() => {
+    const names = types.length
+      ? types.map((t) => t.name)
+      : Object.keys(themePresets);
+    return ["All", ...names];
+  }, [types]);
+
+  // Map slug → nama type (untuk param URL ?category=)
+  const slugToName = useMemo(() => {
+    const m: Record<string, string> = {
+      "new-arrivals": "All",
+      sofas: "Sofa",
+      chairs: "Chair",
+      tables: "Table",
+      beds: "Bed",
+    };
+    for (const t of types) m[t.slug] = t.name;
+    return m;
+  }, [types]);
+
   useEffect(() => {
     const categoryParam = searchParams.get("category");
-    if (categoryParam) {
-      // Map URL slug ke ThemeKey
-      const themeKeyMap: Record<string, ThemeKey> = {
-        "new-arrivals": "All",
-        "sofas": "Sofa",
-        "chairs": "Chair",
-        "tables": "Table",
-        "beds": "Chair", // atau buat theme baru untuk Beds
-      };
-      
-      const theme = themeKeyMap[categoryParam];
-      if (theme) {
-        setActiveTheme(theme);
-      }
-    }
-  }, [searchParams]);
+    if (!categoryParam) return;
+    const theme = slugToName[categoryParam];
+    if (theme) setActiveTheme(theme);
+  }, [searchParams, slugToName]);
 
   const itemsForTheme = (key: ThemeKey): Item[] => {
     if (key === "All") return allItems;
-    // Match by item name containing the theme keyword (Sofa / Chair / Table).
-    // This ensures every sofa/chair/table appears in its category, regardless
-    // of the legacy `category` field (which is "SEATING" for sofas & chairs).
     const keyword = key.toLowerCase();
-    const matched = allItems.filter((i) => i.name.toLowerCase().includes(keyword));
-    // Preserve curated order from themeMap.slugs first, then append the rest.
-    const ordered = themeMap[key].slugs
+    // Cocokkan via item.category (= nama type, uppercased) ATAU nama item mengandung keyword.
+    const matched = allItems.filter(
+      (i) =>
+        i.category?.toLowerCase() === keyword ||
+        i.name.toLowerCase().includes(keyword),
+    );
+    const meta = getMeta(key);
+    const ordered = meta.slugs
       .map((s) => matched.find((i) => i.slug === s))
       .filter((i): i is Item => Boolean(i));
     const rest = matched.filter((i) => !ordered.includes(i));
@@ -219,8 +239,9 @@ const Furniture = () => {
 
   const themedItems = useMemo(
     () => (activeTheme ? itemsForTheme(activeTheme) : []),
-    [activeTheme, allItems],
+    [activeTheme, allItems, types],
   );
+
 
   // Admin-managed banner image for this theme (localStorage-backed CRUD)
  const [banners, setBanners] = useState(() => getAllBanners()); // lazy init
