@@ -44,11 +44,11 @@ export default function AdminItems() {
               <th className="text-left p-3">Image</th>
               <th className="text-left p-3">Title</th>
               <th className="text-left p-3">Code</th>
-              <th className="text-left p-3">Size</th>
               <th className="text-left p-3">Type</th>
               <th className="text-left p-3">Themes</th>
               <th className="text-left p-3">Categories</th>
-              <th className="text-left p-3">Avail.</th>
+              <th className="text-left p-3">Avail</th>
+              <th className="text-left p-3">Edit</th>
               <th></th>
             </tr>
           </thead>

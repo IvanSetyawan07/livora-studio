@@ -24,8 +24,8 @@ export default function AdminBanners() {
     toast.error("File harus berupa gambar");
     return;
   }
-  if (file.size > 4 * 1024 * 1024) {
-    toast.error("Ukuran gambar maks 4MB");
+  if (file.size > 9 * 1024 * 1024) {
+    toast.error("Ukuran gambar maks 9MB");
     return;
   }
   try {

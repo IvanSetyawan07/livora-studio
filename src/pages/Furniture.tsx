@@ -67,7 +67,7 @@ const ThemeCard = ({
       onClick={() => onOpen(themeKey)}
       className="group text-left bg-card border border-border hover:border-foreground/40 transition-all duration-500 hover:-translate-y-1 hover:shadow-[var(--shadow-elegant)] flex flex-col"
     >
-      <div className="relative aspect-[4/3] bg-secondary/60 overflow-hidden flex items-center justify-center">
+      <div className="relative aspect-[31/20] bg-secondary/60 overflow-hidden flex items-center justify-center">
         {image ? (
           <img
             src={image}
@@ -114,7 +114,7 @@ const ItemCard = ({ item }: { item: Item }) => (
         border: "1px solid #E8E4DF",
         borderRadius: "10px",
         overflow: "hidden",
-        aspectRatio: "1 / 1",
+        aspectRatio:  "31 / 20",
         boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
         transition: "all 0.3s ease",
         display: "flex",
@@ -137,7 +137,7 @@ const ItemCard = ({ item }: { item: Item }) => (
         <img
           src={item.image}
           alt={item.name}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
         />
       ) : (
         <div className="w-2/3 h-2/3 transition-transform duration-500 group-hover:scale-105">
@@ -244,6 +244,7 @@ const activeBanner = activeTheme ? banners[activeTheme] : undefined;
       {/* Hero */}
       <section className="pt-40 pb-16 md:pt-48 md:pb-24 border-b border-border">
         <div className="container-livora text-center max-w-4xl">
+          
           <p className="text-[10px] uppercase tracking-[0.45em] text-foreground/60 mb-6">
             Livora | Furniture
           </p>
@@ -268,8 +269,10 @@ const activeBanner = activeTheme ? banners[activeTheme] : undefined;
 
       {/* Content */}
       <section className="py-16 md:py-24">
-        <div className="container-livora">
+        <div className="w-full px-6 md:px-10 lg:px-16">
           {!activeTheme ? (
+            //tampilan 4 
+            // <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 animate-fade-in">
               {(Object.keys(themeMap) as ThemeKey[]).map((k) => (
                 <ThemeCard
@@ -292,11 +295,6 @@ const activeBanner = activeTheme ? banners[activeTheme] : undefined;
               <div
                 className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-10"
               >
-                {/* <img
-                
-                src={activeTheme === "Chair" ? featuredChair : featuredSofa}
-                alt="Featured"
-                /> */}
                 {(() => {
                   const nodes: React.ReactNode[] = themedItems.map((item) => (
                     <ItemCard key={item.slug} item={item} />
