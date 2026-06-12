@@ -1,49 +1,63 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { Link, useSearchParams } from "react-router-dom"; // ← ADD useSearchParams
-import { Armchair, Sofa as SofaIcon, Table2, LayoutGrid, ArrowLeft, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
-import { toast } from "sonner";
+import { Link, useSearchParams } from "react-router-dom";
+import { Armchair, Sofa as SofaIcon, Table2, LayoutGrid, ArrowLeft, Package } from "lucide-react";
 import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
-import { Button } from "@/components/ui/button";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
 import { type Item } from "@/data/items";
 import { useAllItems } from "@/lib/itemsApi";
-import { useCart } from "@/context/CartContext";
+import { api } from "@/lib/api";
 import { getAllBanners, subscribeBanners } from "@/lib/themeBanners";
-import { formatRupiah } from "@/data/furniture";
 import chairTheme from "@/assets/furniture/chair-theme.png";
 import sofaTheme from "@/assets/furniture/sofa-theme.png";
-import featuredChair from "@/assets/hero-chair.png";
-import featuredBed from "@/assets/hero-bed.png";
-import featuredSofa from "@/assets/hero-sofa.png";
-import featuredTable from "@/assets/hero-table.png";
 
-type ThemeKey = "Chair" | "Sofa" | "Table" | "All";
+// Theme = "All" atau nama Furniture Type (dinamis dari backend).
+type ThemeKey = string;
 
-const themeMap: Record<ThemeKey, { icon: typeof Armchair; slugs: string[]; tagline: string; image?: string }> = {
+type ThemeMeta = {
+  icon: typeof Armchair;
+  tagline: string;
+  image?: string;
+  slugs: string[];
+};
+
+// Preset tampilan untuk type bawaan. Type baru otomatis pakai default.
+const themePresets: Record<string, ThemeMeta> = {
   Chair: {
     icon: Armchair,
     tagline: "Sculpted seating for quiet moments.",
     image: chairTheme,
-    slugs: ["white-chair", "coco-chair", "work-chair", /* ... rest */],
+    slugs: ["white-chair", "coco-chair", "work-chair"],
   },
   Sofa: {
     icon: SofaIcon,
     tagline: "Generous silhouettes built for slow living.",
     image: sofaTheme,
-    slugs: ["lounge-sofa", "modular-sofa", /* ... rest */],
+    slugs: ["lounge-sofa", "modular-sofa"],
   },
   Table: {
     icon: Table2,
     tagline: "Considered surfaces in stone, brass, and wood.",
-    slugs: ["coco-table", "coffee-table", /* ... rest */],
-  },
-  All: {
-    icon: LayoutGrid,
-    tagline: "Every piece in our collection, in one place.",
-    slugs: [],
+    slugs: ["coco-table", "coffee-table"],
   },
 };
+
+const defaultMeta = (name: string): ThemeMeta => ({
+  icon: Package,
+  tagline: `Curated ${name.toLowerCase()} pieces in our collection.`,
+  slugs: [],
+});
+
+const getMeta = (name: string): ThemeMeta =>
+  themePresets[name] ?? defaultMeta(name);
+
+const allMeta: ThemeMeta = {
+  icon: LayoutGrid,
+  tagline: "Every piece in our collection, in one place.",
+  slugs: [],
+};
+
+type FurnitureType = { id: number; name: string; slug: string };
 
 const findItem = (slug: string, all: Item[]): Item | undefined =>
   all.find((i) => i.slug === slug);
