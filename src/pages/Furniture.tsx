@@ -73,7 +73,8 @@ const ThemeCard = ({
   allItems: Item[];
   count: number;
 }) => {
-  const { icon: Icon, tagline, slugs, image } = themeMap[themeKey];
+  const { icon: Icon, tagline, slugs, image } =
+    themeKey === "All" ? allMeta : getMeta(themeKey);
   const previewSlug = slugs[0];
   const previewItem = previewSlug ? findItem(previewSlug, allItems) : undefined;
   return (
