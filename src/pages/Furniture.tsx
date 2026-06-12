@@ -1,49 +1,63 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { Link, useSearchParams } from "react-router-dom"; // ← ADD useSearchParams
-import { Armchair, Sofa as SofaIcon, Table2, LayoutGrid, ArrowLeft, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
-import { toast } from "sonner";
+import { Link, useSearchParams } from "react-router-dom";
+import { Armchair, Sofa as SofaIcon, Table2, LayoutGrid, ArrowLeft, Package } from "lucide-react";
 import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
-import { Button } from "@/components/ui/button";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
 import { type Item } from "@/data/items";
 import { useAllItems } from "@/lib/itemsApi";
-import { useCart } from "@/context/CartContext";
+import { api } from "@/lib/api";
 import { getAllBanners, subscribeBanners } from "@/lib/themeBanners";
-import { formatRupiah } from "@/data/furniture";
 import chairTheme from "@/assets/furniture/chair-theme.png";
 import sofaTheme from "@/assets/furniture/sofa-theme.png";
-import featuredChair from "@/assets/hero-chair.png";
-import featuredBed from "@/assets/hero-bed.png";
-import featuredSofa from "@/assets/hero-sofa.png";
-import featuredTable from "@/assets/hero-table.png";
 
-type ThemeKey = "Chair" | "Sofa" | "Table" | "All";
+// Theme = "All" atau nama Furniture Type (dinamis dari backend).
+type ThemeKey = string;
 
-const themeMap: Record<ThemeKey, { icon: typeof Armchair; slugs: string[]; tagline: string; image?: string }> = {
+type ThemeMeta = {
+  icon: typeof Armchair;
+  tagline: string;
+  image?: string;
+  slugs: string[];
+};
+
+// Preset tampilan untuk type bawaan. Type baru otomatis pakai default.
+const themePresets: Record<string, ThemeMeta> = {
   Chair: {
     icon: Armchair,
     tagline: "Sculpted seating for quiet moments.",
     image: chairTheme,
-    slugs: ["white-chair", "coco-chair", "work-chair", /* ... rest */],
+    slugs: ["white-chair", "coco-chair", "work-chair"],
   },
   Sofa: {
     icon: SofaIcon,
     tagline: "Generous silhouettes built for slow living.",
     image: sofaTheme,
-    slugs: ["lounge-sofa", "modular-sofa", /* ... rest */],
+    slugs: ["lounge-sofa", "modular-sofa"],
   },
   Table: {
     icon: Table2,
     tagline: "Considered surfaces in stone, brass, and wood.",
-    slugs: ["coco-table", "coffee-table", /* ... rest */],
-  },
-  All: {
-    icon: LayoutGrid,
-    tagline: "Every piece in our collection, in one place.",
-    slugs: [],
+    slugs: ["coco-table", "coffee-table"],
   },
 };
+
+const defaultMeta = (name: string): ThemeMeta => ({
+  icon: Package,
+  tagline: `Curated ${name.toLowerCase()} pieces in our collection.`,
+  slugs: [],
+});
+
+const getMeta = (name: string): ThemeMeta =>
+  themePresets[name] ?? defaultMeta(name);
+
+const allMeta: ThemeMeta = {
+  icon: LayoutGrid,
+  tagline: "Every piece in our collection, in one place.",
+  slugs: [],
+};
+
+type FurnitureType = { id: number; name: string; slug: string };
 
 const findItem = (slug: string, all: Item[]): Item | undefined =>
   all.find((i) => i.slug === slug);
@@ -59,7 +73,8 @@ const ThemeCard = ({
   allItems: Item[];
   count: number;
 }) => {
-  const { icon: Icon, tagline, slugs, image } = themeMap[themeKey];
+  const { icon: Icon, tagline, slugs, image } =
+    themeKey === "All" ? allMeta : getMeta(themeKey);
   const previewSlug = slugs[0];
   const previewItem = previewSlug ? findItem(previewSlug, allItems) : undefined;
   return (
@@ -164,38 +179,58 @@ const ItemCard = ({ item }: { item: Item }) => (
 
 const Furniture = () => {
   const allItems = useAllItems();
-  const [searchParams] = useSearchParams(); // ← ADD THIS
+  const [searchParams] = useSearchParams();
   const [activeTheme, setActiveTheme] = useState<ThemeKey | null>(null);
 
-  // ✅ READ CATEGORY FROM URL
+  // Fetch furniture types dari backend (admin Taxonomies)
+  const [types, setTypes] = useState<FurnitureType[]>([]);
+  useEffect(() => {
+    api
+      .get<FurnitureType[]>("/taxonomies/furniture-types")
+      .then((r) => setTypes(r.data ?? []))
+      .catch(() => setTypes([]));
+  }, []);
+
+  // Daftar theme keys: "All" + setiap type dari backend.
+  // Fallback ke preset bawaan jika backend belum termuat.
+  const themeKeys: ThemeKey[] = useMemo(() => {
+    const names = types.length
+      ? types.map((t) => t.name)
+      : Object.keys(themePresets);
+    return ["All", ...names];
+  }, [types]);
+
+  // Map slug → nama type (untuk param URL ?category=)
+  const slugToName = useMemo(() => {
+    const m: Record<string, string> = {
+      "new-arrivals": "All",
+      sofas: "Sofa",
+      chairs: "Chair",
+      tables: "Table",
+      beds: "Bed",
+    };
+    for (const t of types) m[t.slug] = t.name;
+    return m;
+  }, [types]);
+
   useEffect(() => {
     const categoryParam = searchParams.get("category");
-    if (categoryParam) {
-      // Map URL slug ke ThemeKey
-      const themeKeyMap: Record<string, ThemeKey> = {
-        "new-arrivals": "All",
-        "sofas": "Sofa",
-        "chairs": "Chair",
-        "tables": "Table",
-        "beds": "Chair", // atau buat theme baru untuk Beds
-      };
-      
-      const theme = themeKeyMap[categoryParam];
-      if (theme) {
-        setActiveTheme(theme);
-      }
-    }
-  }, [searchParams]);
+    if (!categoryParam) return;
+    const theme = slugToName[categoryParam];
+    if (theme) setActiveTheme(theme);
+  }, [searchParams, slugToName]);
 
   const itemsForTheme = (key: ThemeKey): Item[] => {
     if (key === "All") return allItems;
-    // Match by item name containing the theme keyword (Sofa / Chair / Table).
-    // This ensures every sofa/chair/table appears in its category, regardless
-    // of the legacy `category` field (which is "SEATING" for sofas & chairs).
     const keyword = key.toLowerCase();
-    const matched = allItems.filter((i) => i.name.toLowerCase().includes(keyword));
-    // Preserve curated order from themeMap.slugs first, then append the rest.
-    const ordered = themeMap[key].slugs
+    // Cocokkan via item.category (= nama type, uppercased) ATAU nama item mengandung keyword.
+    const matched = allItems.filter(
+      (i) =>
+        i.category?.toLowerCase() === keyword ||
+        i.name.toLowerCase().includes(keyword),
+    );
+    const meta = getMeta(key);
+    const ordered = meta.slugs
       .map((s) => matched.find((i) => i.slug === s))
       .filter((i): i is Item => Boolean(i));
     const rest = matched.filter((i) => !ordered.includes(i));
@@ -204,8 +239,9 @@ const Furniture = () => {
 
   const themedItems = useMemo(
     () => (activeTheme ? itemsForTheme(activeTheme) : []),
-    [activeTheme, allItems],
+    [activeTheme, allItems, types],
   );
+
 
   // Admin-managed banner image for this theme (localStorage-backed CRUD)
  const [banners, setBanners] = useState(() => getAllBanners()); // lazy init
@@ -261,7 +297,7 @@ const activeBanner = activeTheme ? banners[activeTheme] : undefined;
           </h1>
           <p className="mt-6 text-foreground/70 font-light max-w-xl mx-auto">
             {activeTheme
-              ? themeMap[activeTheme].tagline
+              ? (activeTheme === "All" ? allMeta : getMeta(activeTheme)).tagline
               : "Browse by theme — choose a category to explore the curated pieces inside."}
           </p>
         </div>
@@ -274,7 +310,7 @@ const activeBanner = activeTheme ? banners[activeTheme] : undefined;
             //tampilan 4 
             // <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 animate-fade-in">
-              {(Object.keys(themeMap) as ThemeKey[]).map((k) => (
+              {themeKeys.map((k) => (
                 <ThemeCard
                   key={k}
                   themeKey={k}
