@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Loader } from "@/components/livora/Loader";
 import { Navbar } from "@/components/livora/Navbar";
@@ -14,18 +14,19 @@ import { useReveal } from "@/hooks/useReveal";
 const Index = () => {
   useReveal();
   const location = useLocation();
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    if (!ready) return;
     if (location.hash) {
       const id = location.hash.slice(1);
-      // wait for sections to render
       const t = setTimeout(() => {
         const el = document.getElementById(id);
         if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 80);
       return () => clearTimeout(t);
     }
-  }, [location.hash, location.key]);
+  }, [location.hash, location.key, ready]);
 
   useEffect(() => {
     document.title = "LIVORA — Imagine. Create. Realize. | Interior Design Studio";
@@ -40,17 +41,21 @@ const Index = () => {
 
   return (
     <>
-      <Loader />
-      <Navbar />
-      <main>
-        <Hero />
-        <Style />
-        <Scope />
-        <Projects />
-        <Furniture />
-        <Contact />
-      </main>
-      <Footer />
+      <Loader onDone={() => setReady(true)} />
+      {ready && (
+        <>
+          <Navbar />
+          <main>
+            <Hero />
+            <Style />
+            <Scope />
+            <Projects />
+            <Furniture />
+            <Contact />
+          </main>
+          <Footer />
+        </>
+      )}
     </>
   );
 };

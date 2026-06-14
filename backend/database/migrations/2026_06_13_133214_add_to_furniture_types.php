@@ -1,0 +1,24 @@
+<?php
+// database/migrations/YYYY_MM_DD_XXXXXX_add_image_to_furniture_types.php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('furniture_types', function (Blueprint $table) {
+            $table->string('image_path')->nullable()->after('name');
+            $table->string('image_alt_text')->nullable()->after('image_path');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('furniture_types', function (Blueprint $table) {
+            $table->dropColumn(['image_path', 'image_alt_text']);
+        });
+    }
+};

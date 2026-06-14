@@ -221,7 +221,8 @@ section[id] { scroll-margin-top: 96px; }
     transform: translateY(60px);
     animation: rise-up 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     will-change: transform, opacity;
-  }
+    -webkit-animation: rise-up 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
 
   /* Scroll-down indicator */
   @keyframes chevron-bounce {

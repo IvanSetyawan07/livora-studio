@@ -40,6 +40,7 @@ const themePresets: Record<string, ThemeMeta> = {
     tagline: "Considered surfaces in stone, brass, and wood.",
     slugs: ["coco-table", "coffee-table"],
   },
+
 };
 
 const defaultMeta = (name: string): ThemeMeta => ({

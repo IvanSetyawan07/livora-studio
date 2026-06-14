@@ -116,9 +116,7 @@ return new class extends Migration
         });
 
         // Track last activity for "active user" counter
-        Schema::table('users', function (Blueprint $t) {
-            $t->timestamp('last_seen_at')->nullable();
-        });
+        Schema::table('furniture_types', fn(Blueprint $t) => $t->string('image')->nullable());
     }
 
     public function down(): void
