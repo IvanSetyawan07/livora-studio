@@ -407,22 +407,7 @@ export const items: Item[] = [
     categories: ["Lighting", "Living Room"],
     textures: ["Brushed Brass", "Woven Linen", "Warm Glow"],
   },
-  {
-    slug: "sectional-sofa",
-    name: "Sectional Sofa",
-    code: "UP25410",
-    category: "SEATING",
-    specs: {
-      dimensions: "320 × 180 × 78 cm (W × D × H)",
-      material: "Hardwood Frame, Performance Velvet Upholstery",
-      finish: "Stone Grey / Soft Camel",
-      weight: "98 kg",
-      availability: "Made to Order — 10–12 weeks lead time",
-    },
-    themes: ["Warm Modern", "Editorial", "Minimalist"],
-    categories: ["Seating", "Living Room"],
-    textures: ["Soft Velvet", "Plush", "Smooth Hardwood"],
-  },
+  
   {
     slug: "sofa-three-bench",
     name: "Sofa Three Bench",

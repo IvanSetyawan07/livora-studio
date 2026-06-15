@@ -26,6 +26,8 @@ import ERD from "./pages/ERD";
 import Furniture from "./pages/Furniture.tsx";
 import { CartDrawer } from "@/components/livora/CartDrawer.tsx";
 import { CartProvider } from "./context/CartContext.tsx";
+import CatalogPage from "./pages/CatalogPage";
+import CatalogDetail from "./pages/CatalogDetail"; // ← tambah ini
 
 const queryClient = new QueryClient();
 
@@ -46,6 +48,9 @@ function App() {
               <Route path="/projects/:slug" element={<ProjectDetail />} />
               <Route path="/items/:slug" element={<ItemDetail />} />
               <Route path="/furniture" element={<Furniture />} />
+              <Route path="/catalog" element={<CatalogPage />} />
+              <Route path="/catalog/:category" element={<CatalogPage />} />
+              <Route path="/catalog/:category/:slug" element={<CatalogDetail />} /> {/* ← tambah ini */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/dashboard" element={<Dashboard />} />
