@@ -1,3 +1,4 @@
+import { getAllThumbnails, subscribeThumbnails } from "@/lib/themeThumbnails";
 import React, { useMemo, useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Armchair, Sofa as SofaIcon, Table2, LayoutGrid, ArrowLeft, Package } from "lucide-react";
@@ -8,31 +9,24 @@ import { type Item } from "@/data/items";
 import { useAllItems } from "@/lib/itemsApi";
 import { api } from "@/lib/api";
 import { getAllBanners, subscribeBanners } from "@/lib/themeBanners";
-import chairTheme from "@/assets/furniture/chair-theme.png";
-import sofaTheme from "@/assets/furniture/sofa-theme.png";
 
-// Theme = "All" atau nama Furniture Type (dinamis dari backend).
 type ThemeKey = string;
 
 type ThemeMeta = {
   icon: typeof Armchair;
   tagline: string;
-  image?: string;
   slugs: string[];
 };
 
-// Preset tampilan untuk type bawaan. Type baru otomatis pakai default.
 const themePresets: Record<string, ThemeMeta> = {
   Chair: {
     icon: Armchair,
     tagline: "Sculpted seating for quiet moments.",
-    image: chairTheme,
     slugs: ["white-chair", "coco-chair", "work-chair"],
   },
   Sofa: {
     icon: SofaIcon,
     tagline: "Generous silhouettes built for slow living.",
-    image: sofaTheme,
     slugs: ["lounge-sofa", "modular-sofa"],
   },
   Table: {
@@ -40,7 +34,6 @@ const themePresets: Record<string, ThemeMeta> = {
     tagline: "Considered surfaces in stone, brass, and wood.",
     slugs: ["coco-table", "coffee-table"],
   },
-
 };
 
 const defaultMeta = (name: string): ThemeMeta => ({
@@ -68,27 +61,33 @@ const ThemeCard = ({
   onOpen,
   allItems,
   count,
+  thumbnailImage,
 }: {
   themeKey: ThemeKey;
   onOpen: (k: ThemeKey) => void;
   allItems: Item[];
   count: number;
+  thumbnailImage?: string;
 }) => {
-  const { icon: Icon, tagline, slugs, image } =
+  const { icon: Icon, tagline, slugs } =
     themeKey === "All" ? allMeta : getMeta(themeKey);
+
   const previewSlug = slugs[0];
-  const previewItem = previewSlug ? findItem(previewSlug, allItems) : undefined;
+  const previewItem = !thumbnailImage && previewSlug
+    ? findItem(previewSlug, allItems)
+    : undefined;
+
   return (
     <button
       onClick={() => onOpen(themeKey)}
       className="group text-left bg-card border border-border hover:border-foreground/40 transition-all duration-500 hover:-translate-y-1 hover:shadow-[var(--shadow-elegant)] flex flex-col"
     >
       <div className="relative aspect-[31/20] bg-secondary/60 overflow-hidden flex items-center justify-center">
-        {image ? (
+        {thumbnailImage ? (
           <img
-            src={image}
+            src={thumbnailImage}
             alt={themeKey}
-            className="w-full h-full object-contain p-6 transition-transform duration-700 group-hover:scale-110"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
           />
         ) : previewItem ? (
           <div className="w-1/2 h-1/2 transition-transform duration-700 group-hover:scale-110">
@@ -122,7 +121,6 @@ const ItemCard = ({ item }: { item: Item }) => (
     to={`/items/${item.slug}`}
     className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
   >
-    {/* Card (image only, BoConcept-style) */}
     <div
       className="item-card"
       style={{
@@ -130,7 +128,7 @@ const ItemCard = ({ item }: { item: Item }) => (
         border: "1px solid #E8E4DF",
         borderRadius: "10px",
         overflow: "hidden",
-        aspectRatio:  "31 / 20",
+        aspectRatio: "31 / 20",
         boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
         transition: "all 0.3s ease",
         display: "flex",
@@ -161,30 +159,22 @@ const ItemCard = ({ item }: { item: Item }) => (
         </div>
       )}
     </div>
-
-    {/* Caption OUTSIDE the card (BoConcept style) */}
     <div className="mt-4 px-1">
-      <h3 className="text-sm font-normal text-foreground leading-snug">
-        {item.name}
-      </h3>
-      <p className="text-xs text-foreground/60 mt-1.5">
-        Material · {item.specs.material}
-      </p>
-      <p className="text-[11px] uppercase tracking-[0.15em] text-foreground/50 mt-1">
-        {item.code}
-      </p>
+      <h3 className="text-sm font-normal text-foreground leading-snug">{item.name}</h3>
+      <p className="text-xs text-foreground/60 mt-1.5">Material · {item.specs.material}</p>
+      <p className="text-[11px] uppercase tracking-[0.15em] text-foreground/50 mt-1">{item.code}</p>
     </div>
   </Link>
 );
-
 
 const Furniture = () => {
   const allItems = useAllItems();
   const [searchParams] = useSearchParams();
   const [activeTheme, setActiveTheme] = useState<ThemeKey | null>(null);
-
-  // Fetch furniture types dari backend (admin Taxonomies)
   const [types, setTypes] = useState<FurnitureType[]>([]);
+  const [banners, setBanners] = useState(() => getAllBanners());
+  const [thumbnails, setThumbnails] = useState<Record<string, any>>({});
+
   useEffect(() => {
     api
       .get<FurnitureType[]>("/taxonomies/furniture-types")
@@ -192,8 +182,38 @@ const Furniture = () => {
       .catch(() => setTypes([]));
   }, []);
 
-  // Daftar theme keys: "All" + setiap type dari backend.
-  // Fallback ke preset bawaan jika backend belum termuat.
+  useEffect(() => {
+    setBanners(getAllBanners());
+    const unsub = subscribeBanners(() => setBanners(getAllBanners()));
+    const onFocus = () => setBanners(getAllBanners());
+    window.addEventListener("focus", onFocus);
+    return () => {
+      unsub();
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
+
+  // Load thumbnails awal
+  useEffect(() => {
+    getAllThumbnails().then(setThumbnails);
+  }, []);
+
+  // Subscribe thumbnails dengan focus listener
+  useEffect(() => {
+    const unsub = subscribeThumbnails(() => getAllThumbnails().then(setThumbnails));
+    const onFocus = () => getAllThumbnails().then(setThumbnails);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      unsub();
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
+
+  useEffect(() => {
+    setBanners(getAllBanners());
+    getAllThumbnails().then(setThumbnails);
+  }, [activeTheme]);
+
   const themeKeys: ThemeKey[] = useMemo(() => {
     const names = types.length
       ? types.map((t) => t.name)
@@ -201,7 +221,6 @@ const Furniture = () => {
     return ["All", ...names];
   }, [types]);
 
-  // Map slug → nama type (untuk param URL ?category=)
   const slugToName = useMemo(() => {
     const m: Record<string, string> = {
       "new-arrivals": "All",
@@ -224,7 +243,6 @@ const Furniture = () => {
   const itemsForTheme = (key: ThemeKey): Item[] => {
     if (key === "All") return allItems;
     const keyword = key.toLowerCase();
-    // Cocokkan via item.category (= nama type, uppercased) ATAU nama item mengandung keyword.
     const matched = allItems.filter(
       (i) =>
         i.category?.toLowerCase() === keyword ||
@@ -243,57 +261,22 @@ const Furniture = () => {
     [activeTheme, allItems, types],
   );
 
+  const activeBanner = activeTheme ? banners[activeTheme] : undefined;
 
-  // Admin-managed banner image for this theme (localStorage-backed CRUD)
- const [banners, setBanners] = useState(() => getAllBanners()); // lazy init
-
-useEffect(() => {
-  // Pastikan data fresh setiap mount (misal: balik dari admin page)
-  setBanners(getAllBanners());
-
-  // Subscribe cross-component changes
-  const unsub = subscribeBanners(() => setBanners(getAllBanners()));
-
-  // Safety net: refresh saat user kembali ke tab ini
-  const onFocus = () => setBanners(getAllBanners());
-  window.addEventListener("focus", onFocus);
-
-  return () => {
-    unsub();
-    window.removeEventListener("focus", onFocus);
-  };
-}, []);
-
-// Refresh setiap activeTheme berubah (user klik kategori)
-useEffect(() => {
-  setBanners(getAllBanners());
-}, [activeTheme]);
-
-const activeBanner = activeTheme ? banners[activeTheme] : undefined;
-  console.log("localStorage raw:", localStorage.getItem("livora.themeBanners.v1"));
-  console.log("banners state:", banners);
-  console.log("activeTheme:", activeTheme);
-  console.log("activeBanner:", activeBanner)
   return (
     <main className="min-h-screen bg-background">
       <Navbar />
 
-      {/* Hero */}
       <section className="pt-40 pb-16 md:pt-48 md:pb-24 border-b border-border">
         <div className="container-livora text-center max-w-4xl">
-          
           <p className="text-[10px] uppercase tracking-[0.45em] text-foreground/60 mb-6">
             Livora | Furniture
           </p>
           <h1 className="serif text-5xl md:text-7xl font-light leading-[1.05] text-balance">
             {activeTheme ? (
-              <>
-                <em className="italic">{activeTheme}</em> Collection
-              </>
+              <><em className="italic">{activeTheme}</em> Collection</>
             ) : (
-              <>
-                Our Furniture <em className="italic">Collection</em>
-              </>
+              <>Our Furniture <em className="italic">Collection</em></>
             )}
           </h1>
           <p className="mt-6 text-foreground/70 font-light max-w-xl mx-auto">
@@ -304,12 +287,9 @@ const activeBanner = activeTheme ? banners[activeTheme] : undefined;
         </div>
       </section>
 
-      {/* Content */}
       <section className="py-16 md:py-24">
         <div className="w-full px-6 md:px-10 lg:px-16">
           {!activeTheme ? (
-            //tampilan 4 
-            // <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 animate-fade-in">
               {themeKeys.map((k) => (
                 <ThemeCard
@@ -318,6 +298,7 @@ const activeBanner = activeTheme ? banners[activeTheme] : undefined;
                   onOpen={setActiveTheme}
                   allItems={allItems}
                   count={itemsForTheme(k).length}
+                  thumbnailImage={thumbnails[k]?.image}
                 />
               ))}
             </div>
@@ -329,9 +310,7 @@ const activeBanner = activeTheme ? banners[activeTheme] : undefined;
               >
                 <ArrowLeft size={14} /> Back to Themes
               </button>
-              <div
-                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-10"
-              >
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-10">
                 {(() => {
                   const nodes: React.ReactNode[] = themedItems.map((item) => (
                     <ItemCard key={item.slug} item={item} />
@@ -364,9 +343,6 @@ const activeBanner = activeTheme ? banners[activeTheme] : undefined;
               </div>
             </div>
           )}
-          {/* <p className="text-center text-[10px] uppercase tracking-[0.35em] text-foreground/55 mt-20">
-            Lember berkualitas <span className="mx-2">·</span> Lumber yg dibuat dengan baik
-          </p> */}
         </div>
       </section>
 

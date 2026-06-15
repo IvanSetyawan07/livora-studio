@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\ItemController;
 use App\Http\Controllers\Api\TaxonomyController;
 use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\TrackingController;
+use App\Http\Controllers\UserLanguageController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -26,6 +27,7 @@ Route::post('/track/click', [TrackingController::class, 'click']);
 Route::post('/track/view',  [TrackingController::class, 'view']);
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::patch('/user/language', [UserLanguageController::class, 'update']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/heartbeat', function (Request $r) {

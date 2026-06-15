@@ -1,0 +1,188 @@
+{
+  "nav": {
+    "about": "Tentang",
+    "style": "Gaya",
+    "scope": "Layanan",
+    "projects": "Proyek",
+    "furniture": "Furnitur",
+    "contact": "Kontak"
+  },
+  "hero": {
+    "company": "PT. LANGGENG CIPTA RUANG",
+    "line1": "Bayangkan.",
+    "line2": "Ciptakan.",
+    "line3": "Wujudkan.",
+    "description": "Wujudkan ruang impian Anda bersama kami — satu titik kontak untuk desain, pengadaan, dan konstruksi."
+  },
+  "about": {
+    "eyebrow": "01 — Tentang Kami",
+    "title": "Satu titik kontak untuk",
+    "title_em": "ruang impian Anda.",
+    "p1": "Di Livora, kami percaya bahwa mewujudkan ruang impian Anda tidak harus menjadi perjuangan yang rumit. Sebagian besar jalan menuju interior yang indah terhambat oleh layanan yang terpisah-pisah. Kami didirikan untuk menyelesaikan masalah mendasar itu.",
+    "p2": "Kami berperan sebagai",
+    "p2_designers": "Desainer",
+    "p2_mid": "— menyesuaikan ruang sesuai kebutuhan Anda; sebagai",
+    "p2_importers": "Importir",
+    "p2_mid2": "— mengadakan material berkualitas tinggi langsung dari sumbernya; dan sebagai",
+    "p2_contractors": "Kontraktor",
+    "p2_end": "— memastikan setiap detail dipasang dengan sempurna.",
+    "vision_eyebrow": "Visi",
+    "vision_quote": "Menjadi ekosistem One-Stop terdepan untuk kreasi interior — di mana desain, pengadaan, dan konstruksi menyatu secara mulus.",
+    "mission_eyebrow": "Misi",
+    "mission_title": "Tiga prinsip,",
+    "mission_title_em": "satu filosofi.",
+    "missions": [
+      { "t": "Integrasikan", "d": "perjalanan kompleks desain interior." },
+      { "t": "Bangun", "d": "kualitas terbaik dengan desain adaptif, furnitur, dan instalasi." },
+      { "t": "Ciptakan", "d": "dampak yang bermakna dan bertahan lama di setiap ruang." }
+    ]
+  },
+  "style": {
+    "eyebrow": "Gaya Kami",
+    "line1": "Modern.",
+    "line2": "Tenang.",
+    "line3": "Eropa.",
+    "desc": "Terinspirasi dari keeleganan Eropa, detail yang halus, dan keseimbangan antara keindahan dan fungsi. Ruang kami berbicara pelan, namun penuh keyakinan.",
+    "tag1": "Halus",
+    "tag2": "Seimbang",
+    "tag3": "Abadi"
+  },
+  "scope": {
+    "eyebrow": "Lingkup Kerja",
+    "title": "Empat disiplin,",
+    "title_em": "satu studio.",
+    "slides": [
+      {
+        "title": "Interior Dekoratif",
+        "text": "Setiap ruangan memiliki cerita yang menunggu untuk diceritakan. Kami merancang konsep interior yang mengubah dinding kosong dan lantai polos menjadi ruang yang hidup — dirancang sesuai kehidupan, selera, dan visi Anda."
+      },
+      {
+        "title": "Furnitur Lepas",
+        "text": "Furnitur bukan sekadar fungsi — ia adalah bahasa diam sebuah ruangan. Kami mengkurasi karya dengan keahlian tak tertandingi, di mana setiap lekukan, serat, dan jahitan mengundang Anda untuk melambat dan merasa betah."
+      },
+      {
+        "title": "Kontraktor Interior & Arsitektur",
+        "text": "Presisi adalah janji kami. Dari cetak biru hingga sapuan kuas terakhir, tim kami membangun dengan tangan terampil dan mata yang awas — membentuk ruang yang menyimpan keindahan di setiap detail dan kenyamanan di setiap sudut."
+      },
+      {
+        "title": "Inovasi Material, Aksesori & Fitting",
+        "text": "Kami memilih material dan fitting dengan mata seorang kolektor — inovatif, tahan lama, dan diam-diam luar biasa. Elemen yang kami pilih hari ini menjadi tekstur, finishing, dan kenangan yang mendefinisikan sebuah ruang selama bertahun-tahun."
+      }
+    ]
+  },
+  "projects": {
+    "eyebrow": "Proyek Kami",
+    "title": "Karya terpilih,",
+    "title_em": "dirancang untuk bertahan.",
+    "others": "Lainnya →",
+    "view": "Lihat Proyek →",
+    "all": "Semua",
+    "page_eyebrow": "Semua Proyek",
+    "page_title": "Portofolio",
+    "page_title_em": "lengkap kami.",
+    "back": "← Kembali ke beranda"
+  },
+  "furniture": {
+    "eyebrow": "Koleksi Furnitur",
+    "title": "Beragam pilihan",
+    "title_em": "tekstur, bentuk, dan warna.",
+    "desc": "Dari pemasok berkualitas tinggi di Eropa dan Asia, koleksi kami dikurasi untuk keseimbangan antara keahlian premium dan nilai yang tepat.",
+    "suppliers": "Pemasok",
+    "collections": "Koleksi",
+    "possibilities": "Kemungkinan",
+    "looking_for": "Apa yang Anda cari?",
+    "page_eyebrow": "Livora | Furnitur",
+    "page_title": "Koleksi Furnitur",
+    "page_title_em": "Kami",
+    "page_desc": "Jelajahi berdasarkan tema — pilih kategori untuk melihat koleksi di dalamnya.",
+    "theme": "Tema",
+    "piece": "produk",
+    "pieces": "produk",
+    "explore": "Jelajahi →",
+    "back_themes": "Kembali ke Tema",
+    "categories": {
+      "new_arrivals": "Terbaru",
+      "sofas": "Sofa",
+      "chairs": "Kursi",
+      "tables": "Meja",
+      "beds": "Tempat Tidur",
+      "accessories": "Aksesori"
+    }
+  },
+  "contact": {
+    "eyebrow": "Kontak",
+    "title": "Mari",
+    "title_em": "mulai",
+    "title_end": "cerita Anda.",
+    "desc": "Kami ingin mendengar ide-ide Anda dan menjelajahi bagaimana kami dapat mewujudkannya.",
+    "find_us": "Temukan kami di",
+    "call": "Telepon",
+    "web": "Web"
+  },
+  "footer": {
+    "rights": "Hak cipta dilindungi",
+    "tagline": "Bayangkan. Ciptakan. Wujudkan."
+  },
+  "cart": {
+    "title": "Keranjang Anda",
+    "empty": "Keranjang Anda kosong.",
+    "empty_sub": "Mulai jelajahi koleksi kami.",
+    "inquiry": "Tanya Harga",
+    "subtotal": "Subtotal",
+    "send_inquiry": "Kirim Permintaan",
+    "clear": "Kosongkan Keranjang",
+    "removed": "Dihapus dari keranjang",
+    "inquiry_sent": "Permintaan terkirim! Kami akan menghubungi Anda segera."
+  },
+  "login": {
+    "title": "Senang melihat Anda kembali.",
+    "subtitle": "Masuk untuk melanjutkan ke dashboard Livora Anda.",
+    "email": "Email",
+    "password": "Kata Sandi",
+    "remember": "Ingat Saya",
+    "forgot": "Lupa Kata Sandi?",
+    "submit": "Masuk",
+    "loading": "Memuat...",
+    "or": "atau Masuk dengan Email",
+    "google": "Lanjutkan dengan Google",
+    "no_account": "Belum Terdaftar?",
+    "create": "Buat akun"
+  },
+  "register": {
+    "title": "Daftar",
+    "name": "Nama",
+    "email": "Email",
+    "password": "Kata Sandi (min 6)",
+    "submit": "Daftar",
+    "loading": "Memuat...",
+    "have_account": "Sudah punya akun?",
+    "login": "Masuk"
+  },
+  "dashboard": {
+    "hello": "Halo,",
+    "logout": "Keluar"
+  },
+  "admin": {
+    "panel": "Panel Admin",
+    "title": "Dashboard Admin",
+    "welcome": "Selamat datang,",
+    "email": "Email:",
+    "role": "Peran:",
+    "logout": "Keluar",
+    "manage": "Kelola"
+  },
+  "common": {
+    "back_home": "← Kembali ke beranda",
+    "back": "← Kembali",
+    "loading": "Memuat…",
+    "not_found": "Item tidak ditemukan",
+    "project_not_found": "Proyek tidak ditemukan",
+    "you_may_like": "Anda Mungkin Juga Suka",
+    "items_in_space": "Produk di Ruang Ini",
+    "view_project": "Lihat Proyek →",
+    "material": "Material",
+    "location": "LOKASI",
+    "year": "TAHUN",
+    "scope_label": "LINGKUP"
+  }
+}

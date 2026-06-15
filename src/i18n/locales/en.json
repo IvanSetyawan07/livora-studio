@@ -1,0 +1,188 @@
+{
+  "nav": {
+    "about": "About",
+    "style": "Style",
+    "scope": "Scope",
+    "projects": "Projects",
+    "furniture": "Furniture",
+    "contact": "Contact"
+  },
+  "hero": {
+    "company": "PT. LANGGENG CIPTA RUANG",
+    "line1": "Imagine.",
+    "line2": "Create.",
+    "line3": "Realize.",
+    "description": "Create your dream space with us — a single point of contact for design, supply and construction."
+  },
+  "about": {
+    "eyebrow": "01 — About Us",
+    "title": "A single point of contact for",
+    "title_em": "your dream space.",
+    "p1": "At Livora, we believe creating your dream space shouldn't be a complex struggle. Most paths to a beautiful interior are blocked by disconnected services. We were founded to solve that fundamental problem.",
+    "p2": "We act as your",
+    "p2_designers": "Designers",
+    "p2_mid": "— tailoring spaces to your needs; your",
+    "p2_importers": "Importers",
+    "p2_mid2": "— sourcing high-quality materials directly; and your",
+    "p2_contractors": "Contractors",
+    "p2_end": "— ensuring every detail is installed to perfection.",
+    "vision_eyebrow": "Vision",
+    "vision_quote": "To be the leading One-Stop ecosystem for interior creation — where design, supply and construction merge seamlessly.",
+    "mission_eyebrow": "Mission",
+    "mission_title": "Three principles,",
+    "mission_title_em": "one philosophy.",
+    "missions": [
+      { "t": "Integrate", "d": "the complex journey of interior designing." },
+      { "t": "Construct", "d": "top-class quality and adaptive design, furniture and installation." },
+      { "t": "Create", "d": "long-lasting and meaningful impact in every space." }
+    ]
+  },
+  "style": {
+    "eyebrow": "Our Style",
+    "line1": "Modern.",
+    "line2": "Quiet.",
+    "line3": "European.",
+    "desc": "Inspired by European elegance, refined details and the balance between beauty and function. Our spaces speak softly, but with conviction.",
+    "tag1": "Refined",
+    "tag2": "Balanced",
+    "tag3": "Timeless"
+  },
+  "scope": {
+    "eyebrow": "Scope of Work",
+    "title": "Four disciplines,",
+    "title_em": "one studio.",
+    "slides": [
+      {
+        "title": "Decorative Interior",
+        "text": "Every room has a story waiting to be told. We craft interior concepts that transform bare walls and empty floors into spaces that breathe — designed around your life, your taste, and your vision."
+      },
+      {
+        "title": "Loose Furniture",
+        "text": "Furniture is more than function — it is the quiet language of a room. We curate pieces of uncompromising craftsmanship, where every curve, grain and stitch invites you to slow down and feel at home."
+      },
+      {
+        "title": "Interior Contractor & Architecture",
+        "text": "Precision is our promise. From blueprint to final brushstroke, our team builds with disciplined hands and watchful eyes — shaping spaces that hold beauty in every detail and comfort in every corner."
+      },
+      {
+        "title": "Material Innovation, Accessories & Fittings",
+        "text": "We source materials and fittings with a connoisseur's eye — innovative, enduring, quietly remarkable. The pieces we choose today become the textures, finishes and memories that define a space for years to come."
+      }
+    ]
+  },
+  "projects": {
+    "eyebrow": "Our Projects",
+    "title": "Selected works,",
+    "title_em": "crafted to last.",
+    "others": "Others →",
+    "view": "View Project →",
+    "all": "All",
+    "page_eyebrow": "All Projects",
+    "page_title": "A complete",
+    "page_title_em": "portfolio.",
+    "back": "← Back to home"
+  },
+  "furniture": {
+    "eyebrow": "Furniture Collection",
+    "title": "A wide variety of",
+    "title_em": "textures, forms and tones.",
+    "desc": "From high-quality suppliers across Europe and Asia, our collection is curated for the balance between premium craftsmanship and considered value.",
+    "suppliers": "Suppliers",
+    "collections": "Collections",
+    "possibilities": "Possibilities",
+    "looking_for": "What are you looking for?",
+    "page_eyebrow": "Livora | Furniture",
+    "page_title": "Our Furniture",
+    "page_title_em": "Collection",
+    "page_desc": "Browse by theme — choose a category to explore the curated pieces inside.",
+    "theme": "Theme",
+    "piece": "piece",
+    "pieces": "pieces",
+    "explore": "Explore →",
+    "back_themes": "Back to Themes",
+    "categories": {
+      "new_arrivals": "New arrivals",
+      "sofas": "Sofas",
+      "chairs": "Chairs",
+      "tables": "Tables",
+      "beds": "Beds",
+      "accessories": "Accessories"
+    }
+  },
+  "contact": {
+    "eyebrow": "Contact",
+    "title": "Let's",
+    "title_em": "begin",
+    "title_end": "your story.",
+    "desc": "We'd love to hear about your ideas and explore how we can bring them to life.",
+    "find_us": "Find us at",
+    "call": "Call",
+    "web": "Web"
+  },
+  "footer": {
+    "rights": "All rights reserved",
+    "tagline": "Imagine. Create. Realize."
+  },
+  "cart": {
+    "title": "Your Cart",
+    "empty": "Your cart is empty.",
+    "empty_sub": "Start exploring our collection.",
+    "inquiry": "Inquiry",
+    "subtotal": "Subtotal",
+    "send_inquiry": "Send Inquiry",
+    "clear": "Clear Cart",
+    "removed": "Removed from cart",
+    "inquiry_sent": "Inquiry sent! We will contact you shortly."
+  },
+  "login": {
+    "title": "Glad to see you again.",
+    "subtitle": "Login to continue to your Livora dashboard.",
+    "email": "Email",
+    "password": "Password",
+    "remember": "Remember Me",
+    "forgot": "Forgot Password?",
+    "submit": "Login",
+    "loading": "Loading...",
+    "or": "or Sign in with Email",
+    "google": "Continue with Google",
+    "no_account": "Not Registered Yet?",
+    "create": "Create an account"
+  },
+  "register": {
+    "title": "Register",
+    "name": "Name",
+    "email": "Email",
+    "password": "Password (min 6)",
+    "submit": "Register",
+    "loading": "Loading...",
+    "have_account": "Sudah punya akun?",
+    "login": "Login"
+  },
+  "dashboard": {
+    "hello": "Hello,",
+    "logout": "Logout"
+  },
+  "admin": {
+    "panel": "Admin Panel",
+    "title": "Dashboard Admin",
+    "welcome": "Selamat datang,",
+    "email": "Email:",
+    "role": "Role:",
+    "logout": "Logout",
+    "manage": "Manage"
+  },
+  "common": {
+    "back_home": "← Back to home",
+    "back": "← Back",
+    "loading": "Loading…",
+    "not_found": "Item not found",
+    "project_not_found": "Project not found",
+    "you_may_like": "You May Also Like",
+    "items_in_space": "Items in This Space",
+    "view_project": "View Project →",
+    "material": "Material",
+    "location": "LOCATION",
+    "year": "YEAR",
+    "scope_label": "SCOPE"
+  }
+}

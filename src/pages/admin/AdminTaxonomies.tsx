@@ -1,6 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ImagePlus, X } from "lucide-react";
+import { toast } from "sonner";
+import {
+  getAllBanners, getBanner, saveBanner, deleteBanner,
+  subscribeBanners, fileToDataUrl,
+} from "@/lib/themeBanners";
+import {
+  getAllThumbnails, getThumbnail, saveThumbnail, deleteThumbnail,
+  subscribeThumbnails,
+} from "@/lib/themeThumbnails";
 
 const TABS = [
   { key: "scopes", label: "Scopes (Project)" },
@@ -13,9 +22,28 @@ export default function AdminTaxonomies() {
   const [tab, setTab] = useState("scopes");
   const [rows, setRows] = useState<any[]>([]);
   const [name, setName] = useState("");
+  const [banners, setBanners] = useState(() => getAllBanners());
+  const [thumbnails, setThumbnails] = useState<Record<string, any>>({});
+  const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const load = () => api.get(`/taxonomies/${tab}`).then((r) => setRows(r.data));
+  const load = () =>
+    api.get(`/taxonomies/${tab}`).then((r) => setRows(r.data));
+
   useEffect(() => { load(); }, [tab]);
+  useEffect(() => subscribeBanners(() => setBanners(getAllBanners())), []);
+  
+  // Load thumbnails awal
+  useEffect(() => {
+    getAllThumbnails().then(setThumbnails);
+  }, []);
+
+  // Subscribe thumbnails
+  useEffect(() => {
+    const unsub = subscribeThumbnails(() => {
+      getAllThumbnails().then(setThumbnails);
+    });
+    return unsub;
+  }, []);
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +65,154 @@ export default function AdminTaxonomies() {
     load();
   };
 
+  // Upload thumbnail (kartu depan)
+  const handleThumbnailUpload = async (key: string, file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("File harus berupa gambar"); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error("Ukuran maks 10MB"); return; }
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      await saveThumbnail(key, { image: dataUrl, updatedAt: Date.now() });
+      getAllThumbnails().then(setThumbnails);
+      toast.success(`Thumbnail ${key} disimpan`);
+    } catch (err) {
+      console.error("Upload error:", err);
+      toast.error("Gagal membaca file: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
+  // Upload banner (dalam kategori)
+  const handleBannerUpload = async (key: string, file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("File harus berupa gambar"); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error("Ukuran maks 10MB"); return; }
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      const existing = getBanner(key);
+      await saveBanner(key, { image: dataUrl, title: existing?.title ?? "", updatedAt: Date.now() });
+      setBanners(getAllBanners());
+      toast.success(`Banner ${key} disimpan`);
+    } catch {
+      toast.error("Gagal membaca file");
+    }
+  };
+
+  const handleThumbnailDelete = async (key: string) => {
+    if (!confirm(`Hapus thumbnail ${key}?`)) return;
+    await deleteThumbnail(key);
+    getAllThumbnails().then(setThumbnails);
+    toast.success(`Thumbnail ${key} dihapus`);
+  };
+
+  const handleBannerDelete = async (key: string) => {
+    if (!confirm(`Hapus banner ${key}?`)) return;
+    await deleteBanner(key);
+    setBanners(getAllBanners());
+    toast.success(`Banner ${key} dihapus`);
+  };
+
+  const FurnitureRow = ({ bannerKey }: { bannerKey: string }) => {
+    const thumb = thumbnails[bannerKey];
+    const banner = banners[bannerKey];
+
+    return (
+      <div className="mt-3 grid grid-cols-2 gap-4">
+        {/* Thumbnail — kartu depan */}
+        <div className="border border-border rounded-lg p-3 space-y-2">
+          <p className="text-xs font-medium text-foreground">
+            Thumbnail Kartu
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            Gambar yang tampil di grid kategori furniture
+          </p>
+          {thumb && (
+  <img
+    src={thumb.image}
+    alt="thumbnail"
+    className="w-full rounded border border-border"
+    style={{
+      aspectRatio: "31/20",
+      objectFit: "cover",
+      objectPosition: "center"
+    }}
+  />
+)}
+          <div className="flex gap-2">
+            <label className="flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 border border-border rounded cursor-pointer hover:bg-muted transition-colors">
+              <ImagePlus className="w-3.5 h-3.5" />
+              {thumb ? "Ganti" : "Upload"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) =>
+                  handleThumbnailUpload(bannerKey, e.target.files?.[0] ?? null)
+                }
+              />
+            </label>
+            {thumb && (
+              <button
+                onClick={() => handleThumbnailDelete(bannerKey)}
+                className="px-2 text-destructive border border-destructive/30 rounded hover:bg-destructive hover:text-destructive-foreground transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Banner — dalam kategori */}
+        <div className="border border-border rounded-lg p-3 space-y-2">
+          <p className="text-xs font-medium text-foreground">
+            Banner Dalam Kategori
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            Gambar besar di tengah grid item furniture
+          </p>
+          {banner && (
+  <img
+    src={banner.image}
+    alt="banner"
+    className="w-full rounded border border-border"
+    style={{
+      aspectRatio: "2/1",  // landscape untuk banner
+      objectFit: "cover",
+      objectPosition: "center"
+    }}
+  />
+)}
+          <div className="flex gap-2">
+            <label className="flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 border border-border rounded cursor-pointer hover:bg-muted transition-colors">
+              <ImagePlus className="w-3.5 h-3.5" />
+              {banner ? "Ganti" : "Upload"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) =>
+                  handleBannerUpload(bannerKey, e.target.files?.[0] ?? null)
+                }
+              />
+            </label>
+            {banner && (
+              <button
+                onClick={() => handleBannerDelete(bannerKey)}
+                className="px-2 text-destructive border border-destructive/30 rounded hover:bg-destructive hover:text-destructive-foreground transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          {banner?.updatedAt && (
+            <p className="text-[11px] text-muted-foreground">
+              Diubah: {new Date(banner.updatedAt).toLocaleString("id-ID")}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div>
       <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2">Manage</p>
@@ -44,37 +220,74 @@ export default function AdminTaxonomies() {
 
       <div className="flex gap-2 mb-6 border-b border-border">
         {TABS.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            className={`px-4 py-2 text-sm -mb-px border-b-2 ${tab === t.key ? "border-foreground" : "border-transparent text-muted-foreground"}`}>
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-2 text-sm -mb-px border-b-2 ${
+              tab === t.key ? "border-foreground" : "border-transparent text-muted-foreground"
+            }`}
+          >
             {t.label}
           </button>
         ))}
       </div>
 
       <form onSubmit={add} className="flex gap-2 mb-6">
-        <input className="ui-input flex-1" placeholder={`Nama ${tab}`} value={name} onChange={(e) => setName(e.target.value)} />
+        <input
+          className="ui-input flex-1"
+          placeholder={`Nama ${tab}`}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
         <button className="flex items-center gap-2 bg-foreground text-background px-4 rounded text-sm">
           <Plus className="w-4 h-4" /> Add
         </button>
       </form>
 
       <div className="bg-card border border-border rounded-lg divide-y divide-border">
-        {rows.map((r) => (
-          <div key={r.id} className="flex items-center p-4">
-            <div>
-              <p className="font-medium">{r.name}</p>
-              <p className="text-xs text-muted-foreground">{r.slug}</p>
+        {rows.map((r) => {
+          const isFurnitureTab = tab === "furniture-types";
+          return (
+            <div key={r.id} className="p-4">
+              <div className="flex items-center">
+                <div>
+                  <p className="font-medium">{r.name}</p>
+                  <p className="text-xs text-muted-foreground">{r.slug}</p>
+                </div>
+                <div className="ml-auto flex gap-2 items-center">
+                  <button
+                    onClick={() => rename(r)}
+                    className="text-xs px-3 py-1.5 border border-border rounded"
+                  >
+                    Rename
+                  </button>
+                  <button
+                    onClick={() => del(r)}
+                    className="p-2 hover:bg-destructive hover:text-destructive-foreground rounded"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+              {isFurnitureTab && <FurnitureRow bannerKey={r.name} />}
             </div>
-            <div className="ml-auto flex gap-2">
-              <button onClick={() => rename(r)} className="text-xs px-3 py-1.5 border border-border rounded">Rename</button>
-              <button onClick={() => del(r)} className="p-2 hover:bg-destructive hover:text-destructive-foreground rounded">
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        ))}
-        {rows.length === 0 && <p className="p-4 text-sm text-muted-foreground">Kosong.</p>}
+          );
+        })}
+        {rows.length === 0 && (
+          <p className="p-4 text-sm text-muted-foreground">Kosong.</p>
+        )}
       </div>
+
+      {/* "All" — selalu tampil di tab furniture-types */}
+      {tab === "furniture-types" && (
+        <div className="mt-6 p-4 border border-border rounded-lg bg-card">
+          <div className="mb-3">
+            <p className="font-medium">All</p>
+            <p className="text-xs text-muted-foreground">Kategori "All" — semua furniture</p>
+          </div>
+          <FurnitureRow bannerKey="All" />
+        </div>
+      )}
     </div>
   );
 }
