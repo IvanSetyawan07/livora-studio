@@ -28,6 +28,9 @@ import { CartDrawer } from "@/components/livora/CartDrawer.tsx";
 import { CartProvider } from "./context/CartContext.tsx";
 import CatalogPage from "./pages/CatalogPage";
 import CatalogDetail from "./pages/CatalogDetail"; // ← tambah ini
+import CatalogListAdmin from "@/pages/admin/CatalogListAdmin";
+import CatalogFormAdmin from "@/pages/admin/CatalogFormAdmin";
+
 
 const queryClient = new QueryClient();
 
@@ -55,6 +58,9 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/admin" element={<AdminLayout />}>
+              <Route path="catalogs"          element={<CatalogListAdmin />} />
+<Route path="catalogs/create"   element={<CatalogFormAdmin />} />
+<Route path="catalogs/:id/edit" element={<CatalogFormAdmin />} />
                 <Route index element={<AdminOverview />} />
                 <Route path="projects" element={<AdminProjects />} />
                 <Route path="items" element={<AdminItems />} />

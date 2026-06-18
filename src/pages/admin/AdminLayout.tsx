@@ -10,12 +10,14 @@ import {
   BarChart3,
   Image as ImageIcon,
   LogOut,
+  BookOpen,
 } from "lucide-react";
 
 const nav = [
   { to: "/admin", end: true, label: "Overview", icon: LayoutDashboard },
   { to: "/admin/projects", label: "Projects", icon: FolderKanban },
   { to: "/admin/items", label: "Items / Furniture", icon: Sofa },
+  { to: "/admin/catalogs", label: "Catalogs", icon: BookOpen },
   { to: "/admin/taxonomies", label: "Taxonomies", icon: Tags },
   { to: "/admin/landing", label: "Landing Highlights", icon: Star },
   { to: "/admin/banners", label: "Theme Banners", icon: ImageIcon },
@@ -40,7 +42,6 @@ export default function AdminLayout() {
         navigate("/login");
       }
     })();
-    // heartbeat every 30s while admin is in dashboard
     const h = setInterval(() => api.post("/heartbeat").catch(() => {}), 30000);
     api.post("/heartbeat").catch(() => {});
     return () => clearInterval(h);

@@ -152,6 +152,8 @@ const HotspotPanel = ({
 // ─────────────────────────────────────────────
 export default function CatalogDetail() {
   const { slug } = useParams<{ slug: string }>();
+  console.log("slug =", slug);
+  console.log("catalog items =", CATALOG_ITEMS);
   const navigate = useNavigate();
 
   // ── Data

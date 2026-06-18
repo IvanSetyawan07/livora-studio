@@ -5,11 +5,12 @@ import { CatalogCard } from "@/components/livora/CatalogCard";
 import { WhatsAppButton } from "@/components/livora/WhatsAppButton";
 import {
   CATALOG_CATEGORIES,
-  CATALOG_ITEMS,
   CATALOG_TAXONOMIES,
   CatalogCategory,
   CatalogTaxonomy,
+  CatalogItem,
 } from "@/types/catalog";
+import { getAllCatalogs } from "@/lib/catalogApi";
 
 const ITEMS_PER_PAGE = 8;
 
@@ -24,9 +25,17 @@ export default function CatalogPage() {
   const [activeTax, setActiveTax] = useState<CatalogTaxonomy>("All");
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
   const [carouselPos, setCarouselPos] = useState(0);
+  const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
 
   const gridRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
+
+  // Fetch dari API
+  useEffect(() => {
+    getAllCatalogs({ per_page: 100 }).then((res) => {
+      setCatalogItems(res.data as unknown as CatalogItem[]);
+    }).catch(console.error);
+  }, []);
 
   // Reset state setiap ganti category
   useEffect(() => {
@@ -48,21 +57,21 @@ export default function CatalogPage() {
 
   // Filtered items untuk grid
   const filteredItems = useMemo(() => {
-    let items = CATALOG_ITEMS.filter((i) => i.category === activeCat.slug);
+    let items = catalogItems.filter((i) => i.category === activeCat.slug);
     if (activeTax !== "All") items = items.filter((i) => i.taxonomy === activeTax);
     return items;
-  }, [activeCat.slug, activeTax]);
+  }, [catalogItems, activeCat.slug, activeTax]);
 
   const visibleItems = filteredItems.slice(0, visibleCount);
   const hasMore = visibleCount < filteredItems.length;
 
   // Carousel — random dari semua category, exclude current
   const carouselItems = useMemo(() => {
-    return [...CATALOG_ITEMS]
+    return [...catalogItems]
       .filter((i) => i.category !== activeCat.slug)
       .sort(() => Math.random() - 0.5)
       .slice(0, 10);
-  }, [activeCat.slug]);
+  }, [catalogItems, activeCat.slug]);
 
   // Carousel drag
   const drag = useRef({ active: false, startX: 0 });
@@ -84,12 +93,10 @@ export default function CatalogPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      {/* ── HERO — full-bleed background video ── */}
+      {/* ── HERO ── */}
       <section className="relative min-h-[92vh] flex items-center justify-center text-center border-b border-border overflow-hidden">
-
-        {/* Video background — file di /public/videos/<slug>.mp4 */}
         <video
-          key={activeCat.slug}          // re-mount saat ganti category
+          key={activeCat.slug}
           className="absolute inset-0 w-full h-full object-cover"
           src={`/videos/${activeCat.slug}.mp4`}
           autoPlay
@@ -97,14 +104,9 @@ export default function CatalogPage() {
           muted
           playsInline
         >
-          {/* Fallback: kalau browser tidak support video */}
           <div className="absolute inset-0 bg-[hsl(var(--livora-stone))]" />
         </video>
-
-        {/* Overlay supaya teks tetap terbaca di atas video */}
         <div className="absolute inset-0 bg-background/40" />
-
-        {/* Konten teks */}
         <div className="relative z-10 flex flex-col items-center px-4">
           <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/60 mb-4 font-light">
             Livora &nbsp;|&nbsp; Catalog
@@ -115,20 +117,10 @@ export default function CatalogPage() {
           <p className="text-sm md:text-base text-foreground/70 font-light leading-relaxed max-w-md mb-10 reveal">
             {activeCat.description}
           </p>
-          <a
-            href="#catalog-grid"
-            onClick={(e) => {
-              e.preventDefault();
-              document.getElementById("catalog-grid")?.scrollIntoView({ behavior: "smooth" });
-            }}
-            className="text-[10px] uppercase tracking-[0.18em] border border-foreground/40 px-7 py-3 text-foreground hover:bg-foreground hover:text-background hover:border-foreground transition-all duration-500 font-light"
-          >
-            Explore Collection
-          </a>
         </div>
       </section>
 
-      {/* ── FILTER BAR — left-aligned label per wireframe ── */}
+      {/* ── FILTER BAR ── */}
       <div className="container-livora pt-8 pb-0" id="catalog-grid">
         <p className="text-[10px] uppercase tracking-[0.2em] text-foreground font-medium mb-3">
           {activeCat.label}
@@ -150,7 +142,7 @@ export default function CatalogPage() {
         </div>
       </div>
 
-      {/* ── CATALOG GRID — 4 cols, image atas + text bawah per wireframe ── */}
+      {/* ── CATALOG GRID ── */}
       <section className="container-livora py-8" ref={gridRef}>
         {visibleItems.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
@@ -168,8 +160,6 @@ export default function CatalogPage() {
             </p>
           </div>
         )}
-
-        {/* Load More — dark filled button per wireframe */}
         {hasMore && (
           <div className="flex justify-center mt-12">
             <button
@@ -185,8 +175,6 @@ export default function CatalogPage() {
       {/* ── EXPLORE ANOTHER CATALOG ── */}
       <section className="bg-secondary/30 border-t border-border py-16 md:py-20">
         <div className="container-livora">
-
-          {/* Header */}
           <div className="text-center mb-10">
             <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground mb-3 font-light">
               Livora &nbsp;|&nbsp; Discover
@@ -198,8 +186,6 @@ export default function CatalogPage() {
               Explore additional collections curated from across the LIVORA catalog.
             </p>
           </div>
-
-          {/* Carousel — 5 portrait cards per wireframe */}
           <div className="overflow-hidden" ref={carouselRef}>
             <div
               className="flex gap-4 transition-transform duration-500 cursor-grab active:cursor-grabbing select-none"
@@ -215,7 +201,6 @@ export default function CatalogPage() {
                   className="group flex-shrink-0 w-[calc(20%-13px)]"
                   draggable={false}
                 >
-                  {/* Portrait card */}
                   <div className="hover-zoom relative aspect-[3/4] bg-secondary overflow-hidden mb-3">
                     {item.coverImage ? (
                       <img src={item.coverImage} alt={item.title} className="w-full h-full object-cover" />
@@ -234,7 +219,7 @@ export default function CatalogPage() {
                     <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/8 transition-colors duration-500" />
                   </div>
                   <p className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground mb-0.5 font-light">
-                    {item.category.replace(/-/g, " ")}
+                    {typeof item.category === "string" ? item.category.replace(/-/g, " ") : ""}
                   </p>
                   <p className="serif text-sm font-light text-foreground group-hover:text-muted-foreground transition-colors duration-300">
                     {item.title}
@@ -243,8 +228,6 @@ export default function CatalogPage() {
               ))}
             </div>
           </div>
-
-          {/* Carousel controls */}
           <div className="flex justify-center items-center gap-3 mt-6">
             <button
               onClick={() => moveCarousel(-1)}

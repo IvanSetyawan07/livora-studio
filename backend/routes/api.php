@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ProjectPhotoController;
 use App\Http\Controllers\Api\ItemController;
 use App\Http\Controllers\Api\TaxonomyController;
+use App\Http\Controllers\Api\CatalogController;
+use App\Http\Controllers\Api\HotspotController;
 use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\TrackingController;
 use App\Http\Controllers\UserLanguageController;
@@ -21,6 +23,12 @@ Route::get('/landing/highlights', [ProjectController::class, 'highlights']);
 Route::get('/items', [ItemController::class, 'index']);
 Route::get('/items/{slug}', [ItemController::class, 'show']);
 Route::get('/taxonomies/{type}', [TaxonomyController::class, 'index']);
+
+// Catalog - Public Read
+Route::get('/catalogs', [CatalogController::class, 'index']);
+Route::get('/catalogs/{slug}', [CatalogController::class, 'show']);
+Route::get('/catalogs/{catalogId}/hotspots', [HotspotController::class, 'index']);
+Route::get('/catalogs/{catalogId}/hotspots/{scene}', [HotspotController::class, 'getByScene']);
 
 // Public tracking (works for guests too)
 Route::post('/track/click', [TrackingController::class, 'click']);
@@ -57,6 +65,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/taxonomies/{type}', [TaxonomyController::class, 'store']);
         Route::put('/taxonomies/{type}/{id}', [TaxonomyController::class, 'update']);
         Route::delete('/taxonomies/{type}/{id}', [TaxonomyController::class, 'destroy']);
+
+        // Catalogs Admin CRUD
+        Route::post('/catalogs', [CatalogController::class, 'store']);
+        Route::put('/catalogs/{catalog}', [CatalogController::class, 'update']);
+        Route::delete('/catalogs/{catalog}', [CatalogController::class, 'destroy']);
+
+        // Hotspots Admin CRUD (nested under catalogs)
+        Route::prefix('catalogs/{catalog}/hotspots')->group(function () {
+            Route::post('/', [HotspotController::class, 'store']);
+            Route::get('{hotspot}', [HotspotController::class, 'show']);
+            Route::put('{hotspot}', [HotspotController::class, 'update']);
+            Route::delete('{hotspot}', [HotspotController::class, 'destroy']);
+            Route::post('batch', [HotspotController::class, 'batch']);
+        });
 
         // Analytics
         Route::get('/analytics/overview', [AnalyticsController::class, 'overview']);
