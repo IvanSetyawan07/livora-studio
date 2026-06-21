@@ -17,6 +17,7 @@ const nav = [
   { to: "/admin", end: true, label: "Overview", icon: LayoutDashboard },
   { to: "/admin/projects", label: "Projects", icon: FolderKanban },
   { to: "/admin/items", label: "Items / Furniture", icon: Sofa },
+  { to: "/admin/collections", label: "Collections", icon: BookOpen },
   { to: "/admin/catalogs", label: "Catalogs", icon: BookOpen },
   { to: "/admin/taxonomies", label: "Taxonomies", icon: Tags },
   { to: "/admin/landing", label: "Landing Highlights", icon: Star },

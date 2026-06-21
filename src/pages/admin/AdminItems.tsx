@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Trash2, Plus, Settings2 } from "lucide-react";
 
 export default function AdminItems() {
   const [items, setItems] = useState<any[]>([]);
   const [types, setTypes] = useState<any[]>([]);
   const [themes, setThemes] = useState<any[]>([]);
   const [cats, setCats] = useState<any[]>([]);
+  const [collections, setCollections] = useState<any[]>([]);
   const [editing, setEditing] = useState<any | null>(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -17,6 +19,7 @@ export default function AdminItems() {
     api.get("/taxonomies/furniture-types").then((r) => setTypes(r.data));
     api.get("/taxonomies/themes").then((r) => setThemes(r.data));
     api.get("/taxonomies/categories").then((r) => setCats(r.data));
+    api.get("/collections").then((r) => setCollections(r.data)).catch(() => {});
   }, []);
 
   const del = async (i: any) => {
@@ -65,6 +68,9 @@ export default function AdminItems() {
                 <td className="p-3 text-xs">{i.categories?.map((c: any) => c.name).join(", ")}</td>
                 <td className="p-3 text-xs">{i.availability}</td>
                 <td className="p-3 text-right">
+                  <Link to={`/admin/items/${i.id}/experience`} title="Manage Experience" className="p-1.5 hover:bg-muted rounded inline-flex">
+                    <Settings2 className="w-3.5 h-3.5" />
+                  </Link>
                   <button onClick={() => { setEditing(i); setShowForm(true); }} className="p-1.5 hover:bg-muted rounded">
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
@@ -80,14 +86,14 @@ export default function AdminItems() {
       </div>
 
       {showForm && (
-        <ItemForm item={editing} types={types} themes={themes} cats={cats}
+        <ItemForm item={editing} types={types} themes={themes} cats={cats} collections={collections}
           onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />
       )}
     </div>
   );
 }
 
-function ItemForm({ item, types, themes, cats, onClose, onSaved }: any) {
+function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: any) {
   const [title, setTitle] = useState(item?.title || "");
   const [code, setCode] = useState(item?.code || "");
   const [texture, setTexture] = useState(item?.texture || "");
@@ -95,6 +101,7 @@ function ItemForm({ item, types, themes, cats, onClose, onSaved }: any) {
   const [availability, setAvailability] = useState(item?.availability || "available");
   const [description, setDescription] = useState(item?.description || "");
   const [typeId, setTypeId] = useState(item?.type_id?.toString() || "");
+  const [collectionId, setCollectionId] = useState(item?.collection_id?.toString() || item?.collection?.id?.toString() || "");
   const [themeIds, setThemeIds] = useState<number[]>(item?.themes?.map((t: any) => t.id) || []);
   const [catIds, setCatIds] = useState<number[]>(item?.categories?.map((c: any) => c.id) || []);
   const [file, setFile] = useState<File | null>(null);
@@ -115,6 +122,7 @@ function ItemForm({ item, types, themes, cats, onClose, onSaved }: any) {
       fd.append("availability", availability);
       fd.append("description", description);
       if (typeId) fd.append("type_id", typeId);
+      if (collectionId) fd.append("collection_id", collectionId);
       themeIds.forEach((id) => fd.append("theme_ids[]", id.toString()));
       catIds.forEach((id) => fd.append("category_ids[]", id.toString()));
       if (file) fd.append("image", file);
@@ -137,6 +145,12 @@ function ItemForm({ item, types, themes, cats, onClose, onSaved }: any) {
             <select className="ui-input" value={typeId} onChange={(e) => setTypeId(e.target.value)}>
               <option value="">—</option>
               {types.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </Field>
+          <Field label="Collection">
+            <select className="ui-input" value={collectionId} onChange={(e) => setCollectionId(e.target.value)}>
+              <option value="">— None —</option>
+              {(collections ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </Field>
           <Field label="Availability">

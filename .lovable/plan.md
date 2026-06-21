@@ -1,87 +1,75 @@
-# Rencana: Admin Dashboard CRUD + Analytics
+## Advanced Furniture Configurator & Product Experience Page
 
-Saya akan membangun fitur ini di **backend Laravel** (sesuai stack project kamu yang sudah ada di `backend/`) + UI admin di React. Sebelum mulai, ada beberapa hal penting yang perlu saya konfirmasi karena fitur ini cukup besar.
-
----
-
-## Yang akan dibangun
-
-### 1. Backend (Laravel + Sanctum)
-Tabel baru di MySQL/SQLite (pakai migrasi Laravel, **bukan** Supabase karena project kamu pakai Laravel):
-
-- `scopes` — id, name, slug (Interior Design, Furniture, Construction, dll) — CRUD admin
-- `projects` — id, title, subtitle (mis. "Batam"), description, location, year, hero_image, scope_id (FK), is_highlighted (bool, max 3 untuk landing page), order
-- `project_photos` — id, project_id, title (mis. "Lobby"), image, caption
-- `furniture_types` — id, name, slug (Chair, Sofa, Table, dll) — CRUD admin
-- `items` — id, type_id (FK furniture_types), title, code, texture, finish, availability, image, description
-- `themes` — id, name, slug — CRUD admin
-- `categories` — id, name, slug — CRUD admin
-- `item_theme` (pivot many-to-many)
-- `item_category` (pivot many-to-many)
-- `photo_items` — id, project_photo_id, item_id, x, y (koordinat tagging item pada foto) — opsional koordinat
-- `item_views` — id, item_id, user_id (nullable), duration_seconds, viewed_at — untuk analytics
-- `item_clicks` — id, item_id (atau project_id), user_id (nullable), clicked_at
-- `user_sessions` — track login aktif (last_seen_at di tabel users)
-
-Endpoint API (admin only via middleware `role:admin`):
-- `GET/POST/PUT/DELETE /api/admin/projects`
-- `GET/POST/PUT/DELETE /api/admin/projects/{id}/photos`
-- `GET/POST/PUT/DELETE /api/admin/items`
-- `GET/POST/PUT/DELETE /api/admin/scopes|themes|categories|furniture-types`
-- `PUT /api/admin/landing/highlights` — pilih max 3 project
-- `GET /api/admin/analytics/users` — jumlah user aktif
-- `GET /api/admin/analytics/items` — click & view stats per item/project
-
-Endpoint publik:
-- `GET /api/projects` (+ filter `?scope=construction`)
-- `GET /api/projects/{slug}`
-- `GET /api/items` (+ filter `?theme=` `?category=` `?type=`)
-- `GET /api/landing/highlights`
-- `POST /api/track/click` & `POST /api/track/view` (untuk frontend kirim event)
-
-Upload gambar pakai Laravel Storage (`storage/app/public`), disajikan via `/storage/...`.
-
-### 2. Frontend Admin (React)
-Layout admin baru dengan sidebar (sesuai permintaan "nyaman & aesthetic", mengikuti style Livora yang sudah ada — serif heading, neutral palette):
-
-- `/admin` — overview: total users, users online, top-clicked items (chart bar pakai `recharts`)
-- `/admin/projects` — list + form CRUD project, upload hero image, manage photos & tag items per foto
-- `/admin/items` — list + form CRUD item dengan dropdown furniture type, multi-select themes & categories
-- `/admin/taxonomies` — kelola Scopes, Furniture Types, Themes, Categories dalam 1 page (tabs)
-- `/admin/landing` — pilih 3 highlighted projects (drag/checkbox)
-- `/admin/analytics` — chart click/view per item & per project, breakdown by waktu
-
-### 3. Frontend Public (update halaman yang sudah ada)
-- `Projects.tsx` — fetch dari API, tombol filter scope
-- `ProjectDetail.tsx` — render dari API, photos gallery dengan tagged items
-- `Furniture.tsx` — fetch dari API, filter by theme/category/type
-- `Index.tsx` (landing) — section "Our Project" pakai highlighted projects dari API
-- Tracking: kirim `POST /api/track/view` saat user buka detail (dengan timer durasi via `beforeunload`), `POST /api/track/click` saat klik card
+A premium product detail experience inspired by BoConcept, built natively in Livora LCR's existing visual language (serif headings, off-white/gold palette, generous whitespace, subtle fade transitions). No commerce — pure luxury catalog.
 
 ---
 
-## Detail teknis
+### 1. Backend (Laravel) — new tables & APIs
 
-- **Auth admin route**: tambah middleware `EnsureUserIsAdmin` di Laravel yang cek `auth()->user()->role === 'admin'`
-- **Validasi max 3 highlight**: validasi di controller `LandingController@updateHighlights`
-- **Image upload**: pakai `request->file('image')->store('projects', 'public')` + return URL
-- **Tracking durasi**: di frontend simpan `Date.now()` saat mount, kirim ke API saat unmount/route change
-- **Charts**: pakai `recharts` (sudah ada di project)
-- **Realtime user count**: polling tiap 30 detik untuk simplicity (bukan websocket)
+New migrations:
+
+- `collections` — id, name, slug, description
+- `furniture_variants` — id, item_id, variant_name, category (enum: fabric/leather/wood/metal/marble/other), color_name, material_name, preview_image, description, sort_order, is_active
+- `furniture_gallery` — id, item_id, variant_id (nullable), image, title, alt_text, sort_order
+- `furniture_lifestyle` — id, item_id, image, caption, layout_type (full/half/masonry/custom), width_percentage, sort_order
+- `furniture_stories` — id, item_id, title, description, feature_image
+- `furniture_story_cards` — id, story_id, title, description, icon, sort_order
+- Add `collection_id` to existing `items` table
+
+New API endpoints (`/api/items/{slug}` extended response + admin CRUD):
+
+- `GET /items/{slug}` returns full nested payload (variants, gallery, lifestyle, story+cards, collection, related)
+- `POST/PUT/DELETE /admin/items/{id}/variants`
+- `POST/PUT/DELETE /admin/items/{id}/gallery` (+ reorder)
+- `POST/PUT/DELETE /admin/items/{id}/lifestyle`
+- `POST/PUT /admin/items/{id}/story` + nested cards
+- `GET/POST/PUT/DELETE /admin/collections`
 
 ---
 
-## Pertanyaan sebelum saya mulai
+### 2. Frontend — `ItemDetail.tsx` rebuild
 
-Karena scope ini **sangat besar** (sekitar 15-20 file backend baru + 8-10 page admin + update 4 page publik), saya mau pastikan dulu:
+New section flow (top → bottom), keeping current Navbar/Breadcrumb/Footer:
 
-1. **Stack backend** — saya konfirmasi pakai **Laravel** (yang sudah ada di `backend/`), bukan Lovable Cloud/Supabase. Setuju?
-2. **Database** — pakai database Laravel yang sekarang (SQLite/MySQL sesuai `.env` backend kamu). Setuju?
-3. **Approach pengerjaan** — karena besar, mau saya kerjakan **bertahap** (per fase) atau **sekaligus** (1 PR besar, lebih lama tapi langsung jadi)?
-   - **Fase 1**: Backend models + migrations + API Projects & Scopes + UI admin Projects
-   - **Fase 2**: Items + Furniture Types + Themes + Categories + UI admin
-   - **Fase 3**: Landing highlights + update public pages
-   - **Fase 4**: Analytics (tracking + charts)
-4. **Tagging item di foto** — apakah perlu fitur klik koordinat (x,y) di foto untuk tag item, atau cukup pilih item dari dropdown saja (lebih simpel)?
+1. **Hero split** — Left: main image with crossfade on variant change. Right: name, code, category chip, "Choose Your Design" configurator.
+2. **Choose Your Design** — grouped variant cards (Fabric / Leather / Wood). Each card: preview swatch image, variant name, category label. Click → animated crossfade of main image + gallery + description. No reload.
+3. **Interactive Gallery** — large carousel with arrows, swipe (touch), keyboard nav, thumbnail strip below. Updates per selected variant.
+4. **Furniture In Real Spaces** — dynamic grid renderer reading `layout_type` + `width_percentage` per image (full/half/masonry/custom %). CSS grid with fractional widths.
+5. **Storytelling** — editorial intro paragraph, large feature image, then 2×2 feature cards grid (title + description + optional icon).
+6. **Explore The Collection** — auto-fetched siblings by `collection_id`, horizontal scroll card row (reuses existing related-items styling).
 
-Setelah kamu jawab, saya langsung mulai dari fase pertama.
+Animations: tailwind `animate-fade-in`, image crossfade via opacity transition, hover-scale on cards. No commerce UI anywhere.
+
+---
+
+### 3. Admin — `Admin → Furniture → Item Editor`
+
+Extend `AdminItems.tsx` with tabbed editor per item:
+
+- **Details** (existing fields + collection dropdown)
+- **Variants** — table CRUD, image upload, sort
+- **Gallery** — multi-upload, drag-and-drop reorder (dnd-kit), per-image alt/title
+- **Lifestyle** — multi-upload, per-image layout dropdown + width % selector, live preview
+- **Story** — single story form + nested cards CRUD
+- **Collections** — separate top-level admin page for managing collection list
+
+---
+
+### Technical notes
+
+- Stack stays as-is: Laravel backend, React/Vite frontend, axios via `@/lib/api`.
+- Drag-and-drop: `@dnd-kit/core` + `@dnd-kit/sortable`.
+- Image uploads reuse existing `/storage/` flow via `Storage::disk('public')`.
+- Frontend types extended in `src/lib/itemsApi.ts` (`ApiItem` gains nested arrays).
+- All new public-facing reads are unauthenticated GETs (catalog). Admin writes go through existing `EnsureAdmin` middleware.
+- Static-items fallback in `useItemBySlug` kept for offline dev; new fields degrade gracefully when absent.
+
+---
+
+### Scope confirmation needed
+
+This is ~6 new tables, ~20 endpoints, a rebuilt detail page, and 4 new admin tabs. Before I start:
+
+1. **Build order** — should I ship in phases (a) backend migrations + APIs → (b) public detail page → (c) admin CRUD, or all at once?
+2. **Collections** — should existing items be auto-grouped by current `themes`/`type`, or do you want a brand-new `collections` taxonomy you'll populate manually?
+3. **Existing item images** — keep the current single `image` field as a fallback when no gallery exists? (recommended: yes)
