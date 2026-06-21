@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Models\Catalog;
 use App\Models\Hotspot;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 
 class HotspotController extends Controller
