@@ -10,16 +10,32 @@ class ItemController extends Controller
 {
     public function index(Request $r)
     {
-        $q = Item::with(['type','themes','categories']);
-        if ($t = $r->query('type'))     $q->whereHas('type', fn($x) => $x->where('slug',$t));
-        if ($t = $r->query('theme'))    $q->whereHas('themes', fn($x) => $x->where('slug',$t));
-        if ($t = $r->query('category')) $q->whereHas('categories', fn($x) => $x->where('slug',$t));
+        $q = Item::with(['type','collection','themes','categories']);
+        if ($t = $r->query('type'))       $q->whereHas('type', fn($x) => $x->where('slug',$t));
+        if ($t = $r->query('theme'))      $q->whereHas('themes', fn($x) => $x->where('slug',$t));
+        if ($t = $r->query('category'))   $q->whereHas('categories', fn($x) => $x->where('slug',$t));
+        if ($t = $r->query('collection')) $q->whereHas('collection', fn($x) => $x->where('slug',$t));
         return $q->orderByDesc('id')->get();
     }
 
     public function show($slug)
     {
-        return Item::with(['type','themes','categories'])->where('slug',$slug)->firstOrFail();
+        $item = Item::with([
+            'type','collection','themes','categories',
+            'variants.gallery','gallery','lifestyle',
+            'story.cards',
+        ])->where('slug',$slug)->firstOrFail();
+
+        $related = [];
+        if ($item->collection_id) {
+            $related = Item::with('type')
+                ->where('collection_id', $item->collection_id)
+                ->where('id','!=',$item->id)
+                ->limit(8)->get();
+        }
+        $arr = $item->toArray();
+        $arr['related'] = $related;
+        return $arr;
     }
 
     public function store(Request $r)
@@ -32,7 +48,7 @@ class ItemController extends Controller
         $item = Item::create($data);
         $item->themes()->sync($themes);
         $item->categories()->sync($cats);
-        return response()->json($item->load(['type','themes','categories']), 201);
+        return response()->json($item->load(['type','collection','themes','categories']), 201);
     }
 
     public function update(Request $r, Item $item)
@@ -44,7 +60,7 @@ class ItemController extends Controller
         $item->update($data);
         if ($themes !== null) $item->themes()->sync($themes);
         if ($cats !== null)   $item->categories()->sync($cats);
-        return $item->load(['type','themes','categories']);
+        return $item->load(['type','collection','themes','categories']);
     }
 
     public function destroy(Item $item)
@@ -63,6 +79,7 @@ class ItemController extends Controller
             'availability' => 'nullable|string|max:50',
             'description' => 'nullable|string',
             'type_id' => 'nullable|exists:furniture_types,id',
+            'collection_id' => 'nullable|exists:collections,id',
             'theme_ids' => 'nullable|array',
             'theme_ids.*' => 'integer|exists:themes,id',
             'category_ids' => 'nullable|array',

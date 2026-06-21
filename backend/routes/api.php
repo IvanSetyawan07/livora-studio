@@ -11,6 +11,8 @@ use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\HotspotController;
 use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\TrackingController;
+use App\Http\Controllers\Api\CollectionController;
+use App\Http\Controllers\Api\FurnitureExperienceController;
 use App\Http\Controllers\UserLanguageController;
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -23,6 +25,9 @@ Route::get('/landing/highlights', [ProjectController::class, 'highlights']);
 Route::get('/items', [ItemController::class, 'index']);
 Route::get('/items/{slug}', [ItemController::class, 'show']);
 Route::get('/taxonomies/{type}', [TaxonomyController::class, 'index']);
+Route::get('/collections', [CollectionController::class, 'index']);
+Route::get('/collections/{slug}', [CollectionController::class, 'show']);
+
 
 // Catalog - Public Read
 Route::get('/catalogs', [CatalogController::class, 'index']);
@@ -60,6 +65,35 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/items', [ItemController::class, 'store']);
         Route::post('/items/{item}', [ItemController::class, 'update']);
         Route::delete('/items/{item}', [ItemController::class, 'destroy']);
+
+        // Collections
+        Route::post('/collections', [CollectionController::class, 'store']);
+        Route::put('/collections/{collection}', [CollectionController::class, 'update']);
+        Route::delete('/collections/{collection}', [CollectionController::class, 'destroy']);
+
+        // Furniture Experience
+        Route::get('/items/{item}/variants', [FurnitureExperienceController::class, 'variantsIndex']);
+        Route::post('/items/{item}/variants', [FurnitureExperienceController::class, 'variantStore']);
+        Route::post('/variants/{variant}', [FurnitureExperienceController::class, 'variantUpdate']);
+        Route::delete('/variants/{variant}', [FurnitureExperienceController::class, 'variantDestroy']);
+
+        Route::get('/items/{item}/gallery', [FurnitureExperienceController::class, 'galleryIndex']);
+        Route::post('/items/{item}/gallery', [FurnitureExperienceController::class, 'galleryStore']);
+        Route::post('/gallery/{gallery}', [FurnitureExperienceController::class, 'galleryUpdate']);
+        Route::delete('/gallery/{gallery}', [FurnitureExperienceController::class, 'galleryDestroy']);
+        Route::post('/items/{item}/gallery/reorder', [FurnitureExperienceController::class, 'galleryReorder']);
+
+        Route::get('/items/{item}/lifestyle', [FurnitureExperienceController::class, 'lifestyleIndex']);
+        Route::post('/items/{item}/lifestyle', [FurnitureExperienceController::class, 'lifestyleStore']);
+        Route::post('/lifestyle/{lifestyle}', [FurnitureExperienceController::class, 'lifestyleUpdate']);
+        Route::delete('/lifestyle/{lifestyle}', [FurnitureExperienceController::class, 'lifestyleDestroy']);
+
+        Route::get('/items/{item}/story', [FurnitureExperienceController::class, 'storyShow']);
+        Route::post('/items/{item}/story', [FurnitureExperienceController::class, 'storyUpsert']);
+        Route::post('/stories/{story}/cards', [FurnitureExperienceController::class, 'cardStore']);
+        Route::put('/story-cards/{card}', [FurnitureExperienceController::class, 'cardUpdate']);
+        Route::delete('/story-cards/{card}', [FurnitureExperienceController::class, 'cardDestroy']);
+
 
         // Taxonomies
         Route::post('/taxonomies/{type}', [TaxonomyController::class, 'store']);
