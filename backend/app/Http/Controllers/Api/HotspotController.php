@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Models\Catalog;
 use App\Models\Hotspot;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 
 class HotspotController extends Controller
@@ -57,7 +58,7 @@ class HotspotController extends Controller
     {
         // Validation
         $validated = $request->validate([
-            'scene_number' => 'required|string|in:scene-1,scene-2',
+            'scene_number' => ['required', 'string', 'regex:/^scene-\d+$/'],
             'label' => 'required|string|max:255',
             'x' => 'required|numeric|min:0|max:100',
             'y' => 'required|numeric|min:0|max:100',
@@ -112,7 +113,7 @@ class HotspotController extends Controller
     {
         // Validation
         $validated = $request->validate([
-            'scene_number' => 'sometimes|string|in:scene-1,scene-2',
+            'scene_number' => ['sometimes', 'string', 'regex:/^scene-\d+$/'],
             'label' => 'sometimes|string|max:255',
             'x' => 'sometimes|numeric|min:0|max:100',
             'y' => 'sometimes|numeric|min:0|max:100',
@@ -192,22 +193,24 @@ class HotspotController extends Controller
         ]);
 
         try {
-            // Delete existing hotspots
-            $catalog->hotspots()->delete();
+            // FIX #8: Wrap delete+create dalam DB transaction supaya tidak data loss
+            // kalau create gagal di tengah jalan.
+            $created = DB::transaction(function () use ($catalog, $validated) {
+                $catalog->hotspots()->delete();
 
-            // Create new hotspots
-            $created = [];
-            foreach ($validated['hotspots'] as $hotspotData) {
-                $hotspot = $catalog->hotspots()->create([
-                    'scene_number' => $hotspotData['scene_number'],
-                    'label' => $hotspotData['label'],
-                    'x' => (float) $hotspotData['x'],
-                    'y' => (float) $hotspotData['y'],
-                    'item_slug' => $hotspotData['item_slug'] ?? null,
-                    'description' => $hotspotData['description'] ?? null,
-                ]);
-                $created[] = $hotspot;
-            }
+                $rows = [];
+                foreach ($validated['hotspots'] as $hotspotData) {
+                    $rows[] = $catalog->hotspots()->create([
+                        'scene_number' => $hotspotData['scene_number'],
+                        'label' => $hotspotData['label'],
+                        'x' => (float) $hotspotData['x'],
+                        'y' => (float) $hotspotData['y'],
+                        'item_slug' => $hotspotData['item_slug'] ?? null,
+                        'description' => $hotspotData['description'] ?? null,
+                    ]);
+                }
+                return $rows;
+            });
 
             return response()->json($created, 201);
         } catch (\Exception $e) {

@@ -145,10 +145,14 @@ export function HotspotVisualEditor({
     });
   };
 
-  // ── Drag existing hotspot
+  // ── Drag existing hotspot (FIX #1: save ke API HANYA di mouseUp, bukan setiap mousemove)
+  const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
+
   const handleMouseDown = (e: React.MouseEvent, id: string | number) => {
     e.stopPropagation();
     setDraggingId(id);
+    const hotspot = hotspots.find((h) => h.id === id);
+    if (hotspot) dragStartPosRef.current = { x: hotspot.x, y: hotspot.y };
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -160,32 +164,55 @@ export function HotspotVisualEditor({
 
     const hotspot = hotspots.find((h) => h.id === draggingId);
     if (hotspot) {
-      // FIX: Update ke API realtime saat drag
-      const updatedHotspot = {
+      // Update LOCAL state saja — tidak kirim API
+      onHotspotUpdate(draggingId, {
         ...hotspot,
         x: Math.max(0, Math.min(100, x)),
         y: Math.max(0, Math.min(100, y)),
-      };
-      onHotspotUpdate(draggingId, updatedHotspot);
-
-      // Silent save ke API (no loading indicator saat drag)
-      updateHotspot(catalogId, draggingId, {
-        x: updatedHotspot.x,
-        y: updatedHotspot.y,
-      }).catch((err) => {
-        console.error("Failed to save hotspot position:", err);
       });
     }
   };
 
   const handleMouseUp = () => {
+    if (!draggingId) return;
+    const id = draggingId;
+    const hotspot = hotspots.find((h) => h.id === id);
+    const startPos = dragStartPosRef.current;
+
     setDraggingId(null);
+    dragStartPosRef.current = null;
+
+    // Save ke API HANYA jika posisi benar-benar berubah (>0.5%)
+    if (
+      hotspot &&
+      startPos &&
+      (Math.abs(hotspot.x - startPos.x) > 0.5 || Math.abs(hotspot.y - startPos.y) > 0.5)
+    ) {
+      updateHotspot(catalogId, id, { x: hotspot.x, y: hotspot.y }).catch((err) => {
+        console.error("Failed to save hotspot position:", err);
+        setSaveError("Gagal menyimpan posisi hotspot");
+      });
+    }
   };
 
-  // ── FIX: Submit hotspot baru ke API
+  // FIX #4: Global mouseup listener — handle release di luar container
+  useEffect(() => {
+    if (!draggingId) return;
+    const onUp = () => handleMouseUp();
+    window.addEventListener("mouseup", onUp);
+    return () => window.removeEventListener("mouseup", onUp);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draggingId, hotspots]);
+
+  // ── FIX #7: Validate koordinat sebelum submit
   const handleAddHotspot = async () => {
     if (!form.label.trim()) {
       setSaveError("Label tidak boleh kosong");
+      return;
+    }
+    // Default x=50,y=50 berarti user belum klik gambar
+    if (form.x === 50 && form.y === 50) {
+      setSaveError("Klik gambar dulu untuk menempatkan hotspot");
       return;
     }
 
@@ -193,7 +220,6 @@ export function HotspotVisualEditor({
     setSaveError(null);
 
     try {
-      // Save ke API
       const newHotspot = await createHotspot(catalogId, {
         scene_number: sceneNumber,
         label: form.label,
@@ -203,7 +229,6 @@ export function HotspotVisualEditor({
         description: form.description || undefined,
       });
 
-      // Update local state dengan data dari API
       onHotspotAdd(newHotspot as unknown as HotspotItem);
       resetForm();
     } catch (err: any) {
@@ -271,10 +296,19 @@ export function HotspotVisualEditor({
     }
   };
 
-  // ── Start edit
+  // ── Start edit (FIX #5: ensure defaults agar form tidak rusak kalau ada field undefined)
   const startEdit = (hotspot: HotspotItem) => {
     setEditingId(hotspot.id || "");
-    setForm(hotspot);
+    setForm({
+      scene_number: hotspot.scene_number || sceneNumber,
+      label: hotspot.label || "",
+      x: typeof hotspot.x === "number" ? hotspot.x : 50,
+      y: typeof hotspot.y === "number" ? hotspot.y : 50,
+      item_slug: hotspot.item_slug || "",
+      description: hotspot.description || "",
+      id: hotspot.id,
+      image: hotspot.image,
+    });
     setSaveError(null);
   };
 
@@ -551,6 +585,13 @@ export function HotspotVisualEditor({
               className="w-full border border-border bg-background text-foreground p-2 text-sm h-14 resize-none rounded"
             />
           </div>
+
+          {/* FIX #10: Error juga ditampilkan dekat tombol action */}
+          {saveError && (
+            <div className="p-2.5 bg-red-500/15 border border-red-500/40 rounded text-red-700 text-xs">
+              ❌ {saveError}
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex gap-2 pt-2">
