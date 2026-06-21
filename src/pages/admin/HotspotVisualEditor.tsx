@@ -296,10 +296,19 @@ export function HotspotVisualEditor({
     }
   };
 
-  // ── Start edit
+  // ── Start edit (FIX #5: ensure defaults agar form tidak rusak kalau ada field undefined)
   const startEdit = (hotspot: HotspotItem) => {
     setEditingId(hotspot.id || "");
-    setForm(hotspot);
+    setForm({
+      scene_number: hotspot.scene_number || sceneNumber,
+      label: hotspot.label || "",
+      x: typeof hotspot.x === "number" ? hotspot.x : 50,
+      y: typeof hotspot.y === "number" ? hotspot.y : 50,
+      item_slug: hotspot.item_slug || "",
+      description: hotspot.description || "",
+      id: hotspot.id,
+      image: hotspot.image,
+    });
     setSaveError(null);
   };
 
