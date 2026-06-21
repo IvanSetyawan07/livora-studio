@@ -145,10 +145,14 @@ export function HotspotVisualEditor({
     });
   };
 
-  // ── Drag existing hotspot
+  // ── Drag existing hotspot (FIX #1: save ke API HANYA di mouseUp, bukan setiap mousemove)
+  const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
+
   const handleMouseDown = (e: React.MouseEvent, id: string | number) => {
     e.stopPropagation();
     setDraggingId(id);
+    const hotspot = hotspots.find((h) => h.id === id);
+    if (hotspot) dragStartPosRef.current = { x: hotspot.x, y: hotspot.y };
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -160,27 +164,45 @@ export function HotspotVisualEditor({
 
     const hotspot = hotspots.find((h) => h.id === draggingId);
     if (hotspot) {
-      // FIX: Update ke API realtime saat drag
-      const updatedHotspot = {
+      // Update LOCAL state saja — tidak kirim API
+      onHotspotUpdate(draggingId, {
         ...hotspot,
         x: Math.max(0, Math.min(100, x)),
         y: Math.max(0, Math.min(100, y)),
-      };
-      onHotspotUpdate(draggingId, updatedHotspot);
-
-      // Silent save ke API (no loading indicator saat drag)
-      updateHotspot(catalogId, draggingId, {
-        x: updatedHotspot.x,
-        y: updatedHotspot.y,
-      }).catch((err) => {
-        console.error("Failed to save hotspot position:", err);
       });
     }
   };
 
   const handleMouseUp = () => {
+    if (!draggingId) return;
+    const id = draggingId;
+    const hotspot = hotspots.find((h) => h.id === id);
+    const startPos = dragStartPosRef.current;
+
     setDraggingId(null);
+    dragStartPosRef.current = null;
+
+    // Save ke API HANYA jika posisi benar-benar berubah (>0.5%)
+    if (
+      hotspot &&
+      startPos &&
+      (Math.abs(hotspot.x - startPos.x) > 0.5 || Math.abs(hotspot.y - startPos.y) > 0.5)
+    ) {
+      updateHotspot(catalogId, id, { x: hotspot.x, y: hotspot.y }).catch((err) => {
+        console.error("Failed to save hotspot position:", err);
+        setSaveError("Gagal menyimpan posisi hotspot");
+      });
+    }
   };
+
+  // FIX #4: Global mouseup listener — handle release di luar container
+  useEffect(() => {
+    if (!draggingId) return;
+    const onUp = () => handleMouseUp();
+    window.addEventListener("mouseup", onUp);
+    return () => window.removeEventListener("mouseup", onUp);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draggingId, hotspots]);
 
   // ── FIX: Submit hotspot baru ke API
   const handleAddHotspot = async () => {
