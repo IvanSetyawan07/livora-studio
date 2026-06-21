@@ -193,22 +193,24 @@ class HotspotController extends Controller
         ]);
 
         try {
-            // Delete existing hotspots
-            $catalog->hotspots()->delete();
+            // FIX #8: Wrap delete+create dalam DB transaction supaya tidak data loss
+            // kalau create gagal di tengah jalan.
+            $created = DB::transaction(function () use ($catalog, $validated) {
+                $catalog->hotspots()->delete();
 
-            // Create new hotspots
-            $created = [];
-            foreach ($validated['hotspots'] as $hotspotData) {
-                $hotspot = $catalog->hotspots()->create([
-                    'scene_number' => $hotspotData['scene_number'],
-                    'label' => $hotspotData['label'],
-                    'x' => (float) $hotspotData['x'],
-                    'y' => (float) $hotspotData['y'],
-                    'item_slug' => $hotspotData['item_slug'] ?? null,
-                    'description' => $hotspotData['description'] ?? null,
-                ]);
-                $created[] = $hotspot;
-            }
+                $rows = [];
+                foreach ($validated['hotspots'] as $hotspotData) {
+                    $rows[] = $catalog->hotspots()->create([
+                        'scene_number' => $hotspotData['scene_number'],
+                        'label' => $hotspotData['label'],
+                        'x' => (float) $hotspotData['x'],
+                        'y' => (float) $hotspotData['y'],
+                        'item_slug' => $hotspotData['item_slug'] ?? null,
+                        'description' => $hotspotData['description'] ?? null,
+                    ]);
+                }
+                return $rows;
+            });
 
             return response()->json($created, 201);
         } catch (\Exception $e) {
