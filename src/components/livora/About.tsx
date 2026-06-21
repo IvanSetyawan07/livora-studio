@@ -1,4 +1,5 @@
-import aboutImg from "@/assets/about-livora.jpg";
+import aboutImg__asset from "@/assets/about-livora.jpg.asset.json";
+const aboutImg = aboutImg__asset.url;
 import { SectionHeader } from "./SectionHeader";
 
 const missions = [
