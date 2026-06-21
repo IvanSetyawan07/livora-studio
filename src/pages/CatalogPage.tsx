@@ -9,10 +9,48 @@ import {
   CatalogCategory,
   CatalogTaxonomy,
   CatalogItem,
+  Catalog,
 } from "@/types/catalog";
 import { getAllCatalogs } from "@/lib/catalogApi";
+import { imgUrl } from "@/lib/adminApi";
 
 const ITEMS_PER_PAGE = 8;
+
+// ─────────────────────────────────────────────
+// FIX: Normalise API response (snake_case → camelCase + full image URL)
+// Sama logic dengan CatalogDetail.tsx — satu sumber kebenaran
+// ─────────────────────────────────────────────
+function normaliseCatalog(raw: any): CatalogItem {
+  const categorySlug =
+    typeof raw.category === "string" ? raw.category : raw.category?.slug;
+
+  let taxonomyStr = "";
+  if (typeof raw.taxonomy === "string") {
+    taxonomyStr = raw.taxonomy;
+  } else if (Array.isArray(raw.taxonomy)) {
+    taxonomyStr = raw.taxonomy[0]?.name ?? "";
+  } else if (raw.taxonomy && typeof raw.taxonomy === "object") {
+    taxonomyStr = raw.taxonomy.name ?? "";
+  }
+
+  const coverImage: string | undefined = raw.cover_image
+    ? imgUrl(raw.cover_image)
+    : raw.coverImage
+    ? imgUrl(raw.coverImage)
+    : undefined;
+
+  return {
+    id: String(raw.id),
+    slug: raw.slug,
+    title: raw.title,
+    category: categorySlug,
+    taxonomy: taxonomyStr,
+    description: raw.description ?? "",
+    coverImage,
+    galleryImages: raw.gallery_images ?? raw.galleryImages,
+    featured: raw.featured,
+  };
+}
 
 export default function CatalogPage() {
   const { category: categorySlug } = useParams<{ category: string }>();
@@ -30,10 +68,11 @@ export default function CatalogPage() {
   const gridRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
 
-  // Fetch dari API
+  // FIX: Normalise setiap item sebelum disimpan ke state
   useEffect(() => {
     getAllCatalogs({ per_page: 100 }).then((res) => {
-      setCatalogItems(res.data as unknown as CatalogItem[]);
+      const raw = res.data as unknown as any[];
+      setCatalogItems(raw.map(normaliseCatalog));
     }).catch(console.error);
   }, []);
 

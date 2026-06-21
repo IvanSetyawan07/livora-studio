@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 import { CatalogItem } from "@/types/catalog";
+import { imgUrl } from "@/lib/adminApi";
+
 
 interface CatalogCardProps {
   item: CatalogItem;
@@ -7,6 +9,9 @@ interface CatalogCardProps {
 }
 
 export const CatalogCard = ({ item, index = 0 }: CatalogCardProps) => {
+  // FIX: Baca cover_image (snake_case dari API) atau coverImage (camelCase dari seed)
+  const imageUrl = item.cover_image ? imgUrl(item.cover_image) : item.coverImage ?? null;
+
   return (
     <Link
       to={`/catalog/${item.category}/${item.slug}`}
@@ -15,13 +20,9 @@ export const CatalogCard = ({ item, index = 0 }: CatalogCardProps) => {
     >
       {/* Image block — landscape 4:3 */}
       <div className="hover-zoom relative w-full overflow-hidden bg-secondary aspect-[4/3]">
-        {item.coverImage ? (
-          <img
-            src={item.coverImage}
-            alt={item.title}
-            className="w-full h-full object-cover"
-          />
-        ) : (
+        {imageUrl ? (
+  <img src={imageUrl} alt={item.title} className="w-full h-full object-cover" />
+) : (
           <div className="w-full h-full bg-secondary flex items-center justify-center">
             <div className="text-center space-y-2 opacity-30">
               <div className="grid grid-cols-2 gap-1.5 mx-auto w-10">

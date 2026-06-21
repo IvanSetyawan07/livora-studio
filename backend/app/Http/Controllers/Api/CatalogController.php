@@ -65,7 +65,7 @@ class CatalogController extends Controller
     /**
      * Store a newly created resource in storage.
      * POST /api/catalogs
-     * Body: FormData dengan title, slug, category, taxonomy, description, images, hotspots
+     * Body: FormData dengan title, slug, category, taxonomy, tagline, about_title, description, images, hotspots
      */
     public function store(Request $request)
     {
@@ -75,6 +75,8 @@ class CatalogController extends Controller
             'slug' => 'required|string|max:255|unique:catalogs',
             'category' => 'required|string|max:255',
             'taxonomy' => 'required|string|max:255',
+            'tagline' => 'nullable|string|max:255',           // ← NEW
+            'about_title' => 'nullable|string|max:255',       // ← NEW
             'description' => 'required|string',
             'featured' => 'nullable|boolean',
             'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
@@ -142,7 +144,11 @@ class CatalogController extends Controller
     public function show(string $id)
     {
         try {
-            $catalog = Catalog::findOrFail($id);
+            // Coba cari berdasarkan ID jika numeric, fallback ke slug
+            $catalog = is_numeric($id)
+                ? Catalog::findOrFail($id)
+                : Catalog::where('slug', $id)->firstOrFail();
+
             return response()->json($catalog);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
@@ -154,7 +160,7 @@ class CatalogController extends Controller
     /**
      * Update the specified resource in storage.
      * PUT /api/catalogs/{id}
-     * Body: FormData dengan field yang ingin di-update
+     * Body: FormData dengan field yang ingin di-update (including tagline, about_title)
      */
     public function update(Request $request, string $id)
     {
@@ -167,6 +173,8 @@ class CatalogController extends Controller
                 'slug' => 'sometimes|required|string|max:255|unique:catalogs,slug,' . $id,
                 'category' => 'sometimes|required|string|max:255',
                 'taxonomy' => 'sometimes|required|string|max:255',
+                'tagline' => 'nullable|string|max:255',           // ← NEW
+                'about_title' => 'nullable|string|max:255',       // ← NEW
                 'description' => 'sometimes|required|string',
                 'featured' => 'nullable|boolean',
                 'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
@@ -248,38 +256,18 @@ class CatalogController extends Controller
     {
         try {
             $catalog = Catalog::findOrFail($id);
-
-            // Delete images from storage
-            if ($catalog->cover_image && Storage::disk('public')->exists($catalog->cover_image)) {
-                Storage::disk('public')->delete($catalog->cover_image);
-            }
-            if ($catalog->scene_1_image && Storage::disk('public')->exists($catalog->scene_1_image)) {
-                Storage::disk('public')->delete($catalog->scene_1_image);
-            }
-            if ($catalog->scene_2_image && Storage::disk('public')->exists($catalog->scene_2_image)) {
-                Storage::disk('public')->delete($catalog->scene_2_image);
-            }
-
-            // Delete entire catalog folder
-            if (Storage::disk('public')->exists("catalog/{$catalog->slug}")) {
-                Storage::disk('public')->deleteDirectory("catalog/{$catalog->slug}");
-            }
-
-            // Delete hotspots (cascade by default, but explicit delete)
             $catalog->hotspots()->delete();
-
-            // Delete catalog
             $catalog->delete();
 
             return response()->json(null, 204);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'message' => 'Catalog not found',
-            ], 404);
+            return response()->json(['message' => 'Catalog not found'], 404);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Failed to delete catalog',
                 'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
             ], 500);
         }
     }

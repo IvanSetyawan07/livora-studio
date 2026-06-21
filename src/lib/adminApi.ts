@@ -5,17 +5,12 @@ export const BACKEND_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 
 export const imgUrl = (path?: string | null) => {
   if (!path) return "";
+  if (path.startsWith("http")) return path;
+  if (path.startsWith("/seed/")) return path;
 
-  if (path.startsWith("http")) {
-    return path;
-  }
-
-  // gambar seed dari frontend
-  if (path.startsWith("/seed/")) {
-    return path;
-  }
-
-  return BACKEND_ORIGIN + path;
+  // Tambah /storage/ prefix untuk file dari Laravel storage
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  return BACKEND_ORIGIN + "/storage" + cleanPath;
 };
 
 export const trackClick = (target_type: "item" | "project", target_id: number) => {

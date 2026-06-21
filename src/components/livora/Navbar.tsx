@@ -40,8 +40,9 @@ export const Navbar = () => {
     { key: "contact", label: t("nav.contact"), hash: "contact" },
   ];
 
-  const isLanding = location.pathname === "/";
-  const transparentTop = isLanding && !scrolled;
+const isLanding = location.pathname === "/";
+const isCatalogDetail = /^\/catalog\/[^/]+\/[^/]+/.test(location.pathname);
+const transparentTop = (isLanding || isCatalogDetail) && !scrolled;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50);
@@ -156,17 +157,18 @@ export const Navbar = () => {
             ? "text-foreground"
             : "text-foreground/80 hover:text-foreground"
         }`;
+        const shadowStyle = transparentTop ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined;
     if (l.to)
-      return (
-        <Link to={l.to} className={baseCls} onClick={() => setOpen(false)}>
-          {l.label}
-        </Link>
-      );
-    return (
-      <a href={`/#${l.hash}`} className={baseCls} onClick={handleHashClick(l.hash!)}>
-        {l.label}
-      </a>
-    );
+  return (
+    <Link to={l.to} className={baseCls} style={shadowStyle} onClick={() => setOpen(false)}>
+      {l.label}
+    </Link>
+  );
+return (
+  <a href={`/#${l.hash}`} className={baseCls} style={shadowStyle} onClick={handleHashClick(l.hash!)}>
+    {l.label}
+  </a>
+);
   };
 
   return (
@@ -182,8 +184,9 @@ export const Navbar = () => {
         <Link
           to="/"
           className={`serif text-2xl tracking-[0.35em] font-light transition-colors duration-500 ${
-            transparentTop ? "text-white" : "text-foreground"
-          }`}
+  transparentTop ? "text-white" : "text-foreground"
+}`}
+style={transparentTop ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined}
         >
           LIVORA
         </Link>

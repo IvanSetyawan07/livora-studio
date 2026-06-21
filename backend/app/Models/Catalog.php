@@ -11,6 +11,8 @@ class Catalog extends Model
 
     protected $fillable = [
         'title',
+        'tagline',       
+        'about_title',
         'slug',
         'category',
         'taxonomy',

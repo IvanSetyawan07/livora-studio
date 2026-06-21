@@ -1,55 +1,760 @@
-import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
+// UPDATED: Add tagline dan aboutTitle ke normaliseCatalog + About section JSX
+// Base: Document 6 (Framer Motion version)
+
+// src/pages/CatalogDetail.tsx
+
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { X, ChevronLeft, ChevronRight, ArrowUpRight } from "lucide-react";
+import { motion, useScroll, useTransform, easeOut } from "framer-motion";
 import { Navbar } from "@/components/livora/Navbar";
 import { WhatsAppButton } from "@/components/livora/WhatsAppButton";
 import { Footer } from "@/components/livora/Footer";
-import { CATALOG_ITEMS, CATALOG_CATEGORIES, CatalogItem } from "@/types/catalog";
+
+import {
+  CATALOG_CATEGORIES,
+  CatalogItem,
+  CatalogCategory,
+  Catalog,
+} from "@/types/catalog";
+import { getCatalogBySlug, getAllCatalogs, getHotspots } from "@/lib/catalogApi";
+import { imgUrl } from "@/lib/adminApi";
+
+// ─────────────────────────────────────────────
+// Helper: normalise API Catalog → CatalogItem
+// ─────────────────────────────────────────────
+function normaliseCatalog(raw: Catalog): CatalogItem {
+  const categorySlug: CatalogCategory =
+    typeof raw.category === "string"
+      ? (raw.category as CatalogCategory)
+      : ((raw.category as any)?.slug as CatalogCategory);
+
+  let taxonomyStr = "";
+  if (typeof raw.taxonomy === "string") {
+    taxonomyStr = raw.taxonomy;
+  } else if (Array.isArray(raw.taxonomy)) {
+    taxonomyStr = (raw.taxonomy[0] as any)?.name ?? "";
+  } else if (raw.taxonomy && typeof raw.taxonomy === "object") {
+    taxonomyStr = (raw.taxonomy as any).name ?? "";
+  }
+  
+  const r = raw as any;
+  const coverImage: string | undefined = r.cover_image
+    ? imgUrl(r.cover_image)
+    : raw.coverImage
+    ? imgUrl(raw.coverImage)
+    : undefined;
+
+  return {
+    id: String(raw.id),
+    slug: raw.slug,
+    title: raw.title,
+    tagline: r.tagline ?? "",           // ← ADD
+    aboutTitle: r.about_title ?? "",    // ← ADD
+    category: categorySlug,
+    taxonomy: taxonomyStr,
+    description: raw.description ?? "",
+    coverImage,
+    galleryImages: r.gallery_images ?? raw.galleryImages,
+    featured: raw.featured,
+  };
+}
 
 // ─────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────
 interface HotspotItem {
-  id: string;
+  id: string | number;
+  scene_number: string;
   label: string;
   x: number;
   y: number;
   itemSlug?: string;
+  item_slug?: string;
   image?: string;
   description?: string;
 }
 
 interface GalleryScene {
   id: string;
-  image?: string;
+  image: string;
   alt: string;
   hotspots: HotspotItem[];
 }
 
 // ─────────────────────────────────────────────
-// Scene Builder
+// Main Component
 // ─────────────────────────────────────────────
-const buildScenes = (item: CatalogItem): GalleryScene[] => [
-  {
-    id: "scene-1",
-    alt: `${item.title} scene 1`,
-    image: `/catalog/${item.slug}/scene-1.jpg`,
-    hotspots: [
-      { id: "h1", label: "Lounge Chair", x: 28, y: 55, itemSlug: "lounge-chair-oslo" },
-      { id: "h2", label: "Side Table",   x: 52, y: 68, itemSlug: "side-table-nero"   },
-      { id: "h3", label: "Floor Lamp",   x: 72, y: 38, itemSlug: "floor-lamp-arc"    },
-    ],
-  },
-  {
-    id: "scene-2",
-    alt: `${item.title} scene 2`,
-    image: `/catalog/${item.slug}/scene-2.jpg`,
-    hotspots: [
-      { id: "h4", label: "Sofa",         x: 40, y: 60, itemSlug: "sofa-haven"        },
-      { id: "h5", label: "Coffee Table", x: 60, y: 72, itemSlug: "coffee-table-slab" },
-    ],
-  },
-];
+export default function CatalogDetail() {
+  const { category: categoryParam, slug } = useParams<{ category: string; slug: string }>();
+  const navigate = useNavigate();
+  const { scrollY } = useScroll();
+  const heroRef = useRef<HTMLDivElement>(null);
+
+  // ── API State
+  const [item, setItem] = useState<CatalogItem | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [exploreItems, setExploreItems] = useState<CatalogItem[]>([]);
+  const [rawCatalog, setRawCatalog] = useState<any>(null);
+  const [hotspots, setHotspots] = useState<HotspotItem[]>([]);
+  const [heroHeight, setHeroHeight] = useState(800);
+
+  useEffect(() => {
+  if (item) {
+    console.log("tagline:", item.tagline);
+    console.log("aboutTitle:", item.aboutTitle);
+    console.log("description:", item.description);
+  }
+}, [item]);
+  // ── Fetch catalog by slug + hotspots
+  useEffect(() => {
+    if (!slug) return;
+
+    setLoading(true);
+    setNotFound(false);
+    setItem(null);
+    setHotspots([]);
+
+    const fetchData = async () => {
+      try {
+        const catalogData = await getCatalogBySlug(slug);
+        setRawCatalog(catalogData);
+
+        const normalised = normaliseCatalog(catalogData as Catalog);
+        setItem(normalised);
+
+        if (catalogData.id) {
+          try {
+            const hotspotsData = await getHotspots(String(catalogData.id));
+            setHotspots(hotspotsData as unknown as HotspotItem[]);
+          } catch (err) {
+            console.warn("Failed to fetch hotspots:", err);
+            setHotspots([]);
+          }
+        }
+
+        const allRes = await getAllCatalogs({ per_page: 100 });
+        const allRaw = allRes.data as unknown as any[];
+        const siblings = allRaw
+          .filter((i) => i.category === catalogData.category && i.slug !== catalogData.slug)
+          .map((i) => normaliseCatalog(i as Catalog))
+          .slice(0, 8);
+        setExploreItems(siblings);
+      } catch (err) {
+        console.error("Failed to load catalog:", err);
+        setNotFound(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [slug]);
+
+  // ── Derived
+  const catMeta = useMemo(
+    () => (item ? CATALOG_CATEGORIES.find((c) => c.slug === item.category) ?? null : null),
+    [item]
+  );
+
+  const scenes = useMemo(() => {
+    if (!rawCatalog) return [];
+
+    const sceneHotspots1 = hotspots.filter((h) => h.scene_number === "scene-1");
+    const sceneHotspots2 = hotspots.filter((h) => h.scene_number === "scene-2");
+
+    return [
+      {
+        id: "scene-1",
+        image: rawCatalog.scene_1_image ? imgUrl(rawCatalog.scene_1_image) : "",
+        alt: `${item?.title} scene 1`,
+        hotspots: sceneHotspots1,
+      },
+      {
+        id: "scene-2",
+        image: rawCatalog.scene_2_image ? imgUrl(rawCatalog.scene_2_image) : "",
+        alt: `${item?.title} scene 2`,
+        hotspots: sceneHotspots2,
+      },
+    ];
+  }, [rawCatalog, hotspots, item]);
+
+  // ── UI State
+  const [sceneIdx, setSceneIdx] = useState(0);
+  const [activeSpot, setActiveSpot] = useState<HotspotItem | null>(null);
+  const [carouselPos, setCarouselPos] = useState(0);
+  const [heroReady, setHeroReady] = useState(false);
+  const [imgReady, setImgReady] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const carouselPages = Math.ceil(exploreItems.length / 4);
+
+  // ── Measure hero height on mount
+  useEffect(() => {
+    if (heroRef.current) {
+      setHeroHeight(heroRef.current.clientHeight);
+    }
+    const handleResize = () => {
+      if (heroRef.current) {
+        setHeroHeight(heroRef.current.clientHeight);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // ── Reset on slug change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    setSceneIdx(0);
+    setActiveSpot(null);
+    setCarouselPos(0);
+    setHeroReady(false);
+    setImgReady(false);
+    setMounted(false);
+
+    const t = setTimeout(() => setMounted(true), 100);
+    return () => clearTimeout(t);
+  }, [slug]);
+
+  // ── Reveal on scroll
+  useEffect(() => {
+    const els = document.querySelectorAll<Element>(".reveal");
+    const obs = new IntersectionObserver(
+      (entries) =>
+        entries.forEach((e) => e.isIntersecting && e.target.classList.add("is-visible")),
+      { threshold: 0.1 }
+    );
+    els.forEach((el) => obs.observe(el));
+    return () => obs.disconnect();
+  }, [slug]);
+
+  // ─────────────────────────────────────────────
+  // FRAMER MOTION TRANSFORMS
+  // ─────────────────────────────────────────────
+  
+  const imageParallax = useTransform(
+    scrollY,
+    [0, heroHeight],
+    [0, 50],
+    { clamp: false }
+  );
+
+  const gradientOpacity = useTransform(
+    scrollY,
+    [0, heroHeight * 0.7, heroHeight * 0.95],
+    [0, 0.3, 1],
+    { clamp: true }
+  );
+
+  const shadowOpacity = useTransform(
+    scrollY,
+    [0, heroHeight],
+    [0.2, 0.7],
+    { clamp: true }
+  );
+
+  const textX = useTransform(
+    scrollY,
+    [0, heroHeight * 0.3, heroHeight * 0.6, heroHeight * 0.95],
+    [0, -40, -80, -120]
+  );
+
+  const luxuryCubic = [0.22, 1, 0.36, 1] as const;
+
+  const labelAnimation = {
+    initial: { opacity: 0, x: -100, filter: "blur(10px)" },
+    animate: mounted ? { opacity: 1, x: 0, filter: "blur(0px)" } : { opacity: 0, x: -100, filter: "blur(10px)" },
+    transition: { duration: 1.3, ease: luxuryCubic, delay: 0 },
+  };
+
+  const titleAnimation = {
+    initial: { opacity: 0, x: -100, filter: "blur(10px)" },
+    animate: mounted ? { opacity: 1, x: 0, filter: "blur(0px)" } : { opacity: 0, x: -100, filter: "blur(10px)" },
+    transition: { duration: 1.3, ease: luxuryCubic, delay: 0.18 },
+  };
+
+  const descriptionAnimation = {
+    initial: { opacity: 0, x: -100, filter: "blur(10px)" },
+    animate: mounted ? { opacity: 1, x: 0, filter: "blur(0px)" } : { opacity: 0, x: -100, filter: "blur(10px)" },
+    transition: { duration: 1.3, ease: luxuryCubic, delay: 0.36 },
+  };
+
+  const ctaAnimation = {
+    initial: { opacity: 0, x: -100, filter: "blur(10px)" },
+    animate: mounted ? { opacity: 1, x: 0, filter: "blur(0px)" } : { opacity: 0, x: -100, filter: "blur(10px)" },
+    transition: { duration: 1.3, ease: luxuryCubic, delay: 0.54 },
+  };
+
+  const textOpacity = useTransform(
+    scrollY,
+    [0, heroHeight * 0.5, heroHeight],
+    [1, 0.5, 0],
+    { clamp: true }
+  );
+
+  const textY = useTransform(
+    scrollY,
+    [0, heroHeight * 0.5, heroHeight],
+    [0, -40, -80],
+    { clamp: true }
+  );
+
+  const navbarBgOpacity = useTransform(
+    scrollY,
+    [0, heroHeight * 0.3, heroHeight * 0.7],
+    [0, 0.5, 1],
+    { clamp: true }
+  );
+
+  const navbarBlur = useTransform(
+    scrollY,
+    [0, heroHeight * 0.7],
+    [0, 12],
+    { clamp: true }
+  );
+
+  // ── Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground font-light animate-pulse">
+          Loading…
+        </p>
+      </div>
+    );
+  }
+
+  // ── 404
+  if (notFound || !item || !catMeta) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <p className="serif text-3xl font-light mb-4">Catalog not found</p>
+          <Link
+            to={`/catalog/${categoryParam ?? "living-rooms"}`}
+            className="text-xs uppercase tracking-[0.3em] text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Back to Catalog
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const currentScene = scenes[sceneIdx];
+  const coverImage = item.coverImage ?? "/images/placeholder.jpg";
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Navbar with scroll response */}
+      <motion.div
+        style={{
+          backgroundColor: navbarBgOpacity.get ? "rgba(0,0,0,0)" : "#000",
+        } as any}
+        className="fixed top-0 left-0 right-0 z-50 border-b border-border/0 transition-colors duration-300"
+      >
+        <motion.div
+          style={{
+            backdropFilter: navbarBlur.get ? `blur(${navbarBlur.get()}px)` : "blur(0px)",
+          } as any}
+          className="w-full"
+        >
+          <Navbar />
+        </motion.div>
+      </motion.div>
+
+      {/* ════════════════════════════════════════
+          HERO SECTION — Premium, Cinematic
+      ════════════════════════════════════════ */}
+      <motion.section
+        ref={heroRef}
+        className="relative min-h-screen flex items-end pb-16 md:pb-24 overflow-hidden"
+      >
+        {/* Cover image with parallax */}
+        <motion.div
+          className="absolute inset-0"
+          style={{ y: imageParallax }}
+        >
+          <div
+            className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${
+              imgReady ? "opacity-100" : "opacity-0"
+            }`}
+            style={{ backgroundImage: `url(${coverImage})` }}
+          >
+            <img src={coverImage} alt="" className="sr-only" onLoad={() => setImgReady(true)} />
+          </div>
+
+          {!heroReady && !imgReady && (
+            <div className="absolute inset-0 bg-[hsl(var(--livora-stone))]" />
+          )}
+
+          {/* Video background */}
+          <video
+            ref={videoRef}
+            key={item.slug}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+              heroReady ? "opacity-100" : "opacity-0"
+            }`}
+            src={`/videos/${item.category}.mp4`}
+            autoPlay loop muted playsInline
+            onCanPlay={() => setHeroReady(true)}
+          />
+        </motion.div>
+
+        {/* Scroll-driven gradient (appears as user scrolls) */}
+        <motion.div
+          className="absolute inset-x-0 bottom-0 h-1/2 pointer-events-none bg-gradient-to-t from-background via-background/40 to-transparent"
+          style={{ opacity: gradientOpacity }}
+        />
+
+        {/* Dynamic shadow overlay (intensifies on scroll) */}
+        <motion.div
+          className="absolute inset-0 bg-black pointer-events-none"
+          style={{ opacity: shadowOpacity }}
+        />
+
+        {/* Content with scroll-driven text motion (horizontal parallax) */}
+        <motion.div
+          className="relative z-10 container-livora w-full"
+          style={{ x: textX, opacity: textOpacity, y: textY }}
+        >
+          {/* Navigation breadcrumb */}
+          <motion.nav
+            className="flex items-center gap-2 text-[9px] uppercase tracking-[0.2em] text-white/70 mb-8 font-light"
+            initial={labelAnimation.initial}
+            animate={labelAnimation.animate}
+            transition={labelAnimation.transition}
+          >
+            <Link to="/" className="hover:text-white transition-colors">Home</Link>
+            <span>/</span>
+            <Link to={`/catalog/${item.category}`} className="hover:text-white transition-colors">
+              {catMeta.label}
+            </Link>
+            <span>/</span>
+            <span className="text-white/90">{item.title}</span>
+          </motion.nav>
+
+          <div className="max-w-2xl">
+            {/* Category label with staggered animation */}
+            <motion.p
+              className="text-[9px] uppercase tracking-[0.3em] text-white/60 mb-4 font-light"
+              initial={labelAnimation.initial}
+              animate={labelAnimation.animate}
+              transition={labelAnimation.transition}
+            >
+              {catMeta.label}
+            </motion.p>
+
+            {/* Main title with staggered animation */}
+            <motion.h1
+              className="serif text-6xl md:text-8xl font-light leading-[0.9] mb-2 text-white"
+              initial={titleAnimation.initial}
+              animate={titleAnimation.animate}
+              transition={titleAnimation.transition}
+            >
+              {item.title}
+            </motion.h1>
+
+            {/* Tagline with staggered animation */}
+            <motion.p
+              className="text-sm md:text-base text-white/70 font-light leading-relaxed max-w-md mb-10"
+              initial={descriptionAnimation.initial}
+              animate={descriptionAnimation.animate}
+              transition={descriptionAnimation.transition}
+            >
+              {item.tagline}
+            </motion.p>
+
+            {/* CTA buttons with staggered animation */}
+            <motion.div
+              className="flex items-center gap-4"
+              initial={ctaAnimation.initial}
+              animate={ctaAnimation.animate}
+              transition={ctaAnimation.transition}
+            >
+              <a
+                href="#gallery"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById("gallery")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="text-[10px] uppercase tracking-[0.18em] bg-foreground text-background px-8 py-3.5 hover:bg-foreground/80 transition-colors duration-300 font-light"
+              >
+                Explore Spaces
+              </a>
+              <Link
+                to={`/catalog/${item.category}`}
+                className="text-[10px] uppercase tracking-[0.18em] text-white/70 hover:text-white transition-colors duration-300 font-light flex items-center gap-1.5"
+              >
+                <ChevronLeft size={12} /> All {catMeta.label}
+              </Link>
+            </motion.div>
+          </div>
+        </motion.div>
+      </motion.section>
+
+      {/* ════════════════════════════════════════
+          2. DESCRIPTION SECTION — UPDATED
+      ════════════════════════════════════════ */}
+      <section className="py-24 md:py-32 border-b border-border">
+        <div className="container-livora">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-12 md:gap-24 items-start">
+            {/* LEFT COLUMN */}
+            <div className="md:pt-2">
+              <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground font-light mb-3">
+                About this Collection
+              </p>
+              <div className="w-8 h-px bg-border" />
+              
+              {/* About Title (NEW) */}
+              {item.aboutTitle && (
+                <p className="serif text-2xl md:text-3xl font-light text-foreground mt-8 leading-[1.25]">
+                  {item.aboutTitle}
+                </p>
+              )}
+            </div>
+
+            {/* RIGHT COLUMN */}
+            <div>
+              <p className="serif text-3xl md:text-4xl font-light text-foreground leading-[1.25] mb-8">
+                {item.description}
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mt-10">
+                {[
+                  { label: "Style", value: item.taxonomy },
+                  { label: "Category", value: catMeta.label },
+                  { label: "Collection", value: item.title },
+                ].map((s) => (
+                  <div key={s.label}>
+                    <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground mb-1.5 font-light">{s.label}</p>
+                    <p className="text-sm text-foreground font-light">{s.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════
+          3. INTERACTIVE GALLERY
+      ════════════════════════════════════════ */}
+      <section id="gallery" className="py-16 md:py-20 border-b border-border bg-secondary/20">
+        <div className="container-livora">
+          <div className="flex items-end justify-between mb-8">
+            <div>
+              <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground mb-2 font-light">
+                Livora &nbsp;|&nbsp; Spaces
+              </p>
+              <h2 className="serif text-3xl md:text-4xl font-light text-foreground reveal">
+                Inside the <em className="italic">Space</em>
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              {scenes.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    setSceneIdx(i);
+                    setActiveSpot(null);
+                  }}
+                  className={`text-[9px] uppercase tracking-[0.15em] px-3 py-1.5 border transition-all duration-300 font-light ${
+                    i === sceneIdx
+                      ? "bg-foreground text-background border-foreground"
+                      : "border-border text-muted-foreground hover:border-foreground/50"
+                  }`}
+                >
+                  Scene {i + 1}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative aspect-[16/9] bg-secondary overflow-hidden">
+            {currentScene.image ? (
+              <img
+                src={currentScene.image}
+                alt={currentScene.alt}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 bg-[hsl(var(--livora-stone))] flex items-center justify-center">
+                <svg viewBox="0 0 800 450" className="w-full h-full opacity-30">
+                  <line x1="0" y1="0" x2="800" y2="450" stroke="hsl(var(--livora-taupe))" strokeWidth="1" />
+                  <line x1="800" y1="0" x2="0" y2="450" stroke="hsl(var(--livora-taupe))" strokeWidth="1" />
+                  <rect x="1" y="1" width="798" height="448" fill="none" stroke="hsl(var(--livora-taupe))" strokeWidth="1" />
+                </svg>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-foreground/10" />
+
+            {currentScene.hotspots.map((spot) => (
+              <HotspotDot
+                key={spot.id}
+                spot={spot}
+                active={activeSpot?.id === spot.id}
+                onClick={() => setActiveSpot(activeSpot?.id === spot.id ? null : spot)}
+              />
+            ))}
+
+            {activeSpot && <HotspotPanel spot={activeSpot} onClose={() => setActiveSpot(null)} />}
+            {!activeSpot && currentScene.hotspots.length > 0 && (
+              <div className="absolute bottom-4 right-4 text-[9px] uppercase tracking-[0.15em] text-white/60 font-light">
+                Tap the dots to explore items
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════
+          4. ITEMS GRID
+      ════════════════════════════════════════ */}
+      <section className="py-20 md:py-28 border-b border-border">
+        <div className="container-livora">
+          <div className="mb-12">
+            <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground mb-2 font-light">
+              Livora &nbsp;|&nbsp; Pieces
+            </p>
+            <h2 className="serif text-3xl md:text-4xl font-light text-foreground reveal">
+              Items in this <em className="italic">Collection</em>
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
+            {scenes.flatMap((s) => s.hotspots).slice(0, 7).map((spot, i) => {
+              const itemSlug = (spot as any).item_slug || (spot as any).itemSlug;
+              return (
+                <Link
+                  key={spot.id}
+                  to={itemSlug ? `/items/${itemSlug}` : "#"}
+                  className={`group relative bg-secondary overflow-hidden ${i === 0 ? "md:col-span-2 md:row-span-2" : ""}`}
+                  style={{ aspectRatio: i === 0 ? "auto" : "3/4", minHeight: i === 0 ? "360px" : undefined }}
+                >
+                  <div className="absolute inset-0 bg-[hsl(var(--livora-stone))]">
+                    {spot.image && <img src={imgUrl(spot.image)} alt={spot.label} className="w-full h-full object-cover" />}
+                  </div>
+                  <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors duration-500" />
+                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background/80 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-500">
+                    <p className="text-[9px] uppercase tracking-[0.15em] text-foreground/60 mb-0.5 font-light">{item.taxonomy}</p>
+                    <div className="flex items-center justify-between">
+                      <p className="serif text-sm font-light text-foreground">{spot.label}</p>
+                      <ArrowUpRight size={14} className="text-foreground/60" />
+                    </div>
+                  </div>
+                  <div className="absolute top-3 left-3">
+                    <span className="text-[8px] uppercase tracking-[0.1em] bg-background/80 text-muted-foreground px-2 py-0.5 font-light">
+                      {spot.label}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════
+          5. EXPLORE MORE CAROUSEL
+      ════════════════════════════════════════ */}
+      <section className="py-20 md:py-28 bg-secondary/20">
+        <div className="container-livora">
+          <div className="text-center mb-12">
+            <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground mb-3 font-light">
+              Livora &nbsp;|&nbsp; Discover
+            </p>
+            <h2 className="serif text-3xl md:text-4xl font-light mb-3 text-foreground reveal">
+              More from <em className="italic">{catMeta.label}</em>
+            </h2>
+            <p className="text-sm text-muted-foreground font-light max-w-xs mx-auto leading-relaxed">
+              Continue exploring our curated {catMeta.label.toLowerCase()} collection.
+            </p>
+          </div>
+
+          <div className="overflow-hidden">
+            <div
+              className="flex gap-4 transition-transform duration-500 select-none"
+              style={{ transform: `translateX(calc(-${carouselPos * 25}% - ${carouselPos * 16}px))` }}
+            >
+              {exploreItems.map((ei) => (
+                <Link
+                  key={ei.id}
+                  to={`/catalog/${ei.category}/${ei.slug}`}
+                  className="group flex-shrink-0 w-[calc(100%-12px)] sm:w-[calc(50%-12px)] lg:w-[calc(25%-12px)]"
+                  draggable={false}
+                >
+                  <div className="relative aspect-[3/4] bg-secondary overflow-hidden mb-3">
+                    {ei.coverImage ? (
+                      <img src={ei.coverImage} alt={ei.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-[hsl(var(--livora-stone))] flex items-center justify-center">
+                        <svg viewBox="0 0 160 213" className="w-full h-full opacity-30">
+                          <line x1="0" y1="0" x2="160" y2="213" stroke="hsl(var(--livora-taupe))" strokeWidth="1" />
+                          <line x1="160" y1="0" x2="0" y2="213" stroke="hsl(var(--livora-taupe))" strokeWidth="1" />
+                          <rect x="1" y="1" width="158" height="211" fill="none" stroke="hsl(var(--livora-taupe))" strokeWidth="1" />
+                        </svg>
+                      </div>
+                    )}
+                    <span className="absolute top-2 left-2 text-[8px] uppercase tracking-[0.1em] bg-background/85 text-muted-foreground px-1.5 py-0.5 font-light">
+                      {ei.taxonomy}
+                    </span>
+                    <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/8 transition-colors duration-500" />
+                  </div>
+                  <p className="serif text-sm font-light text-foreground group-hover:text-muted-foreground transition-colors duration-300">
+                    {ei.title}
+                  </p>
+                  <p className="text-[9px] uppercase tracking-[0.1em] text-muted-foreground mt-0.5 font-light">
+                    {ei.taxonomy}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {carouselPages > 1 && (
+            <div className="flex justify-center items-center gap-3 mt-8">
+              <button
+                onClick={() => setCarouselPos((p) => Math.max(0, p - 1))}
+                disabled={carouselPos === 0}
+                className="w-8 h-8 border border-border flex items-center justify-center text-muted-foreground hover:border-foreground hover:text-foreground transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              {Array.from({ length: carouselPages }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCarouselPos(i)}
+                  className={`h-px transition-all duration-300 ${i === carouselPos ? "w-7 bg-foreground" : "w-4 bg-border"}`}
+                />
+              ))}
+              <button
+                onClick={() => setCarouselPos((p) => Math.min(carouselPages - 1, p + 1))}
+                disabled={carouselPos >= carouselPages - 1}
+                className="w-8 h-8 border border-border flex items-center justify-center text-muted-foreground hover:border-foreground hover:text-foreground transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          )}
+
+          <div className="text-center mt-12">
+            <Link
+              to={`/catalog/${item.category}`}
+              className="text-[10px] uppercase tracking-[0.2em] border border-border px-8 py-3 text-foreground hover:bg-foreground hover:text-background transition-all duration-500 font-light inline-block"
+            >
+              View All {catMeta.label}
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <Footer />
+      <WhatsAppButton />
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────
 // HotspotDot Component
@@ -115,7 +820,7 @@ const HotspotPanel = ({
     <div className="aspect-[4/3] bg-secondary/60 mb-4 flex items-center justify-center">
       {spot.image ? (
         <img
-          src={spot.image}
+          src={imgUrl(spot.image)}
           alt={spot.label}
           className="w-full h-full object-cover"
         />
@@ -136,9 +841,9 @@ const HotspotPanel = ({
         {spot.description}
       </p>
     )}
-    {spot.itemSlug && (
+    {(spot.itemSlug || spot.item_slug) && (
       <Link
-        to={`/items/${spot.itemSlug}`}
+        to={`/items/${spot.itemSlug || spot.item_slug}`}
         className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.2em] text-foreground hover:text-muted-foreground transition-colors font-light"
       >
         View Item Details <ArrowUpRight size={10} />
@@ -146,532 +851,3 @@ const HotspotPanel = ({
     )}
   </div>
 );
-
-// ─────────────────────────────────────────────
-// Main Component
-// ─────────────────────────────────────────────
-export default function CatalogDetail() {
-  const { slug } = useParams<{ slug: string }>();
-  console.log("slug =", slug);
-  console.log("catalog items =", CATALOG_ITEMS);
-  const navigate = useNavigate();
-
-  // ── Data
-  const item    = useMemo(() => CATALOG_ITEMS.find((i) => i.slug === slug), [slug]);
-  const catMeta = useMemo(() => item ? CATALOG_CATEGORIES.find((c) => c.slug === item.category) : null, [item]);
-  const scenes  = useMemo(() => item ? buildScenes(item) : [], [item]);
-
-  // ── UI State
-  const [sceneIdx,    setSceneIdx]    = useState(0);
-  const [activeSpot,  setActiveSpot]  = useState<HotspotItem | null>(null);
-  const [carouselPos, setCarouselPos] = useState(0);
-  const [heroReady,   setHeroReady]   = useState(false);
-  const [imgReady,    setImgReady]    = useState(false);
-  const [mounted,     setMounted]     = useState(false);
-  const [scrollY,     setScrollY]     = useState(0);
-  const [windowH,     setWindowH]     = useState(800);
-
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  // ── Explore items for carousel
-  const exploreItems = useMemo(
-    () => item ? CATALOG_ITEMS.filter((i) => i.category === item.category && i.slug !== item.slug).slice(0, 8) : [],
-    [item]
-  );
-  const carouselPages = Math.ceil(exploreItems.length / 4);
-
-  // ── Reset on slug change
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    setSceneIdx(0);
-    setActiveSpot(null);
-    setCarouselPos(0);
-    setHeroReady(false);
-    setImgReady(false);
-    setScrollY(0);
-    setMounted(false);
-
-    // Slight delay so DOM is ready before animating
-    const t = setTimeout(() => setMounted(true), 80);
-    return () => clearTimeout(t);
-  }, [slug]);
-
-  // ── Track scroll position
-  useEffect(() => {
-    const fn = () => setScrollY(window.scrollY);
-    window.addEventListener("scroll", fn, { passive: true });
-    return () => window.removeEventListener("scroll", fn);
-  }, []);
-
-  // ── Track window height (reactive to resize)
-  useEffect(() => {
-    const fn = () => setWindowH(window.innerHeight);
-    fn(); // set initial
-    window.addEventListener("resize", fn);
-    return () => window.removeEventListener("resize", fn);
-  }, []);
-
-  // ── Reveal on scroll (IntersectionObserver) — FIX: stable deps
-  useEffect(() => {
-    const els = document.querySelectorAll<Element>(".reveal");
-    const obs = new IntersectionObserver(
-      (entries) =>
-        entries.forEach((e) => e.isIntersecting && e.target.classList.add("is-visible")),
-      { threshold: 0.1 }
-    );
-    els.forEach((el) => obs.observe(el));
-    return () => obs.disconnect();
-  }, [slug]); // re-run when page changes
-
-  // ── 404
-  if (!item || !catMeta) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <p className="serif text-3xl font-light mb-4">Catalog not found</p>
-          <Link
-            to="/catalog/living-rooms"
-            className="text-xs uppercase tracking-[0.3em] text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Back to Catalog
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  const currentScene = scenes[sceneIdx];
-
-  // ── Scroll-driven values
-  const scrollRatio    = Math.min(scrollY / (windowH * 0.65), 1);
-  const overlayOpacity = Math.max(0.48 - scrollRatio * 0.46, 0.02);
-
-  // Per-element style — sama dengan animasi Hero.tsx:
-  // Entry  : translateX(-100px) + blur(10px) + opacity 0  →  normal, spring easing
-  // Scroll turun : geser ke kiri + blur + fade out (reversible)
-  // Scroll naik  : balik ke posisi normal + fade in
-  const getItemStyle = (
-    delay: number   // stagger delay saat entry (ms)
-  ): React.CSSProperties => {
-    if (!mounted) {
-      // Belum entry — sama persis pola Hero.tsx
-      return {
-        opacity: 0,
-        transform: "translateX(-100px)",
-        filter: "blur(10px)",
-        transition: `all 1.3s cubic-bezier(0.22,1,0.36,1) ${delay}ms`,
-      };
-    }
-    // Setelah entry: dikontrol scroll
-    // scrollRatio 0 → normal | scrollRatio 1 → kiri + blur + transparan
-    const tx      = -(scrollRatio * 60);
-    const opacity = Math.max(1 - scrollRatio * 1.8, 0);
-    const blur    = scrollRatio * 8;
-    return {
-      opacity,
-      transform: `translateX(${tx}px)`,
-      filter: `blur(${blur}px)`,
-      transition: "opacity 0.15s ease-out, transform 0.15s ease-out, filter 0.15s ease-out",
-      pointerEvents: opacity < 0.05 ? "none" : "auto",
-    };
-  };
-
-  // ── Hero background: try video first, then fallback to cover image
-  const coverImage = item.coverImage ?? `/catalog/${item.slug}/cover.jpg`;
-
-  return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-
-      {/* ════════════════════════════════════════
-          1. HERO SECTION
-      ════════════════════════════════════════ */}
-      <section className="relative min-h-screen flex items-end pb-16 md:pb-24 overflow-hidden">
-
-        {/* Fallback cover image — always rendered below video */}
-        <div
-          className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${
-            imgReady ? "opacity-100" : "opacity-0"
-          }`}
-          style={{ backgroundImage: `url(${coverImage})` }}
-        >
-          {/* Preload trigger */}
-          <img
-            src={coverImage}
-            alt=""
-            className="sr-only"
-            onLoad={() => setImgReady(true)}
-          />
-        </div>
-
-        {/* Stone placeholder while nothing is ready */}
-        {!heroReady && !imgReady && (
-          <div className="absolute inset-0 bg-[hsl(var(--livora-stone))]" />
-        )}
-
-        {/* Video (primary background) */}
-        <video
-          ref={videoRef}
-          key={item.slug}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
-            heroReady ? "opacity-100" : "opacity-0"
-          }`}
-          src={`/videos/${item.category}.mp4`}
-          autoPlay
-          loop
-          muted
-          playsInline
-          onCanPlay={() => setHeroReady(true)}
-        />
-
-        {/* ── Reactive dark overlay: dark on entry → fades on scroll */}
-        <div
-          className="absolute inset-0 pointer-events-none bg-background"
-          style={{ opacity: overlayOpacity, transition: "none" }}
-        />
-
-        {/* ── Bottom gradient (permanent) */}
-        <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-background via-background/20 to-transparent" />
-
-        {/* ── Content: fade+slide dari kiri saat entry, fade+slide ke kanan saat scroll turun, reversible */}
-        <div className="relative z-10 container-livora w-full">
-
-          {/* Breadcrumb — entry dari -32px kiri, exit ke +24px kanan */}
-          <nav
-            className="flex items-center gap-2 text-[9px] uppercase tracking-[0.2em] text-foreground/50 mb-8 font-light"
-            style={getItemStyle(0)}
-          >
-            <Link to="/" className="hover:text-foreground transition-colors">Home</Link>
-            <span>/</span>
-            <Link to={`/catalog/${item.category}`} className="hover:text-foreground transition-colors">
-              {catMeta.label}
-            </Link>
-            <span>/</span>
-            <span className="text-foreground/80">{item.title}</span>
-          </nav>
-
-          <div className="max-w-2xl">
-            {/* Category · Taxonomy label */}
-            <p
-              className="text-[9px] uppercase tracking-[0.3em] text-foreground/50 mb-4 font-light"
-              style={getItemStyle(80)}
-            >
-              {catMeta.label} &nbsp;·&nbsp; {item.taxonomy}
-            </p>
-
-            {/* Title — entry dari -56px, exit ke +40px (lebih dramatis) */}
-            <h1
-              className="serif text-6xl md:text-8xl font-light leading-[0.9] mb-6 text-foreground"
-              style={getItemStyle(180)}
-            >
-              {item.title}
-            </h1>
-
-            {/* Description */}
-            <p
-              className="text-sm md:text-base text-foreground/70 font-light leading-relaxed max-w-md mb-10"
-              style={getItemStyle(300)}
-            >
-              {item.description}
-            </p>
-
-            {/* Buttons */}
-            <div
-              className="flex items-center gap-4"
-              style={getItemStyle(420)}
-            >
-              <a
-                href="#gallery"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById("gallery")?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="text-[10px] uppercase tracking-[0.18em] bg-foreground text-background px-8 py-3.5 hover:bg-foreground/80 transition-colors duration-300 font-light"
-              >
-                Explore Spaces
-              </a>
-              <Link
-                to={`/catalog/${item.category}`}
-                className="text-[10px] uppercase tracking-[0.18em] text-foreground/60 hover:text-foreground transition-colors duration-300 font-light flex items-center gap-1.5"
-              >
-                <ChevronLeft size={12} /> All {catMeta.label}
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════
-          2. DESCRIPTION SECTION
-      ════════════════════════════════════════ */}
-      <section className="py-24 md:py-32 border-b border-border">
-        <div className="container-livora">
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-12 md:gap-24 items-start">
-            <div className="md:pt-2">
-              <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground font-light mb-3">
-                About this Collection
-              </p>
-              <div className="w-8 h-px bg-border" />
-            </div>
-            <div>
-              <p className="serif text-3xl md:text-4xl font-light text-foreground leading-[1.25] mb-8 reveal">
-                {item.description}
-              </p>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mt-10">
-                {[
-                  { label: "Style",      value: item.taxonomy  },
-                  { label: "Category",   value: catMeta.label  },
-                  { label: "Collection", value: item.title     },
-                ].map((s) => (
-                  <div key={s.label}>
-                    <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground mb-1.5 font-light">
-                      {s.label}
-                    </p>
-                    <p className="text-sm text-foreground font-light">{s.value}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════
-          3. INTERACTIVE GALLERY
-      ════════════════════════════════════════ */}
-      <section id="gallery" className="py-16 md:py-20 border-b border-border bg-secondary/20">
-        <div className="container-livora">
-          <div className="flex items-end justify-between mb-8">
-            <div>
-              <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground mb-2 font-light">
-                Livora &nbsp;|&nbsp; Spaces
-              </p>
-              <h2 className="serif text-3xl md:text-4xl font-light text-foreground reveal">
-                Inside the <em className="italic">Space</em>
-              </h2>
-            </div>
-            <div className="flex items-center gap-2">
-              {scenes.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => { setSceneIdx(i); setActiveSpot(null); }}
-                  className={`text-[9px] uppercase tracking-[0.15em] px-3 py-1.5 border transition-all duration-300 font-light ${
-                    i === sceneIdx
-                      ? "bg-foreground text-background border-foreground"
-                      : "border-border text-muted-foreground hover:border-foreground/50"
-                  }`}
-                >
-                  Scene {i + 1}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="relative aspect-[16/9] bg-secondary overflow-hidden">
-            {currentScene.image ? (
-              <img
-                src={currentScene.image}
-                alt={currentScene.alt}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-            ) : (
-              <div className="absolute inset-0 bg-[hsl(var(--livora-stone))] flex items-center justify-center">
-                <svg viewBox="0 0 800 450" className="w-full h-full opacity-30">
-                  <line x1="0"   y1="0"   x2="800" y2="450" stroke="hsl(var(--livora-taupe))" strokeWidth="1" />
-                  <line x1="800" y1="0"   x2="0"   y2="450" stroke="hsl(var(--livora-taupe))" strokeWidth="1" />
-                  <rect x="1"    y="1"    width="798" height="448" fill="none" stroke="hsl(var(--livora-taupe))" strokeWidth="1" />
-                </svg>
-              </div>
-            )}
-
-            <div className="absolute inset-0 bg-foreground/10" />
-
-            {currentScene.hotspots.map((spot) => (
-              <HotspotDot
-                key={spot.id}
-                spot={spot}
-                active={activeSpot?.id === spot.id}
-                onClick={() => setActiveSpot(activeSpot?.id === spot.id ? null : spot)}
-              />
-            ))}
-
-            {activeSpot && (
-              <HotspotPanel spot={activeSpot} onClose={() => setActiveSpot(null)} />
-            )}
-
-            {!activeSpot && (
-              <div className="absolute bottom-4 right-4 text-[9px] uppercase tracking-[0.15em] text-white/60 font-light">
-                Tap the dots to explore items
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════
-          4. ITEMS GRID
-      ════════════════════════════════════════ */}
-      <section className="py-20 md:py-28 border-b border-border">
-        <div className="container-livora">
-          <div className="mb-12">
-            <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground mb-2 font-light">
-              Livora &nbsp;|&nbsp; Pieces
-            </p>
-            <h2 className="serif text-3xl md:text-4xl font-light text-foreground reveal">
-              Items in this <em className="italic">Collection</em>
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
-            {scenes
-              .flatMap((s) => s.hotspots)
-              .slice(0, 7)
-              .map((spot, i) => (
-                <Link
-                  key={spot.id}
-                  to={spot.itemSlug ? `/items/${spot.itemSlug}` : "#"}
-                  className={`group relative bg-secondary overflow-hidden ${
-                    i === 0 ? "md:col-span-2 md:row-span-2" : ""
-                  }`}
-                  style={{
-                    aspectRatio: i === 0 ? "auto" : "3/4",
-                    minHeight: i === 0 ? "360px" : undefined,
-                  }}
-                >
-                  <div className="absolute inset-0 bg-[hsl(var(--livora-stone))]">
-                    {spot.image && (
-                      <img src={spot.image} alt={spot.label} className="w-full h-full object-cover" />
-                    )}
-                  </div>
-                  <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors duration-500" />
-                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background/80 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-500">
-                    <p className="text-[9px] uppercase tracking-[0.15em] text-foreground/60 mb-0.5 font-light">
-                      {item.taxonomy}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <p className="serif text-sm font-light text-foreground">{spot.label}</p>
-                      <ArrowUpRight size={14} className="text-foreground/60" />
-                    </div>
-                  </div>
-                  <div className="absolute top-3 left-3">
-                    <span className="text-[8px] uppercase tracking-[0.1em] bg-background/80 text-muted-foreground px-2 py-0.5 font-light">
-                      {spot.label}
-                    </span>
-                  </div>
-                </Link>
-              ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════
-          5. EXPLORE MORE CAROUSEL
-      ════════════════════════════════════════ */}
-      <section className="py-20 md:py-28 bg-secondary/20">
-        <div className="container-livora">
-          <div className="text-center mb-12">
-            <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground mb-3 font-light">
-              Livora &nbsp;|&nbsp; Discover
-            </p>
-            <h2 className="serif text-3xl md:text-4xl font-light mb-3 text-foreground reveal">
-              More from <em className="italic">{catMeta.label}</em>
-            </h2>
-            <p className="text-sm text-muted-foreground font-light max-w-xs mx-auto leading-relaxed">
-              Continue exploring our curated {catMeta.label.toLowerCase()} collection.
-            </p>
-          </div>
-
-          {/* Carousel track */}
-          <div className="overflow-hidden">
-            <div
-              className="flex gap-4 transition-transform duration-500 select-none"
-              style={{
-                transform: `translateX(calc(-${carouselPos * 25}% - ${carouselPos * 16}px))`,
-              }}
-            >
-              {exploreItems.map((ei) => (
-                <Link
-                  key={ei.id}
-                  to={`/catalog/${ei.category}/${ei.slug}`}
-                  className="group flex-shrink-0 w-[calc(100%-12px)] sm:w-[calc(50%-12px)] lg:w-[calc(25%-12px)]"
-                  draggable={false}
-                >
-                  <div className="relative aspect-[3/4] bg-secondary overflow-hidden mb-3">
-                    {ei.coverImage ? (
-                      <img
-                        src={ei.coverImage}
-                        alt={ei.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-[hsl(var(--livora-stone))] flex items-center justify-center">
-                        <svg viewBox="0 0 160 213" className="w-full h-full opacity-30">
-                          <line x1="0"   y1="0"   x2="160" y2="213" stroke="hsl(var(--livora-taupe))" strokeWidth="1" />
-                          <line x1="160" y1="0"   x2="0"   y2="213" stroke="hsl(var(--livora-taupe))" strokeWidth="1" />
-                          <rect x="1"    y="1"    width="158" height="211" fill="none" stroke="hsl(var(--livora-taupe))" strokeWidth="1" />
-                        </svg>
-                      </div>
-                    )}
-                    <span className="absolute top-2 left-2 text-[8px] uppercase tracking-[0.1em] bg-background/85 text-muted-foreground px-1.5 py-0.5 font-light">
-                      {ei.taxonomy}
-                    </span>
-                    <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/8 transition-colors duration-500" />
-                  </div>
-                  <p className="serif text-sm font-light text-foreground group-hover:text-muted-foreground transition-colors duration-300">
-                    {ei.title}
-                  </p>
-                  <p className="text-[9px] uppercase tracking-[0.1em] text-muted-foreground mt-0.5 font-light">
-                    {ei.taxonomy}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Carousel controls */}
-          {carouselPages > 1 && (
-            <div className="flex justify-center items-center gap-3 mt-8">
-              <button
-                onClick={() => setCarouselPos((p) => Math.max(0, p - 1))}
-                disabled={carouselPos === 0}
-                className="w-8 h-8 border border-border flex items-center justify-center text-muted-foreground hover:border-foreground hover:text-foreground transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft size={14} />
-              </button>
-
-              {Array.from({ length: carouselPages }).map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCarouselPos(i)}
-                  className={`h-px transition-all duration-300 ${
-                    i === carouselPos ? "w-7 bg-foreground" : "w-4 bg-border"
-                  }`}
-                />
-              ))}
-
-              <button
-                onClick={() => setCarouselPos((p) => Math.min(carouselPages - 1, p + 1))}
-                disabled={carouselPos >= carouselPages - 1}
-                className="w-8 h-8 border border-border flex items-center justify-center text-muted-foreground hover:border-foreground hover:text-foreground transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          )}
-
-          <div className="text-center mt-12">
-            <Link
-              to={`/catalog/${item.category}`}
-              className="text-[10px] uppercase tracking-[0.2em] border border-border px-8 py-3 text-foreground hover:bg-foreground hover:text-background transition-all duration-500 font-light inline-block"
-            >
-              View All {catMeta.label}
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <Footer />
-      <WhatsAppButton />
-    </div>
-  );
-}

@@ -32,6 +32,7 @@ export default function CatalogListAdmin() {
   const [success, setSuccess] = useState<string | null>(null);
 
   // ── Fetch catalogs
+  // FIX #4: Fetch dari /admin/catalogs bukan /catalogs (public)
   const fetchCatalogs = async (pageNum: number = 1) => {
     try {
       setLoading(true);
@@ -42,15 +43,10 @@ export default function CatalogListAdmin() {
         per_page: 10,
       };
 
-      if (searchQuery) {
-        params.search = searchQuery;
-      }
+      if (searchQuery) params.search = searchQuery;
+      if (selectedCategory) params.category = selectedCategory;
 
-      if (selectedCategory) {
-        params.category = selectedCategory;
-      }
-
-      const { data } = await api.get<PaginatedResponse>("/catalogs", {
+      const { data } = await api.get<PaginatedResponse>("/admin/catalogs", {
         params,
       });
 
@@ -72,17 +68,20 @@ export default function CatalogListAdmin() {
   }, [searchQuery, selectedCategory]);
 
   // ── Delete catalog
-  const handleDelete = async (id: string) => {
+  // FIX #1: Bersihkan ID dari karakter asing (misal "2:1" → "2")
+  const handleDelete = async (rawId: string) => {
+    const id = String(rawId).split(":")[0].trim();
     if (!confirm("Yakin ingin menghapus catalog ini?")) return;
 
     try {
       setDeleting(id);
-      await api.delete(`/catalogs/${id}`);
+      await api.delete(`/admin/catalogs/${id}`);
       setSuccess("Catalog deleted successfully");
-      setCatalogs(catalogs.filter((c) => c.id !== id));
-      setTimeout(() => setSuccess(null), 2000);
-    } catch (err) {
-      setError(`Failed to delete: ${err}`);
+      setCatalogs((prev) => prev.filter((c) => String(c.id).split(":")[0] !== id));
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      const msg = err?.response?.data?.error ?? err?.response?.data?.message ?? String(err);
+      setError(`Failed to delete: ${msg}`);
     } finally {
       setDeleting(null);
     }
@@ -233,9 +232,9 @@ export default function CatalogListAdmin() {
                       {/* Title with cover image */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          {catalog.coverImage && (
+                          {((catalog as any).cover_image || catalog.coverImage) && (
                             <img
-                              src={catalog.coverImage}
+                              src={imgUrl((catalog as any).cover_image || catalog.coverImage || "")}
                               alt={catalog.title}
                               className="w-10 h-10 object-cover rounded"
                             />
@@ -272,16 +271,14 @@ export default function CatalogListAdmin() {
                             ✓ Featured
                           </span>
                         ) : (
-                          <span className="text-xs text-muted-foreground">
-                            —
-                          </span>
+                          <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </td>
 
                       {/* Actions */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          {/* Edit button */}
+                          {/* Edit */}
                           <Link
                             to={`/admin/catalogs/${catalog.id}/edit`}
                             className="p-2 hover:bg-secondary rounded text-foreground transition-colors"
@@ -290,12 +287,12 @@ export default function CatalogListAdmin() {
                             <Edit size={16} />
                           </Link>
 
-                          {/* Delete button */}
+                          {/* Delete */}
                           <button
                             onClick={() => handleDelete(String(catalog.id))}
-                            disabled={deleting === String(catalog.id)}
+                            disabled={deleting === String(catalog.id).split(":")[0]}
                             className={`p-2 rounded transition-colors ${
-                              deleting === String(catalog.id)
+                              deleting === String(catalog.id).split(":")[0]
                                 ? "opacity-50 cursor-not-allowed"
                                 : "hover:bg-red-500/20 text-red-500 hover:text-red-600"
                             }`}
@@ -304,7 +301,7 @@ export default function CatalogListAdmin() {
                             <Trash2 size={16} />
                           </button>
 
-                          {/* View public page */}
+                          {/* View public */}
                           <a
                             href={`/catalog/${catalog.category}/${catalog.slug}`}
                             target="_blank"

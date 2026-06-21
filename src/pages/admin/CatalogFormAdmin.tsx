@@ -1,4 +1,5 @@
 // components/admin/CatalogFormAdmin.tsx
+// UPDATED: Add tagline dan aboutTitle fields
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -9,7 +10,6 @@ import {
   CATALOG_CATEGORIES,
   CATALOG_TAXONOMIES,
   CatalogCategory,
-  CatalogItem,
 } from "@/types/catalog";
 
 // ─────────────────────────────────────────────
@@ -17,7 +17,7 @@ import {
 // ─────────────────────────────────────────────
 
 interface HotspotItem {
-  id?: string;
+  id?: string | number;
   scene_number: string;
   label: string;
   x: number;
@@ -32,6 +32,8 @@ interface FormData {
   slug: string;
   category: CatalogCategory;
   taxonomy: string;
+  tagline: string;           // ← NEW
+  aboutTitle: string;        // ← NEW
   description: string;
   featured: boolean;
   coverImage: File | null;
@@ -52,6 +54,8 @@ export default function CatalogFormAdmin() {
     slug: "",
     category: "living-rooms",
     taxonomy: "Modern",
+    tagline: "",           // ← NEW
+    aboutTitle: "",        // ← NEW
     description: "",
     featured: false,
     coverImage: null,
@@ -75,7 +79,6 @@ export default function CatalogFormAdmin() {
 
   // ── Refs
   const coverImageInputRef = useRef<HTMLInputElement>(null);
-  // FIX 1: Pisahkan ref per-scene, bukan satu ref untuk dua scene
   const scene1Ref = useRef<HTMLInputElement>(null);
   const scene2Ref = useRef<HTMLInputElement>(null);
   const sceneRefs: Record<string, React.RefObject<HTMLInputElement>> = {
@@ -92,35 +95,45 @@ export default function CatalogFormAdmin() {
 
     const fetchCatalog = async () => {
       try {
-        const { data } = await api.get<CatalogItem>(`/admin/catalogs/${catalogId}`);
+        const { data: raw } = await api.get<any>(`/admin/catalogs/${catalogId}`);
+
+        const BASE = (import.meta.env.VITE_API_URL as string | undefined)
+          ?.replace("/api", "") ?? "http://127.0.0.1:8000";
+
+        const coverImageUrl = raw.cover_image
+          ? `${BASE}/storage/${raw.cover_image}`
+          : (raw.coverImage ?? "");
+
         setForm({
-          title: data.title,
-          slug: data.slug,
-          category: data.category,
-          taxonomy: data.taxonomy,
-          description: data.description,
-          featured: data.featured || false,
+          title: raw.title,
+          slug: raw.slug,
+          category: raw.category,
+          taxonomy: raw.taxonomy,
+          tagline: raw.tagline ?? "",           // ← NEW
+          aboutTitle: raw.about_title ?? "",    // ← NEW (camelCase in state)
+          description: raw.description,
+          featured: raw.featured || false,
           coverImage: null,
-          coverImageUrl: data.coverImage,
+          coverImageUrl,
         });
 
-        const sceneUrls: { [key: string]: string } = {};
-        const allHotspots: HotspotItem[] = [];
+        const sceneUrls: { [key: string]: string } = {
+          "scene-1": raw.scene_1_image ? `${BASE}/storage/${raw.scene_1_image}` : "",
+          "scene-2": raw.scene_2_image ? `${BASE}/storage/${raw.scene_2_image}` : "",
+        };
 
-        for (const scene of ["scene-1", "scene-2"]) {
-          try {
-            sceneUrls[scene] = `/catalog/${data.slug}/${scene}.jpg`;
-            const { data: hotspotsData } = await api.get<HotspotItem[]>(
-              `/admin/catalogs/${catalogId}/hotspots/${scene}`
-            );
-            allHotspots.push(...hotspotsData);
-          } catch (err) {
-            console.error(`Failed to fetch ${scene}:`, err);
-          }
+        // FIX: Fetch hotspots dari API
+        try {
+          const { data: hotspotsData } = await api.get<HotspotItem[]>(
+            `/admin/catalogs/${catalogId}/hotspots`
+          );
+          setHotspots(hotspotsData);
+        } catch (err) {
+          console.warn("Failed to fetch hotspots:", err);
+          setHotspots([]);
         }
 
         setSceneImages(sceneUrls);
-        setHotspots(allHotspots);
       } catch (err) {
         setError(`Failed to load catalog: ${err}`);
       } finally {
@@ -131,13 +144,12 @@ export default function CatalogFormAdmin() {
     fetchCatalog();
   }, [catalogId]);
 
-  // ── Auto-generate slug
+  // ── Auto-generate slug (hanya saat create, bukan edit)
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const title = e.target.value;
     setForm((prev) => ({
       ...prev,
       title,
-      // FIX 2: Mode edit jangan timpa slug yang sudah ada
       slug: catalogId
         ? prev.slug
         : title.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]/g, ""),
@@ -162,17 +174,17 @@ export default function CatalogFormAdmin() {
   // ── Hotspot handlers
   const handleHotspotAdd = (hotspot: HotspotItem) => {
     setHotspots((prev) => [...prev, hotspot]);
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 2000);
   };
 
-  const handleHotspotUpdate = (id: string, hotspot: HotspotItem) =>
-    setHotspots((prev) => prev.map((h) => (h.id === id ? { ...hotspot, id } : h)));
+  const handleHotspotUpdate = (id: string | number, hotspot: HotspotItem) =>
+    setHotspots((prev) =>
+      prev.map((h) => (h.id === id ? { ...hotspot, id } : h))
+    );
 
-  const handleHotspotDelete = (id: string) =>
+  const handleHotspotDelete = (id: string | number) =>
     setHotspots((prev) => prev.filter((h) => h.id !== id));
 
-  // ── Submit
+  // ── Submit form
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -184,19 +196,23 @@ export default function CatalogFormAdmin() {
       fd.append("slug", form.slug);
       fd.append("category", form.category);
       fd.append("taxonomy", form.taxonomy);
+      fd.append("tagline", form.tagline);           // ← NEW
+      fd.append("about_title", form.aboutTitle);    // ← NEW (convert to snake_case)
       fd.append("description", form.description);
       fd.append("featured", form.featured ? "1" : "0");
 
       if (form.coverImage) fd.append("cover_image", form.coverImage);
 
       Object.entries(sceneImages).forEach(([scene, image]) => {
-        if (image instanceof File) fd.append(`${scene}_image`, image);
+        if (image instanceof File) {
+          const fieldName = scene.replace("-", "_") + "_image";
+          fd.append(fieldName, image);
+        }
       });
 
-      fd.append("hotspots", JSON.stringify(hotspots));
-
       if (catalogId) {
-        await api.put(`/admin/catalogs/${catalogId}`, fd, {
+        fd.append("_method", "PUT");
+        await api.post(`/admin/catalogs/${catalogId}`, fd, {
           headers: { "Content-Type": "multipart/form-data" },
         });
         setSuccess(true);
@@ -209,14 +225,17 @@ export default function CatalogFormAdmin() {
         setTimeout(() => navigate(`/admin/catalogs/${data.id}/edit`), 1500);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? `Error: ${err}`);
+      const msg =
+        err?.response?.data?.message ??
+        err?.response?.data?.error ??
+        `Error: ${err}`;
+      setError(msg);
     } finally {
       setSubmitting(false);
     }
   };
 
-  // ── Helper: URL preview untuk scene tertentu
-  // FIX 3: Fungsi ini dipanggil per-scene, bukan satu nilai global
+  // ── Helper: URL preview per scene
   const getSceneUrl = (scene: string): string => {
     const val = sceneImages[scene];
     if (!val) return "";
@@ -224,7 +243,6 @@ export default function CatalogFormAdmin() {
     return val;
   };
 
-  // sceneImageUrl tetap ada untuk dikirim ke HotspotVisualEditor (pakai currentScene)
   const sceneImageUrl = getSceneUrl(currentScene);
 
   if (loading) {
@@ -300,7 +318,7 @@ export default function CatalogFormAdmin() {
                   type="text"
                   value={form.title}
                   onChange={handleTitleChange}
-                  placeholder="e.g., Serenity Suite"
+                  placeholder="e.g., Serenity"
                   required
                   className="w-full border border-border bg-card text-foreground p-3 rounded focus:ring-2 focus:ring-foreground/50 outline-none"
                 />
@@ -317,10 +335,13 @@ export default function CatalogFormAdmin() {
                   onChange={(e) =>
                     setForm((prev) => ({
                       ...prev,
-                      slug: e.target.value.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]/g, ""),
+                      slug: e.target.value
+                        .toLowerCase()
+                        .replace(/\s+/g, "-")
+                        .replace(/[^\w-]/g, ""),
                     }))
                   }
-                  placeholder="serenity-suite"
+                  placeholder="serenity"
                   className="w-full border border-border bg-card text-foreground p-3 rounded focus:ring-2 focus:ring-foreground/50 outline-none"
                 />
               </div>
@@ -366,10 +387,44 @@ export default function CatalogFormAdmin() {
               </div>
             </div>
 
+            {/* Tagline (NEW) */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Tagline (Hero Subline)
+              </label>
+              <input
+                type="text"
+                value={form.tagline}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, tagline: e.target.value }))
+                }
+                placeholder="e.g., The Quite of Silences"
+                className="w-full border border-border bg-card text-foreground p-3 rounded focus:ring-2 focus:ring-foreground/50 outline-none"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Short line displayed below the title in hero section</p>
+            </div>
+
+            {/* About Title (NEW) */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                About Section Title
+              </label>
+              <input
+                type="text"
+                value={form.aboutTitle}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, aboutTitle: e.target.value }))
+                }
+                placeholder="e.g., A space of calm"
+                className="w-full border border-border bg-card text-foreground p-3 rounded focus:ring-2 focus:ring-foreground/50 outline-none"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Short title displayed on the left in About section</p>
+            </div>
+
             {/* Description */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Description *
+                Description (Long Text) *
               </label>
               <textarea
                 value={form.description}
@@ -380,6 +435,7 @@ export default function CatalogFormAdmin() {
                 required
                 className="w-full border border-border bg-card text-foreground p-3 rounded focus:ring-2 focus:ring-foreground/50 outline-none h-28 resize-none"
               />
+              <p className="text-xs text-muted-foreground mt-1">Full text displayed on the right in About section</p>
             </div>
 
             {/* Featured toggle */}
@@ -406,7 +462,11 @@ export default function CatalogFormAdmin() {
               <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-foreground/50 transition-colors">
                 {form.coverImageUrl && !form.coverImage && (
                   <div className="mb-4">
-                    <img src={form.coverImageUrl} alt="Cover" className="max-h-32 mx-auto rounded" />
+                    <img
+                      src={form.coverImageUrl}
+                      alt="Cover"
+                      className="max-h-32 mx-auto rounded"
+                    />
                   </div>
                 )}
                 {form.coverImage && (
@@ -444,19 +504,16 @@ export default function CatalogFormAdmin() {
         {activeTab === "gallery" && (
           <div className="space-y-8">
             <p className="text-sm text-muted-foreground">
-              Upload scene images (scene-1.jpg, scene-2.jpg) yang akan digunakan untuk
-              hotspot positioning.
+              Upload scene images yang akan digunakan untuk hotspot positioning.
             </p>
 
             {(["scene-1", "scene-2"] as const).map((scene) => {
-              // FIX 3: Hitung URL per-scene di dalam loop, bukan pakai sceneImageUrl global
               const url = getSceneUrl(scene);
 
               return (
                 <div key={scene} className="border border-border rounded-lg p-6 space-y-4">
                   <h3 className="font-semibold capitalize">{scene.replace("-", " ")}</h3>
 
-                  {/* Preview per-scene */}
                   <div className="aspect-video bg-secondary rounded overflow-hidden border border-border">
                     {url ? (
                       <img src={url} alt={scene} className="w-full h-full object-cover" />
@@ -467,7 +524,6 @@ export default function CatalogFormAdmin() {
                     )}
                   </div>
 
-                  {/* FIX 1: Tombol pakai ref per-scene */}
                   <button
                     type="button"
                     onClick={() => sceneRefs[scene].current?.click()}
@@ -476,7 +532,6 @@ export default function CatalogFormAdmin() {
                     <Upload size={16} /> Upload {scene.replace("-", " ")} Image
                   </button>
 
-                  {/* FIX 1: Input file per-scene dengan ref masing-masing */}
                   <input
                     ref={sceneRefs[scene]}
                     type="file"
@@ -504,7 +559,6 @@ export default function CatalogFormAdmin() {
         ════════════════════════════════════════ */}
         {activeTab === "hotspots" && (
           <div className="space-y-6">
-            {/* Scene Selector */}
             <div className="flex gap-2 border-b border-border pb-4">
               {(["scene-1", "scene-2"] as const).map((scene) => (
                 <button
@@ -522,7 +576,6 @@ export default function CatalogFormAdmin() {
               ))}
             </div>
 
-            {/* Hotspot Editor — sceneImageUrl sudah benar karena pakai currentScene */}
             <HotspotVisualEditor
               catalogId={catalogId || "new"}
               sceneNumber={currentScene}

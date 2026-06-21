@@ -1,16 +1,21 @@
 // components/admin/HotspotVisualEditor.tsx
 
 import { useEffect, useRef, useState } from "react";
-import { X, Plus, Edit2, Trash2, Search } from "lucide-react";
+import { X, Plus, Edit2, Trash2, Search, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
+import {
+  createHotspot,
+  updateHotspot,
+  deleteHotspot,
+} from "@/lib/catalogApi";
 
 // ─────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────
 
 interface HotspotItem {
-  id?: string;
+  id?: string | number;
   scene_number: string;
   label: string;
   x: number;
@@ -36,8 +41,8 @@ interface Props {
   sceneImage: string; // URL gambar scene
   hotspots: HotspotItem[];
   onHotspotAdd: (hotspot: HotspotItem) => void;
-  onHotspotUpdate: (id: string, hotspot: HotspotItem) => void;
-  onHotspotDelete: (id: string) => void;
+  onHotspotUpdate: (id: string | number, hotspot: HotspotItem) => void;
+  onHotspotDelete: (id: string | number) => void;
 }
 
 // ─────────────────────────────────────────────
@@ -60,10 +65,15 @@ export function HotspotVisualEditor({
   const [availableItems, setAvailableItems] = useState<ApiItem[]>([]);
   const [itemsLoading, setItemsLoading] = useState(true);
 
+  // ── API loading states per action
+  const [savingId, setSavingId] = useState<string | number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | number | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   // ── UI state
   const [isAdding, setIsAdding] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | number | null>(null);
+  const [draggingId, setDraggingId] = useState<string | number | null>(null);
   const [itemSearch, setItemSearch] = useState("");
   const [showItemDropdown, setShowItemDropdown] = useState(false);
 
@@ -115,6 +125,7 @@ export function HotspotVisualEditor({
     setEditingId(null);
     setItemSearch("");
     setShowItemDropdown(false);
+    setSaveError(null);
   };
 
   // ── Click di image → set koordinat
@@ -135,7 +146,7 @@ export function HotspotVisualEditor({
   };
 
   // ── Drag existing hotspot
-  const handleMouseDown = (e: React.MouseEvent, id: string) => {
+  const handleMouseDown = (e: React.MouseEvent, id: string | number) => {
     e.stopPropagation();
     setDraggingId(id);
   };
@@ -149,10 +160,20 @@ export function HotspotVisualEditor({
 
     const hotspot = hotspots.find((h) => h.id === draggingId);
     if (hotspot) {
-      onHotspotUpdate(draggingId, {
+      // FIX: Update ke API realtime saat drag
+      const updatedHotspot = {
         ...hotspot,
         x: Math.max(0, Math.min(100, x)),
         y: Math.max(0, Math.min(100, y)),
+      };
+      onHotspotUpdate(draggingId, updatedHotspot);
+
+      // Silent save ke API (no loading indicator saat drag)
+      updateHotspot(catalogId, draggingId, {
+        x: updatedHotspot.x,
+        y: updatedHotspot.y,
+      }).catch((err) => {
+        console.error("Failed to save hotspot position:", err);
       });
     }
   };
@@ -161,34 +182,100 @@ export function HotspotVisualEditor({
     setDraggingId(null);
   };
 
-  // ── Submit hotspot baru
-  const handleAddHotspot = () => {
+  // ── FIX: Submit hotspot baru ke API
+  const handleAddHotspot = async () => {
     if (!form.label.trim()) {
-      alert("Label tidak boleh kosong");
+      setSaveError("Label tidak boleh kosong");
       return;
     }
-    
-    const newHotspot: HotspotItem = {
-      ...form,
-      id: `temp-${Date.now()}`,
-      scene_number: sceneNumber,
-    };
 
-    onHotspotAdd(newHotspot);
-    resetForm();
+    setSavingId("new");
+    setSaveError(null);
+
+    try {
+      // Save ke API
+      const newHotspot = await createHotspot(catalogId, {
+        scene_number: sceneNumber,
+        label: form.label,
+        x: form.x,
+        y: form.y,
+        item_slug: form.item_slug || undefined,
+        description: form.description || undefined,
+      });
+
+      // Update local state dengan data dari API
+      onHotspotAdd(newHotspot as unknown as HotspotItem);
+      resetForm();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Gagal membuat hotspot";
+      setSaveError(msg);
+      console.error("Failed to create hotspot:", err);
+    } finally {
+      setSavingId(null);
+    }
   };
 
-  // ── Edit hotspot
+  // ── FIX: Edit hotspot ke API
+  const handleUpdateHotspot = async () => {
+    if (!editingId) return;
+    if (!form.label.trim()) {
+      setSaveError("Label tidak boleh kosong");
+      return;
+    }
+
+    setSavingId(editingId);
+    setSaveError(null);
+
+    try {
+      // Save ke API
+      const updated = await updateHotspot(catalogId, editingId, {
+        scene_number: sceneNumber,
+        label: form.label,
+        x: form.x,
+        y: form.y,
+        item_slug: form.item_slug || undefined,
+        description: form.description || undefined,
+      });
+
+      // Update local state
+      onHotspotUpdate(editingId, updated as unknown as HotspotItem);
+      resetForm();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Gagal update hotspot";
+      setSaveError(msg);
+      console.error("Failed to update hotspot:", err);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  // ── FIX: Delete hotspot dari API
+  const handleDeleteHotspot = async (id: string | number) => {
+    if (!confirm("Hapus hotspot ini?")) return;
+
+    setDeletingId(id);
+    setSaveError(null);
+
+    try {
+      // Delete dari API
+      await deleteHotspot(catalogId, id);
+
+      // Update local state
+      onHotspotDelete(id);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Gagal hapus hotspot";
+      setSaveError(msg);
+      console.error("Failed to delete hotspot:", err);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // ── Start edit
   const startEdit = (hotspot: HotspotItem) => {
     setEditingId(hotspot.id || "");
     setForm(hotspot);
-  };
-
-  const handleUpdateHotspot = () => {
-    if (editingId) {
-      onHotspotUpdate(editingId, { ...form, scene_number: sceneNumber });
-      resetForm();
-    }
+    setSaveError(null);
   };
 
   return (
@@ -210,6 +297,13 @@ export function HotspotVisualEditor({
           </button>
         )}
       </div>
+
+      {/* FIX: Error message */}
+      {saveError && (
+        <div className="p-3 bg-red-500/20 border border-red-500/50 rounded text-red-700 text-xs">
+          ❌ {saveError}
+        </div>
+      )}
 
       {/* ════════════════════════════════════════
           VISUAL EDITOR — Interactive Image
@@ -462,9 +556,15 @@ export function HotspotVisualEditor({
           <div className="flex gap-2 pt-2">
             <button
               onClick={editingId ? handleUpdateHotspot : handleAddHotspot}
-              className="flex-1 bg-foreground text-background py-2 text-sm font-medium rounded hover:bg-foreground/90 transition-colors"
+              disabled={savingId !== null}
+              className={`flex-1 py-2 text-sm font-medium rounded flex items-center justify-center gap-2 transition-colors ${
+                savingId !== null
+                  ? "bg-foreground/50 text-background cursor-not-allowed"
+                  : "bg-foreground text-background hover:bg-foreground/90"
+              }`}
             >
-              {editingId ? "💾 Update Hotspot" : "➕ Add Hotspot"}
+              {savingId !== null && <Loader2 size={14} className="animate-spin" />}
+              {editingId ? "💾 Update" : "➕ Add"}
             </button>
             <button
               onClick={resetForm}
@@ -487,6 +587,7 @@ export function HotspotVisualEditor({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-64 overflow-y-auto">
             {hotspots.map((spot) => {
               const itemData = availableItems.find((i) => i.slug === spot.item_slug);
+              const isDeleting = deletingId === spot.id;
               return (
                 <div
                   key={spot.id}
@@ -495,7 +596,7 @@ export function HotspotVisualEditor({
                     editingId === spot.id
                       ? "bg-foreground/10 border-foreground/50 ring-2 ring-foreground/20"
                       : "bg-secondary border-border hover:bg-secondary/80 hover:border-foreground/30"
-                  }`}
+                  } ${isDeleting ? "opacity-50" : ""}`}
                 >
                   <div className="flex items-start gap-2">
                     {/* Item thumbnail */}
@@ -524,14 +625,21 @@ export function HotspotVisualEditor({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (confirm("Hapus hotspot ini?")) {
-                          onHotspotDelete(spot.id || "");
-                        }
+                        handleDeleteHotspot(spot.id || "");
                       }}
-                      className="text-red-500/60 hover:text-red-600 p-1 flex-shrink-0"
+                      disabled={isDeleting}
+                      className={`p-1 flex-shrink-0 transition-colors ${
+                        isDeleting
+                          ? "text-gray-400 cursor-not-allowed"
+                          : "text-red-500/60 hover:text-red-600"
+                      }`}
                       title="Delete"
                     >
-                      <Trash2 size={14} />
+                      {isDeleting ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <Trash2 size={14} />
+                      )}
                     </button>
                   </div>
                 </div>
