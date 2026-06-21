@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import logoLivora from "@/assets/logo-livora.png";
-
+import logoLivora__asset from "@/assets/logo-livora.png.asset.json";
+const logoLivora = logoLivora__asset.url;
 interface LoaderProps {
   onDone?: () => void;
 }

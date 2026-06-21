@@ -1,5 +1,5 @@
-import styleImg from "@/assets/style-european.jpg";
-
+import styleImg__asset from "@/assets/style-european.jpg.asset.json";
+const styleImg = styleImg__asset.url;
 export const Style = () => (
   <section id="style" className="py-28 md:py-40 container-livora">
     <div className="grid md:grid-cols-12 gap-10 md:gap-16 items-center">

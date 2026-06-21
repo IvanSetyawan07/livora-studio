@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import heroImg from "@/assets/hero-livora.jpg";
-
+import heroImg__asset from "@/assets/hero-livora.jpg.asset.json";
+const heroImg = heroImg__asset.url;
 export const Hero = () => {
   const { t } = useTranslation();
   const [y, setY] = useState(0);
