@@ -586,6 +586,13 @@ export function HotspotVisualEditor({
             />
           </div>
 
+          {/* FIX #10: Error juga ditampilkan dekat tombol action */}
+          {saveError && (
+            <div className="p-2.5 bg-red-500/15 border border-red-500/40 rounded text-red-700 text-xs">
+              ❌ {saveError}
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex gap-2 pt-2">
             <button
