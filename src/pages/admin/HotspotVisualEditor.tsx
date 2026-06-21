@@ -204,10 +204,15 @@ export function HotspotVisualEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draggingId, hotspots]);
 
-  // ── FIX: Submit hotspot baru ke API
+  // ── FIX #7: Validate koordinat sebelum submit
   const handleAddHotspot = async () => {
     if (!form.label.trim()) {
       setSaveError("Label tidak boleh kosong");
+      return;
+    }
+    // Default x=50,y=50 berarti user belum klik gambar
+    if (form.x === 50 && form.y === 50) {
+      setSaveError("Klik gambar dulu untuk menempatkan hotspot");
       return;
     }
 
@@ -215,7 +220,6 @@ export function HotspotVisualEditor({
     setSaveError(null);
 
     try {
-      // Save ke API
       const newHotspot = await createHotspot(catalogId, {
         scene_number: sceneNumber,
         label: form.label,
@@ -225,7 +229,6 @@ export function HotspotVisualEditor({
         description: form.description || undefined,
       });
 
-      // Update local state dengan data dari API
       onHotspotAdd(newHotspot as unknown as HotspotItem);
       resetForm();
     } catch (err: any) {
