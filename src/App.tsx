@@ -17,6 +17,8 @@ import AdminLayout from "./pages/admin/AdminLayout";
 import AdminOverview from "./pages/admin/AdminOverview";
 import AdminProjects from "./pages/admin/AdminProjects";
 import AdminItems from "./pages/admin/AdminItems";
+import AdminCollections from "./pages/admin/AdminCollections";
+import AdminItemExperience from "./pages/admin/AdminItemExperience";
 import AdminTaxonomies from "./pages/admin/AdminTaxonomies";
 import AdminLanding from "./pages/admin/AdminLanding";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
@@ -64,6 +66,8 @@ function App() {
                 <Route index element={<AdminOverview />} />
                 <Route path="projects" element={<AdminProjects />} />
                 <Route path="items" element={<AdminItems />} />
+                <Route path="items/:id/experience" element={<AdminItemExperience />} />
+                <Route path="collections" element={<AdminCollections />} />
                 <Route path="taxonomies" element={<AdminTaxonomies />} />
                 <Route path="landing" element={<AdminLanding />} />
                 <Route path="analytics" element={<AdminAnalytics />} />
