@@ -113,7 +113,7 @@ class HotspotController extends Controller
     {
         // Validation
         $validated = $request->validate([
-            'scene_number' => 'sometimes|string|in:scene-1,scene-2',
+            'scene_number' => ['sometimes', 'string', 'regex:/^scene-\d+$/'],
             'label' => 'sometimes|string|max:255',
             'x' => 'sometimes|numeric|min:0|max:100',
             'y' => 'sometimes|numeric|min:0|max:100',
