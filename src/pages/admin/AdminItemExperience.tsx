@@ -76,8 +76,15 @@ function VariantsPanel({ itemId, initial }: { itemId: number; initial: any[] }) 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {list.map((v) => (
           <div key={v.id} className="bg-card border border-border rounded-lg p-3">
-            <div className="aspect-square bg-muted rounded mb-2 overflow-hidden">
-              {v.preview_image && <img src={imgUrl(v.preview_image)} className="w-full h-full object-cover" alt="" />}
+            <div className="grid grid-cols-2 gap-1 mb-2">
+              <div className="aspect-square bg-muted rounded overflow-hidden relative">
+                {v.preview_image && <img src={imgUrl(v.preview_image)} className="w-full h-full object-cover" alt="" />}
+                <span className="absolute bottom-1 left-1 text-[8px] uppercase tracking-wider bg-background/80 px-1 rounded">Swatch</span>
+              </div>
+              <div className="aspect-square bg-muted rounded overflow-hidden relative">
+                {v.furniture_image && <img src={imgUrl(v.furniture_image)} className="w-full h-full object-cover" alt="" />}
+                <span className="absolute bottom-1 left-1 text-[8px] uppercase tracking-wider bg-background/80 px-1 rounded">Furniture</span>
+              </div>
             </div>
             <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{v.category}</p>
             <p className="text-sm font-medium">{v.variant_name}</p>
@@ -104,6 +111,7 @@ function VariantForm({ itemId, editing, onClose, onSaved }: any) {
   const [sort_order, setSort] = useState(editing?.sort_order || 0);
   const [is_active, setActive] = useState(editing?.is_active ?? true);
   const [file, setFile] = useState<File | null>(null);
+  const [furnitureFile, setFurnitureFile] = useState<File | null>(null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,6 +124,7 @@ function VariantForm({ itemId, editing, onClose, onSaved }: any) {
     fd.append("sort_order", String(sort_order));
     fd.append("is_active", is_active ? "1" : "0");
     if (file) fd.append("preview_image", file);
+    if (furnitureFile) fd.append("furniture_image", furnitureFile);
     const url = editing ? `/admin/variants/${editing.id}` : `/admin/items/${itemId}/variants`;
     try {
       await api.post(url, fd, { headers: { "Content-Type": "multipart/form-data" } });
@@ -140,7 +149,8 @@ function VariantForm({ itemId, editing, onClose, onSaved }: any) {
           <Field label="Active"><input type="checkbox" checked={is_active} onChange={(e) => setActive(e.target.checked)} /></Field>
         </div>
         <Field label="Description"><textarea className="ui-input min-h-[80px]" value={description} onChange={(e) => setDesc(e.target.value)} /></Field>
-        <Field label="Preview Image"><input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} /></Field>
+        <Field label="Material Swatch (small, shown on the card)"><input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} /></Field>
+        <Field label="Furniture Image (the product rendered in this color/material — shown as the big left image)"><input type="file" accept="image/*" onChange={(e) => setFurnitureFile(e.target.files?.[0] || null)} /></Field>
         <div className="flex gap-2 pt-2">
           <button type="button" onClick={onClose} className="px-4 py-2 border border-border rounded text-sm">Cancel</button>
           <button className="ml-auto px-5 py-2 bg-foreground text-background rounded text-sm uppercase tracking-[0.2em]">Save</button>
