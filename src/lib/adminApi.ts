@@ -8,8 +8,11 @@ export const imgUrl = (path?: string | null) => {
   if (path.startsWith("http")) return path;
   if (path.startsWith("/seed/")) return path;
 
-  // Tambah /storage/ prefix untuk file dari Laravel storage
-  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  let cleanPath = path.startsWith("/") ? path : `/${path}`;
+  // If path already includes /storage/, just prepend backend origin
+  if (cleanPath.startsWith("/storage/")) {
+    return BACKEND_ORIGIN + cleanPath;
+  }
   return BACKEND_ORIGIN + "/storage" + cleanPath;
 };
 
