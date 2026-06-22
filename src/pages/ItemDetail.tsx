@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Navbar } from "@/components/livora/Navbar";
 import { PageBreadcrumb } from "@/components/livora/Breadcrumb";
 import { Footer } from "@/components/livora/Footer";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { items } from "@/data/items";
 import { useItemBySlug, type FurnitureVariant, type GalleryImage } from "@/lib/itemsApi";
 import { useProjectBySlug } from "@/lib/projectsApi";
@@ -22,6 +23,7 @@ const ItemDetail = () => {
 
   const [activeVariantId, setActiveVariantId] = useState<number | null>(null);
   const [galleryIndex, setGalleryIndex] = useState(0);
+  const [sheetCategory, setSheetCategory] = useState<string | null>(null);
 
   // Reset variant when item loads
   useEffect(() => {
@@ -65,22 +67,24 @@ const ItemDetail = () => {
     };
   }, [item?.apiId]);
 
-  // Active variant + effective gallery (variant gallery wins, else item gallery)
+  // Active variant
   const activeVariant: FurnitureVariant | null = useMemo(
     () => item?.variants?.find((v) => v.id === activeVariantId) ?? null,
     [item, activeVariantId],
   );
 
+  // Gallery shown as thumbnails below the main image (item-level only; not variant-driven)
   const galleryImages: GalleryImage[] = useMemo(() => {
-    if (activeVariant?.gallery && activeVariant.gallery.length > 0) return activeVariant.gallery;
-    if (item?.gallery && item.gallery.length > 0) return item.gallery;
-    return [];
-  }, [activeVariant, item]);
+    return item?.gallery ?? [];
+  }, [item]);
 
-  // Main display image: variant preview > current gallery image > item.image
+  // Main display image PRIORITY:
+  // 1) The selected variant's furniture image (the product rendered in that color/material)
+  // 2) The user-clicked gallery thumbnail
+  // 3) The item's default image
   const mainImage =
+    activeVariant?.furniture_image ||
     galleryImages[galleryIndex]?.image ||
-    activeVariant?.preview_image ||
     item?.image ||
     "";
 
