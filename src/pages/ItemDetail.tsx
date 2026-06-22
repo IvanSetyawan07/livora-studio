@@ -454,9 +454,76 @@ const ItemDetail = () => {
           </div>
         </section>
       </main>
+
+      {/* SLIDE-OVER: full list of variants for a category */}
+      <Sheet open={!!sheetCategory} onOpenChange={(o) => !o && setSheetCategory(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="serif text-2xl font-light capitalize">
+              {sheetCategory ?? ""}
+            </SheetTitle>
+            <p className="text-xs text-muted-foreground">
+              Select a material to preview it on the piece.
+            </p>
+          </SheetHeader>
+          <div className="grid grid-cols-2 gap-3 mt-6">
+            {(sheetCategory ? variantGroups[sheetCategory] ?? [] : []).map((v) => (
+              <VariantCard
+                key={v.id}
+                v={v}
+                active={v.id === activeVariantId}
+                onClick={() => { setActiveVariantId(v.id); setSheetCategory(null); }}
+                showDetails
+              />
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+
       <Footer />
     </>
   );
 };
+
+function VariantCard({
+  v, active, onClick, showDetails = false,
+}: {
+  v: FurnitureVariant;
+  active: boolean;
+  onClick: () => void;
+  showDetails?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="text-left transition-all hover:-translate-y-0.5"
+      style={{
+        border: `1.5px solid ${active ? GOLD : "#E8E4DF"}`,
+        borderRadius: 10,
+        padding: 8,
+        background: active ? "#FBF7F1" : "#FFFFFF",
+        boxShadow: active ? "0 4px 14px rgba(201,169,122,0.18)" : "none",
+      }}
+    >
+      <div style={{ width: "100%", aspectRatio: "1/1", borderRadius: 6, background: "#F5EFE8", overflow: "hidden", marginBottom: 8 }}>
+        {v.preview_image && (
+          <img src={v.preview_image} alt={v.variant_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        )}
+      </div>
+      <p style={{ fontSize: 10, color: GOLD, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+        {v.category}
+      </p>
+      <p style={{ fontSize: 13, color: "#1A1A1A", marginTop: 2, lineHeight: 1.3 }}>
+        {v.variant_name}
+      </p>
+      {v.color_name && (
+        <p style={{ fontSize: 11, color: "#9A9A9A", marginTop: 2 }}>{v.color_name}</p>
+      )}
+      {showDetails && v.material_name && (
+        <p style={{ fontSize: 11, color: "#9A9A9A", marginTop: 2 }}>{v.material_name}</p>
+      )}
+    </button>
+  );
+}
 
 export default ItemDetail;
