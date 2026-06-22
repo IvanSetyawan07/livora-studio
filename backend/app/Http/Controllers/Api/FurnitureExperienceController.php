@@ -18,12 +18,14 @@ class FurnitureExperienceController extends Controller
     public function variantStore(Request $r, Item $item) {
         $data = $this->validateVariant($r);
         if ($r->hasFile('preview_image')) $data['preview_image'] = '/storage/'.$r->file('preview_image')->store('variants','public');
+        if ($r->hasFile('furniture_image')) $data['furniture_image'] = '/storage/'.$r->file('furniture_image')->store('variants','public');
         $data['item_id'] = $item->id;
         return FurnitureVariant::create($data);
     }
     public function variantUpdate(Request $r, FurnitureVariant $variant) {
         $data = $this->validateVariant($r);
         if ($r->hasFile('preview_image')) $data['preview_image'] = '/storage/'.$r->file('preview_image')->store('variants','public');
+        if ($r->hasFile('furniture_image')) $data['furniture_image'] = '/storage/'.$r->file('furniture_image')->store('variants','public');
         $variant->update($data);
         return $variant;
     }
@@ -39,6 +41,7 @@ class FurnitureExperienceController extends Controller
             'sort_order'=>'nullable|integer',
             'is_active'=>'nullable|boolean',
             'preview_image'=>'nullable|file|image|max:20480',
+            'furniture_image'=>'nullable|file|image|max:20480',
         ]);
     }
 

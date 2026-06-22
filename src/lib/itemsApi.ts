@@ -11,6 +11,7 @@ export interface FurnitureVariant {
   color_name?: string | null;
   material_name?: string | null;
   preview_image?: string | null;
+  furniture_image?: string | null;
   description?: string | null;
   sort_order: number;
   is_active: boolean;
@@ -114,6 +115,7 @@ export const mapApiItem = (it: ApiItem): RichItem => {
     variants: (it.variants ?? []).map((v) => ({
       ...v,
       preview_image: v.preview_image ? imgUrl(v.preview_image) : null,
+      furniture_image: v.furniture_image ? imgUrl(v.furniture_image) : null,
       gallery: (v.gallery ?? []).map((g) => ({ ...g, image: imgUrl(g.image) })),
     })),
     gallery: (it.gallery ?? []).map((g) => ({ ...g, image: imgUrl(g.image) })),
