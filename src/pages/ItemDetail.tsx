@@ -5,6 +5,7 @@ import { Navbar } from "@/components/livora/Navbar";
 import { PageBreadcrumb } from "@/components/livora/Breadcrumb";
 import { Footer } from "@/components/livora/Footer";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { items } from "@/data/items";
 import { useItemBySlug, type FurnitureVariant, type GalleryImage } from "@/lib/itemsApi";
 import { useProjectBySlug } from "@/lib/projectsApi";
@@ -22,6 +23,7 @@ const ItemDetail = () => {
 
   const [activeVariantId, setActiveVariantId] = useState<number | null>(null);
   const [galleryIndex, setGalleryIndex] = useState(0);
+  const [sheetCategory, setSheetCategory] = useState<string | null>(null);
 
   // Reset variant when item loads
   useEffect(() => {
@@ -65,22 +67,24 @@ const ItemDetail = () => {
     };
   }, [item?.apiId]);
 
-  // Active variant + effective gallery (variant gallery wins, else item gallery)
+  // Active variant
   const activeVariant: FurnitureVariant | null = useMemo(
     () => item?.variants?.find((v) => v.id === activeVariantId) ?? null,
     [item, activeVariantId],
   );
 
+  // Gallery shown as thumbnails below the main image (item-level only; not variant-driven)
   const galleryImages: GalleryImage[] = useMemo(() => {
-    if (activeVariant?.gallery && activeVariant.gallery.length > 0) return activeVariant.gallery;
-    if (item?.gallery && item.gallery.length > 0) return item.gallery;
-    return [];
-  }, [activeVariant, item]);
+    return item?.gallery ?? [];
+  }, [item]);
 
-  // Main display image: variant preview > current gallery image > item.image
+  // Main display image PRIORITY:
+  // 1) The selected variant's furniture image (the product rendered in that color/material)
+  // 2) The user-clicked gallery thumbnail
+  // 3) The item's default image
   const mainImage =
+    activeVariant?.furniture_image ||
     galleryImages[galleryIndex]?.image ||
-    activeVariant?.preview_image ||
     item?.image ||
     "";
 
@@ -254,60 +258,36 @@ const ItemDetail = () => {
                   Explore materials and finishes crafted for this piece.
                 </p>
 
-                {Object.entries(variantGroups).map(([cat, vs]) => (
-                  <div key={cat} style={{ marginBottom: 24 }}>
-                    <p style={{ ...goldLabel, marginBottom: 10 }}>{cat}</p>
-                    <div className="grid grid-cols-3 gap-3">
-                      {vs.map((v) => {
-                        const active = v.id === activeVariantId;
-                        return (
+                {Object.entries(variantGroups).map(([cat, vs]) => {
+                  const preview = vs.slice(0, 2);
+                  const extra = vs.length - preview.length;
+                  return (
+                    <div key={cat} style={{ marginBottom: 24 }}>
+                      <div className="flex items-center justify-between mb-2.5">
+                        <p style={goldLabel}>{cat}</p>
+                        {extra > 0 && (
                           <button
-                            key={v.id}
-                            onClick={() => { setActiveVariantId(v.id); setGalleryIndex(0); }}
-                            className="text-left transition-all hover:-translate-y-0.5"
-                            style={{
-                              border: `1.5px solid ${active ? GOLD : "#E8E4DF"}`,
-                              borderRadius: 10,
-                              padding: 8,
-                              background: active ? "#FBF7F1" : "#FFFFFF",
-                              boxShadow: active ? "0 4px 14px rgba(201,169,122,0.18)" : "none",
-                            }}
+                            onClick={() => setSheetCategory(cat)}
+                            style={{ fontSize: 11, color: GOLD, letterSpacing: "0.1em", textTransform: "uppercase" }}
+                            className="hover:underline"
                           >
-                            <div
-                              style={{
-                                width: "100%",
-                                aspectRatio: "1/1",
-                                borderRadius: 6,
-                                background: "#F5EFE8",
-                                overflow: "hidden",
-                                marginBottom: 8,
-                              }}
-                            >
-                              {v.preview_image && (
-                                <img
-                                  src={v.preview_image}
-                                  alt={v.variant_name}
-                                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                />
-                              )}
-                            </div>
-                            <p style={{ fontSize: 11, color: GOLD, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                              {v.category}
-                            </p>
-                            <p style={{ fontSize: 13, color: "#1A1A1A", marginTop: 2, lineHeight: 1.3 }}>
-                              {v.variant_name}
-                            </p>
-                            {v.color_name && (
-                              <p style={{ fontSize: 11, color: "#9A9A9A", marginTop: 2 }}>
-                                {v.color_name}
-                              </p>
-                            )}
+                            + {extra} more →
                           </button>
-                        );
-                      })}
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {preview.map((v) => (
+                          <VariantCard
+                            key={v.id}
+                            v={v}
+                            active={v.id === activeVariantId}
+                            onClick={() => setActiveVariantId(v.id)}
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div>
@@ -474,9 +454,76 @@ const ItemDetail = () => {
           </div>
         </section>
       </main>
+
+      {/* SLIDE-OVER: full list of variants for a category */}
+      <Sheet open={!!sheetCategory} onOpenChange={(o) => !o && setSheetCategory(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="serif text-2xl font-light capitalize">
+              {sheetCategory ?? ""}
+            </SheetTitle>
+            <p className="text-xs text-muted-foreground">
+              Select a material to preview it on the piece.
+            </p>
+          </SheetHeader>
+          <div className="grid grid-cols-2 gap-3 mt-6">
+            {(sheetCategory ? variantGroups[sheetCategory] ?? [] : []).map((v) => (
+              <VariantCard
+                key={v.id}
+                v={v}
+                active={v.id === activeVariantId}
+                onClick={() => { setActiveVariantId(v.id); setSheetCategory(null); }}
+                showDetails
+              />
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+
       <Footer />
     </>
   );
 };
+
+function VariantCard({
+  v, active, onClick, showDetails = false,
+}: {
+  v: FurnitureVariant;
+  active: boolean;
+  onClick: () => void;
+  showDetails?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="text-left transition-all hover:-translate-y-0.5"
+      style={{
+        border: `1.5px solid ${active ? GOLD : "#E8E4DF"}`,
+        borderRadius: 10,
+        padding: 8,
+        background: active ? "#FBF7F1" : "#FFFFFF",
+        boxShadow: active ? "0 4px 14px rgba(201,169,122,0.18)" : "none",
+      }}
+    >
+      <div style={{ width: "100%", aspectRatio: "1/1", borderRadius: 6, background: "#F5EFE8", overflow: "hidden", marginBottom: 8 }}>
+        {v.preview_image && (
+          <img src={v.preview_image} alt={v.variant_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        )}
+      </div>
+      <p style={{ fontSize: 10, color: GOLD, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+        {v.category}
+      </p>
+      <p style={{ fontSize: 13, color: "#1A1A1A", marginTop: 2, lineHeight: 1.3 }}>
+        {v.variant_name}
+      </p>
+      {v.color_name && (
+        <p style={{ fontSize: 11, color: "#9A9A9A", marginTop: 2 }}>{v.color_name}</p>
+      )}
+      {showDetails && v.material_name && (
+        <p style={{ fontSize: 11, color: "#9A9A9A", marginTop: 2 }}>{v.material_name}</p>
+      )}
+    </button>
+  );
+}
 
 export default ItemDetail;
