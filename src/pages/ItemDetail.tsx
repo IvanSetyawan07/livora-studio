@@ -258,60 +258,36 @@ const ItemDetail = () => {
                   Explore materials and finishes crafted for this piece.
                 </p>
 
-                {Object.entries(variantGroups).map(([cat, vs]) => (
-                  <div key={cat} style={{ marginBottom: 24 }}>
-                    <p style={{ ...goldLabel, marginBottom: 10 }}>{cat}</p>
-                    <div className="grid grid-cols-3 gap-3">
-                      {vs.map((v) => {
-                        const active = v.id === activeVariantId;
-                        return (
+                {Object.entries(variantGroups).map(([cat, vs]) => {
+                  const preview = vs.slice(0, 2);
+                  const extra = vs.length - preview.length;
+                  return (
+                    <div key={cat} style={{ marginBottom: 24 }}>
+                      <div className="flex items-center justify-between mb-2.5">
+                        <p style={goldLabel}>{cat}</p>
+                        {extra > 0 && (
                           <button
-                            key={v.id}
-                            onClick={() => { setActiveVariantId(v.id); setGalleryIndex(0); }}
-                            className="text-left transition-all hover:-translate-y-0.5"
-                            style={{
-                              border: `1.5px solid ${active ? GOLD : "#E8E4DF"}`,
-                              borderRadius: 10,
-                              padding: 8,
-                              background: active ? "#FBF7F1" : "#FFFFFF",
-                              boxShadow: active ? "0 4px 14px rgba(201,169,122,0.18)" : "none",
-                            }}
+                            onClick={() => setSheetCategory(cat)}
+                            style={{ fontSize: 11, color: GOLD, letterSpacing: "0.1em", textTransform: "uppercase" }}
+                            className="hover:underline"
                           >
-                            <div
-                              style={{
-                                width: "100%",
-                                aspectRatio: "1/1",
-                                borderRadius: 6,
-                                background: "#F5EFE8",
-                                overflow: "hidden",
-                                marginBottom: 8,
-                              }}
-                            >
-                              {v.preview_image && (
-                                <img
-                                  src={v.preview_image}
-                                  alt={v.variant_name}
-                                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                />
-                              )}
-                            </div>
-                            <p style={{ fontSize: 11, color: GOLD, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                              {v.category}
-                            </p>
-                            <p style={{ fontSize: 13, color: "#1A1A1A", marginTop: 2, lineHeight: 1.3 }}>
-                              {v.variant_name}
-                            </p>
-                            {v.color_name && (
-                              <p style={{ fontSize: 11, color: "#9A9A9A", marginTop: 2 }}>
-                                {v.color_name}
-                              </p>
-                            )}
+                            + {extra} more →
                           </button>
-                        );
-                      })}
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {preview.map((v) => (
+                          <VariantCard
+                            key={v.id}
+                            v={v}
+                            active={v.id === activeVariantId}
+                            onClick={() => setActiveVariantId(v.id)}
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div>
