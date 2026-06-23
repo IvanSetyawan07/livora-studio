@@ -201,16 +201,16 @@ return (
         <div className="flex items-center gap-3 md:gap-5">
           <span
             className={`transition-opacity duration-500 ${
-              transparentTop ? "opacity-80 hover:opacity-100" : ""
+              lightText ? "opacity-80 hover:opacity-100" : ""
             }`}
           >
-            <LanguageSwitcher isLoggedIn={false} transparentTop={transparentTop} />
+            <LanguageSwitcher isLoggedIn={false} transparentTop={lightText} />
           </span>
           <Link
             to="/login"
             aria-label="Login"
             className={`p-2 transition-colors duration-500 ${
-              transparentTop
+              lightText
                 ? "text-white/90 hover:text-white"
                 : "text-foreground/80 hover:text-foreground"
             }`}
@@ -221,7 +221,7 @@ return (
             aria-label="Toggle menu"
             onClick={() => setOpen((v) => !v)}
             className={`md:hidden p-2 transition-colors duration-500 ${
-              transparentTop ? "text-white" : "text-foreground"
+              lightText ? "text-white" : "text-foreground"
             }`}
           >
             {open ? <X size={22} /> : <Menu size={22} />}
