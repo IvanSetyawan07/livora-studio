@@ -40,7 +40,8 @@ export const Navbar = () => {
     { key: "contact", label: t("nav.contact"), hash: "contact" },
   ];
 
-const transparentTop = !scrolled && location.pathname === "/";
+const transparentTop = !scrolled;
+const lightText = !scrolled && location.pathname === "/";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50);
