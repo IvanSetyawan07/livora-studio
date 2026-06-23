@@ -26,7 +26,7 @@ export const Navbar = () => {
     { key: "projects", label: t("nav.projects"), to: "/projects" },
     {
       key: "catalog",
-      label: "Catalog",
+      label: "CATALOG",
       dropdown: [
         { label: "Living Rooms",   to: "/catalog/living-rooms" },
         { label: "Dining Rooms",   to: "/catalog/dining-rooms" },
@@ -41,6 +41,7 @@ export const Navbar = () => {
   ];
 
 const isLanding = location.pathname === "/";
+const isCatalogPage = /^\/catalog\/[^/]+/.test(location.pathname);
 const isCatalogDetail = /^\/catalog\/[^/]+\/[^/]+/.test(location.pathname);
 const transparentTop = (isLanding || isCatalogDetail) && !scrolled;
 
@@ -124,7 +125,7 @@ const transparentTop = (isLanding || isCatalogDetail) && !scrolled;
       return (
         <div>
           <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">
-            Catalog
+            CATALOG
           </p>
           <ul className="pl-3 space-y-2 border-l border-border/40">
             {l.dropdown.map((d) => (
@@ -173,30 +174,32 @@ return (
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 transition-all duration-500 ${
-        scrolled
-          ? "bg-background/85 backdrop-blur-md border-b border-border/60 py-4"
-          : "bg-transparent border-b border-transparent py-6"
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+        transparentTop
+          ? "bg-transparent"
+          : "bg-background/75 backdrop-blur-[6px]"
       }`}
-      style={{ zIndex: 1000 }}
     >
-      <nav className="container-livora flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-8 lg:px-16 h-20 flex items-center justify-between relative">
+        {/* Logo */}
         <Link
           to="/"
           className={`serif text-2xl tracking-[0.35em] font-light transition-colors duration-500 ${
-  transparentTop ? "text-white" : "text-foreground"
-}`}
-style={transparentTop ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined}
+            transparentTop ? "text-white" : "text-foreground"
+          }`}
+          style={transparentTop ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined}
         >
           LIVORA
         </Link>
 
+        {/* Desktop nav links */}
         <ul className="hidden md:flex items-center gap-8 text-xs uppercase tracking-[0.2em]">
           {links.map((l) => (
             <li key={l.key}>{renderLink(l)}</li>
           ))}
         </ul>
 
+        {/* Actions */}
         <div className="flex items-center gap-3 md:gap-5">
           <span
             className={`transition-opacity duration-500 ${
@@ -226,7 +229,14 @@ style={transparentTop ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined}
             {open ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
-      </nav>
+
+        {/* Bottom border — tidak mentok kiri-kanan */}
+        <div
+          className={`absolute bottom-0 left-8 right-8 lg:left-16 lg:right-16 h-px transition-colors duration-500 ${
+            transparentTop ? "bg-white/25" : "bg-foreground/15"
+          }`}
+        />
+      </div>
 
       {/* Mobile menu */}
       {open && (

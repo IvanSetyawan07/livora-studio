@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Navbar } from "@/components/livora/Navbar";
+import { motion, useScroll, useTransform, easeOut } from "framer-motion";
 import { CatalogCard } from "@/components/livora/CatalogCard";
+import livingCatalog from "@/assets/catalo-livinroom.png";
+import diningCatalog from "@/assets/catalo-dining.png";
+import bedroomsCatalog from "@/assets/catalo-bedrooms.png";
+import outdoorCatalog from "@/assets/catalo-outdoor.png";
+import homeOfficeCatalog from "@/assets/catalo-homeoffice.png";
+import publicCatalog from "@/assets/catalo-public.png";
 import { WhatsAppButton } from "@/components/livora/WhatsAppButton";
 import {
   CATALOG_CATEGORIES,
@@ -16,9 +23,18 @@ import { imgUrl } from "@/lib/adminApi";
 
 const ITEMS_PER_PAGE = 8;
 
+// ─── CATEGORY IMAGES ───
+const CATEGORY_IMAGES: Record<CatalogCategory, string> = {
+  "living-rooms": livingCatalog,
+  "dining-rooms": diningCatalog,
+  "bedrooms": bedroomsCatalog,
+  "outdoor-spaces": outdoorCatalog,
+  "home-office": homeOfficeCatalog,
+  "public-spaces": publicCatalog,
+};
+
 // ─────────────────────────────────────────────
 // FIX: Normalise API response (snake_case → camelCase + full image URL)
-// Sama logic dengan CatalogDetail.tsx — satu sumber kebenaran
 // ─────────────────────────────────────────────
 function normaliseCatalog(raw: any): CatalogItem {
   const categorySlug =
@@ -55,6 +71,10 @@ function normaliseCatalog(raw: any): CatalogItem {
 export default function CatalogPage() {
   const { category: categorySlug } = useParams<{ category: string }>();
   const navigate = useNavigate();
+  const { scrollY } = useScroll();
+
+  const heroRef = useRef<HTMLElement>(null);
+  const [heroHeight, setHeroHeight] = useState(800);
 
   const activeCat =
     CATALOG_CATEGORIES.find((c) => c.slug === categorySlug) ??
@@ -101,6 +121,37 @@ export default function CatalogPage() {
     return items;
   }, [catalogItems, activeCat.slug, activeTax]);
 
+  // ─── NAVBAR SCROLL TRANSFORMS (sama persis dengan CatalogDetail) ───
+  const navbarBgOpacity = useTransform(
+    scrollY,
+    [0, heroHeight * 0.3, heroHeight * 0.7],
+    [0, 0.5, 1],
+    { clamp: true }
+  );
+
+  const navbarBlur = useTransform(
+    scrollY,
+    [0, heroHeight * 0.7],
+    [0, 12],
+    { clamp: true }
+  );
+
+  // ─── MEASURE HERO HEIGHT ───
+  useEffect(() => {
+    if (heroRef.current) {
+      setHeroHeight(heroRef.current.clientHeight);
+    }
+
+    const handleResize = () => {
+      if (heroRef.current) {
+        setHeroHeight(heroRef.current.clientHeight);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const visibleItems = filteredItems.slice(0, visibleCount);
   const hasMore = visibleCount < filteredItems.length;
 
@@ -130,10 +181,40 @@ export default function CatalogPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
+      {/* ─── NAVBAR (fixed, sama persis dengan CatalogDetail) ─── */}
+      <motion.div
+        style={{
+          backgroundColor: navbarBgOpacity.get
+            ? "rgba(0,0,0,0)"
+            : "#000",
+        } as any}
+        className="fixed top-0 left-0 right-0 z-50 border-b border-border/0 transition-colors duration-300"
+      >
+        <motion.div
+          style={{
+            backdropFilter: navbarBlur.get
+              ? `blur(${navbarBlur.get()}px)`
+              : "blur(0px)",
+          } as any}
+          className="w-full"
+        >
+          <Navbar />
+        </motion.div>
+      </motion.div>
 
       {/* ── HERO ── */}
-      <section className="relative min-h-[92vh] flex items-center justify-center text-center border-b border-border overflow-hidden">
+      <section
+        ref={heroRef}
+        className="relative min-h-[92vh] flex items-center justify-center text-center border-b border-border overflow-hidden"
+      >
+        {/* Category image as background fallback */}
+        <img
+          key={`bg-${activeCat.slug}`}
+          src={CATEGORY_IMAGES[activeCat.slug]}
+          alt={activeCat.label}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        {/* Video overlay — sits on top of image, hides it when loaded */}
         <video
           key={activeCat.slug}
           className="absolute inset-0 w-full h-full object-cover"
@@ -142,9 +223,7 @@ export default function CatalogPage() {
           loop
           muted
           playsInline
-        >
-          <div className="absolute inset-0 bg-[hsl(var(--livora-stone))]" />
-        </video>
+        />
         <div className="absolute inset-0 bg-background/40" />
         <div className="relative z-10 flex flex-col items-center px-4">
           <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/60 mb-4 font-light">
@@ -318,7 +397,7 @@ export default function CatalogPage() {
               </ul>
             </div>
           ))}
-        </div>
+        </div>-
         <div className="container-livora flex justify-between text-[10px] text-background/25 font-light">
           <span>© 2025 Livora. All rights reserved.</span>
           <span>PT. Langgeng Cipta Ruang</span>

@@ -102,14 +102,17 @@ function VariantsPanel({ itemId, initial }: { itemId: number; initial: any[] }) 
   );
 }
 
+
 function VariantForm({ itemId, editing, onClose, onSaved }: any) {
   const [variant_name, setN] = useState(editing?.variant_name || "");
   const [category, setCat] = useState(editing?.category || "fabric");
   const [color_name, setColor] = useState(editing?.color_name || "");
+  const [color_code, setColorCode] = useState(editing?.color_code || "#C9A97A"); // NEW
   const [material_name, setMat] = useState(editing?.material_name || "");
   const [description, setDesc] = useState(editing?.description || "");
   const [sort_order, setSort] = useState(editing?.sort_order || 0);
   const [is_active, setActive] = useState(editing?.is_active ?? true);
+  const [is_default, setDefault] = useState(editing?.is_default ?? false); // NEW
   const [file, setFile] = useState<File | null>(null);
   const [furnitureFile, setFurnitureFile] = useState<File | null>(null);
 
@@ -119,10 +122,12 @@ function VariantForm({ itemId, editing, onClose, onSaved }: any) {
     fd.append("variant_name", variant_name);
     fd.append("category", category);
     fd.append("color_name", color_name);
+    fd.append("color_code", color_code);                  // NEW
     fd.append("material_name", material_name);
     fd.append("description", description);
     fd.append("sort_order", String(sort_order));
     fd.append("is_active", is_active ? "1" : "0");
+    fd.append("is_default", is_default ? "1" : "0");      // NEW
     if (file) fd.append("preview_image", file);
     if (furnitureFile) fd.append("furniture_image", furnitureFile);
     const url = editing ? `/admin/variants/${editing.id}` : `/admin/items/${itemId}/variants`;
@@ -137,20 +142,61 @@ function VariantForm({ itemId, editing, onClose, onSaved }: any) {
       <form onSubmit={submit} className="space-y-3" onClick={(e) => e.stopPropagation()}>
         <h2 className="serif text-2xl">{editing ? "Edit Variant" : "New Variant"}</h2>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Variant Name"><input required className="ui-input" value={variant_name} onChange={(e) => setN(e.target.value)} /></Field>
+          <Field label="Variant Name">
+            <input required className="ui-input" value={variant_name} onChange={(e) => setN(e.target.value)} />
+          </Field>
           <Field label="Category">
             <select className="ui-input" value={category} onChange={(e) => setCat(e.target.value)}>
               {["fabric","leather","wood","metal","marble","other"].map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </Field>
-          <Field label="Color Name"><input className="ui-input" value={color_name} onChange={(e) => setColor(e.target.value)} /></Field>
-          <Field label="Material Name"><input className="ui-input" value={material_name} onChange={(e) => setMat(e.target.value)} /></Field>
-          <Field label="Sort Order"><input type="number" className="ui-input" value={sort_order} onChange={(e) => setSort(+e.target.value)} /></Field>
-          <Field label="Active"><input type="checkbox" checked={is_active} onChange={(e) => setActive(e.target.checked)} /></Field>
+          <Field label="Color Name">
+            <input className="ui-input" value={color_name} onChange={(e) => setColor(e.target.value)} />
+          </Field>
+          <Field label="Color Code (hex)">
+            <div className="flex gap-2 items-center">
+              <input
+                type="color"
+                value={color_code}
+                onChange={(e) => setColorCode(e.target.value)}
+                className="h-9 w-12 rounded border border-border cursor-pointer"
+              />
+              <input
+                className="ui-input flex-1"
+                value={color_code}
+                onChange={(e) => setColorCode(e.target.value)}
+                placeholder="#C9A97A"
+              />
+            </div>
+          </Field>
+          <Field label="Material Name">
+            <input className="ui-input" value={material_name} onChange={(e) => setMat(e.target.value)} />
+          </Field>
+          <Field label="Sort Order">
+            <input type="number" className="ui-input" value={sort_order} onChange={(e) => setSort(+e.target.value)} />
+          </Field>
+          <Field label="Active">
+            <label className="flex items-center gap-2 mt-2">
+              <input type="checkbox" checked={is_active} onChange={(e) => setActive(e.target.checked)} />
+              <span className="text-sm">Visible to customers</span>
+            </label>
+          </Field>
+          <Field label="Default">
+            <label className="flex items-center gap-2 mt-2">
+              <input type="checkbox" checked={is_default} onChange={(e) => setDefault(e.target.checked)} />
+              <span className="text-sm">Auto-select on page load</span>
+            </label>
+          </Field>
         </div>
-        <Field label="Description"><textarea className="ui-input min-h-[80px]" value={description} onChange={(e) => setDesc(e.target.value)} /></Field>
-        <Field label="Material Swatch (small, shown on the card)"><input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} /></Field>
-        <Field label="Furniture Image (the product rendered in this color/material — shown as the big left image)"><input type="file" accept="image/*" onChange={(e) => setFurnitureFile(e.target.files?.[0] || null)} /></Field>
+        <Field label="Description">
+          <textarea className="ui-input min-h-[80px]" value={description} onChange={(e) => setDesc(e.target.value)} />
+        </Field>
+        <Field label="Material Swatch (small, shown on the card)">
+          <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+        </Field>
+        <Field label="Furniture Image (the product rendered in this color/material — shown as the big left image)">
+          <input type="file" accept="image/*" onChange={(e) => setFurnitureFile(e.target.files?.[0] || null)} />
+        </Field>
         <div className="flex gap-2 pt-2">
           <button type="button" onClick={onClose} className="px-4 py-2 border border-border rounded text-sm">Cancel</button>
           <button className="ml-auto px-5 py-2 bg-foreground text-background rounded text-sm uppercase tracking-[0.2em]">Save</button>

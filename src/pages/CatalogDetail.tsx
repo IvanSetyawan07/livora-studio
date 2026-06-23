@@ -10,7 +10,7 @@ import { motion, useScroll, useTransform, easeOut } from "framer-motion";
 import { Navbar } from "@/components/livora/Navbar";
 import { WhatsAppButton } from "@/components/livora/WhatsAppButton";
 import { Footer } from "@/components/livora/Footer";
-
+import { api } from "@/lib/api";
 import {
   CATALOG_CATEGORIES,
   CatalogItem,
@@ -98,6 +98,8 @@ export default function CatalogDetail() {
   const [exploreItems, setExploreItems] = useState<CatalogItem[]>([]);
   const [rawCatalog, setRawCatalog] = useState<any>(null);
   const [hotspots, setHotspots] = useState<HotspotItem[]>([]);
+  // Tambah ini — map item_slug → item detail untuk lookup gambar
+  const [itemMap, setItemMap] = useState<Record<string, { title: string; image?: string; code?: string }>>({});
   const [heroHeight, setHeroHeight] = useState(800);
 
   useEffect(() => {
@@ -125,21 +127,51 @@ export default function CatalogDetail() {
         setItem(normalised);
 
         if (catalogData.id) {
-          try {
-            const hotspotsData = await getHotspots(String(catalogData.id));
-            setHotspots(hotspotsData as unknown as HotspotItem[]);
-          } catch (err) {
-            console.warn("Failed to fetch hotspots:", err);
-            setHotspots([]);
+  try {
+    const hotspotsData = await getHotspots(String(catalogData.id));
+    setHotspots(hotspotsData as unknown as HotspotItem[]);
+
+    // ── Fetch item details untuk gambar di Items Grid & HotspotPanel
+    const slugs = (hotspotsData as any[])
+      .map((h: any) => h.item_slug)
+      .filter(Boolean) as string[];
+
+    if (slugs.length > 0) {
+      try {
+        const { data: allItemsRes } = await api.get<any>('/items');'/items'
+
+        const allItems: any[] = Array.isArray(allItemsRes)
+          ? allItemsRes
+          : (allItemsRes.data ?? []);
+
+        const map: Record<string, { title: string; image?: string; code?: string }> = {};
+        allItems.forEach((item: any) => {
+          if (slugs.includes(item.slug)) {
+            map[item.slug] = {
+              title: item.title,
+              image: item.image ?? item.cover_image ?? undefined,
+              code: item.code,
+            };
           }
-        }
+        });
+        setItemMap(map);
+      } catch (err) {
+        console.warn('Failed to fetch item details for hotspots:', err);
+      }
+    }
+
+  } catch (err) {
+    console.warn("Failed to fetch hotspots:", err);
+    setHotspots([]);
+  }
+}
 
         const allRes = await getAllCatalogs({ per_page: 100 });
         const allRaw = allRes.data as unknown as any[];
         const siblings = allRaw
           .filter((i) => i.category === catalogData.category && i.slug !== catalogData.slug)
           .map((i) => normaliseCatalog(i as Catalog))
-          .slice(0, 8);
+          .slice(0, 1);
         setExploreItems(siblings);
       } catch (err) {
         console.error("Failed to load catalog:", err);
@@ -600,7 +632,13 @@ export default function CatalogDetail() {
               />
             ))}
 
-            {activeSpot && <HotspotPanel spot={activeSpot} onClose={() => setActiveSpot(null)} />}
+            {activeSpot && (
+  <HotspotPanel
+    spot={activeSpot}
+    onClose={() => setActiveSpot(null)}
+    itemMap={itemMap} // ← ADD
+  />
+)}
             {!activeSpot && currentScene.hotspots.length > 0 && (
               <div className="absolute bottom-4 right-4 text-[9px] uppercase tracking-[0.15em] text-white/60 font-light">
                 Tap the dots to explore items
@@ -626,6 +664,7 @@ export default function CatalogDetail() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
             {scenes.flatMap((s) => s.hotspots).slice(0, 7).map((spot, i) => {
               const itemSlug = (spot as any).item_slug || (spot as any).itemSlug;
+              const itemDetail = itemSlug ? itemMap[itemSlug] : undefined;
               return (
                 <Link
                   key={spot.id}
@@ -634,8 +673,10 @@ export default function CatalogDetail() {
                   style={{ aspectRatio: i === 0 ? "auto" : "3/4", minHeight: i === 0 ? "360px" : undefined }}
                 >
                   <div className="absolute inset-0 bg-[hsl(var(--livora-stone))]">
-                    {spot.image && <img src={imgUrl(spot.image)} alt={spot.label} className="w-full h-full object-cover" />}
-                  </div>
+        {itemDetail?.image && (                                   // ← CHANGED
+          <img src={imgUrl(itemDetail.image)} alt={spot.label} className="w-full h-full object-cover" />
+        )}
+      </div>
                   <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors duration-500" />
                   <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background/80 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-500">
                     <p className="text-[9px] uppercase tracking-[0.15em] text-foreground/60 mb-0.5 font-light">{item.taxonomy}</p>
@@ -806,48 +847,56 @@ const HotspotDot = ({
 const HotspotPanel = ({
   spot,
   onClose,
+  itemMap,
 }: {
   spot: HotspotItem;
   onClose: () => void;
-}) => (
-  <div className="absolute bottom-6 left-6 right-6 md:left-auto md:right-6 md:w-72 z-30 bg-background/95 backdrop-blur-sm border border-border shadow-xl p-5">
-    <button
-      onClick={onClose}
-      className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors"
-    >
-      <X size={14} />
-    </button>
-    <div className="aspect-[4/3] bg-secondary/60 mb-4 flex items-center justify-center">
-      {spot.image ? (
-        <img
-          src={imgUrl(spot.image)}
-          alt={spot.label}
-          className="w-full h-full object-cover"
-        />
-      ) : (
-        <span className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground font-light">
-          No preview
-        </span>
+  itemMap: Record<string, { title: string; image?: string; code?: string }>;
+}) => {
+  const itemSlug = spot.itemSlug || spot.item_slug;
+  const itemDetail = itemSlug ? itemMap[itemSlug] : undefined;
+  const displayImage = itemDetail?.image || spot.image;
+
+  return (
+    <div className="absolute bottom-6 left-6 right-6 md:left-auto md:right-6 md:w-72 z-30 bg-background/95 backdrop-blur-sm border border-border shadow-xl p-5">
+      <button
+        onClick={onClose}
+        className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <X size={14} />
+      </button>
+      <div className="aspect-[4/3] bg-secondary/60 mb-4 flex items-center justify-center">
+        {displayImage ? ( // ← CHANGED: dari spot.image ke displayImage
+          <img
+            src={imgUrl(displayImage)}
+            alt={spot.label}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <span className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground font-light">
+            No preview
+          </span>
+        )}
+      </div>
+      <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground mb-1 font-light">
+        Featured Item
+      </p>
+      <p className="serif text-base font-light text-foreground mb-2">
+        {spot.label}
+      </p>
+      {spot.description && (
+        <p className="text-xs text-muted-foreground font-light leading-relaxed mb-4">
+          {spot.description}
+        </p>
+      )}
+      {(spot.itemSlug || spot.item_slug) && (
+        <Link
+          to={`/items/${spot.itemSlug || spot.item_slug}`}
+          className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.2em] text-foreground hover:text-muted-foreground transition-colors font-light"
+        >
+          View Item Details <ArrowUpRight size={10} />
+        </Link>
       )}
     </div>
-    <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground mb-1 font-light">
-      Featured Item
-    </p>
-    <p className="serif text-base font-light text-foreground mb-2">
-      {spot.label}
-    </p>
-    {spot.description && (
-      <p className="text-xs text-muted-foreground font-light leading-relaxed mb-4">
-        {spot.description}
-      </p>
-    )}
-    {(spot.itemSlug || spot.item_slug) && (
-      <Link
-        to={`/items/${spot.itemSlug || spot.item_slug}`}
-        className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.2em] text-foreground hover:text-muted-foreground transition-colors font-light"
-      >
-        View Item Details <ArrowUpRight size={10} />
-      </Link>
-    )}
-  </div>
-);
+  );
+};

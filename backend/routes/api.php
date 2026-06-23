@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\TrackingController;
 use App\Http\Controllers\Api\CollectionController;
 use App\Http\Controllers\Api\FurnitureExperienceController;
 use App\Http\Controllers\UserLanguageController;
+use App\Http\Controllers\Api\VariantController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -28,7 +29,12 @@ Route::get('/taxonomies/{type}', [TaxonomyController::class, 'index']);
 Route::get('/collections', [CollectionController::class, 'index']);
 Route::get('/collections/{slug}', [CollectionController::class, 'show']);
 
-
+Route::prefix('admin/items/{itemId}/variants')->group(function () {
+    Route::get('/', [VariantController::class, 'index']);
+    Route::post('/', [VariantController::class, 'store']);
+    Route::put('/{variantId}', [VariantController::class, 'update']);
+    Route::delete('/{variantId}', [VariantController::class, 'destroy']);
+});
 // Catalog - Public Read
 Route::get('/catalogs', [CatalogController::class, 'index']);
 Route::get('/catalogs/{slug}', [CatalogController::class, 'show']);

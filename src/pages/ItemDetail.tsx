@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Navbar } from "@/components/livora/Navbar";
 import { PageBreadcrumb } from "@/components/livora/Breadcrumb";
 import { Footer } from "@/components/livora/Footer";
@@ -22,7 +22,6 @@ const ItemDetail = () => {
   const { item, loading } = useItemBySlug(slug);
 
   const [activeVariantId, setActiveVariantId] = useState<number | null>(null);
-  const [galleryIndex, setGalleryIndex] = useState(0);
   const [sheetCategory, setSheetCategory] = useState<string | null>(null);
 
   // Reset variant when item loads
@@ -32,7 +31,6 @@ const ItemDetail = () => {
     } else {
       setActiveVariantId(null);
     }
-    setGalleryIndex(0);
   }, [item?.apiId]);
 
   // SEO
@@ -73,22 +71,18 @@ const ItemDetail = () => {
     [item, activeVariantId],
   );
 
-  // Gallery shown as thumbnails below the main image (item-level only; not variant-driven)
-  const galleryImages: GalleryImage[] = useMemo(() => {
-    return item?.gallery ?? [];
-  }, [item]);
+  // Gallery (item-level) — shown BELOW the main product image, not overlapping it
+  const galleryImages: GalleryImage[] = useMemo(() => item?.gallery ?? [], [item]);
 
-  // Main display image PRIORITY:
-  // 1) The selected variant's furniture image (the product rendered in that color/material)
-  // 2) The user-clicked gallery thumbnail
-  // 3) The item's default image
+  // Main image is driven ONLY by the selected variant (or item default).
+  // Gallery no longer hijacks the main image.
   const mainImage =
     activeVariant?.furniture_image ||
-    galleryImages[galleryIndex]?.image ||
+    activeVariant?.preview_image ||
     item?.image ||
     "";
 
-  // Group variants by category
+  // Group variants by category (fabric | leather | wood | metal | marble | other)
   const variantGroups = useMemo(() => {
     const groups: Record<string, FurnitureVariant[]> = {};
     (item?.variants ?? []).forEach((v) => {
@@ -97,6 +91,12 @@ const ItemDetail = () => {
     });
     return groups;
   }, [item]);
+
+  // For a given category, the currently selected variant (or first as fallback)
+  const selectedByCategory = (cat: string): FurnitureVariant | undefined => {
+    const list = variantGroups[cat] ?? [];
+    return list.find((v) => v.id === activeVariantId) ?? list[0];
+  };
 
   if (!item) {
     return (
@@ -137,9 +137,9 @@ const ItemDetail = () => {
           ]}
         />
 
-        {/* MAIN SPLIT */}
+        {/* MAIN SPLIT — image only (no gallery overlay) + configurator */}
         <section className="grid grid-cols-1 md:grid-cols-[55%_45%]">
-          {/* LEFT: image + gallery thumbs */}
+          {/* LEFT: main product image (controlled by variant only) */}
           <div style={{ background: "#FAFAF8", padding: "60px" }}>
             <div
               className="relative"
@@ -164,53 +164,7 @@ const ItemDetail = () => {
                   <ItemIllustration name={item.name} size={280} strokeWidth={1.1} />
                 </div>
               )}
-
-              {galleryImages.length > 1 && (
-                <>
-                  <button
-                    onClick={() =>
-                      setGalleryIndex((i) => (i - 1 + galleryImages.length) % galleryImages.length)
-                    }
-                    aria-label="Previous"
-                    className="absolute top-1/2 left-4 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-2 shadow transition"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() =>
-                      setGalleryIndex((i) => (i + 1) % galleryImages.length)
-                    }
-                    aria-label="Next"
-                    className="absolute top-1/2 right-4 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-2 shadow transition"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                </>
-              )}
             </div>
-
-            {/* Thumbnails */}
-            {galleryImages.length > 1 && (
-              <div className="flex gap-3 mt-5 overflow-x-auto pb-2">
-                {galleryImages.map((g, i) => (
-                  <button
-                    key={g.id}
-                    onClick={() => setGalleryIndex(i)}
-                    className="flex-shrink-0 transition-all"
-                    style={{
-                      width: 72,
-                      height: 72,
-                      borderRadius: 8,
-                      overflow: "hidden",
-                      border: `2px solid ${i === galleryIndex ? GOLD : "#E8E4DF"}`,
-                      opacity: i === galleryIndex ? 1 : 0.7,
-                    }}
-                  >
-                    <img src={g.image} alt={g.alt_text ?? ""} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* RIGHT: details + configurator */}
@@ -248,46 +202,86 @@ const ItemDetail = () => {
 
             <div className="h-px w-full bg-[#1A1A1A]/10" style={{ margin: "28px 0" }} />
 
-            {/* CHOOSE YOUR DESIGN */}
+            {/* CHOOSE YOUR DESIGN — one clickable ROW per category (BoConcept style) */}
             {Object.keys(variantGroups).length > 0 ? (
               <div>
-                <h2 className="serif font-light" style={{ fontSize: 22, color: "#1A1A1A", marginBottom: 6 }}>
+                <h2 className="serif font-light" style={{ fontSize: 22, color: "#1A1A1A", marginBottom: 18 }}>
                   Choose Your Design
                 </h2>
-                <p style={{ fontSize: 12, color: "#9A9A9A", marginBottom: 20 }}>
-                  Explore materials and finishes crafted for this piece.
-                </p>
 
-                {Object.entries(variantGroups).map(([cat, vs]) => {
-                  const preview = vs.slice(0, 2);
-                  const extra = vs.length - preview.length;
-                  return (
-                    <div key={cat} style={{ marginBottom: 24 }}>
-                      <div className="flex items-center justify-between mb-2.5">
-                        <p style={goldLabel}>{cat}</p>
-                        {extra > 0 && (
-                          <button
-                            onClick={() => setSheetCategory(cat)}
-                            style={{ fontSize: 11, color: GOLD, letterSpacing: "0.1em", textTransform: "uppercase" }}
-                            className="hover:underline"
+                <div className="flex flex-col gap-3">
+                  {Object.entries(variantGroups).map(([cat, vs]) => {
+                    const sel = selectedByCategory(cat);
+                    const extra = Math.max(0, vs.length - 1);
+                    const isActiveCat = sel?.id === activeVariantId;
+                    return (
+                      <button
+                        key={cat}
+                        onClick={() => setSheetCategory(cat)}
+                        className="group w-full text-left transition-all hover:border-[color:var(--gold)]"
+                        style={
+                          {
+                            ["--gold" as any]: GOLD,
+                            border: `1.5px solid ${isActiveCat ? GOLD : "#E2DED8"}`,
+                            borderRadius: 10,
+                            padding: "14px 16px",
+                            background: "#FFFFFF",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 14,
+                          } as React.CSSProperties
+                        }
+                      >
+                        {/* Swatch / preview */}
+                        <div
+                          style={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: "50%",
+                            overflow: "hidden",
+                            flexShrink: 0,
+                            background: "#F5EFE8",
+                            border: "1px solid #E8E4DF",
+                          }}
+                        >
+                          {sel?.preview_image && (
+                            <img
+                              src={sel.preview_image}
+                              alt={sel.variant_name}
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            />
+                          )}
+                        </div>
+
+                        {/* Labels */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: 11, color: "#8A8A8A", letterSpacing: "0.12em", textTransform: "uppercase" }}>
+                            {cat}
+                          </p>
+                          <p
+                            style={{
+                              fontSize: 14,
+                              color: "#1A1A1A",
+                              marginTop: 2,
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
                           >
-                            + {extra} more →
-                          </button>
+                            {sel?.variant_name ?? "Select"}
+                            {sel?.color_name ? ` — ${sel.color_name}` : ""}
+                          </p>
+                        </div>
+
+                        {/* +N count */}
+                        {extra > 0 && (
+                          <span style={{ fontSize: 12, color: "#5A5A5A" }}>+ {extra}</span>
                         )}
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        {preview.map((v) => (
-                          <VariantCard
-                            key={v.id}
-                            v={v}
-                            active={v.id === activeVariantId}
-                            onClick={() => setActiveVariantId(v.id)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
+                        <ChevronRight className="w-4 h-4 text-[#9A9A9A] group-hover:text-[#1A1A1A] transition-colors" />
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             ) : (
               <div>
@@ -319,6 +313,27 @@ const ItemDetail = () => {
             </button>
           </div>
         </section>
+
+        {/* GALLERY — placed BELOW the main item image (BoConcept-style grid) */}
+        {galleryImages.length > 0 && (
+          <section style={{ background: "#FAFAF8", padding: "0 60px 60px" }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-none">
+              {galleryImages.map((g) => (
+                <figure
+                  key={g.id}
+                  className="overflow-hidden rounded-lg"
+                  style={{ background: "#FFFFFF", border: "1px solid #E8E4DF" }}
+                >
+                  <img
+                    src={g.image}
+                    alt={g.alt_text ?? g.title ?? item.name}
+                    style={{ width: "100%", height: "auto", display: "block", objectFit: "cover" }}
+                  />
+                </figure>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* LIFESTYLE — Furniture In Real Spaces */}
         {item.lifestyle && item.lifestyle.length > 0 && (

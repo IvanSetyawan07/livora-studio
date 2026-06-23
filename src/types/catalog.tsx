@@ -1,3 +1,4 @@
+import livingRoom from "@/assets/catalo-livinroom.png";
 export type CatalogCategory =
   | "living-rooms"
   | "dining-rooms"
@@ -45,6 +46,7 @@ export type CatalogTaxonomy = typeof CATALOG_TAXONOMIES[number];
 
 export const CATALOG_CATEGORIES: CatalogCategoryMeta[] = [
   {
+    
     slug: "living-rooms",
     label: "Living Rooms",
     title: "Living",
