@@ -81,7 +81,7 @@ const lightText = !scrolled && location.pathname === "/";
         <div className="relative group/nav">
           <button
             className={`flex items-center gap-1 underline-grow transition-colors ${
-              transparentTop
+              lightText
                 ? "text-white/90 hover:text-white"
                 : active
                 ? "text-foreground"
