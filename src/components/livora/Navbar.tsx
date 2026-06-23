@@ -150,13 +150,13 @@ const lightText = !scrolled && location.pathname === "/";
     const baseCls = mobile
       ? ""
       : `underline-grow transition-colors ${
-          transparentTop
+          lightText
             ? "text-white/90 hover:text-white"
             : isActive(l)
             ? "text-foreground"
             : "text-foreground/80 hover:text-foreground"
         }`;
-        const shadowStyle = transparentTop ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined;
+        const shadowStyle = lightText ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined;
     if (l.to)
   return (
     <Link to={l.to} className={baseCls} style={shadowStyle} onClick={() => setOpen(false)}>
