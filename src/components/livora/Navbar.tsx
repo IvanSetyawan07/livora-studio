@@ -183,9 +183,9 @@ return (
         <Link
           to="/"
           className={`serif text-2xl tracking-[0.35em] font-light transition-colors duration-500 ${
-            transparentTop ? "text-white" : "text-foreground"
+            lightText ? "text-white" : "text-foreground"
           }`}
-          style={transparentTop ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined}
+          style={lightText ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined}
         >
           LIVORA
         </Link>
