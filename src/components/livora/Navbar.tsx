@@ -41,7 +41,7 @@ export const Navbar = () => {
   ];
 
 const transparentTop = !scrolled;
-const lightText = !scrolled && location.pathname === "/";
+const lightText = !scrolled && (location.pathname === "/" || /^\/catalog\/[^/]+\/[^/]+$/.test(location.pathname));
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50);
