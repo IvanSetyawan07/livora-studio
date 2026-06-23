@@ -40,10 +40,7 @@ export const Navbar = () => {
     { key: "contact", label: t("nav.contact"), hash: "contact" },
   ];
 
-const isLanding = location.pathname === "/";
-const isCatalogPage = /^\/catalog\/[^/]+/.test(location.pathname);
-const isCatalogDetail = /^\/catalog\/[^/]+\/[^/]+/.test(location.pathname);
-const transparentTop = (isLanding || isCatalogDetail) && !scrolled;
+const transparentTop = !scrolled;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50);
