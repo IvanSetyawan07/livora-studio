@@ -40,7 +40,8 @@ export const Navbar = () => {
     { key: "contact", label: t("nav.contact"), hash: "contact" },
   ];
 
-const transparentTop = !scrolled && location.pathname === "/";
+const transparentTop = !scrolled;
+const lightText = !scrolled && location.pathname === "/";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50);
@@ -80,7 +81,7 @@ const transparentTop = !scrolled && location.pathname === "/";
         <div className="relative group/nav">
           <button
             className={`flex items-center gap-1 underline-grow transition-colors ${
-              transparentTop
+              lightText
                 ? "text-white/90 hover:text-white"
                 : active
                 ? "text-foreground"
@@ -149,13 +150,13 @@ const transparentTop = !scrolled && location.pathname === "/";
     const baseCls = mobile
       ? ""
       : `underline-grow transition-colors ${
-          transparentTop
+          lightText
             ? "text-white/90 hover:text-white"
             : isActive(l)
             ? "text-foreground"
             : "text-foreground/80 hover:text-foreground"
         }`;
-        const shadowStyle = transparentTop ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined;
+        const shadowStyle = lightText ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined;
     if (l.to)
   return (
     <Link to={l.to} className={baseCls} style={shadowStyle} onClick={() => setOpen(false)}>
@@ -182,9 +183,9 @@ return (
         <Link
           to="/"
           className={`serif text-2xl tracking-[0.35em] font-light transition-colors duration-500 ${
-            transparentTop ? "text-white" : "text-foreground"
+            lightText ? "text-white" : "text-foreground"
           }`}
-          style={transparentTop ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined}
+          style={lightText ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined}
         >
           LIVORA
         </Link>
@@ -200,16 +201,16 @@ return (
         <div className="flex items-center gap-3 md:gap-5">
           <span
             className={`transition-opacity duration-500 ${
-              transparentTop ? "opacity-80 hover:opacity-100" : ""
+              lightText ? "opacity-80 hover:opacity-100" : ""
             }`}
           >
-            <LanguageSwitcher isLoggedIn={false} transparentTop={transparentTop} />
+            <LanguageSwitcher isLoggedIn={false} transparentTop={lightText} />
           </span>
           <Link
             to="/login"
             aria-label="Login"
             className={`p-2 transition-colors duration-500 ${
-              transparentTop
+              lightText
                 ? "text-white/90 hover:text-white"
                 : "text-foreground/80 hover:text-foreground"
             }`}
@@ -220,7 +221,7 @@ return (
             aria-label="Toggle menu"
             onClick={() => setOpen((v) => !v)}
             className={`md:hidden p-2 transition-colors duration-500 ${
-              transparentTop ? "text-white" : "text-foreground"
+              lightText ? "text-white" : "text-foreground"
             }`}
           >
             {open ? <X size={22} /> : <Menu size={22} />}
