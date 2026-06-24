@@ -202,41 +202,19 @@ export default function CatalogPage() {
         </motion.div>
       </motion.div>
 
-      {/* ── HERO ── */}
-      <section
-        ref={heroRef}
-        className="relative min-h-[92vh] flex items-center justify-center text-center border-b border-border overflow-hidden"
-      >
-        {/* Category image as background fallback */}
-        <img
-          key={`bg-${activeCat.slug}`}
-          src={CATEGORY_IMAGES[activeCat.slug]}
-          alt={activeCat.label}
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        {/* Video overlay — sits on top of image, hides it when loaded */}
-        <video
-          key={activeCat.slug}
-          className="absolute inset-0 w-full h-full object-cover"
-          src={`/videos/${activeCat.slug}.mp4`}
-          autoPlay
-          loop
-          muted
-          playsInline
-        />
-        <div className="absolute inset-0 bg-background/40" />
-        <div className="relative z-10 flex flex-col items-center px-4">
-          <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/60 mb-4 font-light">
-            Livora &nbsp;|&nbsp; Catalog
-          </p>
-          <h1 className="serif text-5xl md:text-7xl font-light leading-[0.95] mb-5 reveal text-foreground">
-            {activeCat.title} <em className="italic">{activeCat.titleItalic}</em>
-          </h1>
-          <p className="text-sm md:text-base text-foreground/70 font-light leading-relaxed max-w-md mb-10 reveal">
-            {activeCat.description}
-          </p>
-        </div>
-      </section>
+      {/* ── HERO (luxury editorial) ── */}
+      <CatalogHero
+        activeCat={activeCat}
+        heroRef={heroRef}
+        scrollY={scrollY}
+        index={CATALOG_CATEGORIES.findIndex((c) => c.slug === activeCat.slug)}
+        total={CATALOG_CATEGORIES.length}
+        bgImage={CATEGORY_IMAGES[activeCat.slug]}
+        onExplore={() => {
+          document.getElementById("catalog-grid")?.scrollIntoView({ behavior: "smooth" });
+        }}
+        onProjects={() => navigate("/projects")}
+      />
 
       {/* ── FILTER BAR ── */}
       <div className="container-livora pt-8 pb-0" id="catalog-grid">
@@ -406,5 +384,227 @@ export default function CatalogPage() {
 
       <WhatsAppButton />
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// CATALOG HERO — luxury editorial
+// ─────────────────────────────────────────────
+function CatalogHero({
+  activeCat,
+  heroRef,
+  scrollY,
+  index,
+  total,
+  bgImage,
+  onExplore,
+  onProjects,
+}: {
+  activeCat: any;
+  heroRef: React.RefObject<HTMLElement>;
+  scrollY: any;
+  index: number;
+  total: number;
+  bgImage: string;
+  onExplore: () => void;
+  onProjects: () => void;
+}) {
+  // Parallax: image moves slower than text, overlay darkens on scroll
+  const imgY = useTransform(scrollY, [0, 800], [0, 140]);
+  const imgScale = useTransform(scrollY, [0, 800], [1, 1.08]);
+  const textY = useTransform(scrollY, [0, 800], [0, 60]);
+  const overlayOpacity = useTransform(scrollY, [0, 600], [0.55, 0.78]);
+
+  const ease = [0.22, 1, 0.36, 1] as const;
+  const counter = `${String(index + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}`;
+
+  return (
+    <section
+      ref={heroRef}
+      className="relative h-screen w-full overflow-hidden border-b border-border"
+    >
+      {/* Background image (parallax + initial zoom from 105% → 100%) */}
+      <motion.div
+        key={`hero-bg-${activeCat.slug}`}
+        className="absolute inset-0 will-change-transform"
+        style={{ y: imgY, scale: imgScale }}
+        initial={{ scale: 1.05 }}
+        animate={{ scale: 1 }}
+        transition={{ duration: 2.2, ease }}
+      >
+        <img
+          src={bgImage}
+          alt={activeCat.label}
+          className="absolute inset-0 h-[115%] w-full object-cover"
+        />
+        <video
+          key={activeCat.slug}
+          className="absolute inset-0 h-[115%] w-full object-cover"
+          src={`/videos/${activeCat.slug}.mp4`}
+          autoPlay
+          loop
+          muted
+          playsInline
+        />
+      </motion.div>
+
+      {/* Cinematic layered gradients (darker on left, lighter right) */}
+      <motion.div
+        className="absolute inset-0 pointer-events-none"
+        style={{ opacity: overlayOpacity }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(to right, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.45) 45%, rgba(0,0,0,0.15) 100%)",
+          }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.55) 100%)",
+          }}
+        />
+        {/* Vignette */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,0.55) 100%)",
+          }}
+        />
+      </motion.div>
+
+      {/* Vertical side label (left) */}
+      <div className="hidden md:flex absolute left-6 top-1/2 -translate-y-1/2 z-10 items-center gap-4">
+        <div className="h-12 w-px bg-white/40" />
+        <span
+          className="text-[10px] tracking-[0.45em] uppercase text-white/70 font-light"
+          style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+        >
+          Curated Interiors
+        </span>
+        <div className="h-12 w-px bg-white/40" />
+      </div>
+
+      {/* Collection counter (bottom-left) */}
+      <div className="absolute left-6 md:left-20 bottom-10 z-10 hidden md:flex flex-col items-start gap-1 text-white/70 font-light">
+        <span className="text-xs tracking-[0.3em]">{String(index + 1).padStart(2, "0")}</span>
+        <span className="h-8 w-px bg-white/40" />
+        <span className="text-xs tracking-[0.3em]">{String(total).padStart(2, "0")}</span>
+      </div>
+
+      {/* Scroll indicator (bottom-left) */}
+      <motion.button
+        type="button"
+        onClick={onExplore}
+        className="hidden md:flex absolute left-32 bottom-10 z-10 items-center gap-3 text-white/70 hover:text-white transition-colors"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.6, duration: 0.9, ease }}
+      >
+        <span className="flex items-center justify-center w-9 h-9 rounded-full border border-white/40">
+          <span className="text-base leading-none">↓</span>
+        </span>
+        <span className="text-[10px] uppercase tracking-[0.35em] font-light">Scroll</span>
+      </motion.button>
+
+      {/* Thin horizontal accent line (top) */}
+      <div className="absolute left-0 right-0 top-[88px] h-px bg-white/15 pointer-events-none" />
+
+      {/* Content — left aligned, ~38% width */}
+      <motion.div
+        className="relative z-10 h-full container-livora flex items-center"
+        style={{ y: textY }}
+      >
+        <div className="max-w-[560px] w-full md:w-[40%] pt-24 md:pt-32">
+          {/* Eyebrow */}
+          <motion.p
+            initial={{ opacity: 0, x: -40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 1, ease, delay: 0.2 }}
+            className="flex items-center gap-4 text-[10px] uppercase tracking-[0.45em] text-white/80 font-light mb-8"
+          >
+            <span className="inline-block h-px w-8 bg-white/50" />
+            Livora Collection
+          </motion.p>
+
+          {/* Massive editorial heading */}
+          <h1
+            className="serif font-light text-white leading-[0.95] mb-8"
+            style={{
+              fontSize: "clamp(64px, 9vw, 140px)",
+              textShadow: "1px 1px 12px rgba(0,0,0,0.45)",
+            }}
+          >
+            <motion.span
+              key={`t1-${activeCat.slug}`}
+              initial={{ opacity: 0, x: -80, filter: "blur(8px)" }}
+              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+              transition={{ duration: 1.2, ease, delay: 0.45 }}
+              className="block"
+            >
+              {activeCat.title}
+            </motion.span>
+            <motion.em
+              key={`t2-${activeCat.slug}`}
+              initial={{ opacity: 0, x: -80, filter: "blur(8px)" }}
+              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+              transition={{ duration: 1.2, ease, delay: 0.7 }}
+              className="block italic font-light"
+            >
+              {activeCat.titleItalic}
+            </motion.em>
+          </h1>
+
+          {/* Description */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, ease, delay: 1.0 }}
+            className="text-sm md:text-[15px] text-white/80 font-light leading-relaxed mb-10"
+            style={{ maxWidth: 420 }}
+          >
+            {activeCat.description}
+          </motion.p>
+
+          {/* CTAs */}
+          <motion.div
+            initial="hidden"
+            animate="show"
+            variants={{
+              hidden: {},
+              show: { transition: { staggerChildren: 0.12, delayChildren: 1.25 } },
+            }}
+            className="flex flex-wrap items-center gap-4"
+          >
+            <motion.button
+              variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } }}
+              transition={{ duration: 0.8, ease }}
+              onClick={onExplore}
+              className="group inline-flex items-center gap-3 bg-[#f5f0e8] text-[#1a1a1a] px-7 py-3.5 text-[10px] uppercase tracking-[0.3em] font-light hover:bg-white transition-colors duration-300"
+            >
+              Explore Collection
+              <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
+            </motion.button>
+            <motion.button
+              variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } }}
+              transition={{ duration: 0.8, ease }}
+              onClick={onProjects}
+              className="inline-flex items-center gap-3 border border-white/60 text-white px-7 py-3.5 text-[10px] uppercase tracking-[0.3em] font-light hover:border-white hover:bg-white/10 transition-all duration-300"
+            >
+              View Projects
+            </motion.button>
+          </motion.div>
+        </div>
+      </motion.div>
+
+      {/* Counter on the right (mobile-friendly) */}
+      <div className="md:hidden absolute right-5 bottom-6 z-10 text-white/70 text-[10px] tracking-[0.3em] font-light">
+        {counter}
+      </div>
+    </section>
   );
 }
