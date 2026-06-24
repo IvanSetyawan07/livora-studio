@@ -199,13 +199,6 @@ return (
 
         {/* Actions */}
         <div className="flex items-center gap-3 md:gap-5">
-          <span
-            className={`transition-opacity duration-500 ${
-              lightText ? "opacity-80 hover:opacity-100" : ""
-            }`}
-          >
-            <LanguageSwitcher isLoggedIn={false} transparentTop={lightText} />
-          </span>
           <Link
             to="/login"
             aria-label="Login"
