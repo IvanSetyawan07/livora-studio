@@ -202,41 +202,19 @@ export default function CatalogPage() {
         </motion.div>
       </motion.div>
 
-      {/* ── HERO ── */}
-      <section
-        ref={heroRef}
-        className="relative min-h-[92vh] flex items-center justify-center text-center border-b border-border overflow-hidden"
-      >
-        {/* Category image as background fallback */}
-        <img
-          key={`bg-${activeCat.slug}`}
-          src={CATEGORY_IMAGES[activeCat.slug]}
-          alt={activeCat.label}
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        {/* Video overlay — sits on top of image, hides it when loaded */}
-        <video
-          key={activeCat.slug}
-          className="absolute inset-0 w-full h-full object-cover"
-          src={`/videos/${activeCat.slug}.mp4`}
-          autoPlay
-          loop
-          muted
-          playsInline
-        />
-        <div className="absolute inset-0 bg-background/40" />
-        <div className="relative z-10 flex flex-col items-center px-4">
-          <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/60 mb-4 font-light">
-            Livora &nbsp;|&nbsp; Catalog
-          </p>
-          <h1 className="serif text-5xl md:text-7xl font-light leading-[0.95] mb-5 reveal text-foreground">
-            {activeCat.title} <em className="italic">{activeCat.titleItalic}</em>
-          </h1>
-          <p className="text-sm md:text-base text-foreground/70 font-light leading-relaxed max-w-md mb-10 reveal">
-            {activeCat.description}
-          </p>
-        </div>
-      </section>
+      {/* ── HERO (luxury editorial) ── */}
+      <CatalogHero
+        activeCat={activeCat}
+        heroRef={heroRef}
+        scrollY={scrollY}
+        index={CATALOG_CATEGORIES.findIndex((c) => c.slug === activeCat.slug)}
+        total={CATALOG_CATEGORIES.length}
+        bgImage={CATEGORY_IMAGES[activeCat.slug]}
+        onExplore={() => {
+          document.getElementById("catalog-grid")?.scrollIntoView({ behavior: "smooth" });
+        }}
+        onProjects={() => navigate("/projects")}
+      />
 
       {/* ── FILTER BAR ── */}
       <div className="container-livora pt-8 pb-0" id="catalog-grid">
