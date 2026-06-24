@@ -236,9 +236,6 @@ return (
             {links.map((l) => (
               <li key={l.key}>{renderLink(l, true)}</li>
             ))}
-            <li className="pt-2 border-t border-border/40">
-              <LanguageSwitcher isLoggedIn={false} />
-            </li>
           </ul>
         </div>
       )}
