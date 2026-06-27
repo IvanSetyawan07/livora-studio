@@ -609,7 +609,7 @@ function CatalogHero({
         className="relative z-10 h-full container-livora flex items-center"
         style={{ x: textX, opacity: textOpacity, y: textY }}
       >
-        <div className="max-w-[560px] w-full md:w-[40%] pt-24 md:pt-32">
+        <div className="max-w-[560px] w-full md:w-[40%] pt-24 md:pt-32 pr-4 md:pr-0">
           {/* Eyebrow */}
           <motion.p
             {...eyebrowAnimation}
