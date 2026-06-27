@@ -502,7 +502,7 @@ export default function CatalogDetail() {
 
             {/* CTA buttons with staggered animation */}
             <motion.div
-              className="flex items-center gap-4"
+              className="flex flex-wrap items-center gap-4"
               initial={ctaAnimation.initial}
               animate={ctaAnimation.animate}
               transition={ctaAnimation.transition}
