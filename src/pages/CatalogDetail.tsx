@@ -482,7 +482,7 @@ export default function CatalogDetail() {
 
             {/* Main title with staggered animation */}
             <motion.h1
-              className="serif text-6xl md:text-8xl font-light leading-[0.9] mb-2 text-white"
+              className="serif text-5xl sm:text-6xl md:text-8xl font-light leading-[0.95] md:leading-[0.9] mb-2 text-white break-words"
               initial={titleAnimation.initial}
               animate={titleAnimation.animate}
               transition={titleAnimation.transition}
