@@ -202,7 +202,7 @@ export default function CatalogPage() {
         </motion.div>
       </motion.div>
 
-      {/* ── HERO (luxury editorial) ── */}
+      {/* ── HERO (luxury editorial with scroll-driven exit animation) ── */}
       <CatalogHero
         activeCat={activeCat}
         heroRef={heroRef}
@@ -375,7 +375,7 @@ export default function CatalogPage() {
               </ul>
             </div>
           ))}
-        </div>-
+        </div>
         <div className="container-livora flex justify-between text-[10px] text-background/25 font-light">
           <span>© 2025 Livora. All rights reserved.</span>
           <span>PT. Langgeng Cipta Ruang</span>
@@ -388,7 +388,7 @@ export default function CatalogPage() {
 }
 
 // ─────────────────────────────────────────────
-// CATALOG HERO — luxury editorial
+// CATALOG HERO — scroll-driven exit animation (sama seperti CatalogDetail)
 // ─────────────────────────────────────────────
 function CatalogHero({
   activeCat,
@@ -409,14 +409,77 @@ function CatalogHero({
   onExplore: () => void;
   onProjects: () => void;
 }) {
+  const [heroHeight, setHeroHeight] = useState(800);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    if (heroRef.current) {
+      setHeroHeight(heroRef.current.clientHeight);
+    }
+    const t = setTimeout(() => setMounted(true), 100);
+    return () => clearTimeout(t);
+  }, []);
+
   // Parallax: image moves slower than text, overlay darkens on scroll
   const imgY = useTransform(scrollY, [0, 800], [0, 140]);
   const imgScale = useTransform(scrollY, [0, 800], [1, 1.08]);
-  const textY = useTransform(scrollY, [0, 800], [0, 60]);
+  
+  // ← SCROLL-DRIVEN EXIT: text slides left + opacity fades as user scrolls
+  const textX = useTransform(
+    scrollY,
+    [0, heroHeight * 0.3, heroHeight * 0.6, heroHeight * 0.95],
+    [0, -40, -80, -120]
+  );
+  
+  const textOpacity = useTransform(
+    scrollY,
+    [0, heroHeight * 0.5, heroHeight],
+    [1, 0.5, 0],
+    { clamp: true }
+  );
+
+  const textY = useTransform(
+    scrollY,
+    [0, heroHeight * 0.5, heroHeight],
+    [0, -40, -80],
+    { clamp: true }
+  );
+
   const overlayOpacity = useTransform(scrollY, [0, 600], [0.55, 0.78]);
 
   const ease = [0.22, 1, 0.36, 1] as const;
   const counter = `${String(index + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}`;
+
+  // ─── ENTRY ANIMATIONS ───
+  const eyebrowAnimation = {
+    initial: { opacity: 0, x: -40 },
+    animate: mounted ? { opacity: 1, x: 0 } : { opacity: 0, x: -40 },
+    transition: { duration: 1, ease, delay: 0.2 },
+  };
+
+  const headingAnimation = {
+    initial: { opacity: 0, x: -80, filter: "blur(8px)" },
+    animate: mounted ? { opacity: 1, x: 0, filter: "blur(0px)" } : { opacity: 0, x: -80, filter: "blur(8px)" },
+    transition: { duration: 1.2, ease, delay: 0.45 },
+  };
+
+  const headingItalicAnimation = {
+    initial: { opacity: 0, x: -80, filter: "blur(8px)" },
+    animate: mounted ? { opacity: 1, x: 0, filter: "blur(0px)" } : { opacity: 0, x: -80, filter: "blur(8px)" },
+    transition: { duration: 1.2, ease, delay: 0.7 },
+  };
+
+  const descriptionAnimation = {
+    initial: { opacity: 0, y: 20 },
+    animate: mounted ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 },
+    transition: { duration: 1, ease, delay: 1.0 },
+  };
+
+  const scrollIndicatorAnimation = {
+    initial: { opacity: 0, y: 20 },
+    animate: mounted ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 },
+    transition: { delay: 1.6, duration: 0.9, ease },
+  };
 
   return (
     <section
@@ -501,9 +564,9 @@ function CatalogHero({
         type="button"
         onClick={onExplore}
         className="hidden md:flex absolute left-32 bottom-10 z-10 items-center gap-3 text-white/70 hover:text-white transition-colors"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.6, duration: 0.9, ease }}
+        initial={scrollIndicatorAnimation.initial}
+        animate={scrollIndicatorAnimation.animate}
+        transition={scrollIndicatorAnimation.transition}
       >
         <span className="flex items-center justify-center w-9 h-9 rounded-full border border-white/40">
           <span className="text-base leading-none">↓</span>
@@ -517,14 +580,12 @@ function CatalogHero({
       {/* Content — left aligned, ~38% width */}
       <motion.div
         className="relative z-10 h-full container-livora flex items-center"
-        style={{ y: textY }}
+        style={{ x: textX, opacity: textOpacity, y: textY }}
       >
         <div className="max-w-[560px] w-full md:w-[40%] pt-24 md:pt-32">
           {/* Eyebrow */}
           <motion.p
-            initial={{ opacity: 0, x: -40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 1, ease, delay: 0.2 }}
+            {...eyebrowAnimation}
             className="flex items-center gap-4 text-[10px] uppercase tracking-[0.45em] text-white/80 font-light mb-8"
           >
             <span className="inline-block h-px w-8 bg-white/50" />
@@ -541,18 +602,14 @@ function CatalogHero({
           >
             <motion.span
               key={`t1-${activeCat.slug}`}
-              initial={{ opacity: 0, x: -80, filter: "blur(8px)" }}
-              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-              transition={{ duration: 1.2, ease, delay: 0.45 }}
+              {...headingAnimation}
               className="block"
             >
               {activeCat.title}
             </motion.span>
             <motion.em
               key={`t2-${activeCat.slug}`}
-              initial={{ opacity: 0, x: -80, filter: "blur(8px)" }}
-              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-              transition={{ duration: 1.2, ease, delay: 0.7 }}
+              {...headingItalicAnimation}
               className="block italic font-light"
             >
               {activeCat.titleItalic}
@@ -561,9 +618,7 @@ function CatalogHero({
 
           {/* Description */}
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, ease, delay: 1.0 }}
+            {...descriptionAnimation}
             className="text-sm md:text-[15px] text-white/80 font-light leading-relaxed mb-10"
             style={{ maxWidth: 420 }}
           >
@@ -599,7 +654,7 @@ function CatalogHero({
             </motion.button>
           </motion.div>
         </div>
-      </motion.div>
+      </motion.div> 
 
       {/* Counter on the right (mobile-friendly) */}
       <div className="md:hidden absolute right-5 bottom-6 z-10 text-white/70 text-[10px] tracking-[0.3em] font-light">
