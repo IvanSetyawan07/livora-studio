@@ -482,7 +482,7 @@ export default function CatalogDetail() {
 
             {/* Main title with staggered animation */}
             <motion.h1
-              className="serif text-6xl md:text-8xl font-light leading-[0.9] mb-2 text-white"
+              className="serif text-5xl sm:text-6xl md:text-8xl font-light leading-[0.95] md:leading-[0.9] mb-2 text-white break-words"
               initial={titleAnimation.initial}
               animate={titleAnimation.animate}
               transition={titleAnimation.transition}
@@ -502,7 +502,7 @@ export default function CatalogDetail() {
 
             {/* CTA buttons with staggered animation */}
             <motion.div
-              className="flex items-center gap-4"
+              className="flex flex-wrap items-center gap-4"
               initial={ctaAnimation.initial}
               animate={ctaAnimation.animate}
               transition={ctaAnimation.transition}
@@ -576,7 +576,7 @@ export default function CatalogDetail() {
       ════════════════════════════════════════ */}
       <section id="gallery" className="py-16 md:py-20 border-b border-border bg-secondary/20">
         <div className="container-livora">
-          <div className="flex items-end justify-between mb-8">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
             <div>
               <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground mb-2 font-light">
                 Livora &nbsp;|&nbsp; Spaces
