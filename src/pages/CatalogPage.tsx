@@ -621,9 +621,9 @@ function CatalogHero({
 
           {/* Massive editorial heading */}
           <h1
-            className="serif font-light text-white leading-[0.95] mb-8"
+            className="serif font-light text-white leading-[0.95] mb-6 md:mb-8"
             style={{
-              fontSize: "clamp(64px, 9vw, 140px)",
+              fontSize: "clamp(44px, 11vw, 140px)",
               textShadow: "1px 1px 12px rgba(0,0,0,0.45)",
             }}
           >
