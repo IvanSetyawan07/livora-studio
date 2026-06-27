@@ -576,7 +576,7 @@ export default function CatalogDetail() {
       ════════════════════════════════════════ */}
       <section id="gallery" className="py-16 md:py-20 border-b border-border bg-secondary/20">
         <div className="container-livora">
-          <div className="flex items-end justify-between mb-8">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
             <div>
               <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground mb-2 font-light">
                 Livora &nbsp;|&nbsp; Spaces
