@@ -282,7 +282,34 @@ export default function CatalogPage() {
               Explore additional collections curated from across the LIVORA catalog.
             </p>
           </div>
-          <div className="overflow-hidden" ref={carouselRef}>
+          {/* Mobile: horizontal snap scroll. Desktop: paged translate */}
+          <div className="md:hidden -mx-5 px-5 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
+            <div className="flex gap-3 pb-2">
+              {carouselItems.map((item) => (
+                <Link
+                  key={item.id}
+                  to={`/catalog/${item.category}/${item.slug}`}
+                  className="group flex-shrink-0 w-[65%] snap-start"
+                  draggable={false}
+                >
+                  <div className="relative aspect-[3/4] bg-secondary overflow-hidden mb-2">
+                    {item.coverImage && (
+                      <img src={item.coverImage} alt={item.title} className="w-full h-full object-cover" />
+                    )}
+                    <span className="absolute top-2 left-2 text-[9px] uppercase tracking-[0.1em] bg-background/85 text-muted-foreground px-1.5 py-0.5 font-light">
+                      {item.taxonomy}
+                    </span>
+                  </div>
+                  <p className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground mb-0.5 font-light">
+                    {typeof item.category === "string" ? item.category.replace(/-/g, " ") : ""}
+                  </p>
+                  <p className="serif text-sm font-light text-foreground">{item.title}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="hidden md:block overflow-hidden" ref={carouselRef}>
             <div
               className="flex gap-4 transition-transform duration-500 cursor-grab active:cursor-grabbing select-none"
               style={{ transform: `translateX(calc(-${carouselPos * 20}% - ${carouselPos * 16}px))` }}
@@ -290,7 +317,7 @@ export default function CatalogPage() {
               onMouseUp={handleDragEnd}
               onMouseLeave={handleDragEnd}
             >
-              {carouselItems.map((item, i) => (
+              {carouselItems.map((item) => (
                 <Link
                   key={item.id}
                   to={`/catalog/${item.category}/${item.slug}`}
@@ -324,7 +351,7 @@ export default function CatalogPage() {
               ))}
             </div>
           </div>
-          <div className="flex justify-center items-center gap-3 mt-6">
+          <div className="hidden md:flex justify-center items-center gap-3 mt-6">
             <button
               onClick={() => moveCarousel(-1)}
               disabled={carouselPos === 0}
