@@ -283,7 +283,7 @@ export default function CatalogPage() {
             </p>
           </div>
           {/* Mobile: horizontal snap scroll. Desktop: paged translate */}
-          <div className="md:hidden -mx-5 px-5 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
+          <div className="md:hidden -mx-5 px-5 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="flex gap-3 pb-2">
               {carouselItems.map((item) => (
                 <Link
