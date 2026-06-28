@@ -11,7 +11,6 @@ import { Contact } from "@/components/livora/Contact";
 import { Footer } from "@/components/livora/Footer";
 import { useReveal } from "@/hooks/useReveal";
 import wallpaper from "@/assets/add.png";
-import BackgroundDecoration from "@/components/BackgroundDecoration";
 
 const Index = () => {
   useReveal();
@@ -101,10 +100,17 @@ const Index = () => {
 
             {/* Wallpaper Container */}
             <div ref={wallpaperStartRef} className="relative">
-              {/* Responsive decorative background (replaces legacy wallpaper) */}
-              <BackgroundDecoration
-                offset={getBackgroundOffset()}
-                isFurnitureVisible={isFurnitureVisible}
+              {/* Background - Naik perlahan sampai penuh, terus Fixed */}
+              <div
+                className="fixed inset-0 bg-cover bg-center -z-10"
+                style={{
+                  backgroundImage: `url(${wallpaper})`,
+                  backgroundAttachment: isFurnitureVisible ? 'fixed' : 'scroll',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  transform: `translateY(${-getBackgroundOffset()}px)`,
+                  transition: isFurnitureVisible ? 'none' : 'transform 0.1s ease-out',
+                }}
               />
 
               {/* Overlay */}
