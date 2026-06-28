@@ -66,15 +66,18 @@ export const Projects = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6 md:auto-rows-[minmax(0,1fr)]">
         {filtered.map((p, i) => (
           <Link
             key={p.slug}
             to={`/projects/${p.slug}`}
             className={`reveal group relative block overflow-hidden cursor-pointer ${
-              i === 0 ? "md:col-span-3 md:row-span-2 aspect-[4/5] md:aspect-auto md:h-full min-h-[400px]" : "md:col-span-2 aspect-[4/3]"
+              i === 0
+                ? "md:col-span-3 md:row-span-2 aspect-[4/5] md:aspect-[4/5] md:h-auto"
+                : "md:col-span-2 aspect-[4/3] md:aspect-auto md:h-full"
             }`}
             style={{ transitionDelay: `${i * 80}ms` }}
+
           >
             <img
               src={p.img}
