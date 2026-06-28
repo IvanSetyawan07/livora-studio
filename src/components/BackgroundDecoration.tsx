@@ -1,5 +1,8 @@
-import leafImg from "@/assets/decorations/leaf-branch.png";
-import flowerImg from "@/assets/decorations/flower-stem.png";
+import leafAsset from "@/assets/decorations/leaf-branch.png.asset.json";
+import flowerAsset from "@/assets/decorations/flower-stem.png.asset.json";
+
+const leafImg = leafAsset.url;
+const flowerImg = flowerAsset.url;
 
 interface BackgroundDecorationProps {
   offset: number;
