@@ -18,7 +18,7 @@ export const Contact = () => {
         <div className="reveal overflow-hidden rounded-2xl border border-border min-h-[420px] md:min-h-[520px]">
           <iframe
             title="Livora office location"
-            src="https://www.google.com/maps?q=Jl.+Bangka+Raya+No.45+Jakarta+Selatan&output=embed"
+            src="https://www.google.com/maps?q=-6.2476031,106.8149678&output=embed"
             className="w-full h-full grayscale contrast-110"
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
