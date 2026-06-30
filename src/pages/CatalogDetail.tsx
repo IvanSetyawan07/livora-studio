@@ -877,15 +877,15 @@ const HotspotPanel = ({
   return (
     <div
       style={style}
-      className="absolute z-30 w-56 sm:w-64 md:w-72 bg-background/95 backdrop-blur-sm border border-border shadow-xl p-3 sm:p-4 md:p-5"
+      className="absolute z-30 w-40 sm:w-60 md:w-72 bg-background/95 backdrop-blur-sm border border-border shadow-xl p-2 sm:p-4 md:p-5"
     >
       <button
         onClick={onClose}
-        className="absolute top-2 right-2 text-muted-foreground hover:text-foreground transition-colors"
+        className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 text-muted-foreground hover:text-foreground transition-colors"
       >
-        <X size={14} />
+        <X size={12} />
       </button>
-      <div className="aspect-[4/3] bg-secondary/60 mb-3 flex items-center justify-center overflow-hidden">
+      <div className="aspect-[4/3] bg-secondary/60 mb-2 sm:mb-3 flex items-center justify-center overflow-hidden">
         {displayImage ? (
           <img
             src={imgUrl(displayImage)}
@@ -893,28 +893,28 @@ const HotspotPanel = ({
             className="w-full h-full object-cover"
           />
         ) : (
-          <span className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground font-light">
+          <span className="text-[8px] uppercase tracking-[0.2em] text-muted-foreground font-light">
             No preview
           </span>
         )}
       </div>
-      <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground mb-1 font-light">
+      <p className="text-[8px] sm:text-[9px] uppercase tracking-[0.2em] text-muted-foreground mb-1 font-light">
         Featured Item
       </p>
-      <p className="serif text-sm md:text-base font-light text-foreground mb-2 leading-snug">
+      <p className="serif text-[11px] sm:text-sm md:text-base font-light text-foreground mb-1.5 sm:mb-2 leading-snug line-clamp-2">
         {spot.label}
       </p>
       {spot.description && (
-        <p className="text-[11px] md:text-xs text-muted-foreground font-light leading-relaxed mb-3 line-clamp-2">
+        <p className="hidden sm:block text-[11px] md:text-xs text-muted-foreground font-light leading-relaxed mb-3 line-clamp-2">
           {spot.description}
         </p>
       )}
       {(spot.itemSlug || spot.item_slug) && (
         <Link
           to={`/items/${spot.itemSlug || spot.item_slug}`}
-          className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.2em] text-foreground hover:text-muted-foreground transition-colors font-light"
+          className="flex items-center gap-1 sm:gap-1.5 text-[8px] sm:text-[9px] uppercase tracking-[0.2em] text-foreground hover:text-muted-foreground transition-colors font-light"
         >
-          View Item Details <ArrowUpRight size={10} />
+          View Details <ArrowUpRight size={10} />
         </Link>
       )}
     </div>
