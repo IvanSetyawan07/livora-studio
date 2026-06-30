@@ -3,7 +3,7 @@ import { api } from "@/lib/api";
 import { Plus, Trash2, ImagePlus, X } from "lucide-react";
 import { toast } from "sonner";
 import {
-  getAllBanners, getBanner, saveBanner, deleteBanner,
+  getAllBanners, getBanners, addBanner, removeBannerAt,
   subscribeBanners, fileToDataUrl,
 } from "@/lib/themeBanners";
 import {
@@ -88,10 +88,9 @@ export default function AdminTaxonomies() {
     if (file.size > 10 * 1024 * 1024) { toast.error("Ukuran maks 10MB"); return; }
     try {
       const dataUrl = await fileToDataUrl(file);
-      const existing = getBanner(key);
-      await saveBanner(key, { image: dataUrl, title: existing?.title ?? "", updatedAt: Date.now() });
+      await addBanner(key, { image: dataUrl, title: "", updatedAt: Date.now() });
       setBanners(getAllBanners());
-      toast.success(`Banner ${key} disimpan`);
+      toast.success(`Banner ${key} ditambahkan`);
     } catch {
       toast.error("Gagal membaca file");
     }
@@ -104,16 +103,16 @@ export default function AdminTaxonomies() {
     toast.success(`Thumbnail ${key} dihapus`);
   };
 
-  const handleBannerDelete = async (key: string) => {
-    if (!confirm(`Hapus banner ${key}?`)) return;
-    await deleteBanner(key);
+  const handleBannerDelete = async (key: string, index: number) => {
+    if (!confirm(`Hapus banner #${index + 1} pada ${key}?`)) return;
+    await removeBannerAt(key, index);
     setBanners(getAllBanners());
-    toast.success(`Banner ${key} dihapus`);
+    toast.success(`Banner ${key} #${index + 1} dihapus`);
   };
 
   const FurnitureRow = ({ bannerKey }: { bannerKey: string }) => {
     const thumb = thumbnails[bannerKey];
-    const banner = banners[bannerKey];
+    const bannerList = getBanners(bannerKey);
 
     return (
       <div className="mt-3 grid grid-cols-2 gap-4">
@@ -126,17 +125,13 @@ export default function AdminTaxonomies() {
             Gambar yang tampil di grid kategori furniture
           </p>
           {thumb && (
-  <img
-    src={thumb.image}
-    alt="thumbnail"
-    className="w-full rounded border border-border"
-    style={{
-      aspectRatio: "31/20",
-      objectFit: "cover",
-      objectPosition: "center"
-    }}
-  />
-)}
+            <img
+              src={thumb.image}
+              alt="thumbnail"
+              className="w-full rounded border border-border"
+              style={{ aspectRatio: "31/20", objectFit: "cover", objectPosition: "center" }}
+            />
+          )}
           <div className="flex gap-2">
             <label className="flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 border border-border rounded cursor-pointer hover:bg-muted transition-colors">
               <ImagePlus className="w-3.5 h-3.5" />
@@ -161,57 +156,58 @@ export default function AdminTaxonomies() {
           </div>
         </div>
 
-        {/* Banner — dalam kategori */}
+        {/* Banner — dalam kategori (multi, unlimited) */}
         <div className="border border-border rounded-lg p-3 space-y-2">
           <p className="text-xs font-medium text-foreground">
             Banner Dalam Kategori
           </p>
           <p className="text-[11px] text-muted-foreground">
-            Gambar besar di tengah grid item furniture
+            Tambah banner tanpa batas. Pola: #1 kiri, #2 kanan, #3 kiri (selisih 3 baris furniture).
           </p>
-          {banner && (
-  <img
-    src={banner.image}
-    alt="banner"
-    className="w-full rounded border border-border"
-    style={{
-      aspectRatio: "2/1",  // landscape untuk banner
-      objectFit: "cover",
-      objectPosition: "center"
-    }}
-  />
-)}
-          <div className="flex gap-2">
-            <label className="flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 border border-border rounded cursor-pointer hover:bg-muted transition-colors">
-              <ImagePlus className="w-3.5 h-3.5" />
-              {banner ? "Ganti" : "Upload"}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) =>
-                  handleBannerUpload(bannerKey, e.target.files?.[0] ?? null)
-                }
-              />
-            </label>
-            {banner && (
-              <button
-                onClick={() => handleBannerDelete(bannerKey)}
-                className="px-2 text-destructive border border-destructive/30 rounded hover:bg-destructive hover:text-destructive-foreground transition-colors"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+
+          <div className="space-y-2">
+            {bannerList.map((b, i) => {
+              const side = i % 2 === 0 ? "Kiri" : "Kanan";
+              return (
+                <div key={i} className="relative border border-border rounded overflow-hidden">
+                  <img
+                    src={b.image}
+                    alt={`banner-${i + 1}`}
+                    className="w-full"
+                    style={{ aspectRatio: "2/1", objectFit: "cover", objectPosition: "center" }}
+                  />
+                  <div className="absolute top-1 left-1 text-[10px] bg-background/85 px-1.5 py-0.5 rounded">
+                    #{i + 1} · {side}
+                  </div>
+                  <button
+                    onClick={() => handleBannerDelete(bannerKey, i)}
+                    className="absolute top-1 right-1 p-1 bg-background/85 text-destructive border border-destructive/30 rounded hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
-          {banner?.updatedAt && (
-            <p className="text-[11px] text-muted-foreground">
-              Diubah: {new Date(banner.updatedAt).toLocaleString("id-ID")}
-            </p>
-          )}
+
+          <label className="flex items-center justify-center gap-1.5 text-xs py-1.5 border border-border rounded cursor-pointer hover:bg-muted transition-colors">
+            <ImagePlus className="w-3.5 h-3.5" />
+            {bannerList.length === 0 ? "Upload Banner Pertama" : `Tambah Banner #${bannerList.length + 1}`}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                handleBannerUpload(bannerKey, e.target.files?.[0] ?? null);
+                e.target.value = "";
+              }}
+            />
+          </label>
         </div>
       </div>
     );
   };
+
 
   return (
     <div>

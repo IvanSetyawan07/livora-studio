@@ -8,7 +8,7 @@ import { ItemIllustration } from "@/components/livora/ItemIllustration";
 import { type Item } from "@/data/items";
 import { useAllItems } from "@/lib/itemsApi";
 import { api } from "@/lib/api";
-import { getAllBanners, subscribeBanners } from "@/lib/themeBanners";
+import { getAllBanners, getBanners, subscribeBanners, type ThemeBanner } from "@/lib/themeBanners";
 
 type ThemeKey = string;
 
@@ -261,7 +261,7 @@ const Furniture = () => {
     [activeTheme, allItems, types],
   );
 
-  const activeBanner = activeTheme ? banners[activeTheme] : undefined;
+  const activeBanners: ThemeBanner[] = activeTheme ? getBanners(activeTheme) : [];
 
   return (
     <main className="min-h-screen bg-background">
@@ -310,37 +310,50 @@ const Furniture = () => {
               >
                 <ArrowLeft size={14} /> Back to Themes
               </button>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-10">
+              <style>{`
+                @media (min-width: 1024px) {
+                  .furniture-grid { grid-auto-flow: dense; }
+                  ${activeBanners.map((_, i) => {
+                    const n = i + 1;
+                    const colStart = n % 2 === 1 ? 1 : 3;
+                    const rowStart = 1 + i * 5;
+                    return `.furniture-grid [data-banner="${n}"]{grid-column:${colStart} / span 2;grid-row:${rowStart} / span 2;}`;
+                  }).join("\n")}
+                }
+              `}</style>
+              <div className="furniture-grid grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-10">
                 {(() => {
                   const nodes: React.ReactNode[] = themedItems.map((item) => (
                     <ItemCard key={item.slug} item={item} />
                   ));
-                  if (activeBanner) {
-                    const bannerIndex = themedItems.length >= 5 ? 4 : themedItems.length;
+                  activeBanners.forEach((b, i) => {
+                    const insertIdx = Math.min(i * 12, nodes.length);
                     const banner = (
                       <div
-                        key="__banner__"
-                        className="col-span-2 row-span-2 bg-secondary/40 border border-border rounded-[10px] overflow-hidden relative h-full w-full"
+                        key={`__banner_${i}__`}
+                        data-banner={i + 1}
+                        className="col-span-2 row-span-2 bg-secondary/40 border border-border rounded-[10px] overflow-hidden relative h-full w-full min-h-[300px]"
                       >
                         <img
-                          src={activeBanner.image}
-                          alt={activeBanner.title || `${activeTheme} banner`}
+                          src={b.image}
+                          alt={b.title || `${activeTheme} banner ${i + 1}`}
                           className="absolute inset-0 w-full h-full object-cover"
                         />
-                        {activeBanner.title && (
+                        {b.title && (
                           <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/60 to-transparent">
                             <p className="serif text-2xl text-white font-light">
-                              {activeBanner.title}
+                              {b.title}
                             </p>
                           </div>
                         )}
                       </div>
                     );
-                    nodes.splice(bannerIndex, 0, banner);
-                  }
+                    nodes.splice(insertIdx, 0, banner);
+                  });
                   return nodes;
                 })()}
               </div>
+
             </div>
           )}
         </div>
