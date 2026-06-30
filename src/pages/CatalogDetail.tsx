@@ -640,7 +640,7 @@ export default function CatalogDetail() {
   />
 )}
             {!activeSpot && currentScene.hotspots.length > 0 && (
-              <div className="absolute bottom-4 right-4 text-[9px] uppercase tracking-[0.15em] text-white/60 font-light">
+              <div className="hidden sm:block absolute bottom-4 right-4 text-[9px] uppercase tracking-[0.15em] text-white/60 font-light">
                 Tap the dots to explore items
               </div>
             )}
