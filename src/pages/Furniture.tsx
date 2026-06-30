@@ -261,7 +261,7 @@ const Furniture = () => {
     [activeTheme, allItems, types],
   );
 
-  const activeBanner = activeTheme ? banners[activeTheme] : undefined;
+  const activeBanners: ThemeBanner[] = activeTheme ? getBanners(activeTheme) : [];
 
   return (
     <main className="min-h-screen bg-background">
