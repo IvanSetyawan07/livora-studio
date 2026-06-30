@@ -140,7 +140,7 @@ const ItemDetail = () => {
         {/* MAIN SPLIT — image only (no gallery overlay) + configurator */}
         <section className="grid grid-cols-1 md:grid-cols-[55%_45%]">
           {/* LEFT: main product image (controlled by variant only) */}
-          <div style={{ background: "#FAFAF8", padding: "60px" }}>
+          <div style={{ background: "#ffffff", padding: "60px" }}>
             <div
               className="relative"
               style={{
