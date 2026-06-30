@@ -857,16 +857,36 @@ const HotspotPanel = ({
   const itemDetail = itemSlug ? itemMap[itemSlug] : undefined;
   const displayImage = itemDetail?.image || spot.image;
 
+  // Place card near the hotspot dot, flipping sides near the edges so it
+  // stays inside the scene container.
+  const placeRight = spot.x < 55; // dot in left half → card goes right
+  const placeBelow = spot.y < 45; // dot in upper half → card goes below
+
+  // Offset from the dot center (in %)
+  const horizontalOffset = 3;
+  const verticalOffset = 3;
+
+  const style: React.CSSProperties = {
+    left: placeRight ? `calc(${spot.x}% + ${horizontalOffset}%)` : undefined,
+    right: !placeRight ? `calc(${100 - spot.x}% + ${horizontalOffset}%)` : undefined,
+    top: placeBelow ? `calc(${spot.y}% + ${verticalOffset}%)` : undefined,
+    bottom: !placeBelow ? `calc(${100 - spot.y}% + ${verticalOffset}%)` : undefined,
+    maxWidth: "calc(100% - 24px)",
+  };
+
   return (
-    <div className="absolute bottom-6 left-6 right-6 md:left-auto md:right-6 md:w-72 z-30 bg-background/95 backdrop-blur-sm border border-border shadow-xl p-5">
+    <div
+      style={style}
+      className="absolute z-30 w-56 sm:w-64 md:w-72 bg-background/95 backdrop-blur-sm border border-border shadow-xl p-3 sm:p-4 md:p-5"
+    >
       <button
         onClick={onClose}
-        className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors"
+        className="absolute top-2 right-2 text-muted-foreground hover:text-foreground transition-colors"
       >
         <X size={14} />
       </button>
-      <div className="aspect-[4/3] bg-secondary/60 mb-4 flex items-center justify-center">
-        {displayImage ? ( // ← CHANGED: dari spot.image ke displayImage
+      <div className="aspect-[4/3] bg-secondary/60 mb-3 flex items-center justify-center overflow-hidden">
+        {displayImage ? (
           <img
             src={imgUrl(displayImage)}
             alt={spot.label}
@@ -881,11 +901,11 @@ const HotspotPanel = ({
       <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground mb-1 font-light">
         Featured Item
       </p>
-      <p className="serif text-base font-light text-foreground mb-2">
+      <p className="serif text-sm md:text-base font-light text-foreground mb-2 leading-snug">
         {spot.label}
       </p>
       {spot.description && (
-        <p className="text-xs text-muted-foreground font-light leading-relaxed mb-4">
+        <p className="text-[11px] md:text-xs text-muted-foreground font-light leading-relaxed mb-3 line-clamp-2">
           {spot.description}
         </p>
       )}
