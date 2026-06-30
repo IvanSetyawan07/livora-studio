@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import { Loader } from "@/components/livora/Loader";
 import { Navbar } from "@/components/livora/Navbar";
 import { Hero } from "@/components/livora/Hero";
-import { Style } from "@/components/livora/Style";
+import { StyleGlassmorphism } from "@/components/livora/Style";
 import { Scope } from "@/components/livora/Scope";
 import { Projects } from "@/components/livora/Projects";
 import { Furniture } from "@/components/livora/Furniture";
@@ -17,7 +17,9 @@ const Index = () => {
   const location = useLocation();
   const [ready, setReady] = useState(false);
   const [parallaxY, setParallaxY] = useState(0);
+  const [isFurnitureVisible, setIsFurnitureVisible] = useState(false);
   const wallpaperStartRef = useRef<HTMLDivElement | null>(null);
+  const furnitureRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!ready) return;
@@ -84,6 +86,22 @@ const Index = () => {
     };
   }, [ready]);
 
+  // Track Furniture section visibility
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsFurnitureVisible(entry.isIntersecting);
+      },
+      { threshold: 0 }
+    );
+
+    if (furnitureRef.current) {
+      observer.observe(furnitureRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <>
       <Loader onDone={() => setReady(true)} />
@@ -107,10 +125,13 @@ const Index = () => {
               />
 
               <div className="relative z-10">
-                <Style />
+                <StyleGlassmorphism />
                 <Scope />
                 <Projects />
+
+                {/* Furniture - trigger point */}
                 <Furniture />
+                <div ref={furnitureRef} />
               </div>
             </div>
 
@@ -122,6 +143,5 @@ const Index = () => {
     </>
   );
 };
-
 
 export default Index;
