@@ -3,7 +3,7 @@ import { api } from "@/lib/api";
 import { Plus, Trash2, ImagePlus, X } from "lucide-react";
 import { toast } from "sonner";
 import {
-  getAllBanners, getBanner, saveBanner, deleteBanner,
+  getAllBanners, getBanners, addBanner, removeBannerAt,
   subscribeBanners, fileToDataUrl,
 } from "@/lib/themeBanners";
 import {
