@@ -8,7 +8,7 @@ import { ItemIllustration } from "@/components/livora/ItemIllustration";
 import { type Item } from "@/data/items";
 import { useAllItems } from "@/lib/itemsApi";
 import { api } from "@/lib/api";
-import { getAllBanners, subscribeBanners } from "@/lib/themeBanners";
+import { getAllBanners, getBanners, subscribeBanners, type ThemeBanner } from "@/lib/themeBanners";
 
 type ThemeKey = string;
 
