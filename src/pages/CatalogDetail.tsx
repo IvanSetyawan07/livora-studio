@@ -605,7 +605,7 @@ export default function CatalogDetail() {
             </div>
           </div>
 
-          <div className="relative aspect-[16/9] bg-secondary overflow-hidden">
+          <div className="relative aspect-[4/3] sm:aspect-[16/10] md:aspect-[16/9] bg-secondary overflow-hidden">
             {currentScene.image ? (
               <img
                 src={currentScene.image}
