@@ -71,9 +71,10 @@ const Index = () => {
             <div className="relative overflow-hidden">
               <div
                 aria-hidden
-                className="absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
+                className="absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat md:bg-fixed"
                 style={{ backgroundImage: `url(${wallpaper})` }}
               />
+
 
               <div className="relative z-10">
                 <StyleGlassmorphism />
