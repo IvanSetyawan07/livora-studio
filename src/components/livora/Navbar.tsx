@@ -15,6 +15,7 @@ type NavLink = {
 export const Navbar = () => {
   const { t } = useTranslation();
   const [scrolled, setScrolled] = useState(false);
+  const [hidden, setHidden] = useState(false);
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -41,14 +42,33 @@ export const Navbar = () => {
   ];
 
 const transparentTop = !scrolled;
-const lightText = !scrolled && (location.pathname === "/" || /^\/catalog\/[^/]+$/.test(location.pathname) || /^\/catalog\/[^/]+\/[^/]+$/.test(location.pathname));
+const lightText = !scrolled && (
+  location.pathname === "/" ||
+  /^\/catalog\/[^/]+$/.test(location.pathname) ||
+  /^\/catalog\/[^/]+\/[^/]+$/.test(location.pathname) ||
+  /^\/projects\/[^/]+$/.test(location.pathname)
+);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 50);
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > 50);
+      if (Math.abs(y - lastY) > 5) {
+        if (y > lastY && y > 80) setHidden(true);
+        else setHidden(false);
+        lastY = y;
+      }
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // Never hide while mobile menu is open
+  useEffect(() => {
+    if (open) setHidden(false);
+  }, [open]);
 
   const isActive = (l: NavLink) => {
     if (l.dropdown) return location.pathname.startsWith("/catalog");
