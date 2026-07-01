@@ -67,13 +67,14 @@ const Index = () => {
           <main>
             <Hero />
 
-            {/* Wallpaper Container — static background, fills this whole block */}
-            <div className="relative overflow-hidden">
-              <div
-                aria-hidden
-                className="absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
-                style={{ backgroundImage: `url(${wallpaper})` }}
-              />
+            {/* Wallpaper Container — background stays fixed while scrolling through this block */}
+            <div className="relative">
+              <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+                <div
+                  className="sticky top-0 h-screen w-full bg-cover bg-center bg-no-repeat"
+                  style={{ backgroundImage: `url(${wallpaper})` }}
+                />
+              </div>
 
               <div className="relative z-10">
                 <StyleGlassmorphism />
@@ -85,6 +86,7 @@ const Index = () => {
                 <div ref={furnitureRef} />
               </div>
             </div>
+
 
             <Contact />
           </main>
