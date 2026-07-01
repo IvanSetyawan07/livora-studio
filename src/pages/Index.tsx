@@ -61,7 +61,7 @@ const Index = () => {
 
   return (
     <>
-      <Loader onDone={() => setReady(true)} />
+      {!hasLoaded && <Loader onDone={() => { sessionStorage.setItem("livora_loaded", "1"); setReady(true); }} />}
       {ready && (
         <>
           <Navbar />
