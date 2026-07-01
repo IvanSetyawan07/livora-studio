@@ -623,14 +623,18 @@ export default function CatalogDetail() {
             )}
             <div className="absolute inset-0 bg-foreground/10" />
 
-            {currentScene.hotspots.map((spot) => (
-              <HotspotDot
-                key={spot.id}
-                spot={spot}
-                active={activeSpot?.id === spot.id}
-                onClick={() => setActiveSpot(activeSpot?.id === spot.id ? null : spot)}
-              />
-            ))}
+      {currentScene.hotspots.map((spot) => (
+  <HotspotDot
+    key={spot.id}
+    spot={spot}
+    active={activeSpot?.id === spot.id}
+    onClick={() => setActiveSpot(activeSpot?.id === spot.id ? null : spot)}
+    onHover={(hovering) => {
+      if (hovering) setActiveSpot(spot);
+      else setActiveSpot((curr) => (curr?.id === spot.id ? null : curr));
+    }}  
+  />
+))}
 
             {activeSpot && (
   <HotspotPanel
@@ -803,44 +807,61 @@ export default function CatalogDetail() {
 const HotspotDot = ({
   spot,
   onClick,
+  onHover,
   active,
 }: {
   spot: HotspotItem;
   onClick: () => void;
+  onHover: (hovering: boolean) => void;
   active: boolean;
-}) => (
-  <button
-    onClick={onClick}
-    style={{ left: `${spot.x}%`, top: `${spot.y}%` }}
-    className={`absolute -translate-x-1/2 -translate-y-1/2 group z-20 transition-all duration-300 ${
-      active ? "scale-110" : ""
-    }`}
-    aria-label={spot.label}
-  >
-    <span
-      className={`absolute inset-0 rounded-full border border-white/70 animate-ping opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
-        active ? "opacity-100" : ""
+}) => {
+  // Cek apakah device benar-benar support hover (desktop/mouse),
+  // supaya di HP/tablet touch tidak ikut ke-trigger hover.
+  const supportsHover =
+    typeof window !== "undefined" &&
+    window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => supportsHover && onHover(true)}
+      onMouseLeave={() => supportsHover && onHover(false)}
+      style={{ left: `${spot.x}%`, top: `${spot.y}%` }}
+      className={`absolute -translate-x-1/2 -translate-y-1/2 group z-20 transition-all duration-300 ${
+        active ? "scale-110" : ""
       }`}
-    />
-    <span
-      className={`block w-6 h-6 rounded-full border-2 border-white shadow-lg transition-all duration-300 flex items-center justify-center ${
-        active
-          ? "bg-white"
-          : "bg-white/20 backdrop-blur-sm group-hover:bg-white/60"
-      }`}
+      aria-label={spot.label}
     >
       <span
-        className={`block w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
-          active ? "bg-foreground" : "bg-white"
+        className={`absolute inset-0 rounded-full border border-white/70 animate-ping opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
+          active ? "opacity-100" : ""
         }`}
       />
-    </span>
-    <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 whitespace-nowrap text-[9px] uppercase tracking-[0.15em] bg-background/90 text-foreground px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none font-light">
-      {spot.label}
-    </span>
-  </button>
-);
-
+      <span
+        className={`block w-6 h-6 rounded-full border-2 border-white shadow-lg transition-all duration-300 flex items-center justify-center ${
+          active
+            ? "bg-white"
+            : "bg-white/20 backdrop-blur-sm group-hover:bg-white/60"
+        }`}
+      >
+        <span
+          className={`block w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
+            active ? "bg-foreground" : "bg-white"
+          }`}
+        />
+      </span>
+      <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 whitespace-nowrap text-[9px] uppercase tracking-[0.15em] bg-background/90 text-foreground px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none font-light">
+        {spot.label}
+      </span>
+    </button>
+  );
+};
+// ─────────────────────────────────────────────
+// HotspotPanel Component
+// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// HotspotPanel Component
+// ─────────────────────────────────────────────
 // ─────────────────────────────────────────────
 // HotspotPanel Component
 // ─────────────────────────────────────────────
@@ -877,9 +898,9 @@ const HotspotPanel = ({
   return (
     <div
       style={style}
-      className="absolute z-30 w-[190px] sm:w-[220px] bg-background/95 backdrop-blur-sm border border-border shadow-xl p-2 sm:p-2.5 flex items-center gap-2 sm:gap-2.5"
+      className="absolute z-30 w-[270px] sm:w-[310px] bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.14)] p-4 flex items-center gap-4"
     >
-      <div className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 bg-secondary/60 overflow-hidden flex items-center justify-center">
+      <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-xl bg-secondary/60 overflow-hidden flex items-center justify-center">
         {displayImage ? (
           <img
             src={imgUrl(displayImage)}
@@ -887,33 +908,35 @@ const HotspotPanel = ({
             className="w-full h-full object-cover"
           />
         ) : (
-          <span className="text-[7px] uppercase tracking-[0.15em] text-muted-foreground font-light">N/A</span>
+          <span className="text-[8px] uppercase tracking-[0.15em] text-muted-foreground font-light">N/A</span>
         )}
       </div>
-      <div className="flex-1 min-w-0 pr-3">
-        <p className="serif text-[12px] sm:text-[13px] font-light text-foreground leading-tight truncate">
+
+      <div className="flex-1 min-w-0 pr-4">
+        <p className="text-[15px] sm:text-[16px] font-medium text-foreground leading-tight truncate">
           {spot.label}
         </p>
         {(itemDetail?.code || spot.description) && (
-          <p className="text-[9px] sm:text-[10px] text-muted-foreground font-light leading-tight truncate mt-0.5">
+          <p className="text-[12px] sm:text-[13px] text-muted-foreground font-light leading-tight truncate mt-1">
             {itemDetail?.code || spot.description}
           </p>
         )}
         {(spot.itemSlug || spot.item_slug) && (
           <Link
             to={`/items/${spot.itemSlug || spot.item_slug}`}
-            className="inline-block mt-1 text-[9px] sm:text-[10px] text-foreground font-light border-b border-foreground/60 hover:border-foreground leading-tight"
+            className="inline-flex items-center gap-1 mt-2 text-[12px] sm:text-[13px] text-foreground font-normal hover:text-muted-foreground transition-colors leading-tight"
           >
-            View Product
+            View Product <ArrowUpRight size={12} strokeWidth={2} />
           </Link>
         )}
       </div>
+
       <button
         onClick={onClose}
         aria-label="Close"
-        className="absolute top-1 right-1 text-muted-foreground hover:text-foreground transition-colors p-0.5"
+        className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded-full hover:bg-secondary/60"
       >
-        <X size={11} />
+        <X size={14} />
       </button>
     </div>
   );

@@ -3,12 +3,12 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { Navbar } from "@/components/livora/Navbar";
 import { motion, useScroll, useTransform, easeOut } from "framer-motion";
 import { CatalogCard } from "@/components/livora/CatalogCard";
-import livingCatalog from "@/assets/catalo-livinroom.png";
-import diningCatalog from "@/assets/catalo-dining.png";
-import bedroomsCatalog from "@/assets/catalo-bedrooms.png";
-import outdoorCatalog from "@/assets/catalo-outdoor.png";
-import homeOfficeCatalog from "@/assets/catalo-homeoffice.png";
-import publicCatalog from "@/assets/catalo-public.png";
+import livingCatalog from "@/assets/catalog/living-room.png";
+import diningCatalog from "@/assets/catalog/dining-room.jpeg";
+import bedroomsCatalog from "@/assets/catalog/bedroom.png";
+import outdoorCatalog from "@/assets/catalog/outdoor-space.png";
+import homeOfficeCatalog from "@/assets/catalog/home-office.jpeg";
+import publicCatalog from "@/assets/catalog/public-spaces.png";
 import { WhatsAppButton } from "@/components/livora/WhatsAppButton";
 import {
   CATALOG_CATEGORIES,

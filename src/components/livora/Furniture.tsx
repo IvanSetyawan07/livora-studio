@@ -214,7 +214,7 @@ const FurnitureCollectionCard = () => {
               variants={itemVariants}
               className="text-foreground/75 leading-relaxed font-light text-base md:text-base max-w-sm"
             >
-              From high-quality suppliers across Europe and Asia, our collection
+              From high-quality suppliers, our collection
               is curated for the balance between premium craftsmanship and
               considered value.
             </motion.p>
