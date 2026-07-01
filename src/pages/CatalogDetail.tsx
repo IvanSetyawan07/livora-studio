@@ -877,15 +877,9 @@ const HotspotPanel = ({
   return (
     <div
       style={style}
-      className="absolute z-30 w-40 sm:w-60 md:w-72 bg-background/95 backdrop-blur-sm border border-border shadow-xl p-2 sm:p-4 md:p-5"
+      className="absolute z-30 w-[190px] sm:w-[220px] bg-background/95 backdrop-blur-sm border border-border shadow-xl p-2 sm:p-2.5 flex items-center gap-2 sm:gap-2.5"
     >
-      <button
-        onClick={onClose}
-        className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <X size={12} />
-      </button>
-      <div className="aspect-[4/3] bg-secondary/60 mb-2 sm:mb-3 flex items-center justify-center overflow-hidden">
+      <div className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 bg-secondary/60 overflow-hidden flex items-center justify-center">
         {displayImage ? (
           <img
             src={imgUrl(displayImage)}
@@ -893,30 +887,34 @@ const HotspotPanel = ({
             className="w-full h-full object-cover"
           />
         ) : (
-          <span className="text-[8px] uppercase tracking-[0.2em] text-muted-foreground font-light">
-            No preview
-          </span>
+          <span className="text-[7px] uppercase tracking-[0.15em] text-muted-foreground font-light">N/A</span>
         )}
       </div>
-      <p className="text-[8px] sm:text-[9px] uppercase tracking-[0.2em] text-muted-foreground mb-1 font-light">
-        Featured Item
-      </p>
-      <p className="serif text-[11px] sm:text-sm md:text-base font-light text-foreground mb-1.5 sm:mb-2 leading-snug line-clamp-2">
-        {spot.label}
-      </p>
-      {spot.description && (
-        <p className="hidden sm:block text-[11px] md:text-xs text-muted-foreground font-light leading-relaxed mb-3 line-clamp-2">
-          {spot.description}
+      <div className="flex-1 min-w-0 pr-3">
+        <p className="serif text-[12px] sm:text-[13px] font-light text-foreground leading-tight truncate">
+          {spot.label}
         </p>
-      )}
-      {(spot.itemSlug || spot.item_slug) && (
-        <Link
-          to={`/items/${spot.itemSlug || spot.item_slug}`}
-          className="flex items-center gap-1 sm:gap-1.5 text-[8px] sm:text-[9px] uppercase tracking-[0.2em] text-foreground hover:text-muted-foreground transition-colors font-light"
-        >
-          View Details <ArrowUpRight size={10} />
-        </Link>
-      )}
+        {(itemDetail?.code || spot.description) && (
+          <p className="text-[9px] sm:text-[10px] text-muted-foreground font-light leading-tight truncate mt-0.5">
+            {itemDetail?.code || spot.description}
+          </p>
+        )}
+        {(spot.itemSlug || spot.item_slug) && (
+          <Link
+            to={`/items/${spot.itemSlug || spot.item_slug}`}
+            className="inline-block mt-1 text-[9px] sm:text-[10px] text-foreground font-light border-b border-foreground/60 hover:border-foreground leading-tight"
+          >
+            View Product
+          </Link>
+        )}
+      </div>
+      <button
+        onClick={onClose}
+        aria-label="Close"
+        className="absolute top-1 right-1 text-muted-foreground hover:text-foreground transition-colors p-0.5"
+      >
+        <X size={11} />
+      </button>
     </div>
   );
 };
