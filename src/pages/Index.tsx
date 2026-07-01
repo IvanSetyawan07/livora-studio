@@ -15,7 +15,8 @@ import wallpaper from "@/assets/add.png";
 const Index = () => {
   useReveal();
   const location = useLocation();
-  const [ready, setReady] = useState(false);
+  const hasLoaded = typeof window !== "undefined" && sessionStorage.getItem("livora_loaded") === "1";
+  const [ready, setReady] = useState(hasLoaded);
   const [isFurnitureVisible, setIsFurnitureVisible] = useState(false);
   const furnitureRef = useRef<HTMLDivElement | null>(null);
 
@@ -60,7 +61,7 @@ const Index = () => {
 
   return (
     <>
-      <Loader onDone={() => setReady(true)} />
+      {!hasLoaded && <Loader onDone={() => { sessionStorage.setItem("livora_loaded", "1"); setReady(true); }} />}
       {ready && (
         <>
           <Navbar />
