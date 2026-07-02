@@ -644,10 +644,6 @@ export default function CatalogDetail() {
     spot={spot}
     active={activeSpot?.id === spot.id}
     onClick={() => setActiveSpot(activeSpot?.id === spot.id ? null : spot)}
-    onHover={(hovering) => {
-      if (hovering) setActiveSpot(spot);
-      else setActiveSpot((curr) => (curr?.id === spot.id ? null : curr));
-    }}  
   />
 ))}
 
@@ -822,25 +818,15 @@ export default function CatalogDetail() {
 const HotspotDot = ({
   spot,
   onClick,
-  onHover,
   active,
 }: {
   spot: HotspotItem;
   onClick: () => void;
-  onHover: (hovering: boolean) => void;
   active: boolean;
 }) => {
-  // Cek apakah device benar-benar support hover (desktop/mouse),
-  // supaya di HP/tablet touch tidak ikut ke-trigger hover.
-  const supportsHover =
-    typeof window !== "undefined" &&
-    window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-
   return (
     <button
       onClick={onClick}
-      onMouseEnter={() => supportsHover && onHover(true)}
-      onMouseLeave={() => supportsHover && onHover(false)}
       style={{ left: `${spot.x}%`, top: `${spot.y}%` }}
       className={`absolute -translate-x-1/2 -translate-y-1/2 group z-20 transition-all duration-300 ${
         active ? "scale-110" : ""
