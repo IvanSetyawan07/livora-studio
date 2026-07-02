@@ -391,7 +391,7 @@ export default function CatalogDetail() {
     return <div className="min-h-screen bg-background" />;
   }
 
-  const currentScene = scenes[sceneIdx];
+  const currentScene = scenes[sceneIdx] ?? { id: "", image: "", alt: "", hotspots: [] };
   const coverImage = item.coverImage ?? "/images/placeholder.jpg";
 
   return (
