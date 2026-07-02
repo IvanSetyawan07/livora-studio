@@ -15,6 +15,7 @@ export const CatalogCard = ({ item, index = 0 }: CatalogCardProps) => {
   return (
     <Link
       to={`/catalog/${item.category}/${item.slug}`}
+      state={{ preload: item }}
       className="group block reveal"
       style={{ transitionDelay: `${index * 60}ms` }}
     >

@@ -289,6 +289,7 @@ export default function CatalogPage() {
                 <Link
                   key={item.id}
                   to={`/catalog/${item.category}/${item.slug}`}
+                  state={{ preload: item }}
                   className="group flex-shrink-0 w-[65%] snap-start"
                   draggable={false}
                 >
@@ -321,6 +322,7 @@ export default function CatalogPage() {
                 <Link
                   key={item.id}
                   to={`/catalog/${item.category}/${item.slug}`}
+                  state={{ preload: item }}
                   className="group flex-shrink-0 w-[calc(20%-13px)]"
                   draggable={false}
                 >

@@ -123,17 +123,34 @@ export const useHighlightProjects = () => {
 };
 
 export const useProjectBySlug = (slug?: string) => {
-  const fromStatic = slug ? staticProjects.find((p) => p.slug === slug) : undefined;
-  const [project, setProject] = useState<Project | undefined>(fromStatic);
-  const [loading, setLoading] = useState(true);
+  // Prefer already-loaded cache (from list page), then static, so we never
+  // flash "Project not found" while the API is still in flight.
+  const initial = slug
+    ? cachedAll.find((p) => p.slug === slug) ?? staticProjects.find((p) => p.slug === slug)
+    : undefined;
+  const [project, setProject] = useState<Project | undefined>(initial);
+  const [loading, setLoading] = useState(!initial);
 
   useEffect(() => {
     if (!slug) return;
-    setLoading(true);
+    // Re-seed from latest cache when slug changes
+    const seed =
+      cachedAll.find((p) => p.slug === slug) ??
+      staticProjects.find((p) => p.slug === slug);
+    if (seed) {
+      setProject(seed);
+      setLoading(false);
+    } else {
+      setProject(undefined);
+      setLoading(true);
+    }
     api
       .get<ApiProject>(`/projects/${slug}`)
       .then((r) => setProject(mapApiProject(r.data)))
-      .catch(() => setProject(fromStatic ?? undefined))
+      .catch(() => {
+        // keep whatever seed we had; only clear if none existed
+        if (!seed) setProject(undefined);
+      })
       .finally(() => setLoading(false));
   }, [slug]);
 
