@@ -116,9 +116,15 @@ export default function CatalogDetail() {
   useEffect(() => {
     if (!slug) return;
 
-    setLoading(true);
+    // Only show full loading state if we don't already have a preload for this slug
+    if (!preloadForSlug) {
+      setLoading(true);
+      setItem(null);
+    } else {
+      setItem(preloadForSlug);
+      setLoading(false);
+    }
     setNotFound(false);
-    setItem(null);
     setHotspots([]);
 
     const fetchData = async () => {
@@ -351,8 +357,8 @@ export default function CatalogDetail() {
     { clamp: true }
   );
 
-  // ── Loading state
-  if (loading) {
+  // ── Loading state (only if we have no preloaded item to show)
+  if (loading && !item) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground font-light animate-pulse">
@@ -362,8 +368,8 @@ export default function CatalogDetail() {
     );
   }
 
-  // ── 404
-  if (notFound || !item || !catMeta) {
+  // ── 404 — only when API confirmed not found (never while still fetching)
+  if (notFound || (!loading && (!item || !catMeta))) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -377,6 +383,12 @@ export default function CatalogDetail() {
         </div>
       </div>
     );
+  }
+
+  // From here we know we have an item (either preload or fetched). catMeta may
+  // still be null for one paint if preload has an unusual category — guard.
+  if (!item || !catMeta) {
+    return <div className="min-h-screen bg-background" />;
   }
 
   const currentScene = scenes[sceneIdx];
