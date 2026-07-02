@@ -133,15 +133,11 @@ const ProjectDetail = () => {
     }
   }, [project]);
 
-  // if (loading) {
-  //   return (
-  //     <main className="min-h-screen flex items-center justify-center bg-background">
-  //       <p className="serif text-4xl font-light">Loading…</p>
-  //     </main>
-  //   );
-  // }
-
   if (!project) {
+    // Still resolving from API — render blank instead of flashing "not found"
+    if (loading) {
+      return <main className="min-h-screen bg-background" />;
+    }
     return (
       <main className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
