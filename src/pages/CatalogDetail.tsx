@@ -4,7 +4,7 @@
 // src/pages/CatalogDetail.tsx
 
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { X, ChevronLeft, ChevronRight, ArrowUpRight } from "lucide-react";
 import { motion, useScroll, useTransform, easeOut } from "framer-motion";
 import { Navbar } from "@/components/livora/Navbar";
@@ -88,12 +88,15 @@ interface GalleryScene {
 export default function CatalogDetail() {
   const { category: categoryParam, slug } = useParams<{ category: string; slug: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const preload = (location.state as { preload?: CatalogItem } | null)?.preload;
+  const preloadForSlug = preload && preload.slug === slug ? preload : null;
   const { scrollY } = useScroll();
   const heroRef = useRef<HTMLDivElement>(null);
 
-  // ── API State
-  const [item, setItem] = useState<CatalogItem | null>(null);
-  const [loading, setLoading] = useState(true);
+  // ── API State (seed from router state so we skip the loading flash)
+  const [item, setItem] = useState<CatalogItem | null>(preloadForSlug ?? null);
+  const [loading, setLoading] = useState(!preloadForSlug);
   const [notFound, setNotFound] = useState(false);
   const [exploreItems, setExploreItems] = useState<CatalogItem[]>([]);
   const [rawCatalog, setRawCatalog] = useState<any>(null);
