@@ -19,7 +19,7 @@ const ProjectDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { project, loading } = useProjectBySlug(slug);
-  
+
   const [slideIndex, setSlideIndex] = useState(0);
   const [showScrollHint, setShowScrollHint] = useState(false);
 
@@ -44,7 +44,6 @@ const ProjectDetail = () => {
       trackView("project", id, sec);
     };
   }, [project?.apiId]);
-
 
   // useReveal — re-run setelah project load dari API
   useEffect(() => {
@@ -180,7 +179,7 @@ const ProjectDetail = () => {
           <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-6">
             <h1
               className="serif font-light text-white leading-[1.05] text-balance"
-              style={{ fontSize: "clamp(48px, 8vw, 112px)" }}
+              style={{ fontSize: "clamp(36px, 8vw, 112px)" }}
             >
               {project.name.split(" ").map((word, i) => (
                 <span
@@ -196,9 +195,9 @@ const ProjectDetail = () => {
               ))}
             </h1>
             <p
-              className="text-white/85 mt-6 rise-word"
+              className="text-white/85 mt-6 rise-word text-center"
               style={{
-                fontSize: "16px",
+                fontSize: "14px",
                 letterSpacing: "0.18em",
                 textTransform: "uppercase",
                 animationDelay: `${project.name.split(" ").length * 0.13 + 0.25}s`,
@@ -233,15 +232,14 @@ const ProjectDetail = () => {
         />
 
         <section
-          className="reveal"
+          className="reveal px-6 md:px-[60px] pb-8"
           style={{
             background: "#FAFAF8",
-            padding: "0 60px 32px 60px",
           }}
         >
           <h2
             className="serif font-light leading-[1.05] text-balance mb-6 transition-opacity duration-500"
-            style={{ color: "#1A1A1A", fontSize: "56px", marginTop: "16px" }}
+            style={{ color: "#1A1A1A", fontSize: "clamp(32px, 6vw, 56px)", marginTop: "16px" }}
             key={displayTitle}
           >
             {displayTitle}
@@ -250,19 +248,18 @@ const ProjectDetail = () => {
         </section>
 
         {/* SECTION 2 — SPLIT CONTENT */}
-        <section className="grid md:grid-cols-5 reveal" style={{ transitionDelay: "0.1s" }}>
+        <section className="grid grid-cols-1 md:grid-cols-5 reveal" style={{ transitionDelay: "0.1s" }}>
           {/* LEFT 60% — slideshow */}
-          <div className="md:col-span-3 relative group" style={{ paddingLeft: "60px", background: "#FAFAF8" }}>
+          <div
+            className="md:col-span-3 relative group px-6 md:pl-[60px] md:pr-0"
+            style={{ background: "#FAFAF8" }}
+          >
             <img
               key={displayImage}
               src={displayImage}
               alt={`${displayTitle} — ${project.category}`}
-              className="transition-opacity duration-500 animate-fade-in"
+              className="transition-opacity duration-500 animate-fade-in w-full h-[340px] sm:h-[440px] md:h-[600px] object-cover block"
               style={{
-                width: "100%",
-                height: "600px",
-                objectFit: "cover",
-                display: "block",
                 borderRadius: 0,
               }}
             />
@@ -272,11 +269,10 @@ const ProjectDetail = () => {
                 <button
                   onClick={goPrev}
                   aria-label="Previous slide"
-                  className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                  className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 left-2 md:left-[76px]"
                   style={{
-                    left: "76px",
-                    width: "44px",
-                    height: "44px",
+                    width: "40px",
+                    height: "40px",
                     borderRadius: "50%",
                     background: "rgba(255,255,255,0.9)",
                     color: "#1A1A1A",
@@ -290,11 +286,10 @@ const ProjectDetail = () => {
                 <button
                   onClick={goNext}
                   aria-label="Next slide"
-                  className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                  className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 right-2 md:right-[16px]"
                   style={{
-                    right: "16px",
-                    width: "44px",
-                    height: "44px",
+                    width: "40px",
+                    height: "40px",
                     borderRadius: "50%",
                     background: "rgba(255,255,255,0.9)",
                     color: "#1A1A1A",
@@ -307,13 +302,8 @@ const ProjectDetail = () => {
                 </button>
 
                 <div
-                  className="absolute flex gap-2"
-                  style={{
-                    bottom: "16px",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    paddingLeft: "60px",
-                  }}
+                  className="absolute flex gap-2 bottom-4 left-1/2 -translate-x-1/2"
+                  aria-hidden="false"
                 >
                   {slides.map((_, i) => (
                     <button
@@ -338,11 +328,8 @@ const ProjectDetail = () => {
 
           {/* RIGHT 40% */}
           <div
-            className="md:col-span-2 flex flex-col"
-            style={{
-              background: "#FAFAF8",
-              padding: "48px 48px",
-            }}
+            className="md:col-span-2 flex flex-col px-6 py-10 md:px-12 md:py-12"
+            style={{ background: "#FAFAF8" }}
           >
             <p
               className="uppercase mb-4"
@@ -418,10 +405,9 @@ const ProjectDetail = () => {
 
         {/* SECTION 3 — ITEMS IN THIS SPACE */}
         <section
-          className="reveal"
+          className="reveal px-6 py-10 md:px-[60px] md:py-[60px]"
           style={{
             background: "#FFFFFF",
-            padding: "60px",
             transitionDelay: "0.15s",
           }}
         >
@@ -429,20 +415,14 @@ const ProjectDetail = () => {
             className="serif font-light"
             style={{
               color: "#1A1A1A",
-              fontSize: "28px",
-              marginBottom: "40px",
+              fontSize: "24px",
+              marginBottom: "28px",
             }}
           >
             Items in This Space
           </h2>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: `repeat(${Math.min(Math.max(displayItems.length, 1), 5)}, 1fr)`,
-              gap: "20px",
-            }}
-          >
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-5">
             {displayItems.map((name) => (
               <Link
                 key={name}
@@ -463,7 +443,7 @@ const ProjectDetail = () => {
               >
                 <div
                   style={{
-                    height: "120px",
+                    height: "100px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
