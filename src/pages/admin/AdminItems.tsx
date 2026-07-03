@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
-import { Pencil, Trash2, Plus, Settings2 } from "lucide-react";
+import { Pencil, Trash2, Plus, Settings2, Search, Filter, Download, X, ArrowUpDown } from "lucide-react";
+
+type SortKey = "name-asc" | "name-desc" | "date-desc" | "date-asc";
 
 export default function AdminItems() {
   const [items, setItems] = useState<any[]>([]);
@@ -13,13 +15,29 @@ export default function AdminItems() {
   const [editing, setEditing] = useState<any | null>(null);
   const [showForm, setShowForm] = useState(false);
 
+  // filter / search / sort
+  const [query, setQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>(""); // type slug or id
+  const [sortBy, setSortBy] = useState<SortKey>("date-desc");
+  const [showFilter, setShowFilter] = useState(false);
+
   const load = () => api.get("/items").then((r) => setItems(r.data));
+  const loadTypes = () => api.get("/taxonomies/furniture-types").then((r) => setTypes(r.data));
+
   useEffect(() => {
     load();
-    api.get("/taxonomies/furniture-types").then((r) => setTypes(r.data));
+    loadTypes();
     api.get("/taxonomies/themes").then((r) => setThemes(r.data));
     api.get("/taxonomies/categories").then((r) => setCats(r.data));
     api.get("/collections").then((r) => setCollections(r.data)).catch(() => {});
+  }, []);
+
+  // Refetch furniture types whenever the window regains focus so newly created /
+  // deleted types in Taxonomies page reflect immediately in filter dropdown.
+  useEffect(() => {
+    const onFocus = () => loadTypes();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, []);
 
   const del = async (i: any) => {
@@ -28,9 +46,65 @@ export default function AdminItems() {
     load();
   };
 
+  const downloadImage = async (i: any) => {
+    if (!i.image) {
+      alert("Item ini belum punya gambar.");
+      return;
+    }
+    try {
+      const url = imgUrl(i.image);
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const ext = (blob.type.split("/")[1] || "jpg").split("+")[0];
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${i.slug || i.code || i.title || "item"}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    } catch {
+      alert("Gagal mengunduh gambar.");
+    }
+  };
+
+  const filtered = useMemo(() => {
+    let list = [...items];
+    const q = query.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (i) =>
+          i.title?.toLowerCase().includes(q) ||
+          i.code?.toLowerCase().includes(q),
+      );
+    }
+    if (typeFilter) {
+      list = list.filter((i) => String(i.type?.id ?? i.type_id ?? "") === typeFilter);
+    }
+    list.sort((a, b) => {
+      switch (sortBy) {
+        case "name-asc":  return (a.title || "").localeCompare(b.title || "");
+        case "name-desc": return (b.title || "").localeCompare(a.title || "");
+        case "date-asc":  return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+        case "date-desc":
+        default:          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      }
+    });
+    return list;
+  }, [items, query, typeFilter, sortBy]);
+
+  const activeFilterCount = (typeFilter ? 1 : 0) + (sortBy !== "date-desc" ? 1 : 0);
+
+  const fmtDate = (d?: string) => {
+    if (!d) return "—";
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return "—";
+    return dt.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
+  };
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2">Manage</p>
           <h1 className="serif text-4xl">Items / Furniture</h1>
@@ -38,6 +112,82 @@ export default function AdminItems() {
         <button onClick={() => { setEditing(null); setShowForm(true); }} className="flex items-center gap-2 bg-foreground text-background px-4 py-2 rounded text-sm uppercase tracking-[0.2em]">
           <Plus className="w-4 h-4" /> New Item
         </button>
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="relative flex-1 min-w-[220px] max-w-md">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Cari nama atau code item..."
+            className="w-full pl-9 pr-9 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          {query && (
+            <button onClick={() => setQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        <div className="relative">
+          <button
+            onClick={() => setShowFilter((v) => !v)}
+            className="flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-background text-sm hover:bg-muted"
+          >
+            <Filter className="w-4 h-4" /> Filter
+            {activeFilterCount > 0 && (
+              <span className="ml-1 text-[10px] bg-foreground text-background rounded-full px-1.5 py-0.5">{activeFilterCount}</span>
+            )}
+          </button>
+          {showFilter && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowFilter(false)} />
+              <div className="absolute right-0 mt-2 w-72 bg-card border border-border rounded-lg shadow-lg p-4 z-50 space-y-4">
+                <div>
+                  <label className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Furniture Type</label>
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    className="mt-1 w-full px-2 py-1.5 rounded border border-border bg-background text-sm"
+                  >
+                    <option value="">All Types</option>
+                    {types.map((t: any) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-1">
+                    <ArrowUpDown className="w-3 h-3" /> Sort By
+                  </label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as SortKey)}
+                    className="mt-1 w-full px-2 py-1.5 rounded border border-border bg-background text-sm"
+                  >
+                    <option value="date-desc">Date Upload (Newest)</option>
+                    <option value="date-asc">Date Upload (Oldest)</option>
+                    <option value="name-asc">Name (A → Z)</option>
+                    <option value="name-desc">Name (Z → A)</option>
+                  </select>
+                </div>
+                <div className="flex justify-between pt-1">
+                  <button
+                    onClick={() => { setTypeFilter(""); setSortBy("date-desc"); }}
+                    className="text-xs text-muted-foreground hover:text-foreground underline"
+                  >
+                    Reset
+                  </button>
+                  <button onClick={() => setShowFilter(false)} className="text-xs px-3 py-1 bg-foreground text-background rounded">Done</button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <span className="text-xs text-muted-foreground ml-auto">{filtered.length} of {items.length} items</span>
       </div>
 
       <div className="bg-card border border-border rounded-lg overflow-hidden">
@@ -51,12 +201,12 @@ export default function AdminItems() {
               <th className="text-left p-3">Themes</th>
               <th className="text-left p-3">Categories</th>
               <th className="text-left p-3">Avail</th>
-              <th className="text-left p-3">Edit</th>
-              <th></th>
+              <th className="text-left p-3">Uploaded</th>
+              <th className="text-left p-3">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {items.map((i) => (
+            {filtered.map((i) => (
               <tr key={i.id} className="border-t border-border">
                 <td className="p-3">
                   {i.image ? <img src={imgUrl(i.image)} className="w-12 h-12 object-cover rounded" alt="" /> : <div className="w-12 h-12 bg-muted rounded" />}
@@ -67,20 +217,26 @@ export default function AdminItems() {
                 <td className="p-3 text-xs">{i.themes?.map((t: any) => t.name).join(", ")}</td>
                 <td className="p-3 text-xs">{i.categories?.map((c: any) => c.name).join(", ")}</td>
                 <td className="p-3 text-xs">{i.availability}</td>
-                <td className="p-3 text-right">
+                <td className="p-3 text-xs whitespace-nowrap">{fmtDate(i.created_at)}</td>
+                <td className="p-3 text-right whitespace-nowrap">
+                  <button onClick={() => downloadImage(i)} title="Download image" className="p-1.5 hover:bg-muted rounded" disabled={!i.image}>
+                    <Download className="w-3.5 h-3.5" />
+                  </button>
                   <Link to={`/admin/items/${i.id}/experience`} title="Manage Experience" className="p-1.5 hover:bg-muted rounded inline-flex">
                     <Settings2 className="w-3.5 h-3.5" />
                   </Link>
-                  <button onClick={() => { setEditing(i); setShowForm(true); }} className="p-1.5 hover:bg-muted rounded">
+                  <button onClick={() => { setEditing(i); setShowForm(true); }} className="p-1.5 hover:bg-muted rounded" title="Edit">
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
-                  <button onClick={() => del(i)} className="p-1.5 hover:bg-destructive hover:text-destructive-foreground rounded">
+                  <button onClick={() => del(i)} className="p-1.5 hover:bg-destructive hover:text-destructive-foreground rounded" title="Delete">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </td>
               </tr>
             ))}
-            {items.length === 0 && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Belum ada item.</td></tr>}
+            {filtered.length === 0 && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">
+              {items.length === 0 ? "Belum ada item." : "Tidak ada item yang cocok dengan filter."}
+            </td></tr>}
           </tbody>
         </table>
       </div>
