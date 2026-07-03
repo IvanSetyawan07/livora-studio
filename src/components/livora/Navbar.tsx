@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Menu, X, User, ChevronDown, Plus } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -295,7 +296,7 @@ export const Navbar = () => {
       </header>
 
       {/* Mobile full-screen overlay menu */}
-      {open && (
+      {open && createPortal(
         <div className="md:hidden fixed inset-0 z-40">
           {/* Background: blur apapun yang ada di belakang + dark overlay */}
           <div className="absolute inset-0 backdrop-blur-2xl bg-black/45" />
@@ -313,7 +314,7 @@ export const Navbar = () => {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </>
   );
 };

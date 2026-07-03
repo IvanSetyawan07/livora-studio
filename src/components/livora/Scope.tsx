@@ -1,14 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 
-import decorative__asset from "@/assets/scope-deocrative.png.asset.json";
-
-const decorative = decorative__asset.url;
+import decorative from "@/assets/scope-deocrative.png";
 import furniture from "@/assets/scope-furniture.jpg";
-import contractor__asset from "@/assets/scope-contractor.jpg.asset.json";
-const contractor = contractor__asset.url;
-import materials__asset from "@/assets/scope-materials.jpg.asset.json";
-const materials = materials__asset.url;
+import contractor from "@/assets/scope-contractor.jpg";
+import materials from "@/assets/scope-materials.jpg";
 const slides = [
   {
     n: "A",

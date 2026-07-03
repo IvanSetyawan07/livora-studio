@@ -3,10 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, ArrowRight, Check } from "lucide-react";
 
 import { api, authStorage } from "@/lib/api";
-import loginBg__asset from "@/assets/login-new.png.asset.json";
-const loginBg = loginBg__asset.url;
-import logoLivora__asset from "@/assets/logo-livora.png.asset.json";
-const logoLivora = logoLivora__asset.url;
+import loginBg from "@/assets/login-new.png";
+import logoLivora from "@/assets/logo-livora.png";
 const words = ["Inspire,", "Function,", "Harmony."];
 
 export default function Login() {

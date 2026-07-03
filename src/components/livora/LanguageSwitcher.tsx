@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import axios from 'axios';
+import { api } from '@/lib/api';
 
 export default function LanguageSwitcher({ isLoggedIn = false, transparentTop = false }) {
   const { i18n } = useTranslation();
@@ -12,7 +12,7 @@ export default function LanguageSwitcher({ isLoggedIn = false, transparentTop = 
 
     if (isLoggedIn) {
       try {
-        await axios.patch('/api/user/language', { language: next });
+        await api.patch('/user/language', { language: next });
       } catch (err) {
         console.error('Gagal simpan preferensi bahasa:', err);
       }
