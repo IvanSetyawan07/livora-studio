@@ -157,7 +157,7 @@ const ItemDetail = () => {
                   src={mainImage}
                   alt={item.name}
                   className="animate-fade-in"
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  style={{ width: "100%", height: "100%", objectFit: "contain" }}
                 />
               ) : (
                 <div className="flex items-center justify-center h-full">

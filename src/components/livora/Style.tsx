@@ -1,8 +1,6 @@
 import { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import styleImg__asset from "@/assets/style-european.jpg.asset.json";
-
-const styleImg = styleImg__asset.url;
+import styleImg from "@/assets/style-european.jpg";
 
 export const StyleGlassmorphism = () => {
   const sectionRef = useRef<HTMLElement>(null);

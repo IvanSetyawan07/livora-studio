@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { Link } from "react-router-dom";
-import aboutImg__asset from "@/assets/about-livora.jpg.asset.json";
-const aboutImg = aboutImg__asset.url;
+import aboutImg from "@/assets/about-livora.jpg";
 import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
 import { useReveal } from "@/hooks/useReveal";

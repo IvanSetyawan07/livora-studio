@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, useScroll, useTransform } from "framer-motion";
-import heroImg__asset from "@/assets/hero-livora.jpg.asset.json";
-const heroImg = heroImg__asset.url;
+import heroImg from "@/assets/hero-livora.jpg";
 
 export const Hero = () => {
   const { t } = useTranslation();

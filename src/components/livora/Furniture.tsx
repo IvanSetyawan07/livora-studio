@@ -1,20 +1,13 @@
 import { Link } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { motion, VariantLabels, Variants } from "framer-motion";
-import accessories__asset from "@/assets/landing-furniture/accecories.png.asset.json";
-const accessories = accessories__asset.url;
-import beds__asset from "@/assets/landing-furniture/bed.png.asset.json";
-const beds = beds__asset.url;
-import chairs__asset from "@/assets/landing-furniture/chair.png.asset.json";
-const chairs = chairs__asset.url;
-import sofas__asset from "@/assets/landing-furniture/sofa.png.asset.json";
-const sofas = sofas__asset.url;
-import tables__asset from "@/assets/landing-furniture/table.png.asset.json";
-const tables = tables__asset.url;
-import newArrival__asset from "@/assets/landing-furniture/new-arrival.png.asset.json";
-const newArrival = newArrival__asset.url;
-import furnitureImg__asset from "@/assets/furniture-hompage.png.asset.json";
-const furnitureImg = furnitureImg__asset.url;
+import accessories from "@/assets/landing-furniture/accecories.png";
+import beds from "@/assets/landing-furniture/bed.png";
+import chairs from "@/assets/landing-furniture/chair.png";
+import sofas from "@/assets/landing-furniture/sofa.png";
+import tables from "@/assets/landing-furniture/table.png";
+import newArrival from "@/assets/landing-furniture/new-arrival.png";
+import furnitureImg from "@/assets/furniture-hompage.png";
 
 const categories = [
   { id: 1, label: "New arrivals", slug: "new-arrivals", image: newArrival },

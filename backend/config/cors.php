@@ -19,9 +19,10 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
-
-    'allowed_origins_patterns' => [],
+    'allowed_origins' => [],
+    'allowed_origins_patterns' => [
+    '#^https://(www\.)?livoralcr\.com$#',
+],
 
     'allowed_headers' => ['*'],
 
