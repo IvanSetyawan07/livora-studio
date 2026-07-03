@@ -22,3 +22,25 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment files (sensitive - jangan pernah commit)
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Backup & temporary files
+*.backup
+*.bak
+tmp/
+*.zip
+
+# Laravel specific
+backend/vendor/
+backend/storage/*.key
+backend/bootstrap/cache/*.php
+
+# PHP
+vendor/
