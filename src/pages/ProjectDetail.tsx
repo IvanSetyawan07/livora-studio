@@ -471,9 +471,4 @@ const ProjectDetail = () => {
   );
 };
 
-<<<<<<< HEAD
-
 export default ProjectDetail;
-=======
-export default ProjectDetail;
->>>>>>> 7a0966f208583645ad9c8bd4d2a71f124e5cc4f1
