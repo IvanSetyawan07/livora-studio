@@ -4,14 +4,20 @@ import { Link, useNavigate } from "react-router-dom";
 import { Search, X } from "lucide-react";
 import { useAllItems } from "@/lib/itemsApi";
 import { useAllProjects } from "@/lib/projectsApi";
+import livingCatalog from "@/assets/catalog/living-room.png";
+import diningCatalog from "@/assets/catalog/dining-room.jpeg";
+import bedroomsCatalog from "@/assets/catalog/bedroom.png";
+import outdoorCatalog from "@/assets/catalog/outdoor-space.png";
+import homeOfficeCatalog from "@/assets/catalog/home-office.jpeg";
+import publicCatalog from "@/assets/catalog/public-spaces.png";
 
 const CATALOG_ROOMS = [
-  { label: "Living Rooms", to: "/catalog/living-rooms" },
-  { label: "Dining Rooms", to: "/catalog/dining-rooms" },
-  { label: "Bedrooms", to: "/catalog/bedrooms" },
-  { label: "Outdoor Spaces", to: "/catalog/outdoor-spaces" },
-  { label: "Home Office", to: "/catalog/home-office" },
-  { label: "Public Spaces", to: "/catalog/public-spaces" },
+  { label: "Living Rooms", to: "/catalog/living-rooms", image: livingCatalog },
+  { label: "Dining Rooms", to: "/catalog/dining-rooms", image: diningCatalog },
+  { label: "Bedrooms", to: "/catalog/bedrooms", image: bedroomsCatalog },
+  { label: "Outdoor Spaces", to: "/catalog/outdoor-spaces", image: outdoorCatalog },
+  { label: "Home Office", to: "/catalog/home-office", image: homeOfficeCatalog },
+  { label: "Public Spaces", to: "/catalog/public-spaces", image: publicCatalog },
 ];
 
 const POPULAR = ["sofa", "chair", "table", "bed", "lamp", "outdoor", "modern", "classic"];
@@ -152,33 +158,25 @@ export default function SearchOverlay({ open, onClose }: Props) {
                   Browse the collection
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {CATALOG_ROOMS.map((r, i) => {
-                    const cover =
-                      featuredItems[i % Math.max(featuredItems.length, 1)]?.image;
-                    return (
-                      <button
-                        key={r.to}
-                        onClick={() => go(r.to)}
-                        className="group text-left animate-in fade-in slide-in-from-bottom-2"
-                        style={{ animationDelay: `${i * 60}ms` }}
-                      >
-                        <div className="aspect-square overflow-hidden bg-white/5 border border-white/10">
-                          {cover ? (
-                            <img
-                              src={cover}
-                              alt={r.label}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-white/10 to-white/0" />
-                          )}
-                        </div>
-                        <p className="mt-2 text-xs uppercase tracking-[0.2em] text-white/80 group-hover:text-white">
-                          {r.label}
-                        </p>
-                      </button>
-                    );
-                  })}
+                  {CATALOG_ROOMS.map((r, i) => (
+  <button
+    key={r.to}
+    onClick={() => go(r.to)}
+    className="group text-left animate-in fade-in slide-in-from-bottom-2"
+    style={{ animationDelay: `${i * 60}ms` }}
+  >
+    <div className="aspect-square overflow-hidden bg-white/5 border border-white/10">
+      <img
+        src={r.image}
+        alt={r.label}
+        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+      />
+    </div>
+    <p className="mt-2 text-xs uppercase tracking-[0.2em] text-white/80 group-hover:text-white">
+      {r.label}
+    </p>
+  </button>
+))}
                 </div>
 
                 {/* Featured Projects (big cards) */}
