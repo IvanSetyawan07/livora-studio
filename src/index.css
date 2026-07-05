@@ -139,7 +139,12 @@ section[id] { scroll-margin-top: 96px; }
     transform: scaleX(1);
     transform-origin: left;
   }
-
+.nav-overlay .underline-grow::after {
+  transform-origin: left;
+}
+.nav-overlay .underline-grow:hover::after {
+  transform-origin: right;
+}
   .divider-line {
     @apply h-px w-12 bg-foreground/40 inline-block align-middle mr-4;
   }
