@@ -121,3 +121,103 @@ function PhotoForm({ projectId, photo, items, onClose, onSaved }: any) {
     </div>
   );
 }
+
+function TagItemsPicker({ items, itemIds, toggle }: { items: any[]; itemIds: number[]; toggle: (id: number) => void }) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter(
+      (i: any) =>
+        i.title?.toLowerCase().includes(q) ||
+        i.code?.toLowerCase().includes(q)
+    );
+  }, [items, query]);
+
+  const selected = items.filter((i: any) => itemIds.includes(i.id));
+
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">Tag Items in this Photo</p>
+
+      <div ref={wrapRef} className="relative">
+        <div className="flex items-center gap-2 border border-border rounded px-3 py-2 bg-background">
+          <Search className="w-4 h-4 text-muted-foreground" />
+          <input
+            type="text"
+            value={query}
+            onFocus={() => setOpen(true)}
+            onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+            placeholder="Search items..."
+            className="flex-1 bg-transparent outline-none text-sm"
+          />
+        </div>
+
+        {open && (
+          <div className="absolute z-10 mt-1 w-full bg-card border border-border rounded shadow-lg max-h-64 overflow-y-auto">
+            {filtered.length === 0 && (
+              <p className="p-3 text-xs text-muted-foreground">Tidak ada item.</p>
+            )}
+            {filtered.map((i: any) => {
+              const checked = itemIds.includes(i.id);
+              return (
+                <button
+                  type="button"
+                  key={i.id}
+                  onClick={() => toggle(i.id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-muted/60 transition ${checked ? "bg-muted/40" : ""}`}
+                >
+                  <div className="w-10 h-10 rounded bg-muted overflow-hidden flex-shrink-0">
+                    {i.image ? (
+                      <img src={imgUrl(i.image)} alt={i.title} className="w-full h-full object-cover" />
+                    ) : null}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm truncate">{i.title}</p>
+                    <p className="text-xs text-muted-foreground truncate">{i.code || "—"}</p>
+                  </div>
+                  <input type="checkbox" readOnly checked={checked} className="pointer-events-none" />
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-3">
+          {selected.map((i: any) => (
+            <span
+              key={i.id}
+              className="inline-flex items-center gap-2 bg-muted border border-border rounded-full pl-1 pr-2 py-1 text-xs"
+            >
+              <span className="w-6 h-6 rounded-full bg-background overflow-hidden">
+                {i.image ? <img src={imgUrl(i.image)} alt={i.title} className="w-full h-full object-cover" /> : null}
+              </span>
+              <span className="truncate max-w-[120px]">{i.title}</span>
+              <button
+                type="button"
+                onClick={() => toggle(i.id)}
+                className="text-muted-foreground hover:text-foreground"
+                aria-label="Remove"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
