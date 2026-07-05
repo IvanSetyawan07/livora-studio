@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Menu, X, User, ChevronDown, Plus } from "lucide-react";
+import { Menu, X, User, ChevronDown, Plus, Search } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import LanguageSwitcher from '@/components/livora/LanguageSwitcher';
+import LanguageSwitcher from "@/components/livora/LanguageSwitcher";
+import SearchOverlay from "@/components/livora/SearchOverlay";
 
 type NavLink = {
   label: string;
@@ -19,39 +20,44 @@ export const Navbar = () => {
   const [hidden, setHidden] = useState(false);
   const [open, setOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
-  const links: NavLink[] = [
+  // Links shown inside the hamburger overlay (both desktop & mobile).
+  const menuLinks: NavLink[] = [
     { key: "about", label: t("nav.about"), to: "/about" },
-    { key: "style", label: t("nav.style"), hash: "style" },
-    { key: "scope", label: t("nav.scope"), hash: "scope" },
     { key: "projects", label: t("nav.projects"), to: "/projects" },
     {
       key: "catalog",
       label: "CATALOG",
       dropdown: [
-        { label: "Living Rooms",   to: "/catalog/living-rooms" },
-        { label: "Dining Rooms",   to: "/catalog/dining-rooms" },
-        { label: "Bedrooms",       to: "/catalog/bedrooms" },
+        { label: "Living Rooms", to: "/catalog/living-rooms" },
+        { label: "Dining Rooms", to: "/catalog/dining-rooms" },
+        { label: "Bedrooms", to: "/catalog/bedrooms" },
         { label: "Outdoor Spaces", to: "/catalog/outdoor-spaces" },
-        { label: "Home Office",    to: "/catalog/home-office" },
-        { label: "Public Spaces",  to: "/catalog/public-spaces" },
+        { label: "Home Office", to: "/catalog/home-office" },
+        { label: "Public Spaces", to: "/catalog/public-spaces" },
       ],
     },
     { key: "furniture", label: t("nav.furniture"), to: "/furniture" },
+  ];
+
+  // Quick links always visible on desktop header.
+  const desktopQuickLinks: NavLink[] = [
+    { key: "style", label: t("nav.style"), hash: "style" },
+    { key: "scope", label: t("nav.scope"), hash: "scope" },
     { key: "contact", label: t("nav.contact"), hash: "contact" },
   ];
 
   const transparentTop = !scrolled;
-  const lightText = !scrolled && (
-    location.pathname === "/" ||
-    /^\/catalog\/[^/]+$/.test(location.pathname) ||
-    /^\/catalog\/[^/]+\/[^/]+$/.test(location.pathname) ||
-    /^\/projects\/[^/]+$/.test(location.pathname)
-  );
+  const lightText =
+    !scrolled &&
+    (location.pathname === "/" ||
+      /^\/catalog\/[^/]+$/.test(location.pathname) ||
+      /^\/catalog\/[^/]+\/[^/]+$/.test(location.pathname) ||
+      /^\/projects\/[^/]+$/.test(location.pathname));
 
-  // Saat menu mobile terbuka, header selalu tampil sebagai "light"
   const headerTransparent = open ? true : transparentTop;
   const headerLight = open ? true : lightText;
 
@@ -79,10 +85,11 @@ export const Navbar = () => {
     if (!open) setCatalogOpen(false);
   }, [open]);
 
-  // Kunci scroll body saat menu mobile terbuka
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [open]);
 
   const isActive = (l: NavLink) => {
@@ -108,53 +115,9 @@ export const Navbar = () => {
     }
   };
 
-  const renderLink = (l: NavLink, mobile = false) => {
-    // ── Dropdown desktop ──
-    if (l.dropdown && !mobile) {
-      const active = location.pathname.startsWith("/catalog");
-      return (
-        <div className="relative group/nav">
-          <button
-            className={`underline-grow flex items-center gap-1 transition-colors ${
-              lightText
-                ? "text-white/90 hover:text-white"
-                : active
-                ? "text-foreground is-active"
-                : "text-foreground/80 hover:text-foreground"
-            }`}
-          >
-            {l.label}
-            <ChevronDown
-              size={11}
-              className="opacity-60 group-hover/nav:rotate-180 transition-transform duration-300"
-            />
-          </button>
-
-          {/* Dropdown panel */}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 pt-4 opacity-0 invisible group-hover/nav:opacity-100 group-hover/nav:visible transition-all duration-300 z-50">
-            <div className="bg-background border border-border py-2 min-w-[160px] shadow-sm">
-              {l.dropdown.map((d) => (
-                <Link
-                  key={d.to}
-                  to={d.to}
-                  onClick={() => setOpen(false)}
-                  className={`underline-grow block px-4 py-2 text-[10px] uppercase tracking-[0.12em] font-light transition-colors duration-200 ${
-                    location.pathname === d.to
-                      ? "text-foreground is-active"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                  }`}
-                >
-                  {d.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // ── Dropdown mobile (accordion, teks putih di atas overlay blur) ──
-    if (l.dropdown && mobile) {
+  // Renders a link inside the overlay menu with white-on-blur styling.
+  const renderOverlayLink = (l: NavLink) => {
+    if (l.dropdown) {
       const active = location.pathname.startsWith("/catalog");
       return (
         <div>
@@ -162,7 +125,7 @@ export const Navbar = () => {
             type="button"
             onClick={() => setCatalogOpen((v) => !v)}
             className={`underline-grow w-full flex items-center justify-between group transition-colors duration-300 ${
-              active || catalogOpen ? "text-white is-active" : "text-white/80 hover:text-white"
+              active || catalogOpen ? "text-white is-active" : "text-white/85 hover:text-white"
             }`}
           >
             <span
@@ -181,13 +144,17 @@ export const Navbar = () => {
           </button>
 
           <div
-            className={`overflow-hidden transition-all duration-300 ease-out ${
+            className={`overflow-hidden transition-all duration-500 ease-out ${
               catalogOpen ? "max-h-96 opacity-100 mt-4" : "max-h-0 opacity-0"
             }`}
           >
             <ul className="pl-3 space-y-3 border-l border-white/25">
-              {l.dropdown.map((d) => (
-                <li key={d.to}>
+              {l.dropdown.map((d, i) => (
+                <li
+                  key={d.to}
+                  className={catalogOpen ? "animate-in fade-in slide-in-from-left-2" : ""}
+                  style={catalogOpen ? { animationDelay: `${i * 40}ms`, animationFillMode: "backwards" } : undefined}
+                >
                   <Link
                     to={d.to}
                     onClick={() => setOpen(false)}
@@ -207,28 +174,35 @@ export const Navbar = () => {
       );
     }
 
-    // ── Link biasa ──
-    const baseCls = mobile
-      ? `underline-grow inline-block text-white/90 hover:text-white transition-colors ${
-          isActive(l) ? "is-active" : ""
-        }`
-      : `underline-grow transition-colors ${
-          lightText
-            ? "text-white/90 hover:text-white"
-            : isActive(l)
-            ? "text-foreground is-active"
-            : "text-foreground/80 hover:text-foreground"
-        }`;
-    const shadowStyle = !mobile && lightText ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined;
+    const baseCls = `underline-grow inline-block transition-all duration-300 hover:translate-x-1 ${
+      isActive(l) ? "text-white is-active" : "text-white/85 hover:text-white"
+    }`;
 
     if (l.to)
       return (
-        <Link to={l.to} className={baseCls} style={shadowStyle} onClick={() => setOpen(false)}>
+        <Link to={l.to} className={baseCls} onClick={() => setOpen(false)}>
           {l.label}
         </Link>
       );
     return (
-      <a href={`/#${l.hash}`} className={baseCls} style={shadowStyle} onClick={handleHashClick(l.hash!)}>
+      <a href={`/#${l.hash}`} className={baseCls} onClick={handleHashClick(l.hash!)}>
+        {l.label}
+      </a>
+    );
+  };
+
+  // Small hash-link renderer for desktop quick links.
+  const renderQuickLink = (l: NavLink) => {
+    const cls = `underline-grow transition-colors ${
+      lightText
+        ? "text-white/90 hover:text-white"
+        : isActive(l)
+        ? "text-foreground is-active"
+        : "text-foreground/80 hover:text-foreground"
+    }`;
+    const shadow = lightText ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined;
+    return (
+      <a href={`/#${l.hash}`} className={cls} style={shadow} onClick={handleHashClick(l.hash!)}>
         {l.label}
       </a>
     );
@@ -254,15 +228,24 @@ export const Navbar = () => {
             LIVORA
           </Link>
 
-          {/* Desktop nav links */}
+          {/* Desktop quick links: Style · Scope · Contact only */}
           <ul className="hidden md:flex items-center gap-8 text-xs uppercase tracking-[0.2em]">
-            {links.map((l) => (
-              <li key={l.key}>{renderLink(l)}</li>
+            {desktopQuickLinks.map((l) => (
+              <li key={l.key}>{renderQuickLink(l)}</li>
             ))}
           </ul>
 
           {/* Actions */}
-          <div className="flex items-center gap-3 md:gap-5">
+          <div className="flex items-center gap-2 md:gap-3">
+            <button
+              aria-label="Search"
+              onClick={() => setSearchOpen(true)}
+              className={`p-2 transition-colors duration-500 ${
+                headerLight ? "text-white/90 hover:text-white" : "text-foreground/80 hover:text-foreground"
+              }`}
+            >
+              <Search size={20} />
+            </button>
             <Link
               to="/login"
               aria-label="Login"
@@ -276,15 +259,27 @@ export const Navbar = () => {
             <button
               aria-label="Toggle menu"
               onClick={() => setOpen((v) => !v)}
-              className={`md:hidden p-2 transition-colors duration-500 relative z-[60] ${
+              className={`p-2 transition-all duration-500 relative z-[60] ${
                 headerLight ? "text-white" : "text-foreground"
               }`}
             >
-              {open ? <X size={22} /> : <Menu size={22} />}
+              <span className="relative inline-block w-[22px] h-[22px]">
+                <Menu
+                  size={22}
+                  className={`absolute inset-0 transition-all duration-300 ${
+                    open ? "opacity-0 rotate-90 scale-75" : "opacity-100 rotate-0 scale-100"
+                  }`}
+                />
+                <X
+                  size={22}
+                  className={`absolute inset-0 transition-all duration-300 ${
+                    open ? "opacity-100 rotate-0 scale-100" : "opacity-0 -rotate-90 scale-75"
+                  }`}
+                />
+              </span>
             </button>
           </div>
 
-          {/* Bottom border */}
           {!open && (
             <div
               className={`absolute bottom-0 left-8 right-8 lg:left-16 lg:right-16 h-px transition-colors duration-500 ${
@@ -295,26 +290,59 @@ export const Navbar = () => {
         </div>
       </header>
 
-      {/* Mobile full-screen overlay menu */}
-      {open && createPortal(
-        <div className="md:hidden fixed inset-0 z-40">
-          {/* Background: blur apapun yang ada di belakang + dark overlay */}
-          <div className="absolute inset-0 backdrop-blur-2xl bg-black/45" />
+      {/* Full-screen overlay menu (desktop + mobile) */}
+      {open &&
+        createPortal(
+          <div className="fixed inset-0 z-40">
+            <div className="absolute inset-0 backdrop-blur-2xl bg-black/45 animate-in fade-in duration-300" />
 
-          {/* Content */}
-          <div className="relative h-full flex flex-col justify-between px-8 pt-28 pb-10 overflow-y-auto">
-            <ul className="flex flex-col gap-7 text-sm uppercase tracking-[0.2em] font-light">
-              {links.map((l) => (
-                <li key={l.key}>{renderLink(l, true)}</li>
-              ))}
-            </ul>
+            <div className="relative h-full flex flex-col justify-between px-8 md:px-16 pt-28 pb-10 overflow-y-auto max-w-5xl mx-auto">
+              <ul className="flex flex-col gap-7 text-lg md:text-2xl uppercase tracking-[0.25em] font-light">
+                {menuLinks.map((l, i) => (
+                  <li
+                    key={l.key}
+                    className="animate-in fade-in slide-in-from-left-4"
+                    style={{ animationDelay: `${i * 80}ms`, animationDuration: "500ms", animationFillMode: "backwards" }}
+                  >
+                    {renderOverlayLink(l)}
+                  </li>
+                ))}
 
-            <div className="flex justify-center pt-8 text-white/80">
-              <LanguageSwitcher />
+                {/* Also include quick links inside overlay for completeness */}
+                <li className="pt-4 mt-2 border-t border-white/15" />
+                {desktopQuickLinks.map((l, i) => (
+                  <li
+                    key={l.key}
+                    className="animate-in fade-in slide-in-from-left-4 text-sm md:text-base text-white/70"
+                    style={{
+                      animationDelay: `${(menuLinks.length + i) * 80}ms`,
+                      animationDuration: "500ms",
+                      animationFillMode: "backwards",
+                    }}
+                  >
+                    <a
+                      href={`/#${l.hash}`}
+                      onClick={handleHashClick(l.hash!)}
+                      className="underline-grow hover:text-white transition-all duration-300 hover:translate-x-1 inline-block"
+                    >
+                      {l.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+
+              <div
+                className="flex justify-center pt-8 text-white/80 animate-in fade-in duration-500"
+                style={{ animationDelay: "500ms", animationFillMode: "backwards" }}
+              >
+                <LanguageSwitcher />
+              </div>
             </div>
-          </div>
-        </div>
-      , document.body)}
+          </div>,
+          document.body
+        )}
+
+      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );
 };
