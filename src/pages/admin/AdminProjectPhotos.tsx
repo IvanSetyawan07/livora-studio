@@ -109,18 +109,8 @@ function PhotoForm({ projectId, photo, items, onClose, onSaved }: any) {
         <input className="ui-input" placeholder="Title (e.g. Lobby)" value={title} onChange={(e) => setTitle(e.target.value)} />
         <textarea className="ui-input" placeholder="Caption" value={caption} onChange={(e) => setCaption(e.target.value)} />
         <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">Tag Items in this Photo</p>
-          <div className="border border-border rounded p-2 max-h-48 overflow-y-auto space-y-1">
-            {items.map((i: any) => (
-              <label key={i.id} className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={itemIds.includes(i.id)} onChange={() => toggle(i.id)} />
-                {i.title} <span className="text-xs text-muted-foreground">({i.code || "—"})</span>
-              </label>
-            ))}
-            {items.length === 0 && <p className="text-xs text-muted-foreground">Belum ada item. Buat di menu Items dulu.</p>}
-          </div>
-        </div>
+        <TagItemsPicker items={items} itemIds={itemIds} toggle={toggle} />
+
         <div className="flex gap-2">
           <button type="button" onClick={onClose} className="px-4 py-2 border border-border rounded text-sm">Cancel</button>
           <button disabled={saving} className="ml-auto px-5 py-2 bg-foreground text-background rounded text-sm uppercase tracking-[0.2em] disabled:opacity-60">
