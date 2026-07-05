@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Search, X } from "lucide-react";
 
 export default function AdminProjectPhotos({ project, onClose }: any) {
   const [photos, setPhotos] = useState<any[]>([]);
