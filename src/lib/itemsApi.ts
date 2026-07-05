@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
 import { items as staticItems, getItemBySlug as getStaticItem, type Item } from "@/data/items";
 
+const itemCache = new Map<string, RichItem>();
 export interface FurnitureVariant {
   id: number;
   item_id: number;
@@ -150,22 +151,35 @@ export const useAllItems = () => {
   const [list, setList] = useState<Item[]>(staticItems);
   useEffect(() => {
     api.get<ApiItem[]>("/items")
-      .then((r) => setList(mergeBySlug(staticItems, r.data.map(mapApiItem))))
+      .then((r) => {
+        const mapped = r.data.map(mapApiItem);
+        mapped.forEach((it) => itemCache.set(it.slug, it)); // simpan ke cache
+        setList(mergeBySlug(staticItems, mapped));
+      })
       .catch(() => {});
   }, []);
   return list;
 };
 
 export const useItemBySlug = (slug?: string) => {
+  const cached = slug ? itemCache.get(slug) : undefined;
   const fromStatic = slug ? staticItems.find((i) => i.slug === slug) : undefined;
-  const [item, setItem] = useState<RichItem | undefined>(fromStatic as RichItem | undefined);
-  const [loading, setLoading] = useState(!fromStatic);
+  const [item, setItem] = useState<RichItem | undefined>(
+    cached ?? (fromStatic as RichItem | undefined)
+  );
+  const [loading, setLoading] = useState(!cached && !fromStatic);
 
   useEffect(() => {
     if (!slug) return;
-    setLoading(true);
+    // Kalau udah ada di cache, tetap refresh di background tanpa nampilin loading
+    if (!itemCache.get(slug)) setLoading(true);
+
     api.get<ApiItem>(`/items/${slug}`)
-      .then((r) => setItem(mapApiItem(r.data)))
+      .then((r) => {
+        const mapped = mapApiItem(r.data);
+        itemCache.set(slug, mapped);
+        setItem(mapped);
+      })
       .catch(() => {
         if (fromStatic) setItem(fromStatic as RichItem);
         else setItem(getStaticItem(slug) as RichItem);
