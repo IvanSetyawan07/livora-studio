@@ -51,12 +51,12 @@ export const Navbar = () => {
         { label: "Public Spaces", to: "/catalog/public-spaces" },
       ],
     },
-    { key: "about", label: t("nav.about"), to: "/about" },
     
   ];
 
   // Quick links always visible on desktop header.
   const desktopQuickLinks: NavLink[] = [
+  { key: "about", label: t("nav.about"), to: "/about" },
     { key: "style", label: t("nav.style"), hash: "style" },
     { key: "scope", label: t("nav.scope"), hash: "scope" },
     { key: "contact", label: t("nav.contact"), hash: "contact" },
@@ -276,6 +276,13 @@ export const Navbar = () => {
         : "text-foreground/80 hover:text-foreground"
     }`;
     const shadow = lightText ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined;
+    if (l.to) {
+      return (
+        <Link to={l.to} className={cls} style={shadow}>
+          {l.label}
+        </Link>
+      );
+    }
     return (
       <a href={`/#${l.hash}`} className={cls} style={shadow} onClick={handleHashClick(l.hash!)}>
         {l.label}
