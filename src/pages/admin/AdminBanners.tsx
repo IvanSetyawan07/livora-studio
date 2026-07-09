@@ -21,7 +21,7 @@ export default function AdminBanners() {
   const handleUpload = async (key: string, file: File | null) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) { toast.error("File harus berupa gambar"); return; }
-    if (file.size > 10 * 1024 * 1024) { toast.error("Ukuran gambar maks 10MB"); return; }
+    
     try {
       const dataUrl = await fileToDataUrl(file);
       const existing = getBanner(key);
