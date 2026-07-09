@@ -24,6 +24,7 @@ import AdminLanding from "./pages/admin/AdminLanding";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminBanners from "./pages/admin/AdminBanners";
 import ScrollToTop from "./components/ScrollToTop.tsx";
+import SmoothScroll from "./components/SmoothScroll.tsx";
 import ERD from "./pages/ERD";
 import Furniture from "./pages/Furniture.tsx";
 import { CartDrawer } from "@/components/livora/CartDrawer.tsx";
