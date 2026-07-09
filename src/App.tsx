@@ -46,6 +46,7 @@ function App() {
         <CartProvider>
           <BrowserRouter>
             <ScrollToTop />
+            <SmoothScroll />
             <Routes>
               <Route path="/erd" element={<ERD />} />
               <Route path="/" element={<Index />} />
