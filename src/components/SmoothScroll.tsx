@@ -6,7 +6,6 @@ const SmoothScroll = () => {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    // Skip smooth scroll on admin routes to avoid interfering with forms/scroll containers
     if (pathname.startsWith("/admin")) return;
 
     const lenis = new Lenis({
@@ -22,8 +21,19 @@ const SmoothScroll = () => {
     };
     rafId = requestAnimationFrame(raf);
 
+    // Pause Lenis when a full-screen overlay locks body scroll,
+    // otherwise wheel events keep scrolling the page behind it.
+    const updateLockState = () => {
+      if (document.body.style.overflow === "hidden") lenis.stop();
+      else lenis.start();
+    };
+    updateLockState();
+    const observer = new MutationObserver(updateLockState);
+    observer.observe(document.body, { attributes: true, attributeFilter: ["style", "class"] });
+
     return () => {
       cancelAnimationFrame(rafId);
+      observer.disconnect();
       lenis.destroy();
     };
   }, [pathname]);
