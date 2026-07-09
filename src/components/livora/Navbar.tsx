@@ -478,7 +478,7 @@ export const Navbar = () => {
                                 <img
                                   src={thumb}
                                   alt={ft.name}
-                                  className="w-full h-full object-cover"
+                                  className="w-full h-full object-contain p-1"
                                 />
                               ) : (
                                 <Package size={20} className="text-white/50" />
