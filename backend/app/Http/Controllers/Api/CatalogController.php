@@ -79,9 +79,9 @@ class CatalogController extends Controller
             'about_title' => 'nullable|string|max:255',       // ← NEW
             'description' => 'required|string',
             'featured' => 'nullable|boolean',
-            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
-            'scene_1_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
-            'scene_2_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif',
+            'scene_1_image' => 'nullable|image|mimes:jpeg,png,jpg,gif',
+            'scene_2_image' => 'nullable|image|mimes:jpeg,png,jpg,gif',
             'hotspots' => 'nullable|json',
         ]);
 
@@ -177,9 +177,9 @@ class CatalogController extends Controller
                 'about_title' => 'nullable|string|max:255',       // ← NEW
                 'description' => 'sometimes|required|string',
                 'featured' => 'nullable|boolean',
-                'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
-                'scene_1_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
-                'scene_2_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+                'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif',
+                'scene_1_image' => 'nullable|image|mimes:jpeg,png,jpg,gif',
+                'scene_2_image' => 'nullable|image|mimes:jpeg,png,jpg,gif',
                 'hotspots' => 'nullable|json',
             ]);
 

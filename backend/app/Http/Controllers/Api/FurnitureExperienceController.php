@@ -40,8 +40,8 @@ class FurnitureExperienceController extends Controller
             'description'=>'nullable|string',
             'sort_order'=>'nullable|integer',
             'is_active'=>'nullable|boolean',
-            'preview_image'=>'nullable|file|image|max:20480',
-            'furniture_image'=>'nullable|file|image|max:20480',
+            'preview_image'=>'nullable|file|image',
+            'furniture_image'=>'nullable|file|image',
         ]);
     }
 
@@ -54,7 +54,7 @@ class FurnitureExperienceController extends Controller
             'title'=>'nullable|string|max:200',
             'alt_text'=>'nullable|string|max:200',
             'sort_order'=>'nullable|integer',
-            'image'=>'required|file|image|max:20480',
+            'image'=>'required|file|image',
         ]);
         $data['image'] = '/storage/'.$r->file('image')->store('gallery','public');
         $data['item_id'] = $item->id;
@@ -66,7 +66,7 @@ class FurnitureExperienceController extends Controller
             'title'=>'nullable|string|max:200',
             'alt_text'=>'nullable|string|max:200',
             'sort_order'=>'nullable|integer',
-            'image'=>'nullable|file|image|max:20480',
+            'image'=>'nullable|file|image',
         ]);
         if ($r->hasFile('image')) $data['image'] = '/storage/'.$r->file('image')->store('gallery','public');
         $gallery->update($data);
@@ -101,7 +101,7 @@ class FurnitureExperienceController extends Controller
 
     private function validateLifestyle(Request $r, bool $imageRequired = true) {
         return $r->validate([
-            'image' => ($imageRequired ? 'required' : 'nullable').'|file|image|max:20480',
+            'image' => ($imageRequired ? 'required' : 'nullable').'|file|image',
             'caption' => 'nullable|string',
             'layout_type' => 'nullable|string|in:full,half,masonry,custom',
             'width_percentage' => 'nullable|integer|min:10|max:100',
@@ -116,7 +116,7 @@ class FurnitureExperienceController extends Controller
         $data = $r->validate([
             'title' => 'nullable|string|max:200',
             'description' => 'nullable|string',
-            'feature_image' => 'nullable|file|image|max:20480',
+            'feature_image' => 'nullable|file|image',
         ]);
         if ($r->hasFile('feature_image')) $data['feature_image'] = '/storage/'.$r->file('feature_image')->store('stories','public');
         $story = $item->story ?: new FurnitureStory(['item_id' => $item->id]);

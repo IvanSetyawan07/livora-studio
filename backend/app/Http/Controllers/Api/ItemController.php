@@ -84,7 +84,7 @@ class ItemController extends Controller
             'theme_ids.*' => 'integer|exists:themes,id',
             'category_ids' => 'nullable|array',
             'category_ids.*' => 'integer|exists:categories,id',
-            'image' => 'nullable|file|image|max:20480',
+            'image' => 'nullable|file|image',
         ]);
     }
 
