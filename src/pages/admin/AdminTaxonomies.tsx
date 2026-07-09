@@ -69,7 +69,7 @@ export default function AdminTaxonomies() {
   const handleThumbnailUpload = async (key: string, file: File | null) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) { toast.error("File harus berupa gambar"); return; }
-    if (file.size > 10 * 1024 * 1024) { toast.error("Ukuran maks 10MB"); return; }
+    
     try {
       const dataUrl = await fileToDataUrl(file);
       await saveThumbnail(key, { image: dataUrl, updatedAt: Date.now() });
@@ -85,7 +85,7 @@ export default function AdminTaxonomies() {
   const handleBannerUpload = async (key: string, file: File | null) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) { toast.error("File harus berupa gambar"); return; }
-    if (file.size > 10 * 1024 * 1024) { toast.error("Ukuran maks 10MB"); return; }
+    
     try {
       const dataUrl = await fileToDataUrl(file);
       await addBanner(key, { image: dataUrl, title: "", updatedAt: Date.now() });

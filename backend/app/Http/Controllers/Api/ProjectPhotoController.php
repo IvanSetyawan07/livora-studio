@@ -19,7 +19,7 @@ class ProjectPhotoController extends Controller
             'title' => 'nullable|string|max:200',
             'caption' => 'nullable|string',
             'sort_order' => 'nullable|integer',
-            'image' => 'required|file|image|max:8192',
+            'image' => 'required|file|image',
             'item_ids' => 'nullable|array',
             'item_ids.*' => 'integer|exists:items,id',
         ]);
@@ -37,7 +37,7 @@ class ProjectPhotoController extends Controller
             'title' => 'nullable|string|max:200',
             'caption' => 'nullable|string',
             'sort_order' => 'nullable|integer',
-            'image' => 'nullable|file|image|max:8192',
+            'image' => 'nullable|file|image',
             'item_ids' => 'nullable|array',
             'item_ids.*' => 'integer|exists:items,id',
         ]);

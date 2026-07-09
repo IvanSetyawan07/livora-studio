@@ -28,8 +28,8 @@ class VariantController extends Controller
             'sort_order'      => 'integer',
             'is_active'       => 'boolean',
             'is_default'      => 'boolean',
-            'preview_image'   => 'nullable|image|max:5120',
-            'furniture_image' => 'nullable|image|max:5120',
+            'preview_image'   => 'nullable|image',
+            'furniture_image' => 'nullable|image',
         ]);
 
         $data['item_id'] = $itemId;
@@ -70,8 +70,8 @@ class VariantController extends Controller
             'sort_order'      => 'integer',
             'is_active'       => 'boolean',
             'is_default'      => 'boolean',
-            'preview_image'   => 'nullable|image|max:5120',
-            'furniture_image' => 'nullable|image|max:5120',
+            'preview_image'   => 'nullable|image',
+            'furniture_image' => 'nullable|image',
         ]);
 
         if ($request->hasFile('preview_image')) {
