@@ -10,6 +10,7 @@ import outdoorCatalog from "@/assets/catalog/outdoor-space.png";
 import homeOfficeCatalog from "@/assets/catalog/home-office.jpeg";
 import publicCatalog from "@/assets/catalog/public-spaces.png";
 import { WhatsAppButton } from "@/components/livora/WhatsAppButton";
+import { Footer } from "@/components/livora/Footer";
 import {
   CATALOG_CATEGORIES,
   CATALOG_TAXONOMIES,
