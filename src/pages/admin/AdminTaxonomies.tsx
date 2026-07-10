@@ -71,7 +71,7 @@ export default function AdminTaxonomies() {
     if (!file.type.startsWith("image/")) { toast.error("File harus berupa gambar"); return; }
     
     try {
-      const dataUrl = await fileToDataUrl(file);
+      const dataUrl = await compressImage(file, { maxDim: 1600, quality: 0.9 });
       await saveThumbnail(key, { image: dataUrl, updatedAt: Date.now() });
       getAllThumbnails().then(setThumbnails);
       toast.success(`Thumbnail ${key} disimpan`);
