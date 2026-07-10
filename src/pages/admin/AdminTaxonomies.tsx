@@ -4,7 +4,7 @@ import { Plus, Trash2, ImagePlus, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   getAllBanners, getBanners, addBanner, removeBannerAt,
-  subscribeBanners, fileToDataUrl,
+  subscribeBanners, compressImage,
 } from "@/lib/themeBanners";
 import {
   getAllThumbnails, getThumbnail, saveThumbnail, deleteThumbnail,
@@ -71,7 +71,7 @@ export default function AdminTaxonomies() {
     if (!file.type.startsWith("image/")) { toast.error("File harus berupa gambar"); return; }
     
     try {
-      const dataUrl = await fileToDataUrl(file);
+      const dataUrl = await compressImage(file, { maxDim: 1600, quality: 0.9 });
       await saveThumbnail(key, { image: dataUrl, updatedAt: Date.now() });
       getAllThumbnails().then(setThumbnails);
       toast.success(`Thumbnail ${key} disimpan`);
@@ -87,12 +87,13 @@ export default function AdminTaxonomies() {
     if (!file.type.startsWith("image/")) { toast.error("File harus berupa gambar"); return; }
     
     try {
-      const dataUrl = await fileToDataUrl(file);
+      const dataUrl = await compressImage(file, { maxDim: 1600, quality: 0.82 });
       await addBanner(key, { image: dataUrl, title: "", updatedAt: Date.now() });
       setBanners(getAllBanners());
       toast.success(`Banner ${key} ditambahkan`);
-    } catch {
-      toast.error("Gagal membaca file");
+    } catch (err) {
+      console.error("Banner upload error:", err);
+      toast.error(err instanceof Error ? err.message : "Gagal mengupload banner");
     }
   };
 
