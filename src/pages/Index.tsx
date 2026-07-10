@@ -85,11 +85,11 @@ const Index = () => {
                 {/* Furniture - trigger point */}
                 <Furniture />
                 <div ref={furnitureRef} />
+
+                <Contact />
               </div>
             </div>
 
-
-            <Contact />
           </main>
           <Footer />
         </>
