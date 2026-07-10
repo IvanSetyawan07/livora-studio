@@ -111,7 +111,34 @@ export function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
-    reader.onerror = reject;
+    reader.onerror = () => reject(reader.error ?? new Error("Gagal membaca file"));
     reader.readAsDataURL(file);
   });
+}
+
+/** Downscale + re-encode to keep data URL under localStorage-friendly size. */
+export async function compressImage(
+  file: File,
+  opts: { maxDim?: number; quality?: number; mime?: string } = {}
+): Promise<string> {
+  const { maxDim = 1920, quality = 0.85, mime = "image/jpeg" } = opts;
+  const dataUrl = await fileToDataUrl(file);
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = () => reject(new Error("Gambar tidak valid"));
+    i.src = dataUrl;
+  });
+  let { width, height } = img;
+  const scale = Math.min(1, maxDim / Math.max(width, height));
+  width = Math.round(width * scale);
+  height = Math.round(height * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return dataUrl;
+  ctx.drawImage(img, 0, 0, width, height);
+  const useMime = file.type === "image/png" && mime === "image/jpeg" ? "image/jpeg" : mime;
+  return canvas.toDataURL(useMime, quality);
 }
