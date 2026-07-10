@@ -97,7 +97,7 @@ export default function SearchOverlay({ open, onClose }: Props) {
       {/* Backdrop with blur similar to mobile menu */}
       <div className="absolute inset-0 backdrop-blur-2xl bg-black/55" onClick={onClose} />
 
-      <div className="relative h-full w-full flex flex-col overflow-y-auto">
+      <div className="relative h-full w-full flex flex-col overflow-y-auto overscroll-contain" data-lenis-prevent>
         {/* Search bar */}
         <div className="sticky top-0 z-10 backdrop-blur-md bg-black/20 border-b border-white/15">
           <div className="max-w-6xl mx-auto px-6 md:px-10 h-20 flex items-center gap-4">
