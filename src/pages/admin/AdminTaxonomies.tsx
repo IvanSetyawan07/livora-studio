@@ -87,12 +87,13 @@ export default function AdminTaxonomies() {
     if (!file.type.startsWith("image/")) { toast.error("File harus berupa gambar"); return; }
     
     try {
-      const dataUrl = await fileToDataUrl(file);
+      const dataUrl = await compressImage(file, { maxDim: 1600, quality: 0.82 });
       await addBanner(key, { image: dataUrl, title: "", updatedAt: Date.now() });
       setBanners(getAllBanners());
       toast.success(`Banner ${key} ditambahkan`);
-    } catch {
-      toast.error("Gagal membaca file");
+    } catch (err) {
+      console.error("Banner upload error:", err);
+      toast.error(err instanceof Error ? err.message : "Gagal mengupload banner");
     }
   };
 
