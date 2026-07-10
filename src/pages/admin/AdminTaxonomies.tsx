@@ -4,7 +4,7 @@ import { Plus, Trash2, ImagePlus, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   getAllBanners, getBanners, addBanner, removeBannerAt,
-  subscribeBanners, fileToDataUrl,
+  subscribeBanners, compressImage,
 } from "@/lib/themeBanners";
 import {
   getAllThumbnails, getThumbnail, saveThumbnail, deleteThumbnail,
