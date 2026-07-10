@@ -33,7 +33,11 @@ function read(): Store {
 }
 
 function write(store: Store) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+  } catch {
+    throw new Error("Storage penuh. Hapus banner lama atau pakai gambar lebih kecil.");
+  }
   window.dispatchEvent(new Event(EVENT));
 }
 
