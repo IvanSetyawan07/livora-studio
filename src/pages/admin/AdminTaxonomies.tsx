@@ -281,13 +281,18 @@ export default function AdminTaxonomies() {
             })}
           </div>
 
-          <label className="flex items-center justify-center gap-1.5 text-xs py-1.5 border border-border rounded cursor-pointer hover:bg-muted transition-colors">
-            <ImagePlus className="w-3.5 h-3.5" />
-            {bannerList.length === 0 ? "Upload Banner Pertama" : `Tambah Banner #${bannerList.length + 1}`}
+          <label className={`flex items-center justify-center gap-1.5 text-xs py-1.5 border border-border rounded transition-colors ${bannerBusy ? "opacity-60 cursor-wait" : "cursor-pointer hover:bg-muted"}`}>
+            {bannerBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImagePlus className="w-3.5 h-3.5" />}
+            {bannerBusy
+              ? "Mengupload..."
+              : bannerList.length === 0
+                ? "Upload Banner Pertama"
+                : `Tambah Banner #${bannerList.length + 1}`}
             <input
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/jpg,image/png,image/webp"
               className="hidden"
+              disabled={bannerBusy}
               onChange={(e) => {
                 handleBannerUpload(bannerKey, e.target.files?.[0] ?? null);
                 e.target.value = "";
