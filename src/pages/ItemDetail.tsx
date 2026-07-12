@@ -435,7 +435,7 @@ const ItemDetail = () => {
             {item.collection ? "Pieces designed to live in harmony." : "Curated picks from our catalogue."}
           </p>
 
-          <div className="flex gap-5 overflow-x-auto pb-2">
+          <div className="flex gap-5 overflow-x-auto pt-4 pb-6 -mx-2 px-2" style={{ scrollbarGutter: "stable" }}>
             {related.map((r) => (
               <Link
                 key={r.slug}
@@ -453,9 +453,9 @@ const ItemDetail = () => {
                   display: "block",
                 }}
               >
-                <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "#FFFFFF", borderRadius: 6 }}>
                   {r.image ? (
-                    <img src={r.image} alt={r.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 6 }} />
+                    <img src={r.image} alt={r.name} style={{ maxWidth: "100%", maxHeight: "100%", width: "auto", height: "auto", objectFit: "contain" }} />
                   ) : (
                     <ItemIllustration name={r.name} />
                   )}
