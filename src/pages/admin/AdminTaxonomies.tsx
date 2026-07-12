@@ -222,19 +222,21 @@ export default function AdminTaxonomies() {
             />
           )}
           <div className="flex gap-2">
-            <label className="flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 border border-border rounded cursor-pointer hover:bg-muted transition-colors">
-              <ImagePlus className="w-3.5 h-3.5" />
-              {thumb ? "Ganti" : "Upload"}
+            <label className={`flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 border border-border rounded transition-colors ${thumbBusy ? "opacity-60 cursor-wait" : "cursor-pointer hover:bg-muted"}`}>
+              {thumbBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImagePlus className="w-3.5 h-3.5" />}
+              {thumbBusy ? "Mengupload..." : (thumb ? "Ganti" : "Upload")}
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
                 className="hidden"
-                onChange={(e) =>
-                  handleThumbnailUpload(bannerKey, e.target.files?.[0] ?? null)
-                }
+                disabled={thumbBusy}
+                onChange={(e) => {
+                  handleThumbnailUpload(bannerKey, e.target.files?.[0] ?? null);
+                  e.target.value = "";
+                }}
               />
             </label>
-            {thumb && (
+            {thumb && !thumbBusy && (
               <button
                 onClick={() => handleThumbnailDelete(bannerKey)}
                 className="px-2 text-destructive border border-destructive/30 rounded hover:bg-destructive hover:text-destructive-foreground transition-colors"
