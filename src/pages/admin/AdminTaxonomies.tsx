@@ -1,15 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
-import { Plus, Trash2, ImagePlus, X } from "lucide-react";
+import { Plus, Trash2, ImagePlus, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  getAllBanners, getBanners, addBanner, removeBannerAt,
-  subscribeBanners, compressImage,
+  getAllBanners, getBanners, addBanner, removeBannerAt, updateBannerAt,
+  subscribeBanners,
 } from "@/lib/themeBanners";
 import {
-  getAllThumbnails, getThumbnail, saveThumbnail, deleteThumbnail,
+  getAllThumbnails, saveThumbnail, deleteThumbnail,
   subscribeThumbnails,
 } from "@/lib/themeThumbnails";
+import {
+  uploadTaxonomyImage, uploadTaxonomyBlob, deleteTaxonomyImage,
+  validateImageFile, isBase64Image, base64ToBlob,
+} from "@/lib/taxonomyStorage";
 
 const TABS = [
   { key: "scopes", label: "Scopes (Project)" },
