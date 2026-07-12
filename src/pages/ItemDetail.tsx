@@ -453,10 +453,32 @@ const ItemDetail = () => {
                   display: "block",
                 }}
               >
-                <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "#FFFFFF", borderRadius: 6 }}>
-                  {r.image ? (
-                    <img src={r.image} alt={r.name} style={{ maxWidth: "100%", maxHeight: "100%", width: "auto", height: "auto", objectFit: "contain" }} />
-                  ) : (
+                <div
+  style={{
+    height: 180,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    background: "#FAFAF8",
+    borderRadius: 6,
+  }}
+>
+  {r.image ? (
+    <img
+      src={r.image}
+      alt={r.name}
+      style={{
+        maxWidth: "100%",
+        maxHeight: "100%",
+        width: "auto",
+        height: "auto",
+        objectFit: "contain",
+        mixBlendMode: "multiply",
+        transform: "scale(1.15)",
+      }}
+    />
+  ) : (
                     <ItemIllustration name={r.name} />
                   )}
                 </div>
