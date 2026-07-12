@@ -200,6 +200,8 @@ export default function AdminTaxonomies() {
   const FurnitureRow = ({ bannerKey }: { bannerKey: string }) => {
     const thumb = thumbnails[bannerKey];
     const bannerList = getBanners(bannerKey);
+    const thumbBusy = !!uploading[`thumb:${bannerKey}`];
+    const bannerBusy = !!uploading[`banner:${bannerKey}`];
 
     return (
       <div className="mt-3 grid grid-cols-2 gap-4">
