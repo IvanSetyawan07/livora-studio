@@ -98,7 +98,7 @@ export default function CatalogFormAdmin() {
         const { data: raw } = await api.get<any>(`/admin/catalogs/${catalogId}`);
 
         const BASE = (import.meta.env.VITE_API_URL as string | undefined)
-          ?.replace("/api", "") ?? "http://127.0.0.1:8000";
+  ?.replace(/\/api\/?$/, "") ?? "http://127.0.0.1:8000";
 
         const coverImageUrl = raw.cover_image
           ? `${BASE}/storage/${raw.cover_image}`

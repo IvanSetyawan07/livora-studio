@@ -18,7 +18,7 @@ const buildStorageUrl = (path: string): string => {
   if (path.startsWith('http')) return path;
   
   const baseUrl = (import.meta.env.VITE_API_URL as string | undefined)
-    ?.replace("/api", "") ?? "http://127.0.0.1:8000";
+  ?.replace(/\/api\/?$/, "") ?? "http://127.0.0.1:8000";
   
   return `${baseUrl}/storage/${path}`;
 };
