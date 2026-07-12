@@ -6,6 +6,7 @@ const EVENT = "livora:themeThumbnails:changed";
 
 export type ThemeThumbnail = {
   image: string;
+  path?: string; // Supabase Storage path (for deletion). Absent for legacy base64.
   updatedAt: number;
 };
 

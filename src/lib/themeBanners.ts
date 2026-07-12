@@ -5,6 +5,7 @@ export type ThemeBannerKey = string;
 
 export type ThemeBanner = {
   image: string;
+  path?: string; // Supabase Storage path (for deletion). Absent for legacy base64.
   title?: string;
   updatedAt: number;
 };
