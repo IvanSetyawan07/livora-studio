@@ -28,14 +28,18 @@ export default function AdminTaxonomies() {
   const [name, setName] = useState("");
   const [banners, setBanners] = useState(() => getAllBanners());
   const [thumbnails, setThumbnails] = useState<Record<string, any>>({});
+  const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const setBusy = (k: string, v: boolean) =>
+    setUploading((prev) => ({ ...prev, [k]: v }));
 
   const load = () =>
     api.get(`/taxonomies/${tab}`).then((r) => setRows(r.data));
 
   useEffect(() => { load(); }, [tab]);
   useEffect(() => subscribeBanners(() => setBanners(getAllBanners())), []);
-  
+
   // Load thumbnails awal
   useEffect(() => {
     getAllThumbnails().then(setThumbnails);
@@ -47,6 +51,67 @@ export default function AdminTaxonomies() {
       getAllThumbnails().then(setThumbnails);
     });
     return unsub;
+  }, []);
+
+  // Migrasi otomatis: base64 lama -> Supabase Storage.
+  // Aman: upload dulu; hanya replace reference kalau upload sukses.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const allThumbs = await getAllThumbnails();
+      const allBanners = getAllBanners(); // {key: first banner}
+      const fullBanners = (await import("@/lib/themeBanners")).getAllBannersList();
+
+      let migrated = 0;
+      const failed: string[] = [];
+
+      // Thumbnails
+      for (const [key, t] of Object.entries(allThumbs)) {
+        if (cancelled) return;
+        if (isBase64Image(t?.image) && !t?.path) {
+          try {
+            const blob = await base64ToBlob(t.image);
+            const ct = blob.type || "image/jpeg";
+            const { url, path } = await uploadTaxonomyBlob("thumbnail", key, blob, ct);
+            await saveThumbnail(key, { image: url, path, updatedAt: Date.now() });
+            migrated++;
+          } catch (e) {
+            console.error("Migrasi thumbnail gagal:", key, e);
+            failed.push(`thumbnail:${key}`);
+          }
+        }
+      }
+
+      // Banners (per key, per index)
+      for (const [key, list] of Object.entries(fullBanners)) {
+        for (let i = 0; i < list.length; i++) {
+          if (cancelled) return;
+          const b = list[i];
+          if (isBase64Image(b?.image) && !b?.path) {
+            try {
+              const blob = await base64ToBlob(b.image);
+              const ct = blob.type || "image/jpeg";
+              const { url, path } = await uploadTaxonomyBlob("banner", key, blob, ct);
+              updateBannerAt(key, i, { image: url, path });
+              migrated++;
+            } catch (e) {
+              console.error("Migrasi banner gagal:", key, i, e);
+              failed.push(`banner:${key}#${i + 1}`);
+            }
+          }
+        }
+      }
+
+      if (!cancelled && migrated > 0) {
+        toast.success(`Migrasi selesai: ${migrated} gambar dipindahkan ke storage.`);
+        getAllThumbnails().then(setThumbnails);
+        setBanners(getAllBanners());
+      }
+      if (!cancelled && failed.length > 0) {
+        toast.error(`Gagal migrasi: ${failed.join(", ")} (data lama TIDAK dihapus).`);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const add = async (e: React.FormEvent) => {
@@ -69,48 +134,65 @@ export default function AdminTaxonomies() {
     load();
   };
 
-  // Upload thumbnail (kartu depan)
+  // Upload thumbnail (kartu depan) — upload baru dulu, hapus lama setelah sukses.
   const handleThumbnailUpload = async (key: string, file: File | null) => {
     if (!file) return;
-    if (!file.type.startsWith("image/")) { toast.error("File harus berupa gambar"); return; }
-    
+    const err = validateImageFile(file);
+    if (err) { toast.error(err); return; }
+    const busyKey = `thumb:${key}`;
+    setBusy(busyKey, true);
     try {
-      const dataUrl = await compressImage(file, { maxDim: 1600, quality: 0.9 });
-      await saveThumbnail(key, { image: dataUrl, updatedAt: Date.now() });
+      const prev = (await getAllThumbnails())[key];
+      const { url, path } = await uploadTaxonomyImage("thumbnail", key, file);
+      await saveThumbnail(key, { image: url, path, updatedAt: Date.now() });
+      if (prev?.path && prev.path !== path) {
+        deleteTaxonomyImage(prev.path).catch(() => {});
+      }
       getAllThumbnails().then(setThumbnails);
       toast.success(`Thumbnail ${key} disimpan`);
     } catch (err) {
       console.error("Upload error:", err);
-      toast.error("Gagal membaca file: " + (err instanceof Error ? err.message : String(err)));
+      toast.error(err instanceof Error ? err.message : "Gagal mengupload thumbnail");
+    } finally {
+      setBusy(busyKey, false);
     }
   };
 
-  // Upload banner (dalam kategori)
+  // Upload banner (dalam kategori) — tambah baru; tidak perlu hapus yang lama.
   const handleBannerUpload = async (key: string, file: File | null) => {
     if (!file) return;
-    if (!file.type.startsWith("image/")) { toast.error("File harus berupa gambar"); return; }
-    
+    const err = validateImageFile(file);
+    if (err) { toast.error(err); return; }
+    const busyKey = `banner:${key}`;
+    setBusy(busyKey, true);
     try {
-      const dataUrl = await compressImage(file, { maxDim: 1600, quality: 0.82 });
-      await addBanner(key, { image: dataUrl, title: "", updatedAt: Date.now() });
+      const { url, path } = await uploadTaxonomyImage("banner", key, file);
+      addBanner(key, { image: url, path, title: "", updatedAt: Date.now() });
       setBanners(getAllBanners());
       toast.success(`Banner ${key} ditambahkan`);
     } catch (err) {
       console.error("Banner upload error:", err);
       toast.error(err instanceof Error ? err.message : "Gagal mengupload banner");
+    } finally {
+      setBusy(busyKey, false);
     }
   };
 
   const handleThumbnailDelete = async (key: string) => {
     if (!confirm(`Hapus thumbnail ${key}?`)) return;
+    const prev = (await getAllThumbnails())[key];
     await deleteThumbnail(key);
+    if (prev?.path) deleteTaxonomyImage(prev.path).catch(() => {});
     getAllThumbnails().then(setThumbnails);
     toast.success(`Thumbnail ${key} dihapus`);
   };
 
   const handleBannerDelete = async (key: string, index: number) => {
     if (!confirm(`Hapus banner #${index + 1} pada ${key}?`)) return;
-    await removeBannerAt(key, index);
+    const list = getBanners(key);
+    const target = list[index];
+    removeBannerAt(key, index);
+    if (target?.path) deleteTaxonomyImage(target.path).catch(() => {});
     setBanners(getAllBanners());
     toast.success(`Banner ${key} #${index + 1} dihapus`);
   };
