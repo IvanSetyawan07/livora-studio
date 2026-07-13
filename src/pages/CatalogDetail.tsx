@@ -596,7 +596,7 @@ export default function CatalogDetail() {
               <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground mb-2 font-light">
                 Livora &nbsp;|&nbsp; Spaces
               </p>
-              <h2 className="serif text-3xl md:text-4xl font-light text-foreground reveal">
+              <h2 className="serif text-3xl md:text-4xl font-light text-foreground">
                 Inside the <em className="italic">Space</em>
               </h2>
             </div>
