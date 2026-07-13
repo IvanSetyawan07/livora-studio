@@ -38,8 +38,8 @@ Route::prefix('admin/items/{itemId}/variants')->group(function () {
 // Catalog - Public Read
 Route::get('/catalogs', [CatalogController::class, 'index']);
 Route::get('/catalogs/{slug}', [CatalogController::class, 'show']);
-Route::get('/catalogs/{catalogId}/hotspots', [HotspotController::class, 'index']);
-Route::get('/catalogs/{catalogId}/hotspots/{scene}', [HotspotController::class, 'getByScene']);
+Route::get('/catalogs/{catalog}/hotspots', [HotspotController::class, 'index']);
+Route::get('/catalogs/{catalog}/hotspots/{scene}', [HotspotController::class, 'getByScene']);
 
 // Public tracking
 Route::post('/track/click', [TrackingController::class, 'click']);

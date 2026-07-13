@@ -118,6 +118,12 @@ export const getHotspots = async (catalogId: string): Promise<Hotspot[]> => {
   return response.data;
 };
 
+// Public read-only endpoint — safe for unauthenticated visitors
+export const getPublicHotspots = async (catalogId: string): Promise<Hotspot[]> => {
+  const response = await api.get<Hotspot[]>(`${API_PUBLIC}/${catalogId}/hotspots`);
+  return response.data;
+};
+
 // GET hotspots for a specific scene
 export const getHotspotsByScene = async (catalogId: string, sceneNumber: string): Promise<Hotspot[]> => {
   const response = await api.get<Hotspot[]>(`${API_BASE}/${catalogId}/hotspots/${sceneNumber}`);
