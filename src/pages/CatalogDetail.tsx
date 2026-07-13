@@ -672,7 +672,7 @@ export default function CatalogDetail() {
             <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground mb-2 font-light">
               Livora &nbsp;|&nbsp; Pieces
             </p>
-            <h2 className="serif text-3xl md:text-4xl font-light text-foreground reveal">
+            <h2 className="serif text-3xl md:text-4xl font-light text-foreground">
               Items in this <em className="italic">Collection</em>
             </h2>
           </div>
