@@ -56,6 +56,7 @@ function App() {
               <Route path="/projects/:slug" element={<ProjectDetail />} />
               <Route path="/items/:slug" element={<ItemDetail />} />
               <Route path="/furniture" element={<Furniture />} />
+              <Route path="/furniture/:kind/:slug" element={<FurnitureFilter />} />
               <Route path="/catalog" element={<CatalogPage />} />
               <Route path="/catalog/:category" element={<CatalogPage />} />
               <Route path="/catalog/:category/:slug" element={<CatalogDetail />} /> {/* ← tambah ini */}
