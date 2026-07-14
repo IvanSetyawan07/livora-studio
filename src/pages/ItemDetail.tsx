@@ -418,26 +418,47 @@ const ItemDetail = () => {
         </section>
 
 
-        {/* GALLERY — placed BELOW the main item image (BoConcept-style grid) */}
+        {/* GALLERY — hidden until user clicks Show More */}
         {galleryImages.length > 0 && (
-          <section style={{ background: "#FAFAF8", padding: "0 60px 60px" }}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-none">
-              {galleryImages.map((g) => (
-                <figure
-                  key={g.id}
-                  className="overflow-hidden rounded-lg"
-                  style={{ background: "#FFFFFF", border: "1px solid #E8E4DF" }}
-                >
-                  <img
-                    src={g.image}
-                    alt={g.alt_text ?? g.title ?? item.name}
-                    style={{ width: "100%", height: "auto", display: "block", objectFit: "cover" }}
-                  />
-                </figure>
-              ))}
+          <section style={{ background: "#FAFAF8", padding: "20px 60px 60px" }}>
+            <div className="flex justify-center" style={{ marginBottom: showGallery ? 32 : 0 }}>
+              <button
+                onClick={() => setShowGallery((v) => !v)}
+                className="uppercase hover:opacity-70 transition-opacity"
+                style={{
+                  color: GOLD,
+                  border: `1px solid ${GOLD}`,
+                  background: "transparent",
+                  fontSize: 11,
+                  letterSpacing: "0.25em",
+                  padding: "12px 32px",
+                  borderRadius: 999,
+                  cursor: "pointer",
+                }}
+              >
+                {showGallery ? "Show Less" : "Show More"}
+              </button>
             </div>
+            {showGallery && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-none animate-fade-in">
+                {galleryImages.map((g) => (
+                  <figure
+                    key={g.id}
+                    className="overflow-hidden rounded-lg"
+                    style={{ background: "#FFFFFF", border: "1px solid #E8E4DF" }}
+                  >
+                    <img
+                      src={g.image}
+                      alt={g.alt_text ?? g.title ?? item.name}
+                      style={{ width: "100%", height: "auto", display: "block", objectFit: "cover" }}
+                    />
+                  </figure>
+                ))}
+              </div>
+            )}
           </section>
         )}
+
 
         {/* LIFESTYLE — Furniture In Real Spaces */}
         {item.lifestyle && item.lifestyle.length > 0 && (
