@@ -113,6 +113,8 @@ export const mapApiItem = (it: ApiItem): RichItem => {
     },
     themes: (it.themes ?? []).map((t) => t.name),
     categories: (it.categories ?? []).map((c) => c.name),
+    themeRefs: it.themes ?? [],
+    categoryRefs: it.categories ?? [],
     textures: textures.length ? textures : ["Premium"],
     image: imgUrl(it.image) || undefined,
     apiId: it.id,
