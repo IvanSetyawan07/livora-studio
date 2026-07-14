@@ -27,6 +27,7 @@ import ScrollToTop from "./components/ScrollToTop.tsx";
 import SmoothScroll from "./components/SmoothScroll.tsx";
 import ERD from "./pages/ERD";
 import Furniture from "./pages/Furniture.tsx";
+import FurnitureFilter from "./pages/FurnitureFilter.tsx";
 import { CartDrawer } from "@/components/livora/CartDrawer.tsx";
 import { CartProvider } from "./context/CartContext.tsx";
 import CatalogPage from "./pages/CatalogPage";
