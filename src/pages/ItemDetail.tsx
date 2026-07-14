@@ -203,7 +203,7 @@ const ItemDetail = () => {
             <div className="h-px w-full bg-[#1A1A1A]/10" style={{ margin: "28px 0" }} />
 
             {/* CHOOSE YOUR DESIGN — one clickable ROW per category (BoConcept style) */}
-            {Object.keys(variantGroups).length > 0 ? (
+            {Object.keys(variantGroups).length > 0 && (
               <div>
                 <h2 className="serif font-light" style={{ fontSize: 22, color: "#1A1A1A", marginBottom: 18 }}>
                   Choose Your Design
@@ -232,7 +232,6 @@ const ItemDetail = () => {
                           } as React.CSSProperties
                         }
                       >
-                        {/* Swatch / preview */}
                         <div
                           style={{
                             width: 44,
@@ -253,7 +252,6 @@ const ItemDetail = () => {
                           )}
                         </div>
 
-                        {/* Labels */}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: 11, color: "#8A8A8A", letterSpacing: "0.12em", textTransform: "uppercase" }}>
                             {cat}
@@ -273,7 +271,6 @@ const ItemDetail = () => {
                           </p>
                         </div>
 
-                        {/* +N count */}
                         {extra > 0 && (
                           <span style={{ fontSize: 12, color: "#5A5A5A" }}>+ {extra}</span>
                         )}
@@ -283,16 +280,122 @@ const ItemDetail = () => {
                   })}
                 </div>
               </div>
-            ) : (
-              <div>
-                <p style={goldLabel}>Texture</p>
-                <p style={{ fontSize: 14, color: "#1A1A1A", marginTop: 6, marginBottom: 20 }}>
-                  {item.textures.join(", ")}
+            )}
+
+            <div className="h-px w-full bg-[#1A1A1A]/10" style={{ margin: "28px 0" }} />
+
+            {/* TEXTURE + FINISH — always visible below Choose Your Design */}
+            {(item.textures?.length > 0 || item.specs.finish) && (
+              <div style={{ marginBottom: 24 }}>
+                {item.textures?.length > 0 && (
+                  <div style={{ marginBottom: 18 }}>
+                    <p style={goldLabel}>Texture</p>
+                    <p style={{ fontSize: 14, color: "#1A1A1A", marginTop: 6 }}>
+                      {item.textures.join(", ")}
+                    </p>
+                  </div>
+                )}
+                {item.specs.finish && item.specs.finish !== "—" && (
+                  <div>
+                    <p style={goldLabel}>Finish</p>
+                    <p style={{ fontSize: 14, color: "#1A1A1A", marginTop: 6 }}>
+                      {item.specs.finish}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ABOUT THIS FURNITURE (description) */}
+            {item.description && (
+              <div style={{ marginBottom: 24 }}>
+                <p style={goldLabel}>About this Furniture</p>
+                <p style={{ fontSize: 14, color: "#1A1A1A", marginTop: 6, lineHeight: 1.7 }}>
+                  {item.description}
                 </p>
-                <p style={goldLabel}>Finish</p>
-                <p style={{ fontSize: 14, color: "#1A1A1A", marginTop: 6, marginBottom: 20 }}>
-                  {item.specs.finish}
-                </p>
+              </div>
+            )}
+
+            {/* THEMES / CATEGORIES / COLLECTION — clickable filter buttons */}
+            {((item.themeRefs && item.themeRefs.length > 0) ||
+              (item.categoryRefs && item.categoryRefs.length > 0) ||
+              item.collection) && (
+              <div style={{ marginBottom: 8 }}>
+                {item.themeRefs && item.themeRefs.length > 0 && (
+                  <div style={{ marginBottom: 14 }}>
+                    <p style={goldLabel}>Themes</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                      {item.themeRefs.map((t) => (
+                        <button
+                          key={`th-${t.id}`}
+                          onClick={() => navigate(`/furniture/theme/${t.slug}`)}
+                          className="hover:bg-[#F5EFE8] transition-colors"
+                          style={{
+                            fontSize: 12,
+                            padding: "6px 14px",
+                            borderRadius: 999,
+                            border: `1px solid ${GOLD}`,
+                            color: "#1A1A1A",
+                            background: "#FFFFFF",
+                            cursor: "pointer",
+                            letterSpacing: "0.05em",
+                          }}
+                        >
+                          {t.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {item.categoryRefs && item.categoryRefs.length > 0 && (
+                  <div style={{ marginBottom: 14 }}>
+                    <p style={goldLabel}>Categories</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                      {item.categoryRefs.map((c) => (
+                        <button
+                          key={`cat-${c.id}`}
+                          onClick={() => navigate(`/furniture/category/${c.slug}`)}
+                          className="hover:bg-[#F5EFE8] transition-colors"
+                          style={{
+                            fontSize: 12,
+                            padding: "6px 14px",
+                            borderRadius: 999,
+                            border: `1px solid ${GOLD}`,
+                            color: "#1A1A1A",
+                            background: "#FFFFFF",
+                            cursor: "pointer",
+                            letterSpacing: "0.05em",
+                          }}
+                        >
+                          {c.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {item.collection && (
+                  <div style={{ marginBottom: 14 }}>
+                    <p style={goldLabel}>Collection</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                      <button
+                        onClick={() => navigate(`/furniture/collection/${item.collection!.slug}`)}
+                        className="hover:opacity-90 transition-opacity"
+                        style={{
+                          fontSize: 12,
+                          padding: "6px 14px",
+                          borderRadius: 999,
+                          border: `1px solid ${GOLD}`,
+                          background: GOLD,
+                          color: "#FFFFFF",
+                          cursor: "pointer",
+                          letterSpacing: "0.05em",
+                        }}
+                      >
+                        {item.collection.name}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -313,6 +416,7 @@ const ItemDetail = () => {
             </button>
           </div>
         </section>
+
 
         {/* GALLERY — placed BELOW the main item image (BoConcept-style grid) */}
         {galleryImages.length > 0 && (
