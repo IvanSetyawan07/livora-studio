@@ -117,7 +117,21 @@ export function subscribeBanners(cb: () => void): () => void {
   window.addEventListener(EVENT, cb);
   return () => window.removeEventListener(EVENT, cb);
 }
+export async function saveBanner(key: string, banner: ThemeBanner) {
+  const existing = cache[key] ?? [];
+  if (existing.length === 0) {
+    await addBanner(key, banner);
+  } else {
+    await updateBannerAt(key, 0, banner);
+  }
+}
 
+export async function deleteBanner(key: string) {
+  const list = cache[key] ?? [];
+  for (let i = list.length - 1; i >= 0; i--) {
+    await removeBannerAt(key, i);
+  }
+}
 /* ---------- Helper upload (dipakai AdminTaxonomies, tidak berubah) ---------- */
 export function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
