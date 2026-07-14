@@ -23,6 +23,7 @@ const ItemDetail = () => {
 
   const [activeVariantId, setActiveVariantId] = useState<number | null>(null);
   const [sheetCategory, setSheetCategory] = useState<string | null>(null);
+  const [showGallery, setShowGallery] = useState(false);
 
   // Reset variant when item loads
   useEffect(() => {
