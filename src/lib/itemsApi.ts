@@ -95,6 +95,7 @@ export interface RichItem extends Item {
   lifestyle?: LifestyleImage[];
   story?: FurnitureStory | null;
   related?: { slug: string; name: string; image?: string; code?: string }[];
+  description?: string;
 }
 
 export const mapApiItem = (it: ApiItem): RichItem => {
