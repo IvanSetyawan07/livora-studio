@@ -88,11 +88,14 @@ interface ApiItem {
 
 export interface RichItem extends Item {
   collection?: CollectionRef | null;
+  themeRefs?: { id: number; name: string; slug: string }[];
+  categoryRefs?: { id: number; name: string; slug: string }[];
   variants?: FurnitureVariant[];
   gallery?: GalleryImage[];
   lifestyle?: LifestyleImage[];
   story?: FurnitureStory | null;
   related?: { slug: string; name: string; image?: string; code?: string }[];
+  description?: string;
 }
 
 export const mapApiItem = (it: ApiItem): RichItem => {
@@ -111,6 +114,8 @@ export const mapApiItem = (it: ApiItem): RichItem => {
     },
     themes: (it.themes ?? []).map((t) => t.name),
     categories: (it.categories ?? []).map((c) => c.name),
+    themeRefs: it.themes ?? [],
+    categoryRefs: it.categories ?? [],
     textures: textures.length ? textures : ["Premium"],
     image: imgUrl(it.image) || undefined,
     apiId: it.id,
