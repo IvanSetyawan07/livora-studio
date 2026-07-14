@@ -16,7 +16,7 @@ type NavLink = {
   dropdown?: { label: string; to: string }[];
 };
 
-type FurnitureType = { id: number; name: string; slug: string };
+type FurnitureType = { id: number; name: string; slug: string; image?: string | null };
 
 type OverlayView = "main" | "furniture";
 
@@ -461,7 +461,7 @@ export const Navbar = () => {
 
                   <ul className="flex flex-col gap-4">
                     {furnitureTypes.map((ft, i) => {
-                      const thumb = thumbnails[ft.name]?.image;
+                      const thumb = ft.image || thumbnails[ft.name]?.image;
                       return (
                         <li
                           key={ft.id}
