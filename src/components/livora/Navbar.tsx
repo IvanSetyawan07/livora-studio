@@ -51,7 +51,7 @@ export const Navbar = () => {
         { label: "Public Spaces", to: "/catalog/public-spaces" },
       ],
     },
-    
+    { key: "collection", label: "COLLECTION", to: "/collection" },
   ];
 
   // Quick links always visible on desktop header.
