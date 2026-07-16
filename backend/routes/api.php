@@ -74,8 +74,16 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Collections
         Route::post('/collections', [CollectionController::class, 'store']);
+        Route::post('/collections/{collection}', [CollectionController::class, 'update']);
         Route::put('/collections/{collection}', [CollectionController::class, 'update']);
         Route::delete('/collections/{collection}', [CollectionController::class, 'destroy']);
+        // Story
+        Route::post('/collections/{collection}/story', [CollectionController::class, 'storyUpsert']);
+        // Packages
+        Route::post('/collections/{collection}/packages', [CollectionController::class, 'packageStore']);
+        Route::post('/collection-packages/{package}', [CollectionController::class, 'packageUpdate']);
+        Route::put('/collection-packages/{package}', [CollectionController::class, 'packageUpdate']);
+        Route::delete('/collection-packages/{package}', [CollectionController::class, 'packageDestroy']);
 
         // Furniture Experience
         Route::get('/items/{item}/variants', [FurnitureExperienceController::class, 'variantsIndex']);
