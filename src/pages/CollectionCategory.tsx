@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
 import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
+import { CategoryBar } from "@/components/livora/CategoryBar";
 import {
   getCollectionItems,
   CollectionItemRef,
