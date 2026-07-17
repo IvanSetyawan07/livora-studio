@@ -9,6 +9,7 @@ import {
   Bed,
   Flower2,
   Lamp,
+  type LucideIcon,
 } from "lucide-react";
 
 export interface CategoryTab {
@@ -16,7 +17,7 @@ export interface CategoryTab {
   label: string;
 }
 
-const ICONS: Record<string, React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>> = {
+const ICONS: Record<string, LucideIcon> = {
   all: LayoutGrid,
   sofa: Sofa,
   chair: Armchair,
