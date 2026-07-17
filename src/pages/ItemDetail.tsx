@@ -87,6 +87,22 @@ const ItemDetail = () => {
     item?.image ||
     "";
 
+  // Combined images list used by the lightbox: main image (variant-aware) + gallery items.
+  const lightboxImages: LightboxImage[] = useMemo(() => {
+    const list: LightboxImage[] = [];
+    if (mainImage) list.push({ src: mainImage, alt: item?.name ?? "" });
+    galleryImages.forEach((g) =>
+      list.push({ src: g.image, alt: g.alt_text ?? g.title ?? item?.name ?? "" }),
+    );
+    return list;
+  }, [mainImage, galleryImages, item?.name]);
+
+  const openLightbox = (i: number) => {
+    if (!lightboxImages.length) return;
+    setLightboxIndex(i);
+    setLightboxOpen(true);
+  };
+
   // Group variants by category (fabric | leather | wood | metal | marble | other)
   const variantGroups = useMemo(() => {
     const groups: Record<string, FurnitureVariant[]> = {};
