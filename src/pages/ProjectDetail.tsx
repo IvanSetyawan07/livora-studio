@@ -4,6 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { Navbar } from "@/components/livora/Navbar";
 import { PageBreadcrumb } from "@/components/livora/Breadcrumb";
 import { Footer } from "@/components/livora/Footer";
+import { BookConsultation } from "@/components/livora/BookConsultation";
 import { useProjectBySlug } from "@/lib/projectsApi";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
 import { slugifyItem } from "@/data/items";
