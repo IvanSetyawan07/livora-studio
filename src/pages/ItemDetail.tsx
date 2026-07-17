@@ -710,6 +710,13 @@ const ItemDetail = () => {
         </SheetContent>
       </Sheet>
 
+      <ImageLightbox
+        open={lightboxOpen}
+        images={lightboxImages}
+        startIndex={lightboxIndex}
+        onClose={() => setLightboxOpen(false)}
+      />
+
       <Footer />
     </>
   );
