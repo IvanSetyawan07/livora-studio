@@ -49,34 +49,13 @@ export default function CollectionCategory() {
 
       <div className="pt-24" />
 
-      {/* STICKY TABS */}
-      <div className="sticky top-20 z-40 bg-background/95 backdrop-blur-md border-b border-border/60">
-        <div className="container-livora">
-          <div className="flex items-center justify-between gap-6 py-4">
-            <div className="flex gap-6 md:gap-8 overflow-x-auto no-scrollbar">
-              {CATEGORY_TABS.map((tab) => {
-                const active = tab.slug === activeTab.slug;
-                return (
-                  <button
-                    key={tab.slug}
-                    onClick={() => navigate(`/collection/${slug}/${tab.slug}`)}
-                    className={`relative text-[11px] tracking-[0.25em] uppercase whitespace-nowrap transition-colors ${
-                      active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {tab.label}
-                    {active && (
-                      <motion.span
-                        layoutId="collection-cat-underline"
-                        className="absolute left-0 right-0 -bottom-[13px] h-px bg-foreground"
-                      />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+      {/* CATEGORY BAR — icon dock (in-flow → bottom-docked on scroll) */}
+      <div className="py-6 flex justify-center border-b border-border/60 bg-background/95">
+        <CategoryBar
+          tabs={CATEGORY_TABS}
+          activeSlug={activeTab.slug}
+          onSelect={(s) => navigate(`/collection/${slug}/${s}`)}
+        />
       </div>
 
       {/* CONTENT */}
