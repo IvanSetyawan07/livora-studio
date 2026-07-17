@@ -27,12 +27,16 @@ import ScrollToTop from "./components/ScrollToTop.tsx";
 import SmoothScroll from "./components/SmoothScroll.tsx";
 import ERD from "./pages/ERD";
 import Furniture from "./pages/Furniture.tsx";
+import FurnitureFilter from "./pages/FurnitureFilter.tsx";
 import { CartDrawer } from "@/components/livora/CartDrawer.tsx";
 import { CartProvider } from "./context/CartContext.tsx";
 import CatalogPage from "./pages/CatalogPage";
 import CatalogDetail from "./pages/CatalogDetail"; // ← tambah ini
 import CatalogListAdmin from "@/pages/admin/CatalogListAdmin";
 import CatalogFormAdmin from "@/pages/admin/CatalogFormAdmin";
+import CollectionLanding from "./pages/CollectionLanding.tsx";
+import CollectionDetail from "./pages/CollectionDetail.tsx";
+import CollectionCategory from "./pages/CollectionCategory.tsx";
 
 
 const queryClient = new QueryClient();
@@ -55,9 +59,13 @@ function App() {
               <Route path="/projects/:slug" element={<ProjectDetail />} />
               <Route path="/items/:slug" element={<ItemDetail />} />
               <Route path="/furniture" element={<Furniture />} />
+              <Route path="/furniture/:kind/:slug" element={<FurnitureFilter />} />
               <Route path="/catalog" element={<CatalogPage />} />
               <Route path="/catalog/:category" element={<CatalogPage />} />
               <Route path="/catalog/:category/:slug" element={<CatalogDetail />} /> {/* ← tambah ini */}
+              <Route path="/collection" element={<CollectionLanding />} />
+              <Route path="/collection/:slug" element={<CollectionDetail />} />
+              <Route path="/collection/:slug/:category" element={<CollectionCategory />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/dashboard" element={<Dashboard />} />

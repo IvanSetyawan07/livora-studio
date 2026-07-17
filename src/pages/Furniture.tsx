@@ -50,8 +50,7 @@ const allMeta: ThemeMeta = {
   tagline: "Every piece in our collection, in one place.",
   slugs: [],
 };
-
-type FurnitureType = { id: number; name: string; slug: string };
+type FurnitureType = { id: number; name: string; slug: string; image?: string | null };
 
 const findItem = (slug: string, all: Item[]): Item | undefined =>
   all.find((i) => i.slug === slug);
@@ -221,6 +220,12 @@ const Furniture = () => {
     return ["All", ...names];
   }, [types]);
 
+  const typeImageByName = useMemo(() => {
+  const m: Record<string, string> = {};
+  types.forEach((t) => { if (t.image) m[t.name] = t.image; });
+  return m;
+}, [types]);
+
   const slugToName = useMemo(() => {
     const m: Record<string, string> = {
       "new-arrivals": "All",
@@ -298,7 +303,7 @@ const Furniture = () => {
                   onOpen={setActiveTheme}
                   allItems={allItems}
                   count={itemsForTheme(k).length}
-                  thumbnailImage={thumbnails[k]?.image}
+                  thumbnailImage={typeImageByName[k] || thumbnails[k]?.image}
                 />
               ))}
             </div>

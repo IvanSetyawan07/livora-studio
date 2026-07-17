@@ -10,6 +10,7 @@ import { motion, useScroll, useTransform, easeOut } from "framer-motion";
 import { Navbar } from "@/components/livora/Navbar";
 import { WhatsAppButton } from "@/components/livora/WhatsAppButton";
 import { Footer } from "@/components/livora/Footer";
+import { BookConsultation } from "@/components/livora/BookConsultation";
 import { api } from "@/lib/api";
 import {
   CATALOG_CATEGORIES,
@@ -17,7 +18,7 @@ import {
   CatalogCategory,
   Catalog,
 } from "@/types/catalog";
-import { getCatalogBySlug, getAllCatalogs, getHotspots } from "@/lib/catalogApi";
+import { getCatalogBySlug, getAllCatalogs, getPublicHotspots } from "@/lib/catalogApi";
 import { imgUrl } from "@/lib/adminApi";
 
 // ─────────────────────────────────────────────
@@ -137,7 +138,7 @@ export default function CatalogDetail() {
 
         if (catalogData.id) {
   try {
-    const hotspotsData = await getHotspots(String(catalogData.id));
+    const hotspotsData = await getPublicHotspots(String(catalogData.id));
     setHotspots(hotspotsData as unknown as HotspotItem[]);
 
     // ── Fetch item details untuk gambar di Items Grid & HotspotPanel
@@ -596,7 +597,7 @@ export default function CatalogDetail() {
               <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground mb-2 font-light">
                 Livora &nbsp;|&nbsp; Spaces
               </p>
-              <h2 className="serif text-3xl md:text-4xl font-light text-foreground reveal">
+              <h2 className="serif text-3xl md:text-4xl font-light text-foreground">
                 Inside the <em className="italic">Space</em>
               </h2>
             </div>
@@ -643,17 +644,27 @@ export default function CatalogDetail() {
     key={spot.id}
     spot={spot}
     active={activeSpot?.id === spot.id}
-    onClick={() => setActiveSpot(activeSpot?.id === spot.id ? null : spot)}
+    onClick={(e) => {
+      e.stopPropagation();
+      setActiveSpot(activeSpot?.id === spot.id ? null : spot);
+    }}
   />
 ))}
 
             {activeSpot && (
-  <HotspotPanel
-    spot={activeSpot}
-    onClose={() => setActiveSpot(null)}
-    itemMap={itemMap} // ← ADD
-  />
-)}
+              <>
+                {/* Click-outside overlay */}
+                <div
+                  className="absolute inset-0 z-20"
+                  onClick={() => setActiveSpot(null)}
+                />
+                <HotspotPanel
+                  spot={activeSpot}
+                  onClose={() => setActiveSpot(null)}
+                  itemMap={itemMap}
+                />
+              </>
+            )}
             {!activeSpot && currentScene.hotspots.length > 0 && (
               <div className="hidden sm:block absolute bottom-4 right-4 text-[9px] uppercase tracking-[0.15em] text-white/60 font-light">
                 Tap the dots to explore items
@@ -672,7 +683,7 @@ export default function CatalogDetail() {
             <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground mb-2 font-light">
               Livora &nbsp;|&nbsp; Pieces
             </p>
-            <h2 className="serif text-3xl md:text-4xl font-light text-foreground reveal">
+            <h2 className="serif text-3xl md:text-4xl font-light text-foreground">
               Items in this <em className="italic">Collection</em>
             </h2>
           </div>
@@ -806,6 +817,8 @@ export default function CatalogDetail() {
         </div>
       </section>
 
+      <BookConsultation />
+
       <Footer />
       <WhatsAppButton />
     </div>
@@ -821,7 +834,7 @@ const HotspotDot = ({
   active,
 }: {
   spot: HotspotItem;
-  onClick: () => void;
+  onClick: (e: React.MouseEvent) => void;
   active: boolean;
 }) => {
   return (
@@ -879,27 +892,46 @@ const HotspotPanel = ({
   const itemDetail = itemSlug ? itemMap[itemSlug] : undefined;
   const displayImage = itemDetail?.image || spot.image;
 
-  // Place card near the hotspot dot, flipping sides near the edges so it
-  // stays inside the scene container.
-  const placeRight = spot.x < 55; // dot in left half → card goes right
-  const placeBelow = spot.y < 45; // dot in upper half → card goes below
+  const [isMobile, setIsMobile] = useState<boolean>(
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 639px)").matches : false
+  );
 
-  // Offset from the dot center (in %)
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  // Desktop: place near dot, flipping to keep inside container.
+  // Mobile: pin to safe left/right margins, flip vertically based on dot Y.
+  const placeRight = spot.x < 55;
+  const placeBelow = spot.y < 45;
   const horizontalOffset = 3;
   const verticalOffset = 3;
 
-  const style: React.CSSProperties = {
-    left: placeRight ? `calc(${spot.x}% + ${horizontalOffset}%)` : undefined,
-    right: !placeRight ? `calc(${100 - spot.x}% + ${horizontalOffset}%)` : undefined,
-    top: placeBelow ? `calc(${spot.y}% + ${verticalOffset}%)` : undefined,
-    bottom: !placeBelow ? `calc(${100 - spot.y}% + ${verticalOffset}%)` : undefined,
-    maxWidth: "calc(100% - 24px)",
-  };
+  const style: React.CSSProperties = isMobile
+    ? {
+        left: 16,
+        right: 16,
+        top: placeBelow ? `calc(${spot.y}% + ${verticalOffset}%)` : undefined,
+        bottom: !placeBelow ? `calc(${100 - spot.y}% + ${verticalOffset}%)` : undefined,
+      }
+    : {
+        left: placeRight ? `calc(${spot.x}% + ${horizontalOffset}%)` : undefined,
+        right: !placeRight ? `calc(${100 - spot.x}% + ${horizontalOffset}%)` : undefined,
+        top: placeBelow ? `calc(${spot.y}% + ${verticalOffset}%)` : undefined,
+        bottom: !placeBelow ? `calc(${100 - spot.y}% + ${verticalOffset}%)` : undefined,
+        maxWidth: "calc(100% - 24px)",
+      };
 
   return (
     <div
       style={style}
-      className="absolute z-30 w-[270px] sm:w-[310px] bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.14)] p-4 flex items-center gap-4"
+      onClick={(e) => e.stopPropagation()}
+      className={`absolute z-30 bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.14)] p-4 flex items-center gap-4 ${
+        isMobile ? "w-auto" : "w-[270px] sm:w-[310px]"
+      }`}
     >
       <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-xl bg-secondary/60 overflow-hidden flex items-center justify-center">
         {displayImage ? (

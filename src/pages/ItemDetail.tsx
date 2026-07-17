@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ChevronDown, ImageIcon } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/livora/Navbar";
 import { PageBreadcrumb } from "@/components/livora/Breadcrumb";
 import { Footer } from "@/components/livora/Footer";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
+import { ImageLightbox, type LightboxImage } from "@/components/livora/ImageLightbox";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { items } from "@/data/items";
 import { useItemBySlug, type FurnitureVariant, type GalleryImage } from "@/lib/itemsApi";
@@ -23,6 +25,9 @@ const ItemDetail = () => {
 
   const [activeVariantId, setActiveVariantId] = useState<number | null>(null);
   const [sheetCategory, setSheetCategory] = useState<string | null>(null);
+  const [showGallery, setShowGallery] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   // Reset variant when item loads
   useEffect(() => {
@@ -81,6 +86,22 @@ const ItemDetail = () => {
     activeVariant?.preview_image ||
     item?.image ||
     "";
+
+  // Combined images list used by the lightbox: main image (variant-aware) + gallery items.
+  const lightboxImages: LightboxImage[] = useMemo(() => {
+    const list: LightboxImage[] = [];
+    if (mainImage) list.push({ src: mainImage, alt: item?.name ?? "" });
+    galleryImages.forEach((g) =>
+      list.push({ src: g.image, alt: g.alt_text ?? g.title ?? item?.name ?? "" }),
+    );
+    return list;
+  }, [mainImage, galleryImages, item?.name]);
+
+  const openLightbox = (i: number) => {
+    if (!lightboxImages.length) return;
+    setLightboxIndex(i);
+    setLightboxOpen(true);
+  };
 
   // Group variants by category (fabric | leather | wood | metal | marble | other)
   const variantGroups = useMemo(() => {
@@ -141,22 +162,26 @@ const ItemDetail = () => {
         <section className="grid grid-cols-1 md:grid-cols-[55%_45%]">
           {/* LEFT: main product image (controlled by variant only) */}
           <div style={{ background: "#ffffff", padding: "60px" }}>
-            <div
-              className="relative"
+            <button
+              type="button"
+              onClick={() => openLightbox(0)}
+              className="relative w-full group cursor-zoom-in"
               style={{
                 border: "1px solid #E8E4DF",
                 borderRadius: "12px",
                 background: "#FFFFFF",
                 aspectRatio: "1 / 1",
                 overflow: "hidden",
+                padding: 0,
               }}
+              aria-label="View gallery"
             >
               {mainImage ? (
                 <img
                   key={mainImage}
                   src={mainImage}
                   alt={item.name}
-                  className="animate-fade-in"
+                  className="animate-fade-in transition-transform duration-500 group-hover:scale-[1.03]"
                   style={{ width: "100%", height: "100%", objectFit: "contain" }}
                 />
               ) : (
@@ -164,8 +189,16 @@ const ItemDetail = () => {
                   <ItemIllustration name={item.name} size={280} strokeWidth={1.1} />
                 </div>
               )}
-            </div>
+              {lightboxImages.length > 1 && (
+                <span
+                  className="absolute bottom-3 right-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/70 text-white text-[10px] tracking-[0.2em] uppercase opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <ImageIcon size={12} /> {lightboxImages.length} photos
+                </span>
+              )}
+            </button>
           </div>
+
 
           {/* RIGHT: details + configurator */}
           <div style={{ background: "#FFFFFF", padding: "60px 48px" }}>
@@ -203,7 +236,7 @@ const ItemDetail = () => {
             <div className="h-px w-full bg-[#1A1A1A]/10" style={{ margin: "28px 0" }} />
 
             {/* CHOOSE YOUR DESIGN — one clickable ROW per category (BoConcept style) */}
-            {Object.keys(variantGroups).length > 0 ? (
+            {Object.keys(variantGroups).length > 0 && (
               <div>
                 <h2 className="serif font-light" style={{ fontSize: 22, color: "#1A1A1A", marginBottom: 18 }}>
                   Choose Your Design
@@ -232,7 +265,6 @@ const ItemDetail = () => {
                           } as React.CSSProperties
                         }
                       >
-                        {/* Swatch / preview */}
                         <div
                           style={{
                             width: 44,
@@ -253,7 +285,6 @@ const ItemDetail = () => {
                           )}
                         </div>
 
-                        {/* Labels */}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: 11, color: "#8A8A8A", letterSpacing: "0.12em", textTransform: "uppercase" }}>
                             {cat}
@@ -273,7 +304,6 @@ const ItemDetail = () => {
                           </p>
                         </div>
 
-                        {/* +N count */}
                         {extra > 0 && (
                           <span style={{ fontSize: 12, color: "#5A5A5A" }}>+ {extra}</span>
                         )}
@@ -283,16 +313,122 @@ const ItemDetail = () => {
                   })}
                 </div>
               </div>
-            ) : (
-              <div>
-                <p style={goldLabel}>Texture</p>
-                <p style={{ fontSize: 14, color: "#1A1A1A", marginTop: 6, marginBottom: 20 }}>
-                  {item.textures.join(", ")}
+            )}
+
+            <div className="h-px w-full bg-[#1A1A1A]/10" style={{ margin: "28px 0" }} />
+
+            {/* TEXTURE + FINISH — always visible below Choose Your Design */}
+            {(item.textures?.length > 0 || item.specs.finish) && (
+              <div style={{ marginBottom: 24 }}>
+                {item.textures?.length > 0 && (
+                  <div style={{ marginBottom: 18 }}>
+                    <p style={goldLabel}>Texture</p>
+                    <p style={{ fontSize: 14, color: "#1A1A1A", marginTop: 6 }}>
+                      {item.textures.join(", ")}
+                    </p>
+                  </div>
+                )}
+                {item.specs.finish && item.specs.finish !== "—" && (
+                  <div>
+                    <p style={goldLabel}>Finish</p>
+                    <p style={{ fontSize: 14, color: "#1A1A1A", marginTop: 6 }}>
+                      {item.specs.finish}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ABOUT THIS FURNITURE (description) */}
+            {item.description && (
+              <div style={{ marginBottom: 24 }}>
+                <p style={goldLabel}>About this Furniture</p>
+                <p style={{ fontSize: 14, color: "#1A1A1A", marginTop: 6, lineHeight: 1.7 }}>
+                  {item.description}
                 </p>
-                <p style={goldLabel}>Finish</p>
-                <p style={{ fontSize: 14, color: "#1A1A1A", marginTop: 6, marginBottom: 20 }}>
-                  {item.specs.finish}
-                </p>
+              </div>
+            )}
+
+            {/* THEMES / CATEGORIES / COLLECTION — clickable filter buttons */}
+            {((item.themeRefs && item.themeRefs.length > 0) ||
+              (item.categoryRefs && item.categoryRefs.length > 0) ||
+              item.collection) && (
+              <div style={{ marginBottom: 8 }}>
+                {item.themeRefs && item.themeRefs.length > 0 && (
+                  <div style={{ marginBottom: 14 }}>
+                    <p style={goldLabel}>Themes</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                      {item.themeRefs.map((t) => (
+                        <button
+                          key={`th-${t.id}`}
+                          onClick={() => navigate(`/furniture/theme/${t.slug}`)}
+                          className="hover:bg-[#F5EFE8] transition-colors"
+                          style={{
+                            fontSize: 12,
+                            padding: "6px 14px",
+                            borderRadius: 999,
+                            border: `1px solid ${GOLD}`,
+                            color: "#1A1A1A",
+                            background: "#FFFFFF",
+                            cursor: "pointer",
+                            letterSpacing: "0.05em",
+                          }}
+                        >
+                          {t.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {item.categoryRefs && item.categoryRefs.length > 0 && (
+                  <div style={{ marginBottom: 14 }}>
+                    <p style={goldLabel}>Categories</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                      {item.categoryRefs.map((c) => (
+                        <button
+                          key={`cat-${c.id}`}
+                          onClick={() => navigate(`/furniture/category/${c.slug}`)}
+                          className="hover:bg-[#F5EFE8] transition-colors"
+                          style={{
+                            fontSize: 12,
+                            padding: "6px 14px",
+                            borderRadius: 999,
+                            border: `1px solid ${GOLD}`,
+                            color: "#1A1A1A",
+                            background: "#FFFFFF",
+                            cursor: "pointer",
+                            letterSpacing: "0.05em",
+                          }}
+                        >
+                          {c.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {item.collection && (
+                  <div style={{ marginBottom: 14 }}>
+                    <p style={goldLabel}>Collection</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                      <button
+                        onClick={() => navigate(`/furniture/collection/${item.collection!.slug}`)}
+                        className="hover:opacity-90 transition-opacity"
+                        style={{
+                          fontSize: 12,
+                          padding: "6px 14px",
+                          borderRadius: 999,
+                          border: `1px solid ${GOLD}`,
+                          background: GOLD,
+                          color: "#FFFFFF",
+                          cursor: "pointer",
+                          letterSpacing: "0.05em",
+                        }}
+                      >
+                        {item.collection.name}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -314,26 +450,83 @@ const ItemDetail = () => {
           </div>
         </section>
 
-        {/* GALLERY — placed BELOW the main item image (BoConcept-style grid) */}
+
+        {/* GALLERY — interactive show more/less with staggered reveal */}
         {galleryImages.length > 0 && (
-          <section style={{ background: "#FAFAF8", padding: "0 60px 60px" }}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-none">
-              {galleryImages.map((g) => (
-                <figure
-                  key={g.id}
-                  className="overflow-hidden rounded-lg"
-                  style={{ background: "#FFFFFF", border: "1px solid #E8E4DF" }}
+          <section style={{ background: "#FAFAF8", padding: "40px 60px 60px" }}>
+            <div className="flex flex-col items-center gap-3" style={{ marginBottom: showGallery ? 32 : 0 }}>
+              <p className="text-[11px] tracking-[0.3em] uppercase text-muted-foreground">
+                Gallery · {galleryImages.length} image{galleryImages.length === 1 ? "" : "s"}
+              </p>
+              <button
+                onClick={() => setShowGallery((v) => !v)}
+                className="group inline-flex items-center gap-3 uppercase transition-all"
+                style={{
+                  color: GOLD,
+                  border: `1px solid ${GOLD}`,
+                  background: showGallery ? "#FBF7F1" : "transparent",
+                  fontSize: 11,
+                  letterSpacing: "0.25em",
+                  padding: "12px 28px",
+                  borderRadius: 999,
+                  cursor: "pointer",
+                }}
+              >
+                <motion.span
+                  key={showGallery ? "less" : "more"}
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25 }}
                 >
-                  <img
-                    src={g.image}
-                    alt={g.alt_text ?? g.title ?? item.name}
-                    style={{ width: "100%", height: "auto", display: "block", objectFit: "cover" }}
-                  />
-                </figure>
-              ))}
+                  {showGallery ? "Show Less" : "Show More"}
+                </motion.span>
+                <motion.span
+                  animate={{ rotate: showGallery ? 180 : 0 }}
+                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  className="inline-flex"
+                >
+                  <ChevronDown size={14} />
+                </motion.span>
+              </button>
             </div>
+
+            <AnimatePresence initial={false}>
+              {showGallery && (
+                <motion.div
+                  key="gallery-grid"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-none pt-2">
+                    {galleryImages.map((g, i) => (
+                      <motion.figure
+                        key={g.id}
+                        initial={{ opacity: 0, y: 24 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] }}
+                        onClick={() => openLightbox(mainImage ? i + 1 : i)}
+                        className="overflow-hidden rounded-lg cursor-zoom-in group"
+                        style={{ background: "#FFFFFF", border: "1px solid #E8E4DF" }}
+                      >
+                        <img
+                          src={g.image}
+                          alt={g.alt_text ?? g.title ?? item.name}
+                          className="transition-transform duration-700 group-hover:scale-[1.04]"
+                          style={{ width: "100%", height: "auto", display: "block", objectFit: "cover" }}
+                        />
+                      </motion.figure>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </section>
         )}
+
+
 
         {/* LIFESTYLE — Furniture In Real Spaces */}
         {item.lifestyle && item.lifestyle.length > 0 && (
@@ -435,7 +628,7 @@ const ItemDetail = () => {
             {item.collection ? "Pieces designed to live in harmony." : "Curated picks from our catalogue."}
           </p>
 
-          <div className="flex gap-5 overflow-x-auto pb-2">
+          <div className="flex gap-5 overflow-x-auto pt-4 pb-6 -mx-2 px-2" style={{ scrollbarGutter: "stable" }}>
             {related.map((r) => (
               <Link
                 key={r.slug}
@@ -453,10 +646,32 @@ const ItemDetail = () => {
                   display: "block",
                 }}
               >
-                <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                  {r.image ? (
-                    <img src={r.image} alt={r.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 6 }} />
-                  ) : (
+                <div
+  style={{
+    height: 180,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    background: "#FAFAF8",
+    borderRadius: 6,
+  }}
+>
+  {r.image ? (
+    <img
+      src={r.image}
+      alt={r.name}
+      style={{
+        maxWidth: "100%",
+        maxHeight: "100%",
+        width: "auto",
+        height: "auto",
+        objectFit: "contain",
+        mixBlendMode: "multiply",
+        transform: "scale(1.15)",
+      }}
+    />
+  ) : (
                     <ItemIllustration name={r.name} />
                   )}
                 </div>
@@ -494,6 +709,13 @@ const ItemDetail = () => {
           </div>
         </SheetContent>
       </Sheet>
+
+      <ImageLightbox
+        open={lightboxOpen}
+        images={lightboxImages}
+        startIndex={lightboxIndex}
+        onClose={() => setLightboxOpen(false)}
+      />
 
       <Footer />
     </>

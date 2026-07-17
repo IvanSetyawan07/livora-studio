@@ -1,113 +1,138 @@
-const STORAGE_KEY = "livora.themeBanners.v1";
+import { api } from "@/lib/api";
+
 const EVENT = "livora:themeBanners:changed";
 
 export type ThemeBannerKey = string;
 
 export type ThemeBanner = {
+  id?: number;
   image: string;
-  path?: string; // Supabase Storage path (for deletion). Absent for legacy base64.
+  path?: string;
   title?: string;
   updatedAt: number;
 };
 
-// Internal storage uses arrays. Backward-compatible with old single-object shape.
-type StoreRaw = Record<string, ThemeBanner | ThemeBanner[]>;
 type Store = Record<string, ThemeBanner[]>;
 
-function normalize(raw: StoreRaw): Store {
-  const out: Store = {};
-  for (const k of Object.keys(raw)) {
-    const v = raw[k];
-    if (!v) continue;
-    out[k] = Array.isArray(v) ? v : [v];
-  }
-  return out;
+let cache: Store = {};
+let loaded = false;
+let loadingPromise: Promise<Store> | null = null;
+
+function mapApiBanner(b: any): ThemeBanner {
+  return {
+    id: b.id,
+    image: b.image,
+    path: b.path ?? undefined,
+    title: b.title ?? "",
+    updatedAt: b.updated_at ? new Date(b.updated_at).getTime() : Date.now(),
+  };
 }
 
-function read(): Store {
+async function fetchAll(): Promise<Store> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? normalize(JSON.parse(raw) as StoreRaw) : {};
-  } catch {
-    return {};
+    const { data } = await api.get<Record<string, any[]>>("/taxonomy-banners");
+    const store: Store = {};
+    for (const key of Object.keys(data || {})) {
+      store[key] = (data[key] || []).map(mapApiBanner);
+    }
+    cache = store;
+    loaded = true;
+    window.dispatchEvent(new Event(EVENT));
+    return store;
+  } catch (e) {
+    console.error("Gagal memuat banner:", e);
+    return cache;
   }
 }
 
-function write(store: Store) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-  } catch {
-    throw new Error("Storage penuh. Hapus banner lama atau pakai gambar lebih kecil.");
+export function ensureBannersLoaded(): Promise<Store> {
+  if (loaded) return Promise.resolve(cache);
+  if (!loadingPromise) {
+    loadingPromise = fetchAll().finally(() => {
+      loadingPromise = null;
+    });
   }
+  return loadingPromise;
+}
+
+// Mulai load begitu module ini di-import.
+ensureBannersLoaded();
+
+/* ---------- Multi-banner API (dibaca dari cache in-memory) ---------- */
+export function getBanners(key: string): ThemeBanner[] {
+  return cache[key] ?? [];
+}
+export function getAllBannersList(): Store {
+  return cache;
+}
+export async function addBanner(key: string, banner: ThemeBanner) {
+  const { data } = await api.post("/admin/taxonomy-banners", {
+    taxonomy_key: key,
+    image: banner.image,
+    path: banner.path,
+    title: banner.title || "",
+  });
+  const list = cache[key] ? [...cache[key]] : [];
+  list.push(mapApiBanner(data));
+  cache = { ...cache, [key]: list };
+  window.dispatchEvent(new Event(EVENT));
+}
+export async function updateBannerAt(key: string, index: number, banner: Partial<ThemeBanner>) {
+  const list = cache[key] ?? [];
+  const target = list[index];
+  if (!target?.id) return;
+  const { data } = await api.put(`/admin/taxonomy-banners/${target.id}`, {
+    image: banner.image,
+    path: banner.path,
+    title: banner.title,
+  });
+  const newList = [...list];
+  newList[index] = mapApiBanner(data);
+  cache = { ...cache, [key]: newList };
+  window.dispatchEvent(new Event(EVENT));
+}
+export async function removeBannerAt(key: string, index: number) {
+  const list = cache[key] ?? [];
+  const target = list[index];
+  if (!target?.id) return;
+  await api.delete(`/admin/taxonomy-banners/${target.id}`);
+  const newList = list.filter((_, i) => i !== index);
+  cache = { ...cache, [key]: newList };
   window.dispatchEvent(new Event(EVENT));
 }
 
-/* ---------- New multi-banner API ---------- */
-export function getBanners(key: string): ThemeBanner[] {
-  return read()[key] ?? [];
-}
-export function getAllBannersList(): Store { return read(); }
-export function addBanner(key: string, banner: ThemeBanner) {
-  const store = read();
-  const list = store[key] ?? [];
-  list.push(banner);
-  store[key] = list;
-  write(store);
-}
-export function updateBannerAt(key: string, index: number, banner: Partial<ThemeBanner>) {
-  const store = read();
-  const list = store[key] ?? [];
-  if (!list[index]) return;
-  list[index] = { ...list[index], ...banner, updatedAt: Date.now() };
-  store[key] = list;
-  write(store);
-}
-export function removeBannerAt(key: string, index: number) {
-  const store = read();
-  const list = store[key] ?? [];
-  list.splice(index, 1);
-  if (list.length === 0) delete store[key];
-  else store[key] = list;
-  write(store);
-}
-
 /* ---------- Backward-compatible single-banner API ---------- */
-// Returns an object keyed by category, where each value is the FIRST banner
-// (kept for older callers that expect a single banner object).
 export function getAllBanners(): Record<string, ThemeBanner> {
-  const all = read();
   const out: Record<string, ThemeBanner> = {};
-  for (const k of Object.keys(all)) {
-    if (all[k][0]) out[k] = all[k][0];
+  for (const k of Object.keys(cache)) {
+    if (cache[k][0]) out[k] = cache[k][0];
   }
   return out;
 }
 export function getBanner(key: string): ThemeBanner | undefined {
-  return read()[key]?.[0];
-}
-export function saveBanner(key: string, banner: ThemeBanner) {
-  const store = read();
-  const list = store[key] ?? [];
-  if (list.length === 0) list.push(banner);
-  else list[0] = banner;
-  store[key] = list;
-  write(store);
-}
-export function deleteBanner(key: string) {
-  const store = read();
-  delete store[key];
-  write(store);
+  return cache[key]?.[0];
 }
 
 export function subscribeBanners(cb: () => void): () => void {
-  const handler = () => cb();
-  window.addEventListener(EVENT, handler);
-  window.addEventListener("storage", handler);
-  return () => {
-    window.removeEventListener(EVENT, handler);
-    window.removeEventListener("storage", handler);
-  };
+  window.addEventListener(EVENT, cb);
+  return () => window.removeEventListener(EVENT, cb);
 }
+export async function saveBanner(key: string, banner: ThemeBanner) {
+  const existing = cache[key] ?? [];
+  if (existing.length === 0) {
+    await addBanner(key, banner);
+  } else {
+    await updateBannerAt(key, 0, banner);
+  }
+}
+
+export async function deleteBanner(key: string) {
+  const list = cache[key] ?? [];
+  for (let i = list.length - 1; i >= 0; i--) {
+    await removeBannerAt(key, i);
+  }
+}
+/* ---------- Helper upload (dipakai AdminTaxonomies, tidak berubah) ---------- */
 export function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -115,31 +140,4 @@ export function fileToDataUrl(file: File): Promise<string> {
     reader.onerror = () => reject(reader.error ?? new Error("Gagal membaca file"));
     reader.readAsDataURL(file);
   });
-}
-
-/** Downscale + re-encode to keep data URL under localStorage-friendly size. */
-export async function compressImage(
-  file: File,
-  opts: { maxDim?: number; quality?: number; mime?: string } = {}
-): Promise<string> {
-  const { maxDim = 1920, quality = 0.85, mime = "image/jpeg" } = opts;
-  const dataUrl = await fileToDataUrl(file);
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const i = new Image();
-    i.onload = () => resolve(i);
-    i.onerror = () => reject(new Error("Gambar tidak valid"));
-    i.src = dataUrl;
-  });
-  let { width, height } = img;
-  const scale = Math.min(1, maxDim / Math.max(width, height));
-  width = Math.round(width * scale);
-  height = Math.round(height * scale);
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return dataUrl;
-  ctx.drawImage(img, 0, 0, width, height);
-  const useMime = file.type === "image/png" && mime === "image/jpeg" ? "image/jpeg" : mime;
-  return canvas.toDataURL(useMime, quality);
 }

@@ -138,7 +138,7 @@ const FurnitureCollectionCard = () => {
       variants={containerVariants}
       initial="hidden"
       animate={isVisible ? "visible" : "hidden"}
-      className="mx-auto max-w-7xl px-4 md:px-8"
+      className="container-livora"
     >
       {/* Premium Floating Card */}
       <div

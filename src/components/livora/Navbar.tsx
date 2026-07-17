@@ -16,7 +16,7 @@ type NavLink = {
   dropdown?: { label: string; to: string }[];
 };
 
-type FurnitureType = { id: number; name: string; slug: string };
+type FurnitureType = { id: number; name: string; slug: string; image?: string | null };
 
 type OverlayView = "main" | "furniture";
 
@@ -51,7 +51,7 @@ export const Navbar = () => {
         { label: "Public Spaces", to: "/catalog/public-spaces" },
       ],
     },
-    
+    { key: "collection", label: "COLLECTION", to: "/collection" },
   ];
 
   // Quick links always visible on desktop header.
@@ -297,7 +297,7 @@ export const Navbar = () => {
           headerTransparent ? "bg-transparent" : "bg-background/75 backdrop-blur-[6px]"
         } ${hidden ? "-translate-y-full" : "translate-y-0"}`}
       >
-        <div className="max-w-7xl md:max-w-none mx-auto px-8 lg:px-16 h-20 flex items-center justify-between relative">
+        <div className="container-livora h-20 flex items-center justify-between relative">
           {/* Logo */}
           <Link
             to="/"
@@ -461,7 +461,7 @@ export const Navbar = () => {
 
                   <ul className="flex flex-col gap-4">
                     {furnitureTypes.map((ft, i) => {
-                      const thumb = thumbnails[ft.name]?.image;
+                      const thumb = ft.image || thumbnails[ft.name]?.image;
                       return (
                         <li
                           key={ft.id}

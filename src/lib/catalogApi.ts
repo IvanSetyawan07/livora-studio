@@ -18,7 +18,7 @@ const buildStorageUrl = (path: string): string => {
   if (path.startsWith('http')) return path;
   
   const baseUrl = (import.meta.env.VITE_API_URL as string | undefined)
-    ?.replace("/api", "") ?? "http://127.0.0.1:8000";
+  ?.replace(/\/api\/?$/, "") ?? "http://127.0.0.1:8000";
   
   return `${baseUrl}/storage/${path}`;
 };
@@ -115,6 +115,12 @@ export interface Hotspot {
 // GET all hotspots for a catalog
 export const getHotspots = async (catalogId: string): Promise<Hotspot[]> => {
   const response = await api.get<Hotspot[]>(`${API_BASE}/${catalogId}/hotspots`);
+  return response.data;
+};
+
+// Public read-only endpoint — safe for unauthenticated visitors
+export const getPublicHotspots = async (catalogId: string): Promise<Hotspot[]> => {
+  const response = await api.get<Hotspot[]>(`${API_PUBLIC}/${catalogId}/hotspots`);
   return response.data;
 };
 
