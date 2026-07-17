@@ -451,46 +451,81 @@ const ItemDetail = () => {
         </section>
 
 
-        {/* GALLERY — hidden until user clicks Show More */}
+        {/* GALLERY — interactive show more/less with staggered reveal */}
         {galleryImages.length > 0 && (
-          <section style={{ background: "#FAFAF8", padding: "20px 60px 60px" }}>
-            <div className="flex justify-center" style={{ marginBottom: showGallery ? 32 : 0 }}>
+          <section style={{ background: "#FAFAF8", padding: "40px 60px 60px" }}>
+            <div className="flex flex-col items-center gap-3" style={{ marginBottom: showGallery ? 32 : 0 }}>
+              <p className="text-[11px] tracking-[0.3em] uppercase text-muted-foreground">
+                Gallery · {galleryImages.length} image{galleryImages.length === 1 ? "" : "s"}
+              </p>
               <button
                 onClick={() => setShowGallery((v) => !v)}
-                className="uppercase hover:opacity-70 transition-opacity"
+                className="group inline-flex items-center gap-3 uppercase transition-all"
                 style={{
                   color: GOLD,
                   border: `1px solid ${GOLD}`,
-                  background: "transparent",
+                  background: showGallery ? "#FBF7F1" : "transparent",
                   fontSize: 11,
                   letterSpacing: "0.25em",
-                  padding: "12px 32px",
+                  padding: "12px 28px",
                   borderRadius: 999,
                   cursor: "pointer",
                 }}
               >
-                {showGallery ? "Show Less" : "Show More"}
+                <motion.span
+                  key={showGallery ? "less" : "more"}
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  {showGallery ? "Show Less" : "Show More"}
+                </motion.span>
+                <motion.span
+                  animate={{ rotate: showGallery ? 180 : 0 }}
+                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  className="inline-flex"
+                >
+                  <ChevronDown size={14} />
+                </motion.span>
               </button>
             </div>
-            {showGallery && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-none animate-fade-in">
-                {galleryImages.map((g) => (
-                  <figure
-                    key={g.id}
-                    className="overflow-hidden rounded-lg"
-                    style={{ background: "#FFFFFF", border: "1px solid #E8E4DF" }}
-                  >
-                    <img
-                      src={g.image}
-                      alt={g.alt_text ?? g.title ?? item.name}
-                      style={{ width: "100%", height: "auto", display: "block", objectFit: "cover" }}
-                    />
-                  </figure>
-                ))}
-              </div>
-            )}
+
+            <AnimatePresence initial={false}>
+              {showGallery && (
+                <motion.div
+                  key="gallery-grid"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-none pt-2">
+                    {galleryImages.map((g, i) => (
+                      <motion.figure
+                        key={g.id}
+                        initial={{ opacity: 0, y: 24 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] }}
+                        onClick={() => openLightbox(mainImage ? i + 1 : i)}
+                        className="overflow-hidden rounded-lg cursor-zoom-in group"
+                        style={{ background: "#FFFFFF", border: "1px solid #E8E4DF" }}
+                      >
+                        <img
+                          src={g.image}
+                          alt={g.alt_text ?? g.title ?? item.name}
+                          className="transition-transform duration-700 group-hover:scale-[1.04]"
+                          style={{ width: "100%", height: "auto", display: "block", objectFit: "cover" }}
+                        />
+                      </motion.figure>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </section>
         )}
+
 
 
         {/* LIFESTYLE — Furniture In Real Spaces */}
