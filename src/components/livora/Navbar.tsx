@@ -297,7 +297,7 @@ export const Navbar = () => {
           headerTransparent ? "bg-transparent" : "bg-background/75 backdrop-blur-[6px]"
         } ${hidden ? "-translate-y-full" : "translate-y-0"}`}
       >
-        <div className="max-w-7xl md:max-w-none mx-auto px-8 lg:px-16 h-20 flex items-center justify-between relative">
+        <div className="container-livora h-20 flex items-center justify-between relative">
           {/* Logo */}
           <Link
             to="/"
