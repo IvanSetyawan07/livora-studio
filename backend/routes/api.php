@@ -15,7 +15,10 @@ use App\Http\Controllers\Api\CollectionController;
 use App\Http\Controllers\Api\FurnitureExperienceController;
 use App\Http\Controllers\UserLanguageController;
 use App\Http\Controllers\Api\VariantController;
+use App\Http\Controllers\Api\TaxonomyBannerController;
 
+Route::get('/taxonomy-banners', [TaxonomyBannerController::class, 'index']);
+Route::get('/taxonomy-banners/{key}', [TaxonomyBannerController::class, 'byKey']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -38,8 +41,8 @@ Route::prefix('admin/items/{itemId}/variants')->group(function () {
 // Catalog - Public Read
 Route::get('/catalogs', [CatalogController::class, 'index']);
 Route::get('/catalogs/{slug}', [CatalogController::class, 'show']);
-Route::get('/catalogs/{catalogId}/hotspots', [HotspotController::class, 'index']);
-Route::get('/catalogs/{catalogId}/hotspots/{scene}', [HotspotController::class, 'getByScene']);
+Route::get('/catalogs/{catalog}/hotspots', [HotspotController::class, 'index']);
+Route::get('/catalogs/{catalog}/hotspots/{scene}', [HotspotController::class, 'getByScene']);
 
 // Public tracking
 Route::post('/track/click', [TrackingController::class, 'click']);
@@ -115,7 +118,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/catalogs/{catalog}', [CatalogController::class, 'update']);
         Route::put('/catalogs/{catalog}', [CatalogController::class, 'update']);
         Route::delete('/catalogs/{catalog}', [CatalogController::class, 'destroy']);
-
+Route::post('/taxonomy-banners', [TaxonomyBannerController::class, 'store']);
+Route::put('/taxonomy-banners/{banner}', [TaxonomyBannerController::class, 'update']);
+Route::delete('/taxonomy-banners/{banner}', [TaxonomyBannerController::class, 'destroy']);
         // Hotspots Admin CRUD (nested under catalogs)
         Route::prefix('catalogs/{catalog}/hotspots')->group(function () {
             Route::get('/', [HotspotController::class, 'index']);
