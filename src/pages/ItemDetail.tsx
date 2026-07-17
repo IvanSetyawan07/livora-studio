@@ -162,22 +162,26 @@ const ItemDetail = () => {
         <section className="grid grid-cols-1 md:grid-cols-[55%_45%]">
           {/* LEFT: main product image (controlled by variant only) */}
           <div style={{ background: "#ffffff", padding: "60px" }}>
-            <div
-              className="relative"
+            <button
+              type="button"
+              onClick={() => openLightbox(0)}
+              className="relative w-full group cursor-zoom-in"
               style={{
                 border: "1px solid #E8E4DF",
                 borderRadius: "12px",
                 background: "#FFFFFF",
                 aspectRatio: "1 / 1",
                 overflow: "hidden",
+                padding: 0,
               }}
+              aria-label="View gallery"
             >
               {mainImage ? (
                 <img
                   key={mainImage}
                   src={mainImage}
                   alt={item.name}
-                  className="animate-fade-in"
+                  className="animate-fade-in transition-transform duration-500 group-hover:scale-[1.03]"
                   style={{ width: "100%", height: "100%", objectFit: "contain" }}
                 />
               ) : (
@@ -185,8 +189,16 @@ const ItemDetail = () => {
                   <ItemIllustration name={item.name} size={280} strokeWidth={1.1} />
                 </div>
               )}
-            </div>
+              {lightboxImages.length > 1 && (
+                <span
+                  className="absolute bottom-3 right-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/70 text-white text-[10px] tracking-[0.2em] uppercase opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <ImageIcon size={12} /> {lightboxImages.length} photos
+                </span>
+              )}
+            </button>
           </div>
+
 
           {/* RIGHT: details + configurator */}
           <div style={{ background: "#FFFFFF", padding: "60px 48px" }}>
