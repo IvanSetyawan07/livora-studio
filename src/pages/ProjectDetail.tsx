@@ -466,6 +466,8 @@ const ProjectDetail = () => {
             ))}
           </div>
         </section>
+
+        <BookConsultation />
       </main>
       <Footer />
     </>
