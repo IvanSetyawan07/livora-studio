@@ -4,11 +4,14 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight, Plus } from "lucide-react";
 import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
+import { BookConsultation } from "@/components/livora/BookConsultation";
+import { CategoryBar } from "@/components/livora/CategoryBar";
 import {
   getCollection,
   Collection,
   CATEGORY_TABS,
   CollectionPackage,
+  CollectionItemRef,
 } from "@/lib/collectionsApi";
 
 export default function CollectionDetail() {
@@ -17,15 +20,30 @@ export default function CollectionDetail() {
   const [collection, setCollection] = useState<Collection | null>(null);
   const [loading, setLoading] = useState(true);
   const [activePackage, setActivePackage] = useState<CollectionPackage | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const heroRef = useRef<HTMLElement>(null);
   const { scrollY } = useScroll();
-  const heroY = useTransform(scrollY, [0, 800], [0, 120]);
-  const heroScale = useTransform(scrollY, [0, 800], [1, 1.08]);
+  const heroHeight = 800;
+
+  // Match CatalogPage hero motion: image parallax + scroll-driven text slide/fade/blur.
+  const imgY = useTransform(scrollY, [0, heroHeight], [0, 140]);
+  const imgScale = useTransform(scrollY, [0, heroHeight], [1, 1.08]);
+  const textX = useTransform(
+    scrollY,
+    [0, heroHeight * 0.3, heroHeight * 0.6, heroHeight * 0.95],
+    [0, -40, -80, -120],
+  );
+  const textY = useTransform(scrollY, [0, heroHeight * 0.5, heroHeight], [0, -40, -80], { clamp: true });
+  const textOpacity = useTransform(scrollY, [0, heroHeight * 0.5, heroHeight], [1, 0.5, 0], { clamp: true });
+  const overlayOpacity = useTransform(scrollY, [0, 600], [0.55, 0.78]);
+
+  const ease = [0.22, 1, 0.36, 1] as const;
 
   useEffect(() => {
     if (!slug) return;
     setLoading(true);
+    setMounted(false);
     getCollection(slug)
       .then((c) => {
         setCollection(c);
@@ -36,10 +54,27 @@ export default function CollectionDetail() {
   }, [slug]);
 
   useEffect(() => {
-    if (collection) document.title = `${collection.name} Collection — LIVORA`;
+    if (!collection) return;
+    document.title = `${collection.name} Collection — LIVORA`;
+    const t = setTimeout(() => setMounted(true), 80);
+    return () => clearTimeout(t);
   }, [collection]);
 
-  const hero = collection?.hero_banner || collection?.featured_image ||
+  // Group active package items by slug so duplicates render as "× N pcs".
+  const groupedItems = useMemo(() => {
+    const map = new Map<string, { item: CollectionItemRef; count: number }>();
+    (activePackage?.items ?? []).forEach((it) => {
+      const key = it.slug;
+      const entry = map.get(key);
+      if (entry) entry.count += 1;
+      else map.set(key, { item: it, count: 1 });
+    });
+    return Array.from(map.values());
+  }, [activePackage]);
+
+  const hero =
+    collection?.hero_banner ||
+    collection?.featured_image ||
     "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1920&q=80";
 
   if (loading) {
@@ -50,117 +85,177 @@ export default function CollectionDetail() {
       </div>
     );
   }
-
   if (!collection) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="pt-40 text-center text-sm text-muted-foreground">
-          Collection not found.
-        </div>
+        <div className="pt-40 text-center text-sm text-muted-foreground">Collection not found.</div>
       </div>
     );
   }
+
+  const eyebrowAnim = {
+    initial: { opacity: 0, x: -40 },
+    animate: mounted ? { opacity: 1, x: 0 } : { opacity: 0, x: -40 },
+    transition: { duration: 1, ease, delay: 0.2 },
+  };
+  const headingAnim = {
+    initial: { opacity: 0, x: -80, filter: "blur(8px)" },
+    animate: mounted
+      ? { opacity: 1, x: 0, filter: "blur(0px)" }
+      : { opacity: 0, x: -80, filter: "blur(8px)" },
+    transition: { duration: 1.2, ease, delay: 0.45 },
+  };
+  const headingItalicAnim = {
+    initial: { opacity: 0, x: -80, filter: "blur(8px)" },
+    animate: mounted
+      ? { opacity: 1, x: 0, filter: "blur(0px)" }
+      : { opacity: 0, x: -80, filter: "blur(8px)" },
+    transition: { duration: 1.2, ease, delay: 0.7 },
+  };
+  const descAnim = {
+    initial: { opacity: 0, y: 20 },
+    animate: mounted ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 },
+    transition: { duration: 1, ease, delay: 1.0 },
+  };
+  const ctaAnim = {
+    initial: { opacity: 0, y: 16 },
+    animate: mounted ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 },
+    transition: { duration: 0.8, ease, delay: 1.25 },
+  };
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      {/* HERO */}
-      <section ref={heroRef} className="relative w-full overflow-hidden" style={{ height: "85vh" }}>
-        <motion.div style={{ y: heroY, scale: heroScale }} className="absolute inset-0">
-          <img src={hero} alt={collection.name} className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
+      {/* HERO — cinematic parity with CatalogPage */}
+      <section ref={heroRef} className="relative h-screen w-full overflow-hidden border-b border-border">
+        <motion.div
+          key={`hero-bg-${collection.slug}`}
+          className="absolute inset-0 will-change-transform"
+          style={{ y: imgY, scale: imgScale }}
+          initial={{ scale: 1.05 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 2.2, ease }}
+        >
+          <img src={hero} alt={collection.name} className="absolute inset-0 h-[115%] w-full object-cover" />
         </motion.div>
 
-        <div className="relative z-10 h-full flex items-center">
-          <div className="container-livora">
+        <motion.div className="absolute inset-0 pointer-events-none" style={{ opacity: overlayOpacity }}>
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(to right, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.45) 45%, rgba(0,0,0,0.15) 100%)",
+            }}
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.55) 100%)",
+            }}
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,0.55) 100%)",
+            }}
+          />
+        </motion.div>
+
+        <div className="hidden md:flex absolute left-6 top-1/2 -translate-y-1/2 z-10 items-center gap-4">
+          <div className="h-12 w-px bg-white/40" />
+          <span
+            className="text-[10px] tracking-[0.45em] uppercase text-white/70 font-light"
+            style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+          >
+            Livora Collection
+          </span>
+          <div className="h-12 w-px bg-white/40" />
+        </div>
+
+        <motion.div
+          className="relative z-10 h-full container-livora flex items-center"
+          style={{ x: textX, opacity: textOpacity, y: textY }}
+        >
+          <div className="max-w-[560px] w-full md:w-[46%] pt-24 md:pt-32 pr-4 md:pr-0">
             <motion.p
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-              className="text-[11px] tracking-[0.35em] uppercase text-white/80 mb-6"
+              {...eyebrowAnim}
+              className="flex items-center gap-4 text-[10px] uppercase tracking-[0.45em] text-white/80 font-light mb-8"
             >
+              <span className="inline-block h-px w-8 bg-white/50" />
               <Link to="/collection" className="hover:text-white transition-colors">
                 Collection
-              </Link>{" "}
-              <span className="mx-2">›</span> {collection.name}
+              </Link>
             </motion.p>
-            <motion.h1
-              initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.15 }}
-              className="serif font-light text-white text-5xl md:text-7xl leading-[1.05] mb-6"
-              style={{ textShadow: "0 2px 20px rgba(0,0,0,0.4)" }}
+
+            <h1
+              className="serif font-light text-white leading-[0.95] mb-6 md:mb-8"
+              style={{ fontSize: "clamp(44px, 10vw, 128px)", textShadow: "1px 1px 12px rgba(0,0,0,0.45)" }}
             >
-              {collection.name}
-              <br />Collection
-            </motion.h1>
+              <motion.span {...headingAnim} className="block">
+                {collection.name}
+              </motion.span>
+              <motion.em {...headingItalicAnim} className="block italic font-light">
+                Collection
+              </motion.em>
+            </h1>
+
             <motion.p
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.35 }}
-              className="text-white/85 text-sm md:text-base max-w-lg leading-relaxed mb-8"
+              {...descAnim}
+              className="text-sm md:text-[15px] text-white/80 font-light leading-relaxed mb-10"
+              style={{ maxWidth: 460 }}
             >
               {collection.short_description || collection.description || ""}
             </motion.p>
+
             {collection.cta_text && (
               <motion.button
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5 }}
+                {...ctaAnim}
                 onClick={() => document.getElementById("collection-story")?.scrollIntoView({ behavior: "smooth" })}
-                className="inline-flex items-center gap-3 border border-white/70 text-white px-7 py-3 text-[11px] tracking-[0.25em] uppercase hover:bg-white hover:text-foreground transition-colors duration-300"
+                className="group inline-flex items-center gap-3 bg-[#f5f0e8] text-[#1a1a1a] px-7 py-3.5 text-[10px] uppercase tracking-[0.3em] font-light hover:bg-white transition-colors duration-300"
               >
                 {collection.cta_text}
-                <ArrowRight size={14} />
+                <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
               </motion.button>
             )}
           </div>
-        </div>
+        </motion.div>
       </section>
 
-      {/* STICKY CATEGORY TABS */}
-      <div className="sticky top-20 z-40 bg-background/90 backdrop-blur-md border-b border-border/50">
-        <div className="container-livora">
-          <div className="flex gap-6 md:gap-8 overflow-x-auto py-4 no-scrollbar">
-            {CATEGORY_TABS.map((tab) => (
-              <button
-                key={tab.slug}
-                onClick={() =>
-                  tab.slug === "all"
-                    ? document.getElementById("collection-packages")?.scrollIntoView({ behavior: "smooth" })
-                    : navigate(`/collection/${collection.slug}/${tab.slug}`)
-                }
-                className="relative text-[11px] tracking-[0.25em] uppercase text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap group"
-              >
-                {tab.label}
-                <span className="absolute left-0 right-0 -bottom-1 h-px bg-foreground origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* CATEGORY BAR — icon dock */}
+      <div className="py-8 flex justify-center">
+        <CategoryBar
+          tabs={CATEGORY_TABS}
+          activeSlug="all"
+          onSelect={(s) =>
+            s === "all"
+              ? document.getElementById("collection-packages")?.scrollIntoView({ behavior: "smooth" })
+              : navigate(`/collection/${collection.slug}/${s}`)
+          }
+        />
       </div>
 
-      {/* STORY */}
+      {/* STORY — cleaned up: no eyebrow, no title, no CTA button */}
       {(collection.story?.story_description || collection.story?.story_banner) && (
-        <section id="collection-story" className="container-livora py-24 md:py-32">
+        <section id="collection-story" className="container-livora py-16 md:py-24">
           <div className="relative rounded-2xl overflow-hidden bg-neutral-900">
-            {collection.story.story_banner && (
+            {collection.story?.story_banner && (
               <div className="absolute inset-0">
-                <img src={collection.story.story_banner} alt="" className="w-full h-full object-cover opacity-70" />
+                <img
+                  src={collection.story.story_banner}
+                  alt=""
+                  className="w-full h-full object-cover opacity-70"
+                />
                 <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent" />
               </div>
             )}
             <div className="relative z-10 p-10 md:p-16 max-w-xl text-white">
-              <p className="text-[11px] tracking-[0.3em] uppercase text-white/70 mb-4">The Story</p>
-              <h2 className="serif font-light text-3xl md:text-5xl leading-tight mb-6">
-                One Collection. Endless Possibilities.
-              </h2>
-              <p className="text-sm md:text-base text-white/85 leading-relaxed mb-8">
-                {collection.story.story_description}
+              <p className="text-sm md:text-base text-white/85 leading-relaxed">
+                {collection.story?.story_description}
               </p>
-              {collection.story.cta_text && collection.story.cta_link && (
-                <a
-                  href={collection.story.cta_link}
-                  className="inline-flex items-center gap-3 border border-white/70 px-6 py-3 text-[11px] tracking-[0.25em] uppercase hover:bg-white hover:text-foreground transition-colors duration-300"
-                >
-                  {collection.story.cta_text}
-                  <ArrowRight size={14} />
-                </a>
-              )}
             </div>
           </div>
         </section>
@@ -197,7 +292,11 @@ export default function CollectionDetail() {
                   }`}
                 >
                   {p.banner ? (
-                    <img src={p.banner} alt={p.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-[900ms] group-hover:scale-110" />
+                    <img
+                      src={p.banner}
+                      alt={p.name}
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-[900ms] group-hover:scale-110"
+                    />
                   ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50" />
                   )}
@@ -218,14 +317,14 @@ export default function CollectionDetail() {
             })}
           </div>
 
-          {/* Items Included */}
-          {activePackage && (activePackage.items?.length ?? 0) > 0 && (
-            <div id="package-items" className="mt-16 bg-muted/40 rounded-xl p-6 md:p-10">
+          {/* Items Included — full-image cards, name + pcs below */}
+          {activePackage && groupedItems.length > 0 && (
+            <div id="package-items" className="mt-16">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
                   <h3 className="serif text-2xl font-light">{activePackage.name}</h3>
                   <span className="text-[11px] tracking-[0.15em] uppercase text-muted-foreground bg-background px-3 py-1 rounded-full border border-border">
-                    {activePackage.items?.length} Items
+                    {activePackage.items?.length ?? 0} Items
                   </span>
                 </div>
                 <Link
@@ -235,23 +334,44 @@ export default function CollectionDetail() {
                   View All Items <ArrowRight size={14} />
                 </Link>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                {activePackage.items?.map((it) => (
-                  <Link
-                    key={it.id}
-                    to={`/items/${it.slug}`}
-                    className="group block bg-background border border-border rounded-lg overflow-hidden hover:-translate-y-1 transition-all duration-300"
+
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {groupedItems.map(({ item: it, count }, i) => (
+                  <motion.div
+                    key={it.slug}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.45, delay: (i % 8) * 0.05 }}
                   >
-                    <div className="aspect-square bg-muted overflow-hidden">
-                      {it.image && (
-                        <img src={it.image} alt={it.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                      )}
-                    </div>
-                    <div className="p-3">
-                      <p className="text-xs font-medium truncate">{it.title}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">1 pc</p>
-                    </div>
-                  </Link>
+                    <Link to={`/items/${it.slug}`} className="group block">
+                      <div className="relative aspect-square overflow-hidden">
+                        {it.image ? (
+                          <img
+                            src={it.image}
+                            alt={it.title}
+                            className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-muted/40" />
+                        )}
+                        {count > 1 && (
+                          <span className="absolute top-3 right-3 text-[10px] tracking-[0.15em] uppercase bg-foreground text-background px-2.5 py-1 rounded-full">
+                            × {count} pcs
+                          </span>
+                        )}
+                      </div>
+                      <div className="pt-4 text-center">
+                        <p className="text-sm font-medium text-foreground group-hover:text-foreground/70 transition-colors">
+                          {it.title}
+                        </p>
+                        <p className="text-[11px] tracking-[0.15em] uppercase text-muted-foreground mt-1">
+                          {count} {count === 1 ? "pc" : "pcs"}
+                          {it.type?.name ? ` · ${it.type.name}` : ""}
+                        </p>
+                      </div>
+                    </Link>
+                  </motion.div>
                 ))}
               </div>
             </div>
@@ -259,7 +379,9 @@ export default function CollectionDetail() {
         </section>
       )}
 
-      <div className="py-16" />
+      <BookConsultation />
+
+      <div className="py-8" />
       <Footer />
     </div>
   );

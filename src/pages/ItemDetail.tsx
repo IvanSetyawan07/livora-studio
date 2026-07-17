@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ChevronDown, ImageIcon } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/livora/Navbar";
 import { PageBreadcrumb } from "@/components/livora/Breadcrumb";
 import { Footer } from "@/components/livora/Footer";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
+import { ImageLightbox, type LightboxImage } from "@/components/livora/ImageLightbox";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { items } from "@/data/items";
 import { useItemBySlug, type FurnitureVariant, type GalleryImage } from "@/lib/itemsApi";
@@ -24,6 +26,8 @@ const ItemDetail = () => {
   const [activeVariantId, setActiveVariantId] = useState<number | null>(null);
   const [sheetCategory, setSheetCategory] = useState<string | null>(null);
   const [showGallery, setShowGallery] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   // Reset variant when item loads
   useEffect(() => {
@@ -82,6 +86,22 @@ const ItemDetail = () => {
     activeVariant?.preview_image ||
     item?.image ||
     "";
+
+  // Combined images list used by the lightbox: main image (variant-aware) + gallery items.
+  const lightboxImages: LightboxImage[] = useMemo(() => {
+    const list: LightboxImage[] = [];
+    if (mainImage) list.push({ src: mainImage, alt: item?.name ?? "" });
+    galleryImages.forEach((g) =>
+      list.push({ src: g.image, alt: g.alt_text ?? g.title ?? item?.name ?? "" }),
+    );
+    return list;
+  }, [mainImage, galleryImages, item?.name]);
+
+  const openLightbox = (i: number) => {
+    if (!lightboxImages.length) return;
+    setLightboxIndex(i);
+    setLightboxOpen(true);
+  };
 
   // Group variants by category (fabric | leather | wood | metal | marble | other)
   const variantGroups = useMemo(() => {
@@ -142,22 +162,26 @@ const ItemDetail = () => {
         <section className="grid grid-cols-1 md:grid-cols-[55%_45%]">
           {/* LEFT: main product image (controlled by variant only) */}
           <div style={{ background: "#ffffff", padding: "60px" }}>
-            <div
-              className="relative"
+            <button
+              type="button"
+              onClick={() => openLightbox(0)}
+              className="relative w-full group cursor-zoom-in"
               style={{
                 border: "1px solid #E8E4DF",
                 borderRadius: "12px",
                 background: "#FFFFFF",
                 aspectRatio: "1 / 1",
                 overflow: "hidden",
+                padding: 0,
               }}
+              aria-label="View gallery"
             >
               {mainImage ? (
                 <img
                   key={mainImage}
                   src={mainImage}
                   alt={item.name}
-                  className="animate-fade-in"
+                  className="animate-fade-in transition-transform duration-500 group-hover:scale-[1.03]"
                   style={{ width: "100%", height: "100%", objectFit: "contain" }}
                 />
               ) : (
@@ -165,8 +189,16 @@ const ItemDetail = () => {
                   <ItemIllustration name={item.name} size={280} strokeWidth={1.1} />
                 </div>
               )}
-            </div>
+              {lightboxImages.length > 1 && (
+                <span
+                  className="absolute bottom-3 right-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/70 text-white text-[10px] tracking-[0.2em] uppercase opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <ImageIcon size={12} /> {lightboxImages.length} photos
+                </span>
+              )}
+            </button>
           </div>
+
 
           {/* RIGHT: details + configurator */}
           <div style={{ background: "#FFFFFF", padding: "60px 48px" }}>
@@ -419,46 +451,81 @@ const ItemDetail = () => {
         </section>
 
 
-        {/* GALLERY — hidden until user clicks Show More */}
+        {/* GALLERY — interactive show more/less with staggered reveal */}
         {galleryImages.length > 0 && (
-          <section style={{ background: "#FAFAF8", padding: "20px 60px 60px" }}>
-            <div className="flex justify-center" style={{ marginBottom: showGallery ? 32 : 0 }}>
+          <section style={{ background: "#FAFAF8", padding: "40px 60px 60px" }}>
+            <div className="flex flex-col items-center gap-3" style={{ marginBottom: showGallery ? 32 : 0 }}>
+              <p className="text-[11px] tracking-[0.3em] uppercase text-muted-foreground">
+                Gallery · {galleryImages.length} image{galleryImages.length === 1 ? "" : "s"}
+              </p>
               <button
                 onClick={() => setShowGallery((v) => !v)}
-                className="uppercase hover:opacity-70 transition-opacity"
+                className="group inline-flex items-center gap-3 uppercase transition-all"
                 style={{
                   color: GOLD,
                   border: `1px solid ${GOLD}`,
-                  background: "transparent",
+                  background: showGallery ? "#FBF7F1" : "transparent",
                   fontSize: 11,
                   letterSpacing: "0.25em",
-                  padding: "12px 32px",
+                  padding: "12px 28px",
                   borderRadius: 999,
                   cursor: "pointer",
                 }}
               >
-                {showGallery ? "Show Less" : "Show More"}
+                <motion.span
+                  key={showGallery ? "less" : "more"}
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  {showGallery ? "Show Less" : "Show More"}
+                </motion.span>
+                <motion.span
+                  animate={{ rotate: showGallery ? 180 : 0 }}
+                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  className="inline-flex"
+                >
+                  <ChevronDown size={14} />
+                </motion.span>
               </button>
             </div>
-            {showGallery && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-none animate-fade-in">
-                {galleryImages.map((g) => (
-                  <figure
-                    key={g.id}
-                    className="overflow-hidden rounded-lg"
-                    style={{ background: "#FFFFFF", border: "1px solid #E8E4DF" }}
-                  >
-                    <img
-                      src={g.image}
-                      alt={g.alt_text ?? g.title ?? item.name}
-                      style={{ width: "100%", height: "auto", display: "block", objectFit: "cover" }}
-                    />
-                  </figure>
-                ))}
-              </div>
-            )}
+
+            <AnimatePresence initial={false}>
+              {showGallery && (
+                <motion.div
+                  key="gallery-grid"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-none pt-2">
+                    {galleryImages.map((g, i) => (
+                      <motion.figure
+                        key={g.id}
+                        initial={{ opacity: 0, y: 24 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] }}
+                        onClick={() => openLightbox(mainImage ? i + 1 : i)}
+                        className="overflow-hidden rounded-lg cursor-zoom-in group"
+                        style={{ background: "#FFFFFF", border: "1px solid #E8E4DF" }}
+                      >
+                        <img
+                          src={g.image}
+                          alt={g.alt_text ?? g.title ?? item.name}
+                          className="transition-transform duration-700 group-hover:scale-[1.04]"
+                          style={{ width: "100%", height: "auto", display: "block", objectFit: "cover" }}
+                        />
+                      </motion.figure>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </section>
         )}
+
 
 
         {/* LIFESTYLE — Furniture In Real Spaces */}
@@ -642,6 +709,13 @@ const ItemDetail = () => {
           </div>
         </SheetContent>
       </Sheet>
+
+      <ImageLightbox
+        open={lightboxOpen}
+        images={lightboxImages}
+        startIndex={lightboxIndex}
+        onClose={() => setLightboxOpen(false)}
+      />
 
       <Footer />
     </>
