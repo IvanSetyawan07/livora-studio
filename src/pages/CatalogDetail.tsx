@@ -816,6 +816,8 @@ export default function CatalogDetail() {
         </div>
       </section>
 
+      <BookConsultation />
+
       <Footer />
       <WhatsAppButton />
     </div>
