@@ -10,8 +10,9 @@ import ProjectsPage from "./pages/Projects.tsx";
 import ItemDetail from "./pages/ItemDetail.tsx";
 import AboutPage from "./pages/About.tsx";
 import { WhatsAppButton } from "./components/livora/WhatsAppButton.tsx";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import Auth from "./pages/Auth";
+// import Login from "./pages/Login";
+// import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminOverview from "./pages/admin/AdminOverview";
@@ -66,13 +67,13 @@ function App() {
               <Route path="/collection" element={<CollectionLanding />} />
               <Route path="/collection/:slug" element={<CollectionDetail />} />
               <Route path="/collection/:slug/:category" element={<CollectionCategory />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+              <Route path="/login" element={<Auth />} />
+              <Route path="/register" element={<Auth />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/admin" element={<AdminLayout />}>
               <Route path="catalogs"          element={<CatalogListAdmin />} />
-<Route path="catalogs/create"   element={<CatalogFormAdmin />} />
-<Route path="catalogs/:id/edit" element={<CatalogFormAdmin />} />
+                <Route path="catalogs/create"   element={<CatalogFormAdmin />} />
+                <Route path="catalogs/:id/edit" element={<CatalogFormAdmin />} />
                 <Route index element={<AdminOverview />} />
                 <Route path="projects" element={<AdminProjects />} />
                 <Route path="items" element={<AdminItems />} />
