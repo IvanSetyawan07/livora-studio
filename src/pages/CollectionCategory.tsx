@@ -80,7 +80,11 @@ export default function CollectionCategory() {
         <CategoryBar
           tabs={CATEGORY_TABS}
           activeSlug={activeTab.slug}
-          onSelect={(s) => navigate(`/collection/${slug}/${s}`)}
+          onSelect={(s) =>
+            navigate(
+              `/collection/${slug}/${s}${packageSlug ? `?package=${packageSlug}` : ""}`,
+            )
+          }
         />
       </div>
 
@@ -88,14 +92,22 @@ export default function CollectionCategory() {
       <section className="container-livora py-12">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
           <div>
-            <p className="text-[11px] tracking-[0.3em] uppercase text-muted-foreground mb-2">
+            <p className="text-[11px] tracking-[0.3em] uppercase text-muted-foreground mb-2 flex flex-wrap items-center gap-2">
               <Link to={`/collection/${slug}`} className="hover:text-foreground">
                 {collection?.name ?? "Collection"}
               </Link>
+              {activePackage && (
+                <>
+                  <span className="opacity-40">/</span>
+                  <span>{activePackage.name}</span>
+                </>
+              )}
             </p>
             <h1 className="serif font-light text-3xl md:text-5xl">{activeTab.label}</h1>
             <p className="text-xs text-muted-foreground mt-2">
-              {loading ? "Loading…" : `${items.length} item${items.length === 1 ? "" : "s"}`}
+              {loading
+                ? "Loading…"
+                : `${displayItems.length} item${displayItems.length === 1 ? "" : "s"}`}
             </p>
           </div>
           <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
@@ -103,14 +115,14 @@ export default function CollectionCategory() {
           </p>
         </div>
 
-        {!loading && items.length === 0 && (
+        {!loading && displayItems.length === 0 && (
           <p className="py-16 text-center text-sm text-muted-foreground">
             No items in this category yet.
           </p>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
-          {items.map((it, i) => (
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          {displayItems.map((it, i) => (
             <motion.div
               key={it.id}
               initial={{ opacity: 0, y: 20 }}
@@ -122,15 +134,20 @@ export default function CollectionCategory() {
                 to={`/items/${it.slug}`}
                 className="group block bg-card border border-border/70 rounded-lg overflow-hidden transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_15px_40px_-15px_rgba(0,0,0,0.2)]"
               >
-                <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+                <div className="relative aspect-[4/3] overflow-hidden bg-white">
                   {it.image ? (
                     <img
                       src={it.image}
                       alt={it.title}
-                      className="w-full h-full object-cover transition-transform duration-[800ms] group-hover:scale-110"
+                      className="w-full h-full object-contain p-3 transition-transform duration-[800ms] group-hover:scale-105"
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-muted to-muted/50" />
+                  )}
+                  {it.count > 1 && (
+                    <span className="absolute top-3 right-3 text-[10px] tracking-[0.15em] uppercase bg-foreground text-background px-2.5 py-1 rounded-full">
+                      × {it.count} pcs
+                    </span>
                   )}
                   <span className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-background/90 border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <Plus size={14} />
