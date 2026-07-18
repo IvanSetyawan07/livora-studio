@@ -8,7 +8,9 @@ const WHATSAPP_NUMBER = "628212043307";
 export const WhatsAppButton = () => {
   const { pathname } = useLocation();
   const isLanding = pathname === "/";
-  const [visible, setVisible] = useState(!isLanding);
+  // Hide on collection detail & category pages so it doesn't cover the CategoryBar.
+  const isHidden = /^\/collection\/[^/]+/.test(pathname);
+  const [visible, setVisible] = useState(!isLanding && !isHidden);
 
   useEffect(() => {
     if (!isLanding) {
