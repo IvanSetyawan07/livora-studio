@@ -13,6 +13,10 @@ export const WhatsAppButton = () => {
   const [visible, setVisible] = useState(!isLanding && !isHidden);
 
   useEffect(() => {
+    if (isHidden) {
+      setVisible(false);
+      return;
+    }
     if (!isLanding) {
       setVisible(true);
       return;
@@ -24,7 +28,7 @@ export const WhatsAppButton = () => {
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, [isLanding]);
+  }, [isLanding, isHidden]);
 
   return (
     <a
