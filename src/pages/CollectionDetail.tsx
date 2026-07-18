@@ -60,14 +60,21 @@ export default function CollectionDetail() {
     return () => clearTimeout(t);
   }, [collection]);
 
-  // Group active package items by slug so duplicates render as "× N pcs".
-  const groupedItems = useMemo(() => {
-    const map = new Map<string, { item: CollectionItemRef; count: number }>();
+  // Group active package items by TYPE (Sofa, Chair, Table, …). Each card
+  // represents one furniture type in the package and shows how many pieces of
+  // that type the package contains. Clicking opens the category view scoped to
+  // the active package.
+  const groupedByType = useMemo(() => {
+    const map = new Map<
+      string,
+      { typeSlug: string; typeName: string; sample: CollectionItemRef; count: number }
+    >();
     (activePackage?.items ?? []).forEach((it) => {
-      const key = it.slug;
+      const key = it.type?.slug ?? "other";
+      const name = it.type?.name ?? "Other";
       const entry = map.get(key);
       if (entry) entry.count += 1;
-      else map.set(key, { item: it, count: 1 });
+      else map.set(key, { typeSlug: key, typeName: name, sample: it, count: 1 });
     });
     return Array.from(map.values());
   }, [activePackage]);
