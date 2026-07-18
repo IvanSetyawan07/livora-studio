@@ -61,7 +61,7 @@ export function CategoryBar({ tabs, activeSlug, onSelect }: Props) {
     <>
       <div ref={sentinelRef} />
       {/* In-flow bar */}
-      <div className="container-livora">
+      <div className="container-livora flex justify-center">
         <BarInner tabs={tabs} activeSlug={activeSlug} onSelect={onSelect} compact={false} />
       </div>
 

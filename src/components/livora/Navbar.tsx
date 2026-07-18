@@ -68,7 +68,10 @@ export const Navbar = () => {
     (location.pathname === "/" ||
       /^\/catalog\/[^/]+$/.test(location.pathname) ||
       /^\/catalog\/[^/]+\/[^/]+$/.test(location.pathname) ||
-      /^\/projects\/[^/]+$/.test(location.pathname));
+      /^\/projects\/[^/]+$/.test(location.pathname) ||
+      location.pathname === "/collection" ||
+      /^\/collection\/[^/]+$/.test(location.pathname) ||
+      /^\/collection\/[^/]+\/[^/]+$/.test(location.pathname));
 
   const headerTransparent = open ? true : transparentTop;
   const headerLight = open ? true : lightText;

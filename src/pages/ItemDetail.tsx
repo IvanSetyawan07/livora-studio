@@ -687,7 +687,7 @@ const ItemDetail = () => {
 
       {/* SLIDE-OVER: full list of variants for a category */}
       <Sheet open={!!sheetCategory} onOpenChange={(o) => !o && setSheetCategory(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto overscroll-contain" data-lenis-prevent>
           <SheetHeader>
             <SheetTitle className="serif text-2xl font-light capitalize">
               {sheetCategory ?? ""}

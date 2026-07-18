@@ -22,9 +22,9 @@ export default function CollectionLanding() {
       .finally(() => setLoading(false));
   }, []);
 
-  const fallbackHero =
+  // Static hero image — intentionally NOT tied to admin CRUD data.
+  const heroImage =
     "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1920&q=80";
-  const heroImage = items[0]?.hero_banner || items[0]?.featured_image || fallbackHero;
 
   return (
     <div className="min-h-screen bg-background">
