@@ -324,61 +324,57 @@ export default function CollectionDetail() {
             })}
           </div>
 
-          {/* Items Included — full-image cards, name + pcs below */}
-          {activePackage && groupedItems.length > 0 && (
-            <div id="package-items" className="mt-16">
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-3">
-                  <h3 className="serif text-2xl font-light">{activePackage.name}</h3>
-                  <span className="text-[11px] tracking-[0.15em] uppercase text-muted-foreground bg-background px-3 py-1 rounded-full border border-border">
+          {/* Items Included — grouped by furniture type. Card = 1 type in the package. */}
+          {activePackage && groupedByType.length > 0 && (
+            <div id="package-items" className="mt-12 md:mt-16">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 md:mb-8">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h3 className="serif text-xl md:text-2xl font-light">{activePackage.name}</h3>
+                  <span className="text-[10px] md:text-[11px] tracking-[0.15em] uppercase text-muted-foreground bg-background px-3 py-1 rounded-full border border-border">
                     {activePackage.items?.length ?? 0} Items
                   </span>
                 </div>
-                <Link
-                  to={`/collection/${collection.slug}/all`}
-                  className="hidden md:inline-flex items-center gap-2 text-[11px] tracking-[0.25em] uppercase text-foreground hover:opacity-70 transition"
-                >
-                  View All Items <ArrowRight size={14} />
-                </Link>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {groupedItems.map(({ item: it, count }, i) => (
-                  <motion.div
-                    key={it.slug}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                {groupedByType.map(({ typeSlug, typeName, sample, count }, i) => (
+                  <motion.button
+                    key={typeSlug}
+                    type="button"
+                    onClick={() =>
+                      navigate(
+                        `/collection/${collection.slug}/${typeSlug}?package=${activePackage.slug}`,
+                      )
+                    }
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.45, delay: (i % 8) * 0.05 }}
+                    className="group block text-left"
                   >
-                    <Link to={`/items/${it.slug}`} className="group block">
-                      <div className="relative aspect-square overflow-hidden">
-                        {it.image ? (
-                          <img
-                            src={it.image}
-                            alt={it.title}
-                            className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-muted/40" />
-                        )}
-                        {count > 1 && (
-                          <span className="absolute top-3 right-3 text-[10px] tracking-[0.15em] uppercase bg-foreground text-background px-2.5 py-1 rounded-full">
-                            × {count} pcs
-                          </span>
-                        )}
-                      </div>
-                      <div className="pt-4 text-center">
-                        <p className="text-sm font-medium text-foreground group-hover:text-foreground/70 transition-colors">
-                          {it.title}
-                        </p>
-                        <p className="text-[11px] tracking-[0.15em] uppercase text-muted-foreground mt-1">
-                          {count} {count === 1 ? "pc" : "pcs"}
-                          {it.type?.name ? ` · ${it.type.name}` : ""}
-                        </p>
-                      </div>
-                    </Link>
-                  </motion.div>
+                    <div className="relative aspect-square overflow-hidden bg-white rounded-md">
+                      {sample.image ? (
+                        <img
+                          src={sample.image}
+                          alt={typeName}
+                          className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-muted/40" />
+                      )}
+                      <span className="absolute top-3 right-3 text-[10px] tracking-[0.15em] uppercase bg-foreground text-background px-2.5 py-1 rounded-full">
+                        {count} {count === 1 ? "pc" : "pcs"}
+                      </span>
+                    </div>
+                    <div className="pt-3 md:pt-4 text-center">
+                      <p className="text-sm font-medium text-foreground group-hover:text-foreground/70 transition-colors">
+                        {typeName}
+                      </p>
+                      <p className="text-[11px] tracking-[0.15em] uppercase text-muted-foreground mt-1">
+                        {count} {count === 1 ? "piece" : "pieces"}
+                      </p>
+                    </div>
+                  </motion.button>
                 ))}
               </div>
             </div>
