@@ -35,9 +35,12 @@ interface Props {
 }
 
 /**
- * Icon-pill category bar. Renders in-flow at its natural position; when the
- * user scrolls past it, a compact clone docks to the bottom of the viewport
- * and returns to its original spot once scrolled back up.
+ * Icon-pill category bar. In-flow at natural position; when scrolled past,
+ * a compact clone docks to the bottom of the viewport.
+ *
+ * Mobile: in-flow bar renders in a smaller size so all icons fit; docked bar
+ * becomes an Instagram-style dark pill with an animated bubble behind the
+ * active icon.
  */
 export function CategoryBar({ tabs, activeSlug, onSelect }: Props) {
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -48,7 +51,6 @@ export function CategoryBar({ tabs, activeSlug, onSelect }: Props) {
     if (!el) return;
     const io = new IntersectionObserver(
       ([entry]) => {
-        // If the natural bar is scrolled ABOVE the viewport, show the docked one.
         setDocked(entry.boundingClientRect.top < 0 && !entry.isIntersecting);
       },
       { threshold: 0, rootMargin: "-1px 0px 0px 0px" },
@@ -62,10 +64,10 @@ export function CategoryBar({ tabs, activeSlug, onSelect }: Props) {
       <div ref={sentinelRef} />
       {/* In-flow bar */}
       <div className="container-livora flex justify-center">
-        <BarInner tabs={tabs} activeSlug={activeSlug} onSelect={onSelect} compact={false} />
+        <BarInner tabs={tabs} activeSlug={activeSlug} onSelect={onSelect} variant="flow" />
       </div>
 
-      {/* Docked (bottom, compact) */}
+      {/* Docked (bottom) */}
       <AnimatePresence>
         {docked && (
           <motion.div
@@ -77,12 +79,13 @@ export function CategoryBar({ tabs, activeSlug, onSelect }: Props) {
             className="fixed inset-x-0 bottom-4 z-40 flex justify-center pointer-events-none px-4"
           >
             <div className="pointer-events-auto">
-              <BarInner
-                tabs={tabs}
-                activeSlug={activeSlug}
-                onSelect={onSelect}
-                compact
-              />
+              {/* Mobile: dark bubble pill. Desktop: same light pill as before. */}
+              <div className="md:hidden">
+                <BarInner tabs={tabs} activeSlug={activeSlug} onSelect={onSelect} variant="dock-mobile" />
+              </div>
+              <div className="hidden md:block">
+                <BarInner tabs={tabs} activeSlug={activeSlug} onSelect={onSelect} variant="dock-desktop" />
+              </div>
             </div>
           </motion.div>
         )}
@@ -91,20 +94,60 @@ export function CategoryBar({ tabs, activeSlug, onSelect }: Props) {
   );
 }
 
+type Variant = "flow" | "dock-mobile" | "dock-desktop";
+
 function BarInner({
   tabs,
   activeSlug,
   onSelect,
-  compact,
-}: Props & { compact: boolean }) {
+  variant,
+}: Props & { variant: Variant }) {
+  if (variant === "dock-mobile") {
+    // Instagram-style dark pill with bubble motion behind active icon.
+    return (
+      <div className="inline-flex items-center bg-neutral-900/95 backdrop-blur-md rounded-full shadow-[0_18px_50px_-18px_rgba(0,0,0,0.55)] px-2 py-2 gap-1">
+        {tabs.map((t) => {
+          const Icon = ICONS[t.slug] ?? LayoutGrid;
+          const active = t.slug === activeSlug;
+          return (
+            <button
+              key={t.slug}
+              onClick={() => onSelect(t.slug)}
+              aria-label={t.label}
+              className="relative flex items-center justify-center rounded-full"
+              style={{ width: 44, height: 44 }}
+            >
+              {active && (
+                <motion.span
+                  layoutId="cat-dock-bubble"
+                  className="absolute inset-0 rounded-full bg-white/15"
+                  transition={{ type: "spring", stiffness: 500, damping: 34 }}
+                  aria-hidden
+                />
+              )}
+              <Icon
+                size={20}
+                strokeWidth={1.6}
+                className={`relative z-10 transition-colors ${
+                  active ? "text-white" : "text-white/60"
+                }`}
+              />
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  const compact = variant === "dock-desktop";
   return (
     <div
       className={`inline-flex items-stretch bg-white/95 backdrop-blur-md border border-black/[0.06] rounded-2xl overflow-hidden ${
         compact
-          ? "shadow-[0_18px_50px_-18px_rgba(0,0,0,0.35)] gap-0"
+          ? "shadow-[0_18px_50px_-18px_rgba(0,0,0,0.35)]"
           : "shadow-[0_12px_40px_-20px_rgba(0,0,0,0.25)]"
       }`}
-      style={{ padding: compact ? "6px" : "10px" }}
+      style={{ padding: compact ? 6 : 8 }}
     >
       <div className="flex items-stretch gap-1">
         {tabs.map((t) => {
@@ -114,38 +157,31 @@ function BarInner({
             <button
               key={t.slug}
               onClick={() => onSelect(t.slug)}
-              className="relative group flex flex-col items-center justify-center rounded-xl transition-colors"
-              style={{
-                padding: compact ? "8px 12px" : "12px 18px",
-                minWidth: compact ? 62 : 84,
-              }}
+              className="relative group flex flex-col items-center justify-center rounded-xl transition-colors px-2 py-2 md:px-4 md:py-3"
+              style={{ minWidth: compact ? 62 : undefined }}
             >
-              {/* Hover bubble */}
               <span
                 className="absolute inset-1 rounded-lg bg-black/[0.04] opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100 transition-all duration-300"
                 aria-hidden
               />
-
               <Icon
-                size={compact ? 18 : 22}
+                size={compact ? 18 : 20}
                 strokeWidth={1.4}
-                className={`relative z-10 transition-colors ${
+                className={`relative z-10 transition-colors md:!size-[22px] ${
                   active ? "text-foreground" : "text-neutral-500 group-hover:text-foreground"
                 }`}
               />
               <span
-                className={`relative z-10 uppercase tracking-[0.18em] transition-colors ${
+                className={`relative z-10 uppercase transition-colors mt-1 md:mt-1.5 ${
                   active ? "text-foreground" : "text-neutral-500 group-hover:text-foreground"
                 }`}
                 style={{
-                  fontSize: compact ? 9 : 10,
-                  marginTop: compact ? 3 : 6,
-                  letterSpacing: compact ? "0.12em" : "0.18em",
+                  fontSize: compact ? 9 : 9,
+                  letterSpacing: compact ? "0.12em" : "0.16em",
                 }}
               >
                 {t.label}
               </span>
-
               {active && (
                 <motion.span
                   layoutId={compact ? "cat-underline-dock" : "cat-underline-flow"}
