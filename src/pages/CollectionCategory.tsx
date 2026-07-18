@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
 import { Navbar } from "@/components/livora/Navbar";
@@ -13,8 +13,14 @@ import {
   Collection,
 } from "@/lib/collectionsApi";
 
+interface DisplayItem extends CollectionItemRef {
+  count: number;
+}
+
 export default function CollectionCategory() {
   const { slug, category } = useParams<{ slug: string; category: string }>();
+  const [searchParams] = useSearchParams();
+  const packageSlug = searchParams.get("package");
   const navigate = useNavigate();
   const [items, setItems] = useState<CollectionItemRef[]>([]);
   const [collection, setCollection] = useState<Collection | null>(null);
@@ -39,9 +45,29 @@ export default function CollectionCategory() {
     [category]
   );
 
+  // When scoped to a package, restrict items to that package's contents and
+  // fold duplicates into a "× N pcs" count.
+  const activePackage = useMemo(
+    () => (packageSlug ? collection?.packages?.find((p) => p.slug === packageSlug) ?? null : null),
+    [collection, packageSlug],
+  );
+
+  const displayItems = useMemo<DisplayItem[]>(() => {
+    if (!activePackage) return items.map((it) => ({ ...it, count: 1 }));
+    const map = new Map<string, DisplayItem>();
+    (activePackage.items ?? []).forEach((it) => {
+      if (category && category !== "all" && it.type?.slug !== category) return;
+      const entry = map.get(it.slug);
+      if (entry) entry.count += 1;
+      else map.set(it.slug, { ...it, count: 1 });
+    });
+    return Array.from(map.values());
+  }, [activePackage, items, category]);
+
   useEffect(() => {
     document.title = `${activeTab.label} — ${collection?.name ?? "Collection"} — LIVORA`;
   }, [activeTab, collection]);
+
 
   return (
     <div className="min-h-screen bg-background">
