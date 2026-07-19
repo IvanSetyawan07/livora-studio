@@ -147,5 +147,10 @@ Route::delete('/taxonomy-banners/{banner}', [TaxonomyBannerController::class, 'd
         // Analytics
         Route::get('/analytics/overview', [AnalyticsController::class, 'overview']);
         Route::get('/analytics/users', [AnalyticsController::class, 'activeUsers']);
+
+        // Users management
+        Route::get('/users', [\App\Http\Controllers\Api\AdminUserController::class, 'index']);
+        Route::get('/users/{user}', [\App\Http\Controllers\Api\AdminUserController::class, 'show']);
+        Route::get('/users/{user}/activities', [\App\Http\Controllers\Api\AdminUserController::class, 'activities']);
     });
 });
