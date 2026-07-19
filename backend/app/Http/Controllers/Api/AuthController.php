@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Google_Client;
 
 class AuthController extends Controller
 {
@@ -124,11 +125,28 @@ class AuthController extends Controller
         // TODO: verify $data['id_token'] with the provider's public keys.
         // Until credentials are configured, accept the trusted-payload shape
         // above only in local/dev.
-        if (app()->environment('production') && empty($data['id_token'])) {
-            return response()->json([
-                'message' => "$provider OAuth belum dikonfigurasi. Set kredensial provider terlebih dahulu."
-            ], 501);
-        }
+        if ($provider === 'google') {
+    if (empty($data['id_token'])) {
+        return response()->json(['message' => 'id_token wajib diisi'], 422);
+    }
+
+    $client = new Google_Client(['client_id' => config('services.google.client_id')]);
+    $payload = $client->verifyIdToken($data['id_token']);
+
+    if (!$payload) {
+        return response()->json(['message' => 'Token Google tidak valid'], 401);
+    }
+
+    $data['email']       = $payload['email'] ?? null;
+    $data['name']        = $payload['name'] ?? ($data['name'] ?? null);
+    $data['provider_id'] = $payload['sub'] ?? null;
+    $data['avatar_url']  = $payload['picture'] ?? null;
+} elseif (app()->environment('production')) {
+    // Apple masih placeholder
+    return response()->json([
+        'message' => "$provider OAuth belum dikonfigurasi. Set kredensial provider terlebih dahulu."
+    ], 501);
+}
 
         $email = $data['email'] ?? null;
         if (!$email) {

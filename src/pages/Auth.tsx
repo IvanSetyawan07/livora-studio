@@ -786,8 +786,40 @@ export default function Auth() {
   // Shared "Continue with Google" placeholder — same TODO that already
   // existed on desktop. Not duplicated logic, just reused inline below.
   const handleGoogleClick = () => {
-    // TODO: hubungkan ke Google OAuth setelah backend siap
-  };
+  const googleHiddenRef = useRef<HTMLDivElement>(null);
+
+const handleGoogleCredential = async (response: { credential: string }) => {
+  setLoading(true);
+  try {
+    const { data } = await api.post("/auth/google/callback", {
+      id_token: response.credential,
+    });
+    authStorage.setToken(data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+    navigate(data.user?.role === "admin" ? "/admin" : "/");
+  } catch (error: any) {
+    toast.error(error?.response?.data?.message || "Google login gagal");
+  } finally {
+    setLoading(false);
+  }
+};
+
+useEffect(() => {
+  const w = window as any;
+  if (!w.google?.accounts?.id) return;
+  w.google.accounts.id.initialize({
+    client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+    callback: handleGoogleCredential,
+  });
+  if (googleHiddenRef.current) {
+    w.google.accounts.id.renderButton(googleHiddenRef.current, { type: "standard" });
+  }
+}, []);
+
+const handleGoogleClick = () => {
+  const realBtn = googleHiddenRef.current?.querySelector('div[role="button"]') as HTMLElement | null;
+  realBtn?.click();
+};};
 
   // Apple placeholder — intentionally NOT a fake success flow. Wire this to
   // Sign in with Apple JS once:
@@ -805,7 +837,7 @@ export default function Auth() {
       style={{ backgroundColor: "#ffffff", fontFamily: "'Work Sans', system-ui, sans-serif" }}
     >
       <div className="w-full lg:max-w-100 relative bg-white lg:rounded-2xl overflow-hidden lg:shadow-sm min-h-[100dvh] lg:min-h-[96vh]">
-
+        
 
         {/* ═══════════════════════════════════════════════════════════════
             DESKTOP (lg and up) — UNCHANGED from the existing implementation.
@@ -1169,6 +1201,8 @@ export default function Auth() {
         />
 
       </div>
+      
     </div>
+    
   );
 }
