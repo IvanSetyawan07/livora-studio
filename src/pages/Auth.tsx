@@ -799,10 +799,11 @@ export default function Auth() {
 
   return (
     <div
-      className="min-h-screen w-full flex items-center justify-center p-2 sm:p-4"
+      className="min-h-screen w-full flex items-center justify-center lg:p-2 lg:sm:p-4"
       style={{ backgroundColor: "#ffffff", fontFamily: "'Work Sans', system-ui, sans-serif" }}
     >
-      <div className="w-full max-w-100 relative bg-white rounded-2xl overflow-hidden shadow-sm min-h-[96vh] lg:min-h-[96vh]">
+      <div className="w-full lg:max-w-100 relative bg-white lg:rounded-2xl overflow-hidden lg:shadow-sm min-h-[100dvh] lg:min-h-[96vh]">
+
 
         {/* ═══════════════════════════════════════════════════════════════
             DESKTOP (lg and up) — UNCHANGED from the existing implementation.
