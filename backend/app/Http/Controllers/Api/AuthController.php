@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\UserActivity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -13,15 +16,19 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name' => 'required',
             'email' => 'required|email|unique:users',
+            'phone' => 'nullable|string|max:32',
             'password' => 'required|min:6'
         ]);
 
         $user = \App\Models\User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
             'password' => $validated['password'], // auto-hash via $casts
             'role' => 'user',
         ]);
+
+        UserActivity::log($user->id, 'register', $request);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -46,6 +53,12 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
+        $user->login_count = (int) ($user->login_count ?? 0) + 1;
+        $user->last_login_at = now();
+        $user->last_ip = $request->ip();
+        $user->save();
+
+        UserActivity::log($user->id, 'login', $request);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -63,10 +76,95 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        UserActivity::log($request->user()->id, 'logout', $request);
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
             'message' => 'Logout berhasil'
+        ]);
+    }
+
+    /**
+     * Track a generic activity (page view, item view, etc.) from the frontend.
+     */
+    public function trackActivity(Request $request)
+    {
+        $data = $request->validate([
+            'type' => 'required|string|max:40',
+            'path' => 'nullable|string|max:255',
+            'meta' => 'nullable|array',
+        ]);
+
+        UserActivity::log($request->user()->id, $data['type'], $request, $data['meta'] ?? null, $data['path'] ?? null);
+
+        return response()->json(['ok' => true]);
+    }
+
+    // -----------------------------------------------------------------
+    // OAuth (Google / Apple) — placeholder scaffolding.
+    // Wire real credentials via Laravel Socialite (config/services.php)
+    // and set GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / APPLE_* in .env.
+    // For now: accept a provider id_token from the frontend, verify or
+    // stub, then upsert the user and issue a Sanctum token.
+    // -----------------------------------------------------------------
+    public function oauthCallback(Request $request, string $provider)
+    {
+        if (!in_array($provider, ['google', 'apple'])) {
+            return response()->json(['message' => 'Unsupported provider'], 400);
+        }
+
+        $data = $request->validate([
+            'id_token'    => 'nullable|string',
+            'email'       => 'nullable|email',
+            'name'        => 'nullable|string',
+            'provider_id' => 'nullable|string',
+            'avatar_url'  => 'nullable|string',
+        ]);
+
+        // TODO: verify $data['id_token'] with the provider's public keys.
+        // Until credentials are configured, accept the trusted-payload shape
+        // above only in local/dev.
+        if (app()->environment('production') && empty($data['id_token'])) {
+            return response()->json([
+                'message' => "$provider OAuth belum dikonfigurasi. Set kredensial provider terlebih dahulu."
+            ], 501);
+        }
+
+        $email = $data['email'] ?? null;
+        if (!$email) {
+            return response()->json(['message' => 'Email tidak tersedia dari provider'], 422);
+        }
+
+        $user = \App\Models\User::where('email', $email)->first();
+        if (!$user) {
+            $user = \App\Models\User::create([
+                'name'        => $data['name'] ?? Str::before($email, '@'),
+                'email'       => $email,
+                'password'    => Hash::make(Str::random(32)),
+                'role'        => 'user',
+                'provider'    => $provider,
+                'provider_id' => $data['provider_id'] ?? null,
+                'avatar_url'  => $data['avatar_url'] ?? null,
+            ]);
+        } else {
+            $user->provider    = $user->provider ?? $provider;
+            $user->provider_id = $user->provider_id ?? ($data['provider_id'] ?? null);
+            if (!empty($data['avatar_url'])) $user->avatar_url = $data['avatar_url'];
+        }
+
+        $user->login_count   = (int) ($user->login_count ?? 0) + 1;
+        $user->last_login_at = now();
+        $user->last_ip       = $request->ip();
+        $user->save();
+
+        UserActivity::log($user->id, 'login', $request, ['provider' => $provider]);
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'message' => "Login via $provider berhasil",
+            'token'   => $token,
+            'user'    => $user,
         ]);
     }
 }

@@ -8,8 +8,11 @@ const WHATSAPP_NUMBER = "628212043307";
 export const WhatsAppButton = () => {
   const { pathname } = useLocation();
   const isLanding = pathname === "/";
-  // Hide on collection detail & category pages so it doesn't cover the CategoryBar.
-  const isHidden = /^\/collection\/[^/]+/.test(pathname);
+  // Hide on collection detail/category (CategoryBar overlap) and on auth pages.
+  const isHidden =
+    /^\/collection\/[^/]+/.test(pathname) ||
+    pathname === "/login" ||
+    pathname === "/register";
   const [visible, setVisible] = useState(!isLanding && !isHidden);
 
   useEffect(() => {

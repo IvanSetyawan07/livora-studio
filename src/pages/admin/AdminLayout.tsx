@@ -11,6 +11,7 @@ import {
   Image as ImageIcon,
   LogOut,
   BookOpen,
+  Users,
 } from "lucide-react";
 
 const nav = [
@@ -22,6 +23,7 @@ const nav = [
   { to: "/admin/taxonomies", label: "Taxonomies", icon: Tags },
   { to: "/admin/landing", label: "Landing Highlights", icon: Star },
   { to: "/admin/banners", label: "Theme Banners", icon: ImageIcon },
+  { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
 ];
 

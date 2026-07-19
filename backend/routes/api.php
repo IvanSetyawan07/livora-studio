@@ -21,6 +21,8 @@ Route::get('/taxonomy-banners', [TaxonomyBannerController::class, 'index']);
 Route::get('/taxonomy-banners/{key}', [TaxonomyBannerController::class, 'byKey']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/auth/{provider}/callback', [AuthController::class, 'oauthCallback'])
+    ->whereIn('provider', ['google', 'apple']);
 
 // Public read APIs
 Route::get('/projects', [ProjectController::class, 'index']);
@@ -56,6 +58,7 @@ Route::middleware('auth:sanctum')->group(function () {
         $u = $r->user(); $u->last_seen_at = now(); $u->save();
         return ['ok' => true];
     });
+    Route::post('/activities', [AuthController::class, 'trackActivity']);
 
     Route::middleware('admin')->prefix('admin')->group(function () {
         // Projects
@@ -144,5 +147,10 @@ Route::delete('/taxonomy-banners/{banner}', [TaxonomyBannerController::class, 'd
         // Analytics
         Route::get('/analytics/overview', [AnalyticsController::class, 'overview']);
         Route::get('/analytics/users', [AnalyticsController::class, 'activeUsers']);
+
+        // Users management
+        Route::get('/users', [\App\Http\Controllers\Api\AdminUserController::class, 'index']);
+        Route::get('/users/{user}', [\App\Http\Controllers\Api\AdminUserController::class, 'show']);
+        Route::get('/users/{user}/activities', [\App\Http\Controllers\Api\AdminUserController::class, 'activities']);
     });
 });
