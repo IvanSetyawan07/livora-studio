@@ -58,6 +58,7 @@ Route::middleware('auth:sanctum')->group(function () {
         $u = $r->user(); $u->last_seen_at = now(); $u->save();
         return ['ok' => true];
     });
+    Route::post('/activities', [AuthController::class, 'trackActivity']);
 
     Route::middleware('admin')->prefix('admin')->group(function () {
         // Projects
