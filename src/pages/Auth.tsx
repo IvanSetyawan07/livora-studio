@@ -274,8 +274,9 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
   useEffect(() => {
     animate(y, expanded ? expandedY : collapsedY, {
       type: "spring",
-      stiffness: 420,
-      damping: 42,
+      stiffness: 520,
+      damping: 38,
+      mass: 0.7,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vh]);
@@ -288,8 +289,9 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
     }
     animate(y, next ? expandedY : collapsedY, {
       type: "spring",
-      stiffness: 420,
-      damping: 42,
+      stiffness: 520,
+      damping: 38,
+      mass: 0.7,
     });
   };
 
