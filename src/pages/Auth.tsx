@@ -304,8 +304,8 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
     const current = y.get();
 
     let next: boolean;
-    if (velocity < -350) next = true;
-    else if (velocity > 350) next = false;
+    if (velocity < -180) next = true;
+    else if (velocity > 180) next = false;
     else next = current < midpoint;
 
     snapTo(next);
