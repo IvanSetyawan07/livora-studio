@@ -274,8 +274,9 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
   useEffect(() => {
     animate(y, expanded ? expandedY : collapsedY, {
       type: "spring",
-      stiffness: 420,
-      damping: 42,
+      stiffness: 520,
+      damping: 38,
+      mass: 0.7,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vh]);
@@ -288,8 +289,9 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
     }
     animate(y, next ? expandedY : collapsedY, {
       type: "spring",
-      stiffness: 420,
-      damping: 42,
+      stiffness: 520,
+      damping: 38,
+      mass: 0.7,
     });
   };
 
@@ -302,8 +304,8 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
     const current = y.get();
 
     let next: boolean;
-    if (velocity < -350) next = true;
-    else if (velocity > 350) next = false;
+    if (velocity < -180) next = true;
+    else if (velocity > 180) next = false;
     else next = current < midpoint;
 
     snapTo(next);
@@ -367,7 +369,7 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
       <motion.div
         drag={dragEnabled ? "y" : false}
         dragConstraints={{ top: expandedY, bottom: collapsedY }}
-        dragElastic={0.03}
+        dragElastic={0.12}
         dragMomentum={false}
         onDragEnd={handleDragEnd}
         style={{ y, height: sheetHeight, touchAction: "none" }}
@@ -799,10 +801,11 @@ export default function Auth() {
 
   return (
     <div
-      className="min-h-screen w-full flex items-center justify-center p-2 sm:p-4"
+      className="min-h-screen w-full flex items-center justify-center lg:p-2 lg:sm:p-4"
       style={{ backgroundColor: "#ffffff", fontFamily: "'Work Sans', system-ui, sans-serif" }}
     >
-      <div className="w-full max-w-100 relative bg-white rounded-2xl overflow-hidden shadow-sm min-h-[96vh] lg:min-h-[96vh]">
+      <div className="w-full lg:max-w-100 relative bg-white lg:rounded-2xl overflow-hidden lg:shadow-sm min-h-[100dvh] lg:min-h-[96vh]">
+
 
         {/* ═══════════════════════════════════════════════════════════════
             DESKTOP (lg and up) — UNCHANGED from the existing implementation.
