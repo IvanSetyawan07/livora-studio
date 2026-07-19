@@ -197,6 +197,55 @@ function useViewportHeight() {
 }
 
 // ---------------------------------------------------------------------------
+// Reusable "Continue with Google" control. Renders a custom-styled fake
+// button underneath, and overlays Google's OWN button (rendered via
+// google.accounts.id.renderButton into `mountRef`) directly on top of it,
+// invisible (opacity 0) but fully interactive. This way the click always
+// lands on Google's real button — you cannot reach inside its cross-origin
+// iframe with querySelector, so a "click the real button programmatically"
+// approach never works. Overlaying is the supported workaround.
+// ---------------------------------------------------------------------------
+function GoogleButton({ mountRef }: { mountRef: React.RefObject<HTMLDivElement> }) {
+  return (
+    <div className="relative w-full h-11">
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-hidden="true"
+        className="pointer-events-none w-full h-11 rounded-lg border border-neutral-200 bg-white text-neutral-700 text-[14px] font-medium flex items-center justify-center gap-2.5"
+      >
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+          <path
+            fill="#4285F4"
+            d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"
+          />
+          <path
+            fill="#34A853"
+            d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
+          />
+          <path
+            fill="#FBBC05"
+            d="M3.964 10.706A5.41 5.41 0 0 1 3.68 9c0-.593.102-1.17.284-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"
+          />
+          <path
+            fill="#EA4335"
+            d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.167 6.656 3.58 9 3.58z"
+          />
+        </svg>
+        Continue with Google
+      </button>
+      {/* Google's real button, rendered here by google.accounts.id.renderButton,
+          stretched to fill this box and made invisible but clickable. */}
+      <div
+        ref={mountRef}
+        className="absolute inset-0 overflow-hidden rounded-lg opacity-0"
+        style={{ colorScheme: "light" }}
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // The mobile bottom sheet. Two layers:
 //   - the image (always full-viewport, never moves)
 //   - the panel (drag="y", snaps between "collapsed" near the bottom and
@@ -235,7 +284,7 @@ interface MobileAuthSheetProps {
   setAgreeTerms: (v: boolean) => void;
   handleLogin: (e: React.FormEvent) => void;
   handleRegister: (e: React.FormEvent) => void;
-  handleGoogleClick: () => void;
+  googleMobileRef: React.RefObject<HTMLDivElement>;
   handleAppleClick: () => void;
 }
 
@@ -248,7 +297,7 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
     regPhone, setRegPhone, regPassword, setRegPassword,
     regConfirmPassword, setRegConfirmPassword, showRegPassword, setShowRegPassword,
     agreeTerms, setAgreeTerms,
-    handleLogin, handleRegister, handleGoogleClick, handleAppleClick,
+    handleLogin, handleRegister, googleMobileRef, handleAppleClick,
   } = props;
 
   const vh = useViewportHeight();
@@ -505,19 +554,7 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
                   </div>
 
                   <div className="space-y-2.5">
-                    <button
-                      type="button"
-                      onClick={handleGoogleClick}
-                      className="w-full h-12 rounded-lg border border-neutral-200 bg-white text-neutral-700 text-[14px] font-medium flex items-center justify-center gap-2.5 hover:bg-neutral-50 transition"
-                    >
-                      <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true">
-                        <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" />
-                        <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" />
-                        <path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.68 9c0-.593.102-1.17.284-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" />
-                        <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.167 6.656 3.58 9 3.58z" />
-                      </svg>
-                      Continue with Google
-                    </button>
+                    <GoogleButton mountRef={googleMobileRef} />
 
                     {applePlatform && (
                       <button
@@ -783,10 +820,26 @@ export default function Auth() {
     }
   };
 
-  // Google Sign-In: render Google's own hidden button, then forward our
-  // custom button's click to it (so we can style our own button but still
-  // use Google's official rendered button under the hood).
-  const googleHiddenRef = useRef<HTMLDivElement>(null);
+  // ---------------------------------------------------------------------
+  // Google Sign-In (Google Identity Services / GIS).
+  //
+  // Google's renderButton() draws its button INSIDE a cross-origin
+  // <iframe> pointed at accounts.google.com. You cannot querySelector into
+  // a cross-origin iframe's content from the parent page — so a "find the
+  // real button and .click() it" approach silently does nothing (no error,
+  // no network request — exactly the symptom we were chasing).
+  //
+  // The supported fix: render the real Google button into a container,
+  // then visually replace it with our own custom-styled button underneath
+  // while keeping the real one on top, fully sized, but invisible
+  // (opacity: 0). The user's click always lands on Google's real button.
+  //
+  // Two separate mount points (desktop / mobile) because both can be in
+  // the DOM at once depending on viewport — each needs its own rendered
+  // button instance.
+  // ---------------------------------------------------------------------
+  const googleDesktopRef = useRef<HTMLDivElement>(null);
+  const googleMobileRef = useRef<HTMLDivElement>(null);
 
   const handleGoogleCredential = async (response: { credential: string }) => {
     setLoading(true);
@@ -806,20 +859,38 @@ export default function Auth() {
 
   useEffect(() => {
     const w = window as any;
-    if (!w.google?.accounts?.id) return;
-    w.google.accounts.id.initialize({
-      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      callback: handleGoogleCredential,
-    });
-    if (googleHiddenRef.current) {
-      w.google.accounts.id.renderButton(googleHiddenRef.current, { type: "standard" });
-    }
-  }, []);
 
-  const handleGoogleClick = () => {
-    const realBtn = googleHiddenRef.current?.querySelector('div[role="button"]') as HTMLElement | null;
-    realBtn?.click();
-  };
+    const tryInit = () => {
+      if (!w.google?.accounts?.id) return false;
+
+      w.google.accounts.id.initialize({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        callback: handleGoogleCredential,
+      });
+
+      const opts = { type: "standard", width: 320, text: "continue_with" } as const;
+
+      if (googleDesktopRef.current) {
+        googleDesktopRef.current.innerHTML = "";
+        w.google.accounts.id.renderButton(googleDesktopRef.current, opts);
+      }
+      if (googleMobileRef.current) {
+        googleMobileRef.current.innerHTML = "";
+        w.google.accounts.id.renderButton(googleMobileRef.current, opts);
+      }
+      return true;
+    };
+
+    // The Google Identity Services script (accounts.google.com/gsi/client)
+    // may not have finished loading yet when this component mounts, so we
+    // poll briefly until it's ready instead of silently giving up once.
+    if (tryInit()) return;
+    const interval = setInterval(() => {
+      if (tryInit()) clearInterval(interval);
+    }, 300);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Apple placeholder — intentionally NOT a fake success flow. Wire this to
   // Sign in with Apple JS once:
@@ -837,8 +908,6 @@ export default function Auth() {
       style={{ backgroundColor: "#ffffff", fontFamily: "'Work Sans', system-ui, sans-serif" }}
     >
       <div className="w-full lg:max-w-100 relative bg-white lg:rounded-2xl overflow-hidden lg:shadow-sm min-h-[100dvh] lg:min-h-[96vh]">
-        <div ref={googleHiddenRef} style={{ position: "absolute", opacity: 0, pointerEvents: "none", top: -9999, left: -9999 }} />
-        
 
         {/* ═══════════════════════════════════════════════════════════════
             DESKTOP (lg and up) — UNCHANGED from the existing implementation.
@@ -984,31 +1053,7 @@ export default function Auth() {
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={handleGoogleClick}
-                      className="w-full h-11 rounded-lg border border-neutral-200 bg-white text-neutral-700 text-[14px] font-medium flex items-center justify-center gap-2.5 hover:bg-neutral-50 transition"
-                    >
-                      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-                        <path
-                          fill="#4285F4"
-                          d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"
-                        />
-                        <path
-                          fill="#34A853"
-                          d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
-                        />
-                        <path
-                          fill="#FBBC05"
-                          d="M3.964 10.706A5.41 5.41 0 0 1 3.68 9c0-.593.102-1.17.284-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"
-                        />
-                        <path
-                          fill="#EA4335"
-                          d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.167 6.656 3.58 9 3.58z"
-                        />
-                      </svg>
-                      Continue with Google
-                    </button>
+                    <GoogleButton mountRef={googleDesktopRef} />
 
                     <p className="text-center text-[13px] text-neutral-400 mt-6">
                       Not Registered Yet?{" "}
@@ -1197,13 +1242,11 @@ export default function Auth() {
           setAgreeTerms={setAgreeTerms}
           handleLogin={handleLogin}
           handleRegister={handleRegister}
-          handleGoogleClick={handleGoogleClick}
+          googleMobileRef={googleMobileRef}
           handleAppleClick={handleAppleClick}
         />
 
       </div>
-      
     </div>
-    
   );
 }
