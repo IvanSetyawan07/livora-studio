@@ -817,8 +817,40 @@ useEffect(() => {
 }, []);
 
 const handleGoogleClick = () => {
-  const realBtn = googleHiddenRef.current?.querySelector('div[role="button"]') as HTMLElement | null;
-  realBtn?.click();
+  const googleHiddenRef = useRef<HTMLDivElement>(null);
+
+  const handleGoogleCredential = async (response: { credential: string }) => {
+    setLoading(true);
+    try {
+      const { data } = await api.post("/auth/google/callback", {
+        id_token: response.credential,
+      });
+      authStorage.setToken(data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      navigate(data.user?.role === "admin" ? "/admin" : "/");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Google login gagal");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const w = window as any;
+    if (!w.google?.accounts?.id) return;
+    w.google.accounts.id.initialize({
+      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+      callback: handleGoogleCredential,
+    });
+    if (googleHiddenRef.current) {
+      w.google.accounts.id.renderButton(googleHiddenRef.current, { type: "standard" });
+    }
+  }, []);
+
+  const handleGoogleClick = () => {
+    const realBtn = googleHiddenRef.current?.querySelector('div[role="button"]') as HTMLElement | null;
+    realBtn?.click();
+  };
 };};
 
   // Apple placeholder — intentionally NOT a fake success flow. Wire this to
