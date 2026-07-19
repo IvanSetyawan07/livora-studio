@@ -21,6 +21,8 @@ Route::get('/taxonomy-banners', [TaxonomyBannerController::class, 'index']);
 Route::get('/taxonomy-banners/{key}', [TaxonomyBannerController::class, 'byKey']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/auth/{provider}/callback', [AuthController::class, 'oauthCallback'])
+    ->whereIn('provider', ['google', 'apple']);
 
 // Public read APIs
 Route::get('/projects', [ProjectController::class, 'index']);
