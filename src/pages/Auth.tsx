@@ -10,10 +10,6 @@ import logoLivora from "@/assets/logo-livora.png";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
-// ---------------------------------------------------------------------------
-// Kode negara untuk input nomor HP — default Indonesia (+62) berada paling
-// atas. Tambahkan/ubah daftar ini kalau perlu negara lain.
-// ---------------------------------------------------------------------------
 const COUNTRY_CODES = [
   { code: "ID", dial: "+62", flag: "🇮🇩", name: "Indonesia" },
   { code: "MY", dial: "+60", flag: "🇲🇾", name: "Malaysia" },
@@ -23,12 +19,6 @@ const COUNTRY_CODES = [
   { code: "AU", dial: "+61", flag: "🇦🇺", name: "Australia" },
 ] as const;
 
-// ---------------------------------------------------------------------------
-// Apple platform detection — "Continue with Apple" should only render on
-// Apple-compatible devices/browsers. This is a UI-level gate only; it does
-// NOT imply Apple OAuth is configured on the backend (see comment near the
-// button below).
-// ---------------------------------------------------------------------------
 function isApplePlatform(): boolean {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent || "";
@@ -39,13 +29,6 @@ function isApplePlatform(): boolean {
   return isIOSDevice || isMac;
 }
 
-// ---------------------------------------------------------------------------
-// Panoramic background — the source image is one wide composition split in
-// two: its LEFT half belongs to the Login state, its RIGHT half belongs to
-// the Register state. We never show the same center crop for both — instead
-// the image pans from one half to the other as the auth state changes.
-// Shared by desktop AND the mobile hero (no rotation, ever — just a pan).
-// ---------------------------------------------------------------------------
 function PanoramicImage({ isLogin }: { isLogin: boolean }) {
   return (
     <div className="absolute inset-0 overflow-hidden">
@@ -61,9 +44,6 @@ function PanoramicImage({ isLogin }: { isLogin: boolean }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Image-side wording — swaps between the two auth states
-// ---------------------------------------------------------------------------
 const WORDING = {
   login: {
     lines: ["Inspire.", "Function.", "Harmony."],
@@ -75,7 +55,6 @@ const WORDING = {
   },
 };
 
-// Desktop wording — horizontal fade (unchanged, still only used on lg+)
 function ImageWording({ isLogin }: { isLogin: boolean }) {
   const content = isLogin ? WORDING.login : WORDING.register;
 
@@ -131,11 +110,6 @@ function ImageWording({ isLogin }: { isLogin: boolean }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Mobile wording — fade + small VERTICAL movement only (per mobile spec).
-// Deliberately separate from ImageWording so desktop's transition is never
-// touched by mobile-only tuning.
-// ---------------------------------------------------------------------------
 function MobileWording({ isLogin }: { isLogin: boolean }) {
   const content = isLogin ? WORDING.login : WORDING.register;
 
@@ -174,12 +148,6 @@ function MobileWording({ isLogin }: { isLogin: boolean }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Tracks the viewport height in px (not just dvh in CSS) because the drag
-// gesture needs real pixel snap points to animate/constrain against.
-// Recomputes on resize/orientation change (address bar show/hide on mobile
-// browsers triggers this too).
-// ---------------------------------------------------------------------------
 function useViewportHeight() {
   const [vh, setVh] = useState(() =>
     typeof window !== "undefined" ? window.innerHeight : 800
@@ -196,15 +164,44 @@ function useViewportHeight() {
   return vh;
 }
 
-// ---------------------------------------------------------------------------
-// The mobile bottom sheet. Two layers:
-//   - the image (always full-viewport, never moves)
-//   - the panel (drag="y", snaps between "collapsed" near the bottom and
-//     "expanded" near the top, spring transition, snapping on release)
-// Panel content only scrolls internally once fully expanded; while
-// collapsed (or while expanded-but-scrolled-to-top) the panel itself
-// remains draggable so a swipe down re-collapses it.
-// ---------------------------------------------------------------------------
+function GoogleButton({ mountRef }: { mountRef: React.RefObject<HTMLDivElement> }) {
+  return (
+    <div className="relative w-full h-11">
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-hidden="true"
+        className="pointer-events-none w-full h-11 rounded-lg border border-neutral-200 bg-white text-neutral-700 text-[14px] font-medium flex items-center justify-center gap-2.5"
+      >
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+          <path
+            fill="#4285F4"
+            d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"
+          />
+          <path
+            fill="#34A853"
+            d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
+          />
+          <path
+            fill="#FBBC05"
+            d="M3.964 10.706A5.41 5.41 0 0 1 3.68 9c0-.593.102-1.17.284-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"
+          />
+          <path
+            fill="#EA4335"
+            d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.167 6.656 3.58 9 3.58z"
+          />
+        </svg>
+        Continue with Google
+      </button>
+      <div
+        ref={mountRef}
+        className="absolute inset-0 overflow-hidden rounded-lg opacity-0"
+        style={{ colorScheme: "light" }}
+      />
+    </div>
+  );
+}
+
 interface MobileAuthSheetProps {
   isLogin: boolean;
   loading: boolean;
@@ -235,7 +232,7 @@ interface MobileAuthSheetProps {
   setAgreeTerms: (v: boolean) => void;
   handleLogin: (e: React.FormEvent) => void;
   handleRegister: (e: React.FormEvent) => void;
-  handleGoogleClick: () => void;
+  googleMobileRef: React.RefObject<HTMLDivElement>;
   handleAppleClick: () => void;
 }
 
@@ -248,18 +245,14 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
     regPhone, setRegPhone, regPassword, setRegPassword,
     regConfirmPassword, setRegConfirmPassword, showRegPassword, setShowRegPassword,
     agreeTerms, setAgreeTerms,
-    handleLogin, handleRegister, handleGoogleClick, handleAppleClick,
+    handleLogin, handleRegister, googleMobileRef, handleAppleClick,
   } = props;
 
   const vh = useViewportHeight();
 
-  // Space always left visible above the sheet at full expansion, so the
-  // hero/logo layer never fully disappears and the image reads as a
-  // stable layer behind the panel rather than something being replaced.
   const TOP_INSET = 96;
   const sheetHeight = Math.max(vh - TOP_INSET, 360);
 
-  // How much of the sheet is visible in its collapsed state.
   const collapsedVisible = Math.min(vh * 0.46, sheetHeight);
   const collapsedY = sheetHeight - collapsedVisible;
   const expandedY = 0;
@@ -269,8 +262,6 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
   const [dragEnabled, setDragEnabled] = useState(true);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Keep the sheet pinned to the correct snap point if the viewport height
-  // changes (e.g. mobile browser chrome collapsing on scroll, rotation).
   useEffect(() => {
     animate(y, expanded ? expandedY : collapsedY, {
       type: "spring",
@@ -311,16 +302,11 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
     snapTo(next);
   };
 
-  // While expanded, the panel should stop dragging (so the content can
-  // scroll natively) unless the content is already scrolled to its top —
-  // that's what lets a swipe-down-from-top re-collapse the sheet.
   const handleContentScroll = () => {
     if (!expanded || !contentRef.current) return;
     setDragEnabled(contentRef.current.scrollTop <= 0);
   };
 
-  // Fade the hero wording out as the sheet rises so it doesn't collide
-  // with the panel edge while dragging.
   const wordingOpacity = useTransform(y, [expandedY, collapsedY], [0, 1]);
   const wordingY = useTransform(y, [expandedY, collapsedY], [-12, 0]);
 
@@ -329,13 +315,11 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
       className="lg:hidden relative w-full overflow-hidden bg-neutral-900"
       style={{ height: "100dvh" }}
     >
-      {/* ── Layer 1: image — fixed, full-viewport, never moves ── */}
       <div className="absolute inset-0 z-10">
         <PanoramicImage isLogin={isLogin} />
         <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/40 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/35 to-transparent" />
 
-        {/* Logo — always visible, even at full expansion */}
         <div
           className="relative flex items-center gap-2.5 text-white px-6"
           style={{ paddingTop: "max(1.5rem, env(safe-area-inset-top))" }}
@@ -355,8 +339,6 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
           </div>
         </div>
 
-        {/* Wording — sits in the space the collapsed sheet leaves visible;
-            fades out as the sheet rises so it never overlaps the panel */}
         <motion.div
           className="absolute left-0 right-0 px-6 pr-12"
           style={{ bottom: `calc(${collapsedVisible}px + 28px)`, opacity: wordingOpacity, y: wordingY }}
@@ -365,7 +347,6 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
         </motion.div>
       </div>
 
-      {/* ── Layer 2: the draggable sheet ── */}
       <motion.div
         drag={dragEnabled ? "y" : false}
         dragConstraints={{ top: expandedY, bottom: collapsedY }}
@@ -384,7 +365,6 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
             boxShadow: "0 -12px 32px rgba(0,0,0,0.16)",
           }}
         >
-          {/* drag handle — tap to toggle, plus the primary drag affordance */}
           <button
             type="button"
             onClick={() => snapTo(!expanded)}
@@ -394,7 +374,6 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
             <span className="w-9 h-1 rounded-full bg-neutral-300" />
           </button>
 
-          {/* content — scrolls internally only once expanded */}
           <div
             ref={contentRef}
             onScroll={handleContentScroll}
@@ -505,19 +484,7 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
                   </div>
 
                   <div className="space-y-2.5">
-                    <button
-                      type="button"
-                      onClick={handleGoogleClick}
-                      className="w-full h-12 rounded-lg border border-neutral-200 bg-white text-neutral-700 text-[14px] font-medium flex items-center justify-center gap-2.5 hover:bg-neutral-50 transition"
-                    >
-                      <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true">
-                        <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" />
-                        <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" />
-                        <path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.68 9c0-.593.102-1.17.284-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" />
-                        <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.167 6.656 3.58 9 3.58z" />
-                      </svg>
-                      Continue with Google
-                    </button>
+                    <GoogleButton mountRef={googleMobileRef} />
 
                     {applePlatform && (
                       <button
@@ -591,9 +558,6 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
                       </div>
                     </div>
 
-                    {/* Phone isn't in the visual reference, but the
-                        existing /register endpoint requires it — kept so
-                        registration doesn't silently break on mobile. */}
                     <div className="space-y-1.5">
                       <label className="block text-[13px] font-semibold text-neutral-800">Nomor HP</label>
                       <div className="flex gap-2">
@@ -714,17 +678,14 @@ export default function Auth() {
   const navigate = useNavigate();
   const isLogin = location.pathname !== "/register";
 
-  // shared
   const [loading, setLoading] = useState(false);
   const [applePlatform] = useState(isApplePlatform);
 
-  // login fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
 
-  // register fields
   const [name, setName] = useState("");
   const [regEmail, setRegEmail] = useState("");
   const [regCountryCode, setRegCountryCode] = useState("+62");
@@ -733,8 +694,6 @@ export default function Auth() {
   const [regConfirmPassword, setRegConfirmPassword] = useState("");
   const [showRegPassword, setShowRegPassword] = useState(false);
 
-  // mobile-only: terms checkbox (bottom-sheet register spec asks for it,
-  // desktop layout doesn't have this control so it's scoped here only)
   const [agreeTerms, setAgreeTerms] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -755,7 +714,6 @@ export default function Auth() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Client-side check only — does not touch existing API contract.
     if (regPassword !== regConfirmPassword) {
       toast.error("Password dan konfirmasi password tidak sama");
       return;
@@ -783,10 +741,9 @@ export default function Auth() {
     }
   };
 
-  // Google Sign-In: render Google's own hidden button, then forward our
-  // custom button's click to it (so we can style our own button but still
-  // use Google's official rendered button under the hood).
-  const googleHiddenRef = useRef<HTMLDivElement>(null);
+  const googleDesktopRef = useRef<HTMLDivElement>(null);
+  const googleMobileRef = useRef<HTMLDivElement>(null);
+  const googleInitialized = useRef(false);
 
   const handleGoogleCredential = async (response: { credential: string }) => {
     setLoading(true);
@@ -806,28 +763,43 @@ export default function Auth() {
 
   useEffect(() => {
     const w = window as any;
-    if (!w.google?.accounts?.id) return;
-    w.google.accounts.id.initialize({
-      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      callback: handleGoogleCredential,
-    });
-    if (googleHiddenRef.current) {
-      w.google.accounts.id.renderButton(googleHiddenRef.current, { type: "standard" });
-    }
+
+    const renderButtons = () => {
+      const opts = { type: "standard", width: 320, text: "continue_with" } as const;
+      if (googleDesktopRef.current) {
+        googleDesktopRef.current.innerHTML = "";
+        w.google.accounts.id.renderButton(googleDesktopRef.current, opts);
+      }
+      if (googleMobileRef.current) {
+        googleMobileRef.current.innerHTML = "";
+        w.google.accounts.id.renderButton(googleMobileRef.current, opts);
+      }
+    };
+
+    const tryInit = () => {
+      if (!w.google?.accounts?.id) return false;
+
+      if (!googleInitialized.current) {
+        w.google.accounts.id.initialize({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+          callback: handleGoogleCredential,
+        });
+        googleInitialized.current = true;
+      }
+
+      renderButtons();
+      return true;
+    };
+
+    if (tryInit()) return;
+    const interval = setInterval(() => {
+      if (tryInit()) clearInterval(interval);
+    }, 300);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleGoogleClick = () => {
-    const realBtn = googleHiddenRef.current?.querySelector('div[role="button"]') as HTMLElement | null;
-    realBtn?.click();
-  };
-
-  // Apple placeholder — intentionally NOT a fake success flow. Wire this to
-  // Sign in with Apple JS once:
-  //  1) an Apple Services ID + redirect URI is registered with Apple, and
-  //  2) a backend endpoint (mirroring /login) exists to verify the Apple
-  //     identity token and issue your own session token.
   const handleAppleClick = () => {
-    // TODO: requires Apple OAuth provider configuration (see comment above)
     toast("Apple sign-in is coming soon.");
   };
 
@@ -837,17 +809,7 @@ export default function Auth() {
       style={{ backgroundColor: "#ffffff", fontFamily: "'Work Sans', system-ui, sans-serif" }}
     >
       <div className="w-full lg:max-w-100 relative bg-white lg:rounded-2xl overflow-hidden lg:shadow-sm min-h-[100dvh] lg:min-h-[96vh]">
-        <div ref={googleHiddenRef} style={{ position: "absolute", opacity: 0, pointerEvents: "none", top: -9999, left: -9999 }} />
-        
 
-        {/* ═══════════════════════════════════════════════════════════════
-            DESKTOP (lg and up) — UNCHANGED from the existing implementation.
-            Every class, value, and transition below is identical to before.
-           ═══════════════════════════════════════════════════════════════ */}
-
-        {/* ═══ Panel Gambar — DIAM DI TEMPAT. Tidak lagi ikut animasi "muter",
-             cuma pindah left secara halus di belakang (z-10) sementara form
-             yang selalu tampil di atasnya (z-20) ═══ */}
         <motion.div
           animate={{ left: isLogin ? "0%" : "50%" }}
           transition={{ duration: 0.9, ease }}
@@ -878,10 +840,6 @@ export default function Auth() {
           </div>
         </motion.div>
 
-        {/* ═══ Panel Form (desktop only now — was previously doing double
-             duty as the mobile fallback via `lg:hidden` children; that
-             fallback has been removed since mobile has its own experience
-             below). `hidden lg:flex` is the only display change here. ═══ */}
         <motion.div
           animate={{ left: isLogin ? "50%" : "0%" }}
           transition={{ duration: 0.9, ease }}
@@ -984,31 +942,7 @@ export default function Auth() {
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={handleGoogleClick}
-                      className="w-full h-11 rounded-lg border border-neutral-200 bg-white text-neutral-700 text-[14px] font-medium flex items-center justify-center gap-2.5 hover:bg-neutral-50 transition"
-                    >
-                      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-                        <path
-                          fill="#4285F4"
-                          d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"
-                        />
-                        <path
-                          fill="#34A853"
-                          d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
-                        />
-                        <path
-                          fill="#FBBC05"
-                          d="M3.964 10.706A5.41 5.41 0 0 1 3.68 9c0-.593.102-1.17.284-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"
-                        />
-                        <path
-                          fill="#EA4335"
-                          d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.167 6.656 3.58 9 3.58z"
-                        />
-                      </svg>
-                      Continue with Google
-                    </button>
+                    <GoogleButton mountRef={googleDesktopRef} />
 
                     <p className="text-center text-[13px] text-neutral-400 mt-6">
                       Not Registered Yet?{" "}
@@ -1154,19 +1088,6 @@ export default function Auth() {
           </div>
         </motion.div>
 
-        {/* ═══════════════════════════════════════════════════════════════
-            MOBILE (below lg / ~1024px) — true draggable bottom sheet.
-            Two independent layers:
-              1) the image, absolutely stable, always full-viewport, z-10
-              2) the sheet, a Framer Motion draggable panel with two snap
-                 points (collapsed near the bottom, expanded near the top),
-                 z-20, always above the image.
-            The outer container has no page scroll at all — only the sheet
-            moves (via drag), and only the sheet's own content scrolls,
-            and only once the sheet is fully expanded.
-            Entirely isolated from the desktop markup above; shares only
-            state + handlers.
-           ═══════════════════════════════════════════════════════════════ */}
         <MobileAuthSheet
           isLogin={isLogin}
           loading={loading}
@@ -1197,13 +1118,11 @@ export default function Auth() {
           setAgreeTerms={setAgreeTerms}
           handleLogin={handleLogin}
           handleRegister={handleRegister}
-          handleGoogleClick={handleGoogleClick}
+          googleMobileRef={googleMobileRef}
           handleAppleClick={handleAppleClick}
         />
 
       </div>
-      
     </div>
-    
   );
 }

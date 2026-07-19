@@ -130,8 +130,21 @@ class AuthController extends Controller
         return response()->json(['message' => 'id_token wajib diisi'], 422);
     }
 
+    \Log::info('Google OAuth attempt', [
+        'id_token_length' => strlen($data['id_token']),
+        'client_id' => config('services.google.client_id'),
+    ]);
+
     $client = new Google_Client(['client_id' => config('services.google.client_id')]);
-    $payload = $client->verifyIdToken($data['id_token']);
+
+    try {
+        $payload = $client->verifyIdToken($data['id_token']);
+    } catch (\Throwable $e) {
+        \Log::error('Google verifyIdToken threw exception', ['message' => $e->getMessage()]);
+        return response()->json(['message' => 'Google verify error: ' . $e->getMessage()], 401);
+    }
+
+    \Log::info('Google verify result', ['payload_null' => is_null($payload)]);
 
     if (!$payload) {
         return response()->json(['message' => 'Token Google tidak valid'], 401);
