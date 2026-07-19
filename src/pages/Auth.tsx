@@ -369,7 +369,7 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
       <motion.div
         drag={dragEnabled ? "y" : false}
         dragConstraints={{ top: expandedY, bottom: collapsedY }}
-        dragElastic={0.03}
+        dragElastic={0.12}
         dragMomentum={false}
         onDragEnd={handleDragEnd}
         style={{ y, height: sheetHeight, touchAction: "none" }}
