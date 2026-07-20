@@ -32,6 +32,7 @@ export const Navbar = () => {
   const [furnitureShown, setFurnitureShown] = useState(false);
   const [furnitureTypes, setFurnitureTypes] = useState<FurnitureType[]>([]);
   const [thumbnails, setThumbnails] = useState<Record<string, any>>({});
+  const [authUser, setAuthUser] = useState<{ name: string } | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -140,7 +141,14 @@ export const Navbar = () => {
       unsub();
       window.removeEventListener("focus", onFocus);
     };
+    
   }, []);
+  useEffect(() => {
+  api
+    .get("/me")
+    .then((r) => setAuthUser({ name: r.data?.name ?? "Account" }))
+    .catch(() => setAuthUser(null));
+}, []);
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -349,15 +357,23 @@ export const Navbar = () => {
               <Search size={20} />
             </button>
             <Link
-              to="/login"
-              aria-label="Login"
-              className={`p-2 transition-colors duration-500 ${
-                headerLight ? "text-white/90 hover:text-white" : "text-foreground/80 hover:text-foreground"
-              }`}
-              onClick={() => setOpen(false)}
-            >
-              <User size={20} />
-            </Link>
+  to={authUser ? "/profile" : "/login"}
+  aria-label={authUser ? "My Profile" : "Login"}
+  className={`p-2 flex items-center gap-2 transition-colors duration-500 ${
+    headerLight ? "text-white/90 hover:text-white" : "text-foreground/80 hover:text-foreground"
+  }`}
+  onClick={() => setOpen(false)}
+>
+  <User size={20} />
+  {authUser && (
+    <span
+      className="hidden md:inline text-xs uppercase tracking-[0.15em] max-w-[100px] truncate"
+      style={headerLight ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined}
+    >
+      {authUser.name}
+    </span>
+  )}
+</Link>
             <button
               aria-label="Toggle menu"
               onClick={() => setOpen((v) => !v)}
