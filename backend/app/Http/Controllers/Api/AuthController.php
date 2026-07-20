@@ -84,7 +84,55 @@ class AuthController extends Controller
             'message' => 'Logout berhasil'
         ]);
     }
+/**
+ * User update profil sendiri (nama, phone, address). Email sengaja
+ * tidak diizinkan diganti sendiri di endpoint ini untuk menghindari
+ * konflik dengan akun Google yang sudah terhubung — bisa dibuka lagi
+ * nanti kalau dibutuhkan.
+ */
+public function updateProfile(Request $request)
+{
+    $user = $request->user();
 
+    $data = $request->validate([
+        'name'    => 'required|string|max:150',
+        'phone'   => 'nullable|string|max:32',
+        'address' => 'nullable|string|max:500',
+    ]);
+
+    $user->fill($data);
+    $user->save();
+
+    return response()->json([
+        'message' => 'Profil berhasil diperbarui',
+        'user'    => $user,
+    ]);
+}
+
+/**
+ * User ganti password sendiri. Wajib masukkan password lama untuk verifikasi.
+ * Kalau user login via Google dan belum pernah set password manual,
+ * current_password akan gagal cocok — itu expected (arahkan mereka pakai
+ * "Forgot Password" kalau kasus ini terjadi).
+ */
+public function changePassword(Request $request)
+{
+    $user = $request->user();
+
+    $data = $request->validate([
+        'current_password' => 'required|string',
+        'new_password'      => 'required|string|min:6|confirmed',
+    ]);
+
+    if (!\Illuminate\Support\Facades\Hash::check($data['current_password'], $user->password)) {
+        return response()->json(['message' => 'Password lama tidak sesuai'], 422);
+    }
+
+    $user->password = $data['new_password']; // auto-hash via $casts
+    $user->save();
+
+    return response()->json(['message' => 'Password berhasil diperbarui']);
+}
     /**
      * Track a generic activity (page view, item view, etc.) from the frontend.
      */

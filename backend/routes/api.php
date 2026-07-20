@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\VariantController;
 use App\Http\Controllers\Api\TaxonomyBannerController;
 use App\Http\Controllers\Api\ConsultationController;
 use App\Http\Controllers\Api\Admin\ConsultationController as AdminConsultationController;
+use App\Http\Controllers\Api\WishlistController;
 
 Route::get('/taxonomy-banners', [TaxonomyBannerController::class, 'index']);
 Route::get('/taxonomy-banners/{key}', [TaxonomyBannerController::class, 'byKey']);
@@ -59,6 +60,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::patch('/user/language', [UserLanguageController::class, 'update']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::put('/me', [AuthController::class, 'updateProfile']);
+    Route::post('/me/password', [AuthController::class, 'changePassword']);
+    Route::get('/wishlist', [WishlistController::class, 'index']);
+Route::post('/wishlist', [WishlistController::class, 'store']);
+Route::delete('/wishlist/{type}/{id}', [WishlistController::class, 'destroy']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/heartbeat', function (Request $r) {
         $u = $r->user(); $u->last_seen_at = now(); $u->save();

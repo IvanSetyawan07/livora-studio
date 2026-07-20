@@ -37,6 +37,7 @@ export default function AdminDashboard() {
   };
 
   return (
+    
     <div className="min-h-screen bg-background p-10">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
@@ -53,7 +54,13 @@ export default function AdminDashboard() {
             Logout
           </button>
         </div>
-
+<div
+  onClick={() => navigate("/admin/consultations")}
+  className="bg-card border border-border rounded-lg p-6 cursor-pointer hover:border-foreground/40 transition-colors"
+>
+  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">Manage</p>
+  <h3 className="serif text-xl">Consultations</h3>
+</div>
         <div className="bg-card border border-border rounded-lg p-6 mb-6">
           <h2 className="text-lg mb-2">Selamat datang, {user?.name ?? "..."}</h2>
           <p className="text-sm text-muted-foreground">Email: {user?.email}</p>

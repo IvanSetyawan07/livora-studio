@@ -11,6 +11,7 @@ import ItemDetail from "./pages/ItemDetail.tsx";
 import AboutPage from "./pages/About.tsx";
 import { WhatsAppButton } from "./components/livora/WhatsAppButton.tsx";
 import Auth from "./pages/Auth";
+import Profile from "./pages/Profile.tsx";
 // import Login from "./pages/Login";
 // import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
@@ -40,6 +41,7 @@ import CollectionLanding from "./pages/CollectionLanding.tsx";
 import CollectionDetail from "./pages/CollectionDetail.tsx";
 import CollectionCategory from "./pages/CollectionCategory.tsx";
 import Appointment from "./pages/Appointment.tsx";
+import AdminConsultations from "./pages/admin/AdminConsultations.tsx";
 
 
 const queryClient = new QueryClient();
@@ -72,8 +74,10 @@ function App() {
               <Route path="/appointment" element={<Appointment />} />
               <Route path="/login" element={<Auth />} />
               <Route path="/register" element={<Auth />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/admin" element={<AdminLayout />}>
+               <Route path="consultations" element={<AdminConsultations />} />
               <Route path="catalogs"          element={<CatalogListAdmin />} />
                 <Route path="catalogs/create"   element={<CatalogFormAdmin />} />
                 <Route path="catalogs/:id/edit" element={<CatalogFormAdmin />} />
@@ -87,6 +91,7 @@ function App() {
                 <Route path="analytics" element={<AdminAnalytics />} />
                 <Route path="banners" element={<AdminBanners />} />
                 <Route path="users" element={<AdminUsers />} />
+                
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
