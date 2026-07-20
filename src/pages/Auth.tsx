@@ -857,22 +857,36 @@ export default function Auth() {
     }
   };
 
-  useEffect(() => {
+  // Shared helper: render (or re-render) Google's real button into both
+  // mount points, sized to match each container's actual rendered width
+  // (rather than a hardcoded value) so the invisible click-target always
+  // lines up with the visible fake button, on every breakpoint.
+  const renderGoogleButtons = () => {
     const w = window as any;
+    if (!w.google?.accounts?.id) return;
 
     const renderInto = (el: HTMLDivElement | null) => {
       if (!el) return;
       el.innerHTML = "";
-      // Google's button has a max width of 400px; use the container's
-      // actual rendered width instead of a hardcoded value so it matches
-      // exactly regardless of breakpoint (desktop panel vs mobile sheet).
-      const width = Math.min(Math.floor(el.offsetWidth) || 320, 400);
+      const width = Math.min(Math.floor(el.offsetWidth) || 320, 400); // GSI max width is 400
       w.google.accounts.id.renderButton(el, {
         type: "standard",
         width,
         text: "continue_with",
       });
     };
+
+    renderInto(googleDesktopRef.current);
+    renderInto(googleMobileRef.current);
+  };
+
+  // 1) Initial setup: initialize GSI once the script has loaded, then do
+  // the first render of both buttons. The Google Identity Services script
+  // (accounts.google.com/gsi/client) may not have finished loading yet
+  // when this component mounts, so we poll briefly until it's ready
+  // instead of silently giving up once.
+  useEffect(() => {
+    const w = window as any;
 
     const tryInit = () => {
       if (!w.google?.accounts?.id) return false;
@@ -885,14 +899,10 @@ export default function Auth() {
         w.__gsiInitialized = true;
       }
 
-      renderInto(googleDesktopRef.current);
-      renderInto(googleMobileRef.current);
+      renderGoogleButtons();
       return true;
     };
 
-    // The Google Identity Services script (accounts.google.com/gsi/client)
-    // may not have finished loading yet when this component mounts, so we
-    // poll briefly until it's ready instead of silently giving up once.
     if (tryInit()) return;
     const interval = setInterval(() => {
       if (tryInit()) clearInterval(interval);
@@ -901,28 +911,36 @@ export default function Auth() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Re-render Google's button when the login/register panel finishes its
-  // width-changing transition, so the invisible click-target stays aligned
-  // with the visible fake button.
+  // 2) Re-render Google's button when the login/register panel finishes
+  // its width-changing transition, so the invisible click-target stays
+  // aligned with the visible fake button after the layout shifts.
   useEffect(() => {
     const w = window as any;
     if (!w.__gsiInitialized) return;
-    const t = setTimeout(() => {
-      const renderInto = (el: HTMLDivElement | null) => {
-        if (!el) return;
-        el.innerHTML = "";
-        const width = Math.min(Math.floor(el.offsetWidth) || 320, 400);
-        w.google.accounts.id.renderButton(el, {
-          type: "standard",
-          width,
-          text: "continue_with",
-        });
-      };
-      renderInto(googleDesktopRef.current);
-      renderInto(googleMobileRef.current);
-    }, 950); // wait out the 0.9s panel transition
+    const t = setTimeout(renderGoogleButtons, 950); // wait out the 0.9s panel transition
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLogin]);
+
+  // 3) Google's rendered button becomes unresponsive after its popup is
+  // closed without completing sign-in (its iframe instance gets
+  // suppressed internally). The window regains focus right when that
+  // popup closes, so re-render the button at that moment to get a fresh,
+  // clickable iframe.
+  useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout>;
+    const handleFocus = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(renderGoogleButtons, 200);
+    };
+
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      clearTimeout(timeout);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Apple placeholder — intentionally NOT a fake success flow. Wire this to
   // Sign in with Apple JS once:
