@@ -32,6 +32,7 @@ export const Navbar = () => {
   const [furnitureShown, setFurnitureShown] = useState(false);
   const [furnitureTypes, setFurnitureTypes] = useState<FurnitureType[]>([]);
   const [thumbnails, setThumbnails] = useState<Record<string, any>>({});
+  const [authUser, setAuthUser] = useState<{ name: string } | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -52,6 +53,7 @@ export const Navbar = () => {
       ],
     },
     { key: "collection", label: "COLLECTION", to: "/collection" },
+    { key: "appointment", label: "MAKE AN APPOINTMENT", to: "/appointment" },
   ];
 
   // Quick links always visible on desktop header.
@@ -66,6 +68,7 @@ export const Navbar = () => {
   const lightText =
     !scrolled &&
     (location.pathname === "/" ||
+      location.pathname === "/appointment" ||
       /^\/catalog\/[^/]+$/.test(location.pathname) ||
       /^\/catalog\/[^/]+\/[^/]+$/.test(location.pathname) ||
       /^\/projects\/[^/]+$/.test(location.pathname) ||
@@ -138,7 +141,14 @@ export const Navbar = () => {
       unsub();
       window.removeEventListener("focus", onFocus);
     };
+    
   }, []);
+  useEffect(() => {
+  api
+    .get("/me")
+    .then((r) => setAuthUser({ name: r.data?.name ?? "Account" }))
+    .catch(() => setAuthUser(null));
+}, []);
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -296,10 +306,10 @@ export const Navbar = () => {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 ${open ? "z-30" : "z-50"} transition-all duration-500 ${
-          headerTransparent ? "bg-transparent" : "bg-background/75 backdrop-blur-[6px]"
-        } ${hidden ? "-translate-y-full" : "translate-y-0"}`}
-      >
+  className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+    headerTransparent ? "bg-transparent" : "bg-background/75 backdrop-blur-[6px]"
+  } ${hidden ? "-translate-y-full" : "translate-y-0"}`}
+>
         <div className="container-livora h-20 flex items-center justify-between relative">
           {/* Logo */}
           <Link
@@ -313,11 +323,26 @@ export const Navbar = () => {
             LIVORA
           </Link>
 
-          {/* Desktop quick links: Style · Scope · Contact only */}
+          {/* Desktop quick links: Style · Scope · Contact + Make an Appointment */}
           <ul className="hidden md:flex items-center gap-8 text-xs uppercase tracking-[0.2em]">
             {desktopQuickLinks.map((l) => (
               <li key={l.key}>{renderQuickLink(l)}</li>
             ))}
+            <li>
+              <Link
+                to="/appointment"
+                className={`underline-grow transition-colors ${
+                  lightText
+                    ? "text-white/90 hover:text-white"
+                    : location.pathname === "/appointment"
+                    ? "text-foreground is-active"
+                    : "text-foreground/80 hover:text-foreground"
+                }`}
+                style={lightText ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined}
+              >
+                Make an Appointment
+              </Link>
+            </li>
           </ul>
 
           {/* Actions */}
@@ -332,15 +357,23 @@ export const Navbar = () => {
               <Search size={20} />
             </button>
             <Link
-              to="/login"
-              aria-label="Login"
-              className={`p-2 transition-colors duration-500 ${
-                headerLight ? "text-white/90 hover:text-white" : "text-foreground/80 hover:text-foreground"
-              }`}
-              onClick={() => setOpen(false)}
-            >
-              <User size={20} />
-            </Link>
+  to={authUser ? "/profile" : "/login"}
+  aria-label={authUser ? "My Profile" : "Login"}
+  className={`p-2 flex items-center gap-2 transition-colors duration-500 ${
+    headerLight ? "text-white/90 hover:text-white" : "text-foreground/80 hover:text-foreground"
+  }`}
+  onClick={() => setOpen(false)}
+>
+  <User size={20} />
+  {authUser && (
+    <span
+      className="hidden md:inline text-xs uppercase tracking-[0.15em] max-w-[100px] truncate"
+      style={headerLight ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined}
+    >
+      {authUser.name}
+    </span>
+  )}
+</Link>
             <button
               aria-label="Toggle menu"
               onClick={() => setOpen((v) => !v)}

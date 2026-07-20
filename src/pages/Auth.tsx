@@ -164,6 +164,18 @@ function useViewportHeight() {
   return vh;
 }
 
+<<<<<<< HEAD
+=======
+// ---------------------------------------------------------------------------
+// Reusable "Continue with Google" control. Renders a custom-styled fake
+// button underneath, and overlays Google's OWN button (rendered via
+// google.accounts.id.renderButton into `mountRef`) directly on top of it,
+// invisible (opacity 0) but fully interactive. This way the click always
+// lands on Google's real button — you cannot reach inside its cross-origin
+// iframe with querySelector, so a "click the real button programmatically"
+// approach never works. Overlaying is the supported workaround.
+// ---------------------------------------------------------------------------
+>>>>>>> ef3d356ee112cdc12b918ea1d7a7d0b89ad901f2
 function GoogleButton({ mountRef }: { mountRef: React.RefObject<HTMLDivElement> }) {
   return (
     <div className="relative w-full h-11">
@@ -193,6 +205,11 @@ function GoogleButton({ mountRef }: { mountRef: React.RefObject<HTMLDivElement> 
         </svg>
         Continue with Google
       </button>
+<<<<<<< HEAD
+=======
+      {/* Google's real button, rendered here by google.accounts.id.renderButton,
+          stretched to fill this box and made invisible but clickable. */}
+>>>>>>> ef3d356ee112cdc12b918ea1d7a7d0b89ad901f2
       <div
         ref={mountRef}
         className="absolute inset-0 overflow-hidden rounded-lg opacity-0"
@@ -202,6 +219,18 @@ function GoogleButton({ mountRef }: { mountRef: React.RefObject<HTMLDivElement> 
   );
 }
 
+<<<<<<< HEAD
+=======
+// ---------------------------------------------------------------------------
+// The mobile bottom sheet. Two layers:
+//   - the image (always full-viewport, never moves)
+//   - the panel (drag="y", snaps between "collapsed" near the bottom and
+//     "expanded" near the top, spring transition, snapping on release)
+// Panel content only scrolls internally once fully expanded; while
+// collapsed (or while expanded-but-scrolled-to-top) the panel itself
+// remains draggable so a swipe down re-collapses it.
+// ---------------------------------------------------------------------------
+>>>>>>> ef3d356ee112cdc12b918ea1d7a7d0b89ad901f2
 interface MobileAuthSheetProps {
   isLogin: boolean;
   loading: boolean;
@@ -741,9 +770,32 @@ export default function Auth() {
     }
   };
 
+<<<<<<< HEAD
   const googleDesktopRef = useRef<HTMLDivElement>(null);
   const googleMobileRef = useRef<HTMLDivElement>(null);
   const googleInitialized = useRef(false);
+=======
+  // ---------------------------------------------------------------------
+  // Google Sign-In (Google Identity Services / GIS).
+  //
+  // Google's renderButton() draws its button INSIDE a cross-origin
+  // <iframe> pointed at accounts.google.com. You cannot querySelector into
+  // a cross-origin iframe's content from the parent page — so a "find the
+  // real button and .click() it" approach silently does nothing (no error,
+  // no network request — exactly the symptom we were chasing).
+  //
+  // The supported fix: render the real Google button into a container,
+  // then visually replace it with our own custom-styled button underneath
+  // while keeping the real one on top, fully sized, but invisible
+  // (opacity: 0). The user's click always lands on Google's real button.
+  //
+  // Two separate mount points (desktop / mobile) because both can be in
+  // the DOM at once depending on viewport — each needs its own rendered
+  // button instance.
+  // ---------------------------------------------------------------------
+  const googleDesktopRef = useRef<HTMLDivElement>(null);
+  const googleMobileRef = useRef<HTMLDivElement>(null);
+>>>>>>> ef3d356ee112cdc12b918ea1d7a7d0b89ad901f2
 
   const handleGoogleCredential = async (response: { credential: string }) => {
     setLoading(true);
@@ -761,8 +813,13 @@ export default function Auth() {
     }
   };
 
-  useEffect(() => {
+  // Shared helper: render (or re-render) Google's real button into both
+  // mount points, sized to match each container's actual rendered width
+  // (rather than a hardcoded value) so the invisible click-target always
+  // lines up with the visible fake button, on every breakpoint.
+  const renderGoogleButtons = () => {
     const w = window as any;
+<<<<<<< HEAD
 
     const renderButtons = () => {
       const opts = { type: "standard", width: 320, text: "continue_with" } as const;
@@ -780,14 +837,52 @@ export default function Auth() {
       if (!w.google?.accounts?.id) return false;
 
       if (!googleInitialized.current) {
+=======
+    if (!w.google?.accounts?.id) return;
+
+    const renderInto = (el: HTMLDivElement | null) => {
+      if (!el) return;
+      el.innerHTML = "";
+      const width = Math.min(Math.floor(el.offsetWidth) || 320, 400); // GSI max width is 400
+      w.google.accounts.id.renderButton(el, {
+        type: "standard",
+        width,
+        text: "continue_with",
+      });
+    };
+
+    renderInto(googleDesktopRef.current);
+    renderInto(googleMobileRef.current);
+  };
+
+  // 1) Initial setup: initialize GSI once the script has loaded, then do
+  // the first render of both buttons. The Google Identity Services script
+  // (accounts.google.com/gsi/client) may not have finished loading yet
+  // when this component mounts, so we poll briefly until it's ready
+  // instead of silently giving up once.
+  useEffect(() => {
+    const w = window as any;
+
+    const tryInit = () => {
+      if (!w.google?.accounts?.id) return false;
+
+      if (!w.__gsiInitialized) {
+>>>>>>> ef3d356ee112cdc12b918ea1d7a7d0b89ad901f2
         w.google.accounts.id.initialize({
           client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
           callback: handleGoogleCredential,
         });
+<<<<<<< HEAD
         googleInitialized.current = true;
       }
 
       renderButtons();
+=======
+        w.__gsiInitialized = true;
+      }
+
+      renderGoogleButtons();
+>>>>>>> ef3d356ee112cdc12b918ea1d7a7d0b89ad901f2
       return true;
     };
 
@@ -799,6 +894,45 @@ export default function Auth() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+<<<<<<< HEAD
+=======
+  // 2) Re-render Google's button when the login/register panel finishes
+  // its width-changing transition, so the invisible click-target stays
+  // aligned with the visible fake button after the layout shifts.
+  useEffect(() => {
+    const w = window as any;
+    if (!w.__gsiInitialized) return;
+    const t = setTimeout(renderGoogleButtons, 950); // wait out the 0.9s panel transition
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLogin]);
+
+  // 3) Google's rendered button becomes unresponsive after its popup is
+  // closed without completing sign-in (its iframe instance gets
+  // suppressed internally). The window regains focus right when that
+  // popup closes, so re-render the button at that moment to get a fresh,
+  // clickable iframe.
+  useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout>;
+    const handleFocus = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(renderGoogleButtons, 200);
+    };
+
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      clearTimeout(timeout);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Apple placeholder — intentionally NOT a fake success flow. Wire this to
+  // Sign in with Apple JS once:
+  //  1) an Apple Services ID + redirect URI is registered with Apple, and
+  //  2) a backend endpoint (mirroring /login) exists to verify the Apple
+  //     identity token and issue your own session token.
+>>>>>>> ef3d356ee112cdc12b918ea1d7a7d0b89ad901f2
   const handleAppleClick = () => {
     toast("Apple sign-in is coming soon.");
   };

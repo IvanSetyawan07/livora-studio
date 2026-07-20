@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
+import { getAdminConsultations } from "@/lib/adminConsultations";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 export default function AdminOverview() {
+  const navigate = useNavigate();
   const [data, setData] = useState<any>(null);
+  const [newInquiries, setNewInquiries] = useState<number | null>(null);
 
   useEffect(() => {
     api.get("/admin/analytics/overview").then((r) => setData(r.data)).catch(() => {});
+    getAdminConsultations()
+      .then((list) => setNewInquiries(list.filter((c) => c.status === "new_inquiry").length))
+      .catch(() => setNewInquiries(0));
   }, []);
 
   if (!data) return <p className="text-sm text-muted-foreground">Loading...</p>;
@@ -22,13 +29,32 @@ export default function AdminOverview() {
       <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2">Dashboard</p>
       <h1 className="serif text-4xl mb-8">Overview</h1>
 
-      <div className="grid grid-cols-3 gap-5 mb-10">
+      <div className="grid grid-cols-3 gap-5 mb-5">
         {stats.map((s) => (
           <div key={s.label} className="bg-card border border-border rounded-lg p-6">
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-3">{s.label}</p>
             <p className="serif text-4xl">{s.value}</p>
           </div>
         ))}
+      </div>
+
+      {/* Quick access — Consultations */}
+      <div
+        onClick={() => navigate("/admin/consultations")}
+        className="relative bg-card border border-border rounded-lg p-6 mb-10 cursor-pointer hover:border-foreground/40 transition-colors flex items-center justify-between"
+      >
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">Manage</p>
+          <h3 className="serif text-xl">Consultations</h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            Design consultation requests from the Appointment page.
+          </p>
+        </div>
+        {newInquiries !== null && newInquiries > 0 && (
+          <span className="bg-foreground text-background text-xs rounded-full px-3 py-1 uppercase tracking-wider">
+            {newInquiries} New
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-5">
