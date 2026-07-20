@@ -16,6 +16,8 @@ use App\Http\Controllers\Api\FurnitureExperienceController;
 use App\Http\Controllers\UserLanguageController;
 use App\Http\Controllers\Api\VariantController;
 use App\Http\Controllers\Api\TaxonomyBannerController;
+use App\Http\Controllers\Api\ConsultationController;
+use App\Http\Controllers\Api\Admin\ConsultationController as AdminConsultationController;
 
 Route::get('/taxonomy-banners', [TaxonomyBannerController::class, 'index']);
 Route::get('/taxonomy-banners/{key}', [TaxonomyBannerController::class, 'byKey']);
@@ -25,6 +27,7 @@ Route::post('/auth/{provider}/callback', [AuthController::class, 'oauthCallback'
     ->whereIn('provider', ['google', 'apple']);
 
 // Public read APIs
+Route::post('/consultations', [ConsultationController::class, 'store']);
 Route::get('/projects', [ProjectController::class, 'index']);
 Route::get('/projects/{slug}', [ProjectController::class, 'show']);
 Route::get('/landing/highlights', [ProjectController::class, 'highlights']);
@@ -51,6 +54,9 @@ Route::post('/track/click', [TrackingController::class, 'click']);
 Route::post('/track/view',  [TrackingController::class, 'view']);
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/my/consultations', [ConsultationController::class, 'mine']);
+    Route::get('/consultations/{consultation}', [ConsultationController::class, 'show']);
+
     Route::patch('/user/language', [UserLanguageController::class, 'update']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -129,9 +135,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/catalogs/{catalog}', [CatalogController::class, 'update']);
         Route::put('/catalogs/{catalog}', [CatalogController::class, 'update']);
         Route::delete('/catalogs/{catalog}', [CatalogController::class, 'destroy']);
-Route::post('/taxonomy-banners', [TaxonomyBannerController::class, 'store']);
-Route::put('/taxonomy-banners/{banner}', [TaxonomyBannerController::class, 'update']);
-Route::delete('/taxonomy-banners/{banner}', [TaxonomyBannerController::class, 'destroy']);
+        Route::post('/taxonomy-banners', [TaxonomyBannerController::class, 'store']);
+        Route::put('/taxonomy-banners/{banner}', [TaxonomyBannerController::class, 'update']);
+        Route::delete('/taxonomy-banners/{banner}', [TaxonomyBannerController::class, 'destroy']);
         // Hotspots Admin CRUD (nested under catalogs)
         Route::prefix('catalogs/{catalog}/hotspots')->group(function () {
             Route::get('/', [HotspotController::class, 'index']);
@@ -147,6 +153,13 @@ Route::delete('/taxonomy-banners/{banner}', [TaxonomyBannerController::class, 'd
         // Analytics
         Route::get('/analytics/overview', [AnalyticsController::class, 'overview']);
         Route::get('/analytics/users', [AnalyticsController::class, 'activeUsers']);
+
+        // Consultations management
+        Route::get('/consultations', [AdminConsultationController::class, 'index']);
+        Route::get('/consultations/{consultation}', [AdminConsultationController::class, 'show']);
+        Route::put('/consultations/{consultation}', [AdminConsultationController::class, 'update']);
+        Route::post('/consultations/{consultation}', [AdminConsultationController::class, 'update']);
+        Route::delete('/consultations/{consultation}', [AdminConsultationController::class, 'destroy']);
 
         // Users management
         Route::get('/users', [\App\Http\Controllers\Api\AdminUserController::class, 'index']);

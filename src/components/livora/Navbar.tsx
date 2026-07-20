@@ -67,6 +67,7 @@ export const Navbar = () => {
   const lightText =
     !scrolled &&
     (location.pathname === "/" ||
+      location.pathname === "/appointment" ||
       /^\/catalog\/[^/]+$/.test(location.pathname) ||
       /^\/catalog\/[^/]+\/[^/]+$/.test(location.pathname) ||
       /^\/projects\/[^/]+$/.test(location.pathname) ||
@@ -322,12 +323,14 @@ export const Navbar = () => {
             <li>
               <Link
                 to="/appointment"
-                className={`px-4 py-2 border transition-all duration-500 tracking-[0.2em] ${
+                className={`underline-grow transition-colors ${
                   lightText
-                    ? "text-[#C9A96E] border-[#C9A96E]/70 hover:bg-[#C9A96E] hover:text-white"
-                    : "text-[#B08A5B] border-[#B08A5B]/70 hover:bg-[#B08A5B] hover:text-white"
+                    ? "text-white/90 hover:text-white"
+                    : location.pathname === "/appointment"
+                    ? "text-foreground is-active"
+                    : "text-foreground/80 hover:text-foreground"
                 }`}
-                style={lightText ? { textShadow: "0 1px 8px rgba(0,0,0,0.4)" } : undefined}
+                style={lightText ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined}
               >
                 Make an Appointment
               </Link>
