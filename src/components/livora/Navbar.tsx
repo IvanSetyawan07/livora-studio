@@ -313,11 +313,24 @@ export const Navbar = () => {
             LIVORA
           </Link>
 
-          {/* Desktop quick links: Style · Scope · Contact only */}
+          {/* Desktop quick links: Style · Scope · Contact + Make an Appointment */}
           <ul className="hidden md:flex items-center gap-8 text-xs uppercase tracking-[0.2em]">
             {desktopQuickLinks.map((l) => (
               <li key={l.key}>{renderQuickLink(l)}</li>
             ))}
+            <li>
+              <Link
+                to="/appointment"
+                className={`px-4 py-2 border transition-all duration-500 tracking-[0.2em] ${
+                  lightText
+                    ? "text-[#C9A96E] border-[#C9A96E]/70 hover:bg-[#C9A96E] hover:text-white"
+                    : "text-[#B08A5B] border-[#B08A5B]/70 hover:bg-[#B08A5B] hover:text-white"
+                }`}
+                style={lightText ? { textShadow: "0 1px 8px rgba(0,0,0,0.4)" } : undefined}
+              >
+                Make an Appointment
+              </Link>
+            </li>
           </ul>
 
           {/* Actions */}
