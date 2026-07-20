@@ -39,6 +39,7 @@ import CatalogFormAdmin from "@/pages/admin/CatalogFormAdmin";
 import CollectionLanding from "./pages/CollectionLanding.tsx";
 import CollectionDetail from "./pages/CollectionDetail.tsx";
 import CollectionCategory from "./pages/CollectionCategory.tsx";
+import Appointment from "./pages/Appointment.tsx";
 
 
 const queryClient = new QueryClient();
