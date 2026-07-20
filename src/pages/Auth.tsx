@@ -860,24 +860,33 @@ export default function Auth() {
   useEffect(() => {
     const w = window as any;
 
+    const renderInto = (el: HTMLDivElement | null) => {
+      if (!el) return;
+      el.innerHTML = "";
+      // Google's button has a max width of 400px; use the container's
+      // actual rendered width instead of a hardcoded value so it matches
+      // exactly regardless of breakpoint (desktop panel vs mobile sheet).
+      const width = Math.min(Math.floor(el.offsetWidth) || 320, 400);
+      w.google.accounts.id.renderButton(el, {
+        type: "standard",
+        width,
+        text: "continue_with",
+      });
+    };
+
     const tryInit = () => {
       if (!w.google?.accounts?.id) return false;
 
-      w.google.accounts.id.initialize({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-        callback: handleGoogleCredential,
-      });
-
-      const opts = { type: "standard", width: 320, text: "continue_with" } as const;
-
-      if (googleDesktopRef.current) {
-        googleDesktopRef.current.innerHTML = "";
-        w.google.accounts.id.renderButton(googleDesktopRef.current, opts);
+      if (!w.__gsiInitialized) {
+        w.google.accounts.id.initialize({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+          callback: handleGoogleCredential,
+        });
+        w.__gsiInitialized = true;
       }
-      if (googleMobileRef.current) {
-        googleMobileRef.current.innerHTML = "";
-        w.google.accounts.id.renderButton(googleMobileRef.current, opts);
-      }
+
+      renderInto(googleDesktopRef.current);
+      renderInto(googleMobileRef.current);
       return true;
     };
 
@@ -891,6 +900,29 @@ export default function Auth() {
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Re-render Google's button when the login/register panel finishes its
+  // width-changing transition, so the invisible click-target stays aligned
+  // with the visible fake button.
+  useEffect(() => {
+    const w = window as any;
+    if (!w.__gsiInitialized) return;
+    const t = setTimeout(() => {
+      const renderInto = (el: HTMLDivElement | null) => {
+        if (!el) return;
+        el.innerHTML = "";
+        const width = Math.min(Math.floor(el.offsetWidth) || 320, 400);
+        w.google.accounts.id.renderButton(el, {
+          type: "standard",
+          width,
+          text: "continue_with",
+        });
+      };
+      renderInto(googleDesktopRef.current);
+      renderInto(googleMobileRef.current);
+    }, 950); // wait out the 0.9s panel transition
+    return () => clearTimeout(t);
+  }, [isLogin]);
 
   // Apple placeholder — intentionally NOT a fake success flow. Wire this to
   // Sign in with Apple JS once:

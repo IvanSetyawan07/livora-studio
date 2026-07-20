@@ -296,10 +296,10 @@ export const Navbar = () => {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 ${open ? "z-30" : "z-50"} transition-all duration-500 ${
-          headerTransparent ? "bg-transparent" : "bg-background/75 backdrop-blur-[6px]"
-        } ${hidden ? "-translate-y-full" : "translate-y-0"}`}
-      >
+  className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+    headerTransparent ? "bg-transparent" : "bg-background/75 backdrop-blur-[6px]"
+  } ${hidden ? "-translate-y-full" : "translate-y-0"}`}
+>
         <div className="container-livora h-20 flex items-center justify-between relative">
           {/* Logo */}
           <Link
