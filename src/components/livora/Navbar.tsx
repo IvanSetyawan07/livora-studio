@@ -52,6 +52,7 @@ export const Navbar = () => {
       ],
     },
     { key: "collection", label: "COLLECTION", to: "/collection" },
+    { key: "appointment", label: "MAKE AN APPOINTMENT", to: "/appointment" },
   ];
 
   // Quick links always visible on desktop header.
