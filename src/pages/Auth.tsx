@@ -164,8 +164,6 @@ function useViewportHeight() {
   return vh;
 }
 
-<<<<<<< HEAD
-=======
 // ---------------------------------------------------------------------------
 // Reusable "Continue with Google" control. Renders a custom-styled fake
 // button underneath, and overlays Google's OWN button (rendered via
@@ -175,7 +173,6 @@ function useViewportHeight() {
 // iframe with querySelector, so a "click the real button programmatically"
 // approach never works. Overlaying is the supported workaround.
 // ---------------------------------------------------------------------------
->>>>>>> ef3d356ee112cdc12b918ea1d7a7d0b89ad901f2
 function GoogleButton({ mountRef }: { mountRef: React.RefObject<HTMLDivElement> }) {
   return (
     <div className="relative w-full h-11">
@@ -205,11 +202,8 @@ function GoogleButton({ mountRef }: { mountRef: React.RefObject<HTMLDivElement> 
         </svg>
         Continue with Google
       </button>
-<<<<<<< HEAD
-=======
       {/* Google's real button, rendered here by google.accounts.id.renderButton,
           stretched to fill this box and made invisible but clickable. */}
->>>>>>> ef3d356ee112cdc12b918ea1d7a7d0b89ad901f2
       <div
         ref={mountRef}
         className="absolute inset-0 overflow-hidden rounded-lg opacity-0"
@@ -219,8 +213,6 @@ function GoogleButton({ mountRef }: { mountRef: React.RefObject<HTMLDivElement> 
   );
 }
 
-<<<<<<< HEAD
-=======
 // ---------------------------------------------------------------------------
 // The mobile bottom sheet. Two layers:
 //   - the image (always full-viewport, never moves)
@@ -230,7 +222,6 @@ function GoogleButton({ mountRef }: { mountRef: React.RefObject<HTMLDivElement> 
 // collapsed (or while expanded-but-scrolled-to-top) the panel itself
 // remains draggable so a swipe down re-collapses it.
 // ---------------------------------------------------------------------------
->>>>>>> ef3d356ee112cdc12b918ea1d7a7d0b89ad901f2
 interface MobileAuthSheetProps {
   isLogin: boolean;
   loading: boolean;
@@ -770,11 +761,6 @@ export default function Auth() {
     }
   };
 
-<<<<<<< HEAD
-  const googleDesktopRef = useRef<HTMLDivElement>(null);
-  const googleMobileRef = useRef<HTMLDivElement>(null);
-  const googleInitialized = useRef(false);
-=======
   // ---------------------------------------------------------------------
   // Google Sign-In (Google Identity Services / GIS).
   //
@@ -795,7 +781,6 @@ export default function Auth() {
   // ---------------------------------------------------------------------
   const googleDesktopRef = useRef<HTMLDivElement>(null);
   const googleMobileRef = useRef<HTMLDivElement>(null);
->>>>>>> ef3d356ee112cdc12b918ea1d7a7d0b89ad901f2
 
   const handleGoogleCredential = async (response: { credential: string }) => {
     setLoading(true);
@@ -819,25 +804,6 @@ export default function Auth() {
   // lines up with the visible fake button, on every breakpoint.
   const renderGoogleButtons = () => {
     const w = window as any;
-<<<<<<< HEAD
-
-    const renderButtons = () => {
-      const opts = { type: "standard", width: 320, text: "continue_with" } as const;
-      if (googleDesktopRef.current) {
-        googleDesktopRef.current.innerHTML = "";
-        w.google.accounts.id.renderButton(googleDesktopRef.current, opts);
-      }
-      if (googleMobileRef.current) {
-        googleMobileRef.current.innerHTML = "";
-        w.google.accounts.id.renderButton(googleMobileRef.current, opts);
-      }
-    };
-
-    const tryInit = () => {
-      if (!w.google?.accounts?.id) return false;
-
-      if (!googleInitialized.current) {
-=======
     if (!w.google?.accounts?.id) return;
 
     const renderInto = (el: HTMLDivElement | null) => {
@@ -867,22 +833,14 @@ export default function Auth() {
       if (!w.google?.accounts?.id) return false;
 
       if (!w.__gsiInitialized) {
->>>>>>> ef3d356ee112cdc12b918ea1d7a7d0b89ad901f2
         w.google.accounts.id.initialize({
           client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
           callback: handleGoogleCredential,
         });
-<<<<<<< HEAD
-        googleInitialized.current = true;
-      }
-
-      renderButtons();
-=======
         w.__gsiInitialized = true;
       }
 
       renderGoogleButtons();
->>>>>>> ef3d356ee112cdc12b918ea1d7a7d0b89ad901f2
       return true;
     };
 
@@ -894,8 +852,6 @@ export default function Auth() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-<<<<<<< HEAD
-=======
   // 2) Re-render Google's button when the login/register panel finishes
   // its width-changing transition, so the invisible click-target stays
   // aligned with the visible fake button after the layout shifts.
@@ -932,7 +888,6 @@ export default function Auth() {
   //  1) an Apple Services ID + redirect URI is registered with Apple, and
   //  2) a backend endpoint (mirroring /login) exists to verify the Apple
   //     identity token and issue your own session token.
->>>>>>> ef3d356ee112cdc12b918ea1d7a7d0b89ad901f2
   const handleAppleClick = () => {
     toast("Apple sign-in is coming soon.");
   };
@@ -1260,13 +1215,3 @@ export default function Auth() {
     </div>
   );
 }
-# edit langsung file untuk hapus semua marker & pilih kode yang benar
-nano src/pages/Auth.tsx
-# atau pakai vim/editor lain
-
-# setelah bersih dari marker, cek dulu tidak ada sisa
-grep -n "<<<<<<<\|=======\|>>>>>>>" src/pages/Auth.tsx
-
-# lalu commit perbaikan sebagai commit baru (jangan amend kalau sudah kepush)
-git add src/pages/Auth.tsx
-git commit -m "fix: resolve leftover merge conflict markers in Auth.tsx"
