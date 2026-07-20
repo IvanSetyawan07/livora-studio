@@ -1,72 +1,81 @@
-## Ringkasan
-Menambahkan fitur **Collection** dengan design language yang sama seperti Livora existing. Tidak mengubah homepage, navbar (hanya penambahan menu), footer, catalog, experience editor, atau admin dashboard yang sudah ada. Item data tetap menggunakan tabel `items` existing — tidak duplicate.
+## Livora — Appointment System + Enhancements
 
-## Perubahan Navbar
-- Tambah menu **COLLECTION** di overlay `menuLinks` (Navbar.tsx), posisinya tepat setelah CATALOG dropdown.
-- Menu lain tidak diubah.
+Scope besar, jadi saya bagi jadi **4 batch berurutan**. Tiap batch selesai baru lanjut batch berikutnya, biar bisa kamu review.
 
-## Routing (frontend)
-Tambah 3 route di `src/App.tsx`:
-- `/collection` → CollectionLanding
-- `/collection/:slug` → CollectionDetail
-- `/collection/:slug/:category` → CollectionCategory
+**Prinsip yang saya pegang:**
+- Landing page & desain existing TIDAK disentuh — hanya menambah.
+- Footer existing dipakai apa adanya.
+- Navbar existing hanya ditambah item "Make an Appointment".
+- Google Login existing tidak diubah.
+- Semua desain baru pakai palette warm-neutral + serif heading + muted gold (konsisten Livora, bukan SaaS card).
 
-## Halaman Baru (Frontend)
+---
 
-**1. CollectionLanding (`/collection`)**
-- Hero 85vh full-width + parallax ringan + text reveal (pakai animasi ala CatalogPage).
-- Section "Explore Our Collections" — grid 3/2/1 kolom. Card: banner, name, description, "Explore Collection →".
-- Hover: image zoom, shadow, card lift, arrow slide.
+### BATCH 1 — Appointment Page (frontend) + Navbar
 
-**2. CollectionDetail (`/collection/:slug`)**
-- Hero large banner + name + description + CTA.
-- Sticky horizontal tabs kategori: All, Sofa, Chair, Table, Cabinet, Bedroom, Decor, Lighting → klik ke `/collection/:slug/:category`.
-- Section **Collection Story** (banner + description + CTA).
-- Section **Collection Packages** (grid card: banner, title, jumlah item, tombol). Klik package → expand ke "Items Included" (data dari items existing).
+Frontend murni, belum submit ke DB (form tampilan dulu).
 
-**3. CollectionCategory (`/collection/:slug/:category`)**
-- Sticky tabs kategori sama seperti detail.
-- Grid item 3/2/1 kolom. Card: image, title, subtitle, plus button, hover zoom.
-- Data diambil dari endpoint `/items?collection={slug}&type={category}` (query param existing sudah support `collection` & `type`; kalau belum, ditambahkan di ItemController — read-only).
+- `src/pages/Appointment.tsx` — halaman baru sesuai gambar referensi:
+  - Hero full-width (dark warm interior, overlay), "DESIGN CONSULTATION" eyebrow, heading serif "Designing Spaces. Enriching Lives.", CTA gold outline.
+  - Section "What Can We Help You With?" — 4 kartu dengan image + icon lingkaran, hover subtle zoom.
+  - Section "How It Works" — 3 langkah editorial (01/02/03) dengan foto.
+  - Section "The Right Questions" — split kiri text / kanan media dengan play button.
+  - Section "How Would You Like to Meet?" — 3 kartu dark image (Showroom / Virtual / At Your Space).
+  - Section "Why Choose Livora" — dark band, 4 value points, ikon minimal.
+  - Form "Let's start your design journey." — grid rapi, cream background, muted gold CTA.
+  - Footer existing.
+- `src/components/livora/Navbar.tsx` — tambah item **Make an Appointment** (gold outline pill, cocok dengan style existing, jangan geser layout).
+- Route `/appointment` di `src/App.tsx`.
+- Micro-interactions: framer-motion fade + rise, gambar zoom halus.
 
-## Perubahan Database (BACKEND — perlu approval)
+### BATCH 2 — Backend Consultations + Admin CRUD
 
-Tabel `collections` existing dipertahankan (name, slug, description). Tambahan **4 tabel baru** + kolom baru di `collections`:
+Ini backend Laravel (bukan Supabase — project pakai Laravel API).
 
-**Migration baru:** `2026_07_16_XXXXXX_extend_collections_for_landing.php`
+- Migration `consultations` (semua field yang kamu sebut + attachments JSON + status enum + assigned_admin_id).
+- Migration `consultation_status_history`.
+- Model + Controller `ConsultationController` (store publik, admin index/show/update/destroy).
+- Auto-link ke `user_id` bila token login ada, else lookup by email.
+- Route: `POST /api/consultations` (publik), `GET/PATCH/DELETE /api/admin/consultations/*` (admin only).
+- Frontend: form Appointment di batch 1 di-wire ke API + Zod validation + toast success.
+- Halaman baru `src/pages/admin/AdminConsultations.tsx` — list + filter status + detail drawer + edit status/notes/assigned/meeting date.
+- Menu "Consultations" di `AdminLayout` sidebar dengan badge unread.
 
-- `collections` — tambah kolom: `short_description`, `hero_banner`, `card_banner`, `featured_image`, `display_order`, `status`, `seo_title`, `seo_description`.
-- `collection_stories` — 1:1 dengan collection: `story_banner`, `story_description`, `cta_text`, `cta_link`.
-- `collection_packages` — 1:N: `collection_id`, `name`, `slug`, `banner`, `sort_order`.
-- `collection_package_item` — pivot M:N ke `items` existing: `package_id`, `item_id`, `sort_order`.
+### BATCH 3 — Messaging + Notifications + User Timeline
 
-Tidak ada perubahan pada tabel `items`, `catalogs`, `furniture_types`, atau apapun yang existing selain `collections` (menambah kolom, non-destructive).
+- Migration `consultation_messages` (sender_type user/admin, is_read, attachment).
+- Migration `notifications` (recipient_id, type, payload JSON, read_at) — untuk admin & user.
+- Endpoint messages (index, store) + endpoint notifications (list, mark-read).
+- Frontend admin detail: panel chat premium di dalam drawer consultation (bukan bubble generic — pakai style Livora, avatar circle, timestamp light).
+- Frontend user: halaman `/profile/consultations` menampilkan list + progress timeline vertical (Inquiry → Under Review → Contacted → Meeting Scheduled → In Progress → Completed) + chat.
+- Bell icon di admin layout + di user profile dengan badge unread + polling ringan (setiap 30s).
+- Tombol quick action di admin detail: "Contact via WhatsApp" (wa.me link + template), "Send Email" (mailto atau form).
 
-## Perubahan Backend (Laravel)
-- `CollectionController` diperluas: field baru pada store/update, eager-load story + packages + items pada `show`.
-- Controller baru: `CollectionStoryController`, `CollectionPackageController` untuk CRUD (admin only, di dalam `middleware('admin')`).
-- `ItemController@index` diperluas: dukung query `?collection=slug&type=slug` (read-only, aman).
-- Public GET endpoint: `/collections`, `/collections/{slug}` (sudah ada, diperluas payload-nya).
+### BATCH 4 — Extras
 
-## Admin CRUD
-Menu `Collections` di AdminLayout sudah ada. Halaman `AdminCollections.tsx` di-upgrade menjadi list + form editor lengkap:
-- Field: name, slug, short_description, hero_banner, card_banner, featured_image, display_order, status, seo_title, seo_description.
-- Tab **Story**: story_banner, story_description, CTA text/link.
-- Tab **Packages**: list package (CRUD) → tiap package pilih item existing via multi-select (dari tabel items).
+1. **Admin hapus user** — tombol Delete di `AdminUsers.tsx` (dropdown / trash icon) + confirmation dialog + `DELETE /api/admin/users/{id}` di backend, cascade activities.
+2. **Global hero image preloader** — extract `Loader.tsx` logic, jadikan `HeroImagePreloader` yang cache list URL hero semua page utama, tampil di landing pertama load, skip di navigasi selanjutnya.
+3. **Breadcrumb fix** — `Breadcrumb.tsx` sekarang refactor: baca dari route hierarchy (bukan `document.referrer`), fallback rapi bila masuk dari deep link, format konsisten `Home / Furniture / Sofa / Milano Sofa`.
+4. **Email exists check di Register** — endpoint `POST /api/auth/check-email` (debounced call dari form register), inline error "Email already registered — sign in instead".
+5. **Wishlist** (per-user list, admin bisa lihat isinya untuk keperluan marketing):
+   - Migration `wishlists` polymorphic: `user_id`, `target_type` (item/collection/project/catalog), `target_id`, `created_at`.
+   - Endpoint user: add / remove / list (grouped by type).
+   - Tombol heart di card Item, Collection, Project, Catalog (toggle, subtle animation).
+   - Halaman `/profile/wishlist` dengan tab per-type, kartu preview + remove.
+   - Admin: `AdminUsers.tsx` rincian drawer → tab baru "Wishlist" menampilkan apa yang user simpan (marketing insight).
 
-Tidak membuat halaman admin baru di luar menu Collections yang sudah ada.
+---
 
-## Animasi & Styling
-- Reuse animasi Framer/CSS yang sudah dipakai di CatalogPage (fade-up, parallax, hover zoom, arrow slide, stagger).
-- Container `max-w-7xl` + padding kiri/kanan konsisten dengan Homepage/Catalog. Hero full-width. Vertical spacing 80–120px.
-- Typography: serif heading, sans body — reuse token existing.
+### Format response tiap batch
 
-## Yang TIDAK diubah
-- Homepage, Navbar layout (hanya menambah 1 item), Footer, Catalog, Experience Editor, Admin Dashboard structure, styling global, route existing, tabel `items` / `catalogs` / `furniture_types` / `themes` / `categories`.
+Setelah tiap batch, saya laporkan di chat:
+```
+✅ BATCH X selesai
+- File dibuat: ...
+- File diubah: ...
+- Migration baru: ...
+- Route baru: ...
+- Belum dikerjakan (masuk batch berikutnya): ...
+```
 
-## Konfirmasi yang saya butuhkan sebelum mulai:
-1. **OK untuk saya jalankan migration** yang: (a) menambah 8 kolom baru di tabel `collections`, (b) membuat 3 tabel baru (`collection_stories`, `collection_packages`, `collection_package_item`)? Migration non-destructive, data existing pada `collections` (name/slug/description) tetap.
-2. Untuk **Package → Items**: cukup pilih dari items existing (multi-select) tanpa duplicate data, benar?
-3. Kategori tabs (Sofa/Chair/Table/Cabinet/Bedroom/Decor/Lighting) — saya map ke `furniture_types` existing berdasarkan slug. Kalau ada slug yang belum ada di DB (mis. "Cabinet"/"Decor"/"Lighting"), tab tetap muncul tapi hasil kosong. OK?
-
-Balas dengan **"OK, jalankan"** atau kasih catatan. Setelah approval, saya migrate DB dulu → lalu implement frontend + admin.
+Saya mulai **BATCH 1** sekarang setelah plan ini kamu approve.
