@@ -1260,3 +1260,13 @@ export default function Auth() {
     </div>
   );
 }
+# edit langsung file untuk hapus semua marker & pilih kode yang benar
+nano src/pages/Auth.tsx
+# atau pakai vim/editor lain
+
+# setelah bersih dari marker, cek dulu tidak ada sisa
+grep -n "<<<<<<<\|=======\|>>>>>>>" src/pages/Auth.tsx
+
+# lalu commit perbaikan sebagai commit baru (jangan amend kalau sudah kepush)
+git add src/pages/Auth.tsx
+git commit -m "fix: resolve leftover merge conflict markers in Auth.tsx"
