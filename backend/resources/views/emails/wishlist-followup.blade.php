@@ -5,12 +5,23 @@
 
 @if(count($items))
 <div style="margin:28px 0;padding:20px 24px;background:#faf7f1;">
-  <div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#8a8072;margin-bottom:10px;">Your saved items</div>
-  <ul style="padding-left:18px;margin:0;">
+  <div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#8a8072;margin-bottom:14px;">Your saved items</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
     @foreach($items as $it)
-      <li style="margin:4px 0;">{{ $it['name'] ?? 'Item' }} <span style="color:#8a8072;">({{ $it['type'] ?? '' }})</span></li>
+      <tr>
+        <td style="padding:8px 12px 8px 0;width:52px;vertical-align:top;">
+          @if(!empty($it['image']))
+            <img src="{{ $it['image'] }}" alt="{{ $it['name'] ?? 'Item' }}" width="48" height="48" style="width:48px;height:48px;object-fit:cover;border-radius:6px;display:block;background:#eee;">
+          @else
+            <div style="width:48px;height:48px;border-radius:6px;background:#eee;"></div>
+          @endif
+        </td>
+        <td style="padding:8px 0;font-size:14px;vertical-align:middle;border-bottom:1px solid #eee;">
+          {{ $it['name'] ?? 'Item' }} <span style="color:#8a8072;">({{ $it['type'] ?? '' }})</span>
+        </td>
+      </tr>
     @endforeach
-  </ul>
+  </table>
 </div>
 @endif
 
