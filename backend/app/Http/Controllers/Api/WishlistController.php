@@ -136,56 +136,62 @@ class WishlistController extends Controller
      * Admin: kirim email follow-up ke user tentang wishlist mereka.
      */
     public function adminMessage(Request $request, User $user)
-{
-    $data = $request->validate([
-        'subject' => 'nullable|string|max:200',
-        'message' => 'required|string',
-    ]);
+    {
+        $data = $request->validate([
+            'subject' => 'nullable|string|max:200',
+            'message' => 'required|string',
+        ]);
 
-    $items = Wishlist::where('user_id', $user->id)->get()->map(function (Wishlist $w) {
-        $e = $this->resolveEntity($w->wishlistable_type, $w->wishlistable_id);
-        return [
-            'name'  => $e['name'] ?? 'Item',
-            'type'  => $w->wishlistable_type,
-            'image' => $this->absoluteImageUrl($e['image'] ?? null),
-        ];
-    })->toArray();
+        // FIX: sertakan 'image' (di-absolutkan) supaya email follow-up
+        // bisa menampilkan gambar item yang disimpan user.
+        $items = Wishlist::where('user_id', $user->id)->get()->map(function (Wishlist $w) {
+            $e = $this->resolveEntity($w->wishlistable_type, $w->wishlistable_id);
+            return [
+                'name'  => $e['name'] ?? 'Item',
+                'type'  => $w->wishlistable_type,
+                'image' => $this->absoluteImageUrl($e['image'] ?? null),
+            ];
+        })->toArray();
 
-    try {
-        Mail::to($user->email)->send(new WishlistFollowUp(
-            $user->name ?? 'there',
-            $data['message'],
-            $items,
-            $data['subject'] ?? null,
-        ));
-    } catch (\Throwable $e) {
-        Log::error('WishlistFollowUp failed: ' . $e->getMessage());
-        return response()->json(['message' => 'Email gagal dikirim', 'error' => $e->getMessage()], 500);
+        try {
+            Mail::to($user->email)->send(new WishlistFollowUp(
+                $user->name ?? 'there',
+                $data['message'],
+                $items,
+                $data['subject'] ?? null,
+            ));
+        } catch (\Throwable $e) {
+            Log::error('WishlistFollowUp failed: ' . $e->getMessage());
+            return response()->json(['message' => 'Email gagal dikirim', 'error' => $e->getMessage()], 500);
+        }
+
+        return response()->json(['message' => 'Email terkirim ke ' . $user->email]);
     }
 
-    return response()->json(['message' => 'Email terkirim ke ' . $user->email]);
-}
+    /**
+     * Replikasi logic imgUrl() di frontend (src/lib/adminApi.ts) supaya
+     * gambar di email (dibuka lewat mail client, bukan lewat React app)
+     * tetap resolve ke URL absolut yang benar.
+     *
+     * PENTING: pastikan config('app.url') / APP_URL di .env Laravel
+     * memang di-set ke domain API yang benar (mis. https://api.livoralcr.com),
+     * kalau tidak, gambar di email akan broken.
+     */
+    private function absoluteImageUrl(?string $path): ?string
+    {
+        if (!$path) return null;
+        if (str_starts_with($path, 'http')) return $path;
 
-/**
- * Replikasi logic imgUrl() di frontend (src/lib/adminApi.ts) supaya
- * gambar di email (dibuka lewat mail client, bukan lewat React app)
- * tetap resolve ke URL absolut yang benar.
- */
-private function absoluteImageUrl(?string $path): ?string
-{
-    if (!$path) return null;
-    if (str_starts_with($path, 'http')) return $path;
+        $origin = rtrim(config('app.url'), '/');
 
-    $origin = rtrim(config('app.url'), '/');
+        if (str_starts_with($path, '/seed/')) {
+            return $origin . $path;
+        }
 
-    if (str_starts_with($path, '/seed/')) {
-        return $origin . $path;
+        $clean = str_starts_with($path, '/') ? $path : '/' . $path;
+        if (str_starts_with($clean, '/storage/')) {
+            return $origin . $clean;
+        }
+        return $origin . '/storage' . $clean;
     }
-
-    $clean = str_starts_with($path, '/') ? $path : '/' . $path;
-    if (str_starts_with($clean, '/storage/')) {
-        return $origin . $clean;
-    }
-    return $origin . '/storage' . $clean;
-}
 }

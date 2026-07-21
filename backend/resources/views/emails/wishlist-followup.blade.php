@@ -6,6 +6,8 @@
 @if(count($items))
 <div style="margin:28px 0;padding:20px 24px;background:#faf7f1;">
   <div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#8a8072;margin-bottom:14px;">Your saved items</div>
+  {{-- FIX: pakai <table> (bukan <ul>/flex) supaya kompatibel di email client,
+       dan tambahkan gambar tiap item --}}
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
     @foreach($items as $it)
       <tr>

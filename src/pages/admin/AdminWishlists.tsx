@@ -122,27 +122,28 @@ export default function AdminWishlists() {
                 <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
                   Saved items ({selected.count})
                 </h3>
+                {/* FIX: tambah thumbnail gambar tiap item, sebelumnya cuma render nama + type */}
                 <ul className="space-y-1 text-sm">
-  {selected.items.map((it) => (
-    <li key={it.id} className="flex items-center gap-3 border-b border-border/40 py-2">
-      <div className="w-12 h-12 rounded overflow-hidden bg-secondary/40 flex-shrink-0 flex items-center justify-center">
-        {it.entity?.image ? (
-          <img
-            src={imgUrl(it.entity.image)}
-            alt={it.entity?.name ?? "Item"}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <span className="text-[9px] text-muted-foreground">N/A</span>
-        )}
-      </div>
-      <div className="flex-1 flex justify-between items-center min-w-0">
-        <span className="truncate">{it.entity?.name ?? "—"}</span>
-        <span className="text-xs uppercase text-muted-foreground ml-2 flex-shrink-0">{it.type}</span>
-      </div>
-    </li>
-  ))}
-</ul>
+                  {selected.items.map((it) => (
+                    <li key={it.id} className="flex items-center gap-3 border-b border-border/40 py-2">
+                      <div className="w-12 h-12 rounded overflow-hidden bg-secondary/40 flex-shrink-0 flex items-center justify-center">
+                        {it.entity?.image ? (
+                          <img
+                            src={imgUrl(it.entity.image)}
+                            alt={it.entity?.name ?? "Item"}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-[9px] text-muted-foreground">N/A</span>
+                        )}
+                      </div>
+                      <div className="flex-1 flex justify-between items-center min-w-0">
+                        <span className="truncate">{it.entity?.name ?? "—"}</span>
+                        <span className="text-xs uppercase text-muted-foreground ml-2 flex-shrink-0">{it.type}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               </div>
 
               <div className="space-y-3">

@@ -218,6 +218,9 @@ const ItemDetail = () => {
               {item.collection?.name ?? item.category}
             </span>
 
+            {/* FIX: item.id -> item.apiId (RichItem tidak pernah set `id`,
+                yang di-set di mapApiItem adalah `apiId`. Ini yang bikin
+                SaveButton sebelumnya tidak pernah dirender.) */}
             <div className="flex items-start justify-between gap-4" style={{ marginTop: "20px" }}>
               <div className="flex-1">
                 <h1
@@ -230,7 +233,9 @@ const ItemDetail = () => {
                   {item.code}
                 </p>
               </div>
-              {item.id && <SaveButton type="item" id={Number(item.id)} />}
+              {item.apiId && (
+                <SaveButton type="item" id={Number(item.apiId)} size={20} className="mt-1" />
+              )}
             </div>
 
             {activeVariant?.description && (
