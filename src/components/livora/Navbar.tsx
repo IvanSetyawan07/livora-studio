@@ -378,24 +378,85 @@ export const Navbar = () => {
             >
               <Search size={20} />
             </button>
-            <Link
-  to={authUser ? "/profile" : "/login"}
-  aria-label={authUser ? "My Profile" : "Login"}
-  className={`p-2 flex items-center gap-2 transition-colors duration-500 ${
-    headerLight ? "text-white/90 hover:text-white" : "text-foreground/80 hover:text-foreground"
-  }`}
-  onClick={() => setOpen(false)}
->
-  <User size={20} />
-  {authUser && (
-    <span
-      className="hidden md:inline text-xs uppercase tracking-[0.15em] max-w-[100px] truncate"
-      style={headerLight ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined}
-    >
-      {authUser.name}
-    </span>
-  )}
-</Link>
+            {authUser ? (
+              <div ref={profileRef} className="relative">
+                <button
+                  onClick={() => setProfileOpen((v) => !v)}
+                  aria-label="Account menu"
+                  className={`p-2 flex items-center gap-2 transition-colors duration-500 ${
+                    headerLight ? "text-white/90 hover:text-white" : "text-foreground/80 hover:text-foreground"
+                  }`}
+                >
+                  <User size={20} />
+                  <span
+                    className="hidden md:inline text-xs uppercase tracking-[0.15em] max-w-[100px] truncate"
+                    style={headerLight ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined}
+                  >
+                    {authUser.name}
+                  </span>
+                  <ChevronDown size={14} className={`transition-transform ${profileOpen ? "rotate-180" : ""}`} />
+                </button>
+                {profileOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-background border border-border rounded-lg shadow-xl overflow-hidden z-[70] animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="px-4 py-3 border-b border-border">
+                      <p className="text-sm font-medium truncate">{authUser.name}</p>
+                      {authUser.email && (
+                        <p className="text-xs text-muted-foreground truncate">{authUser.email}</p>
+                      )}
+                    </div>
+                    <div className="py-1 text-sm">
+                      <Link
+                        to="/profile"
+                        onClick={() => setProfileOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60"
+                      >
+                        <User size={16} /> Profile Detail
+                      </Link>
+                      <Link
+                        to="/profile?tab=wishlist"
+                        onClick={() => setProfileOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60"
+                      >
+                        <Bookmark size={16} /> Saved Items
+                      </Link>
+                      <Link
+                        to="/profile?tab=consultations"
+                        onClick={() => setProfileOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60"
+                      >
+                        <ClipboardList size={16} /> My Consultations
+                      </Link>
+                      {authUser.role === "admin" && (
+                        <Link
+                          to="/admin"
+                          onClick={() => setProfileOpen(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60 border-t border-border"
+                        >
+                          <Shield size={16} /> Admin Panel
+                        </Link>
+                      )}
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60 border-t border-border text-red-600"
+                      >
+                        <LogOut size={16} /> Logout
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                aria-label="Login"
+                className={`p-2 flex items-center gap-2 transition-colors duration-500 ${
+                  headerLight ? "text-white/90 hover:text-white" : "text-foreground/80 hover:text-foreground"
+                }`}
+                onClick={() => setOpen(false)}
+              >
+                <User size={20} />
+              </Link>
+            )}
             <button
               aria-label="Toggle menu"
               onClick={() => setOpen((v) => !v)}
