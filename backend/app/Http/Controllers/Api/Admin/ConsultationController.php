@@ -3,46 +3,38 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\ConsultationConfirmed;
 use App\Models\Consultation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class ConsultationController extends Controller
 {
-    /**
-     * List semua consultation — dipakai di halaman Admin Consultations (list/table).
-     */
     public function index(Request $request)
     {
-        $query = Consultation::with(['assignedAdmin:id,name'])
-            ->orderByDesc('created_at');
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->query('status'));
-        }
-
-        return $query->get()->map(function (Consultation $c) {
-            $arr = $c->toArray();
-            $arr['status_label'] = $c->statusLabel();
-            return $arr;
-        });
+        return Consultation::with(['user:id,name,email', 'assignedAdmin:id,name'])
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function (Consultation $c) {
+                $arr = $c->toArray();
+                $arr['status_label'] = $c->statusLabel();
+                return $arr;
+            });
     }
 
-    /**
-     * Detail 1 consultation untuk admin — termasuk history status lengkap.
-     */
-    public function show(Consultation $consultation)
+    public function show(Request $request, Consultation $consultation)
     {
-        $consultation->load(['assignedAdmin:id,name', 'statusHistory.changedByUser:id,name']);
+        $consultation->load([
+            'user:id,name,email,phone',
+            'assignedAdmin:id,name',
+            'statusHistory.changedByUser:id,name',
+        ]);
         $arr = $consultation->toArray();
         $arr['status_label'] = $consultation->statusLabel();
         return $arr;
     }
 
-    /**
-     * Admin mengubah status, assigned admin, contact method, jadwal meeting,
-     * follow-up date, atau admin notes. Setiap perubahan status otomatis
-     * tercatat di consultation_status_histories lewat Consultation::changeStatus().
-     */
     public function update(Request $request, Consultation $consultation)
     {
         $data = $request->validate([
@@ -52,34 +44,82 @@ class ConsultationController extends Controller
             'contact_method'     => 'nullable|string|max:50',
             'meeting_date'       => 'nullable|date',
             'meeting_time'       => 'nullable',
-            'meeting_location'   => 'nullable|string|max:150',
-            'meeting_link'       => 'nullable|string|max:255',
+            'meeting_location'   => 'nullable|string|max:255',
+            'meeting_link'       => 'nullable|string|max:500',
             'follow_up_date'     => 'nullable|date',
+            'note'               => 'nullable|string', // catatan untuk status history
         ]);
 
-        $adminId = $request->user()?->id;
+        $statusNote = $data['note'] ?? null;
+        unset($data['note']);
 
-        // Kalau status berubah, catat lewat helper supaya history konsisten.
-        if (array_key_exists('status', $data) && $data['status'] !== null && $data['status'] !== $consultation->status) {
-            $consultation->changeStatus($data['status'], $adminId, 'Status updated by admin.');
+        if (isset($data['status']) && $data['status'] !== $consultation->status) {
+            $newStatus = $data['status'];
             unset($data['status']);
+            $consultation->fill($data)->save();
+            $consultation->changeStatus($newStatus, $request->user()->id, $statusNote);
+        } else {
+            unset($data['status']);
+            $consultation->fill($data)->save();
         }
 
-        $consultation->fill($data);
-        $consultation->save();
-
-        $consultation->load(['assignedAdmin:id,name', 'statusHistory.changedByUser:id,name']);
+        $consultation->load(['user:id,name,email', 'assignedAdmin:id,name', 'statusHistory.changedByUser:id,name']);
         $arr = $consultation->toArray();
         $arr['status_label'] = $consultation->statusLabel();
         return $arr;
     }
 
-    /**
-     * Hapus consultation — dipakai tombol Delete di admin (dengan confirmation di frontend).
-     */
     public function destroy(Consultation $consultation)
     {
         $consultation->delete();
-        return response()->json(['message' => 'Consultation deleted.']);
+        return response()->json(['message' => 'Deleted']);
+    }
+
+    /**
+     * Tombol khusus "Confirm & Email User" di admin panel.
+     * Kirim email konfirmasi manual berisi status terkini + pesan tambahan admin,
+     * DAN otomatis pindahkan status ke "contacted" kalau masih di "new_inquiry"
+     * / "under_review" agar timeline user ikut update.
+     */
+    public function confirmEmail(Request $request, Consultation $consultation)
+    {
+        $data = $request->validate([
+            'subject' => 'nullable|string|max:200',
+            'message' => 'nullable|string',
+        ]);
+
+        try {
+            Mail::to($consultation->email)->send(new ConsultationConfirmed(
+                $consultation,
+                $data['subject'] ?? null,
+                $data['message'] ?? null,
+            ));
+        } catch (\Throwable $e) {
+            Log::error('Failed to send ConsultationConfirmed email: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Email gagal terkirim. Cek konfigurasi SMTP di backend.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+
+        // Naikkan status ke "contacted" kalau masih tahap awal, catat di history.
+        $earlyStatuses = [Consultation::STATUS_NEW_INQUIRY, Consultation::STATUS_UNDER_REVIEW];
+        if (in_array($consultation->status, $earlyStatuses, true)) {
+            $consultation->changeStatus(
+                Consultation::STATUS_CONTACTED,
+                $request->user()->id,
+                'Confirmation email sent to user.'
+            );
+        } else {
+            // Tetap catat di history bahwa admin kirim email konfirmasi manual.
+            $consultation->statusHistory()->create([
+                'previous_status' => $consultation->status,
+                'new_status'      => $consultation->status,
+                'changed_by'      => $request->user()->id,
+                'note'            => 'Confirmation email sent to user.',
+            ]);
+        }
+
+        return response()->json(['message' => 'Email terkirim ke ' . $consultation->email]);
     }
 }
