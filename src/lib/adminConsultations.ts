@@ -1,5 +1,6 @@
 import { api } from "@/lib/api";
 import type { Consultation } from "@/lib/consultations";
+import type { WishlistEntry } from "@/lib/wishlist";
 
 export type UpdateConsultationPayload = Partial<{
   status: string;
@@ -11,6 +12,7 @@ export type UpdateConsultationPayload = Partial<{
   meeting_location: string;
   meeting_link: string;
   follow_up_date: string;
+  note: string;
 }>;
 
 export const getAdminConsultations = () =>
@@ -24,3 +26,25 @@ export const updateAdminConsultation = (id: number, payload: UpdateConsultationP
 
 export const deleteAdminConsultation = (id: number) =>
   api.delete(`/admin/consultations/${id}`);
+
+export const confirmConsultationEmail = (
+  id: number,
+  payload: { subject?: string; message?: string } = {},
+) => api.post(`/admin/consultations/${id}/confirm-email`, payload).then((r) => r.data);
+
+// ---- Admin wishlist ----
+
+export type AdminWishlistGroup = {
+  user: { id: number; name: string; email: string; phone: string | null };
+  count: number;
+  items: WishlistEntry[];
+  last_added: string;
+};
+
+export const getAdminWishlists = () =>
+  api.get<AdminWishlistGroup[]>("/admin/wishlists").then((r) => r.data);
+
+export const sendWishlistFollowUp = (
+  userId: number,
+  payload: { subject?: string; message: string },
+) => api.post(`/admin/wishlists/user/${userId}/message`, payload).then((r) => r.data);
