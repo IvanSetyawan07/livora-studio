@@ -12,6 +12,7 @@ import { items } from "@/data/items";
 import { useItemBySlug, type FurnitureVariant, type GalleryImage } from "@/lib/itemsApi";
 import { useProjectBySlug } from "@/lib/projectsApi";
 import { trackClick, trackView } from "@/lib/adminApi";
+import SaveButton from "@/components/livora/SaveButton";
 
 const GOLD = "#C9A97A";
 
@@ -217,15 +218,20 @@ const ItemDetail = () => {
               {item.collection?.name ?? item.category}
             </span>
 
-            <h1
-              className="serif font-light"
-              style={{ fontSize: "40px", color: "#1A1A1A", marginTop: "20px", lineHeight: 1.1 }}
-            >
-              {item.name}
-            </h1>
-            <p style={{ fontSize: "12px", color: "#9A9A9A", letterSpacing: "0.2em", marginTop: "8px" }}>
-              {item.code}
-            </p>
+            <div className="flex items-start justify-between gap-4" style={{ marginTop: "20px" }}>
+              <div className="flex-1">
+                <h1
+                  className="serif font-light"
+                  style={{ fontSize: "40px", color: "#1A1A1A", lineHeight: 1.1 }}
+                >
+                  {item.name}
+                </h1>
+                <p style={{ fontSize: "12px", color: "#9A9A9A", letterSpacing: "0.2em", marginTop: "8px" }}>
+                  {item.code}
+                </p>
+              </div>
+              {item.id && <SaveButton type="item" id={Number(item.id)} />}
+            </div>
 
             {activeVariant?.description && (
               <p key={activeVariant.id} className="animate-fade-in" style={{ fontSize: 14, color: "#5A5A5A", marginTop: 16, lineHeight: 1.7 }}>

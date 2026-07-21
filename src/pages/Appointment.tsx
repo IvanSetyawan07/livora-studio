@@ -205,7 +205,10 @@ export default function Appointment() {
         },
         files
       );
-      toast.success("Thank you — we've received your inquiry. Our team will be in touch soon.");
+      toast.success(
+        "Thank you — email konfirmasi sudah dikirim ke inbox kamu. Tim kami akan meninjau dan menghubungi dalam 1×24 jam.",
+        { duration: 6000 }
+      );
       resetForm();
     } catch (err: any) {
       const apiMessage =
