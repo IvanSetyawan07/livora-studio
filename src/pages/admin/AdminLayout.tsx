@@ -12,6 +12,8 @@ import {
   LogOut,
   BookOpen,
   Users,
+  MessageCircle,
+  Bookmark,
 } from "lucide-react";
 
 const nav = [
@@ -24,6 +26,8 @@ const nav = [
   { to: "/admin/landing", label: "Landing Highlights", icon: Star },
   { to: "/admin/banners", label: "Theme Banners", icon: ImageIcon },
   { to: "/admin/users", label: "Users", icon: Users },
+  { to: "/admin/consultations", label: "Consultations", icon: MessageCircle },
+  { to: "/admin/wishlists", label: "Saved (Wishlist)", icon: Bookmark },
   { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
