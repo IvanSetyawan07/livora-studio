@@ -5,7 +5,7 @@ import { getMyConsultations, type Consultation } from "@/lib/consultations";
 import { updateProfile, changePassword } from "@/lib/profile";
 import { getWishlist, removeFromWishlist, type WishlistEntry } from "@/lib/wishlist";
 import { toast } from "sonner";
-import { Check, Calendar, MapPin, Video, Heart, User as UserIcon, ClipboardList } from "lucide-react";
+import { Check, Calendar, MapPin, Video, Bookmark, User as UserIcon, ClipboardList } from "lucide-react";
 
 type User = { id: number; name: string; email: string; phone?: string | null; address?: string | null };
 
@@ -23,7 +23,7 @@ const TIMELINE_STEPS = [
 const TABS = [
   { key: "profile", label: "Edit Profile", icon: UserIcon },
   { key: "consultations", label: "My Consultations", icon: ClipboardList },
-  { key: "wishlist", label: "Wishlist", icon: Heart },
+  { key: "wishlist", label: "Saved", icon: Bookmark },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
