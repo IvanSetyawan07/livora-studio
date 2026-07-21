@@ -32,7 +32,7 @@ class WishlistFollowUp extends Mailable
             view: 'emails.wishlist-followup',
             with: [
                 'name'    => $this->recipientName,
-                'message' => $this->bodyMessage,
+                'bodyMessage' => $this->bodyMessage, 
                 'items'   => $this->savedItems,
             ],
         );
