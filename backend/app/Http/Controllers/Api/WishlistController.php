@@ -94,4 +94,74 @@ class WishlistController extends Controller
             'image' => $model->thumbnail ?? $model->cover_image ?? null,
         ];
     }
+
+    /**
+     * Admin: list semua user yang punya wishlist, di-group per user.
+     */
+    public function adminIndex()
+    {
+        $rows = Wishlist::with('user:id,name,email,phone')
+            ->orderByDesc('created_at')
+            ->get();
+
+        $grouped = $rows->groupBy('user_id')->map(function ($items, $userId) {
+            $user = $items->first()->user;
+            if (!$user) return null;
+            $resolved = $items->map(function (Wishlist $w) {
+                return [
+                    'id'         => $w->id,
+                    'type'       => $w->wishlistable_type,
+                    'entity_id'  => $w->wishlistable_id,
+                    'entity'     => $this->resolveEntity($w->wishlistable_type, $w->wishlistable_id),
+                    'created_at' => $w->created_at,
+                ];
+            })->filter(fn ($r) => $r['entity'] !== null)->values();
+            return [
+                'user'  => [
+                    'id'    => $user->id,
+                    'name'  => $user->name,
+                    'email' => $user->email,
+                    'phone' => $user->phone,
+                ],
+                'count' => $resolved->count(),
+                'items' => $resolved,
+                'last_added' => $items->max('created_at'),
+            ];
+        })->filter()->values();
+
+        return $grouped;
+    }
+
+    /**
+     * Admin: kirim email follow-up ke user tentang wishlist mereka.
+     */
+    public function adminMessage(Request $request, User $user)
+    {
+        $data = $request->validate([
+            'subject' => 'nullable|string|max:200',
+            'message' => 'required|string',
+        ]);
+
+        $items = Wishlist::where('user_id', $user->id)->get()->map(function (Wishlist $w) {
+            $e = $this->resolveEntity($w->wishlistable_type, $w->wishlistable_id);
+            return [
+                'name' => $e['name'] ?? 'Item',
+                'type' => $w->wishlistable_type,
+            ];
+        })->toArray();
+
+        try {
+            Mail::to($user->email)->send(new WishlistFollowUp(
+                $user->name ?? 'there',
+                $data['message'],
+                $items,
+                $data['subject'] ?? null,
+            ));
+        } catch (\Throwable $e) {
+            Log::error('WishlistFollowUp failed: ' . $e->getMessage());
+            return response()->json(['message' => 'Email gagal dikirim', 'error' => $e->getMessage()], 500);
+        }
+
+        return response()->json(['message' => 'Email terkirim ke ' . $user->email]);
+    }
 }
