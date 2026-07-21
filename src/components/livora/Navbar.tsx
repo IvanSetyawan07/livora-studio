@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Menu, X, User, ChevronDown, ChevronRight, Plus, Search, ArrowLeft, Package } from "lucide-react";
+import { Menu, X, User, ChevronDown, ChevronRight, Plus, Search, ArrowLeft, Package, LogOut, Bookmark, ClipboardList, Shield } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/livora/LanguageSwitcher";
 import SearchOverlay from "@/components/livora/SearchOverlay";
-import { api } from "@/lib/api";
+import { api, authStorage } from "@/lib/api";
 import { getAllThumbnails, subscribeThumbnails } from "@/lib/themeThumbnails";
+import { toast } from "sonner";
 
 type NavLink = {
   label: string;
@@ -32,7 +33,9 @@ export const Navbar = () => {
   const [furnitureShown, setFurnitureShown] = useState(false);
   const [furnitureTypes, setFurnitureTypes] = useState<FurnitureType[]>([]);
   const [thumbnails, setThumbnails] = useState<Record<string, any>>({});
-  const [authUser, setAuthUser] = useState<{ name: string } | null>(null);
+  const [authUser, setAuthUser] = useState<{ name: string; email?: string; role?: string } | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -146,9 +149,28 @@ export const Navbar = () => {
   useEffect(() => {
   api
     .get("/me")
-    .then((r) => setAuthUser({ name: r.data?.name ?? "Account" }))
+    .then((r) => setAuthUser({ name: r.data?.name ?? "Account", email: r.data?.email, role: r.data?.role }))
     .catch(() => setAuthUser(null));
 }, []);
+
+  // Close profile dropdown on outside click
+  useEffect(() => {
+    if (!profileOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [profileOpen]);
+
+  const handleLogout = async () => {
+    try { await api.post("/logout"); } catch { /* ignore */ }
+    authStorage.clear();
+    setAuthUser(null);
+    setProfileOpen(false);
+    toast.success("Berhasil logout");
+    navigate("/");
+  };
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
