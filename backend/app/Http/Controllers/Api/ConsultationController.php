@@ -89,7 +89,22 @@ class ConsultationController extends Controller
             'note'            => 'Inquiry submitted by customer.',
         ]);
 
-        // TODO (Batch 3): trigger notifikasi "New consultation request from {name}" ke admin.
+        // Email otomatis: (1) konfirmasi ke user, (2) notifikasi admin.
+        // Semua di-wrap try/catch supaya submit tetap sukses meski SMTP down.
+        try {
+            Mail::to($consultation->email)->send(new ConsultationReceived($consultation));
+        } catch (\Throwable $e) {
+            Log::warning('ConsultationReceived email failed: ' . $e->getMessage());
+        }
+
+        $adminAddress = config('mail.admin_address') ?: env('MAIL_ADMIN_ADDRESS');
+        if ($adminAddress) {
+            try {
+                Mail::to($adminAddress)->send(new NewConsultationAdminAlert($consultation));
+            } catch (\Throwable $e) {
+                Log::warning('NewConsultationAdminAlert email failed: ' . $e->getMessage());
+            }
+        }
 
         return response()->json($consultation, 201);
     }
