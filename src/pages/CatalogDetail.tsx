@@ -505,7 +505,7 @@ export default function CatalogDetail() {
               >
                 {item.title}
               </motion.h1>
-              <SaveButton type="catalog" id={Number(item.id)} variant="pill" />
+              
             </div>
 
             {/* Tagline with staggered animation */}
@@ -539,8 +539,11 @@ export default function CatalogDetail() {
                 to={`/catalog/${item.category}`}
                 className="text-[10px] uppercase tracking-[0.18em] text-white/70 hover:text-white transition-colors duration-300 font-light flex items-center gap-1.5"
               >
-                <ChevronLeft size={12} /> All {catMeta.label}
+                <div className="!rounded-none [&_button]:!rounded-none [&_button]:!border-0 [&_button]:!bg-foreground [&_button]:!text-background [&_button]:!px-8 [&_button]:!py-3.5 [&_button]:!text-[10px] [&_button]:!uppercase [&_button]:!tracking-[0.18em] [&_button]:!font-light hover:[&_button]:!bg-foreground/80 [&_button]:transition-colors [&_button]:duration-300">
+  <SaveButton type="catalog" id={Number(item.id)} variant="pill" />
+</div>
               </Link>
+              
             </motion.div>
           </div>
         </motion.div>

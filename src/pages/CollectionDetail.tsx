@@ -199,9 +199,6 @@ export default function CollectionDetail() {
                   Collection
                 </Link>
               </motion.p>
-              {collection.id && (
-                <SaveButton type="collection" id={Number(collection.id)} variant="pill" />
-              )}
             </div>
 
             <h1
@@ -224,16 +221,29 @@ export default function CollectionDetail() {
               {collection.short_description || collection.description || ""}
             </motion.p>
 
-            {collection.cta_text && (
-              <motion.button
-                {...ctaAnim}
-                onClick={() => document.getElementById("collection-story")?.scrollIntoView({ behavior: "smooth" })}
-                className="group inline-flex items-center gap-3 bg-[#f5f0e8] text-[#1a1a1a] px-7 py-3.5 text-[10px] uppercase tracking-[0.3em] font-light hover:bg-white transition-colors duration-300"
-              >
-                {collection.cta_text}
-                <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
-              </motion.button>
-            )}
+            <div className="flex flex-wrap items-center gap-4">
+              {collection.cta_text && (
+                <motion.button
+                  {...ctaAnim}
+                  onClick={() => document.getElementById("collection-story")?.scrollIntoView({ behavior: "smooth" })}
+                  className="group inline-flex items-center gap-3 bg-foreground text-background px-7 py-3.5 text-[10px] uppercase tracking-[0.3em] font-light hover:bg-foreground/80 transition-colors duration-300"
+                >
+                  {collection.cta_text}
+                  <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
+                </motion.button>
+              )}
+
+              {collection.id && (
+                <motion.div {...ctaAnim}>
+                  <SaveButton
+                    type="collection"
+                    id={Number(collection.id)}
+                    variant="solid"
+                    className="bg-foreground/80 backdrop-blur-sm text-white hover:bg-foreground"
+                  />
+                </motion.div>
+              )}
+            </div>
           </div>
         </motion.div>
       </section>

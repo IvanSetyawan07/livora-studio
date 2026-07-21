@@ -10,7 +10,7 @@ type Props = {
   id: number;
   className?: string;
   size?: number;
-  variant?: "icon" | "pill";
+  variant?: "icon" | "pill" | "solid";
 };
 
 /**
@@ -78,6 +78,19 @@ export default function SaveButton({ type, id, className = "", size = 22, varian
       </button>
     );
   }
+  if (variant === "solid") {
+  return (
+    <button
+      onClick={toggle}
+      disabled={loading}
+      className={`inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] bg-foreground text-background px-8 py-3.5 hover:bg-foreground/80 transition-colors duration-300 font-light disabled:opacity-60 ${className}`}
+    >
+      <Bookmark size={14} fill={saved ? "currentColor" : "none"} />
+      {saved ? "Saved" : "Save"}
+    </button>
+  );
+}
+  
 
   return (
     <button
