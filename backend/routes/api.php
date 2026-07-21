@@ -24,6 +24,7 @@ Route::get('/taxonomy-banners', [TaxonomyBannerController::class, 'index']);
 Route::get('/taxonomy-banners/{key}', [TaxonomyBannerController::class, 'byKey']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/check-email', [AuthController::class, 'checkEmail']);
 Route::post('/auth/{provider}/callback', [AuthController::class, 'oauthCallback'])
     ->whereIn('provider', ['google', 'apple']);
 
@@ -166,6 +167,11 @@ Route::delete('/wishlist/{type}/{id}', [WishlistController::class, 'destroy']);
         Route::put('/consultations/{consultation}', [AdminConsultationController::class, 'update']);
         Route::post('/consultations/{consultation}', [AdminConsultationController::class, 'update']);
         Route::delete('/consultations/{consultation}', [AdminConsultationController::class, 'destroy']);
+        Route::post('/consultations/{consultation}/confirm-email', [AdminConsultationController::class, 'confirmEmail']);
+
+        // Wishlist admin view
+        Route::get('/wishlists', [WishlistController::class, 'adminIndex']);
+        Route::post('/wishlists/user/{user}/message', [WishlistController::class, 'adminMessage']);
 
         // Users management
         Route::get('/users', [\App\Http\Controllers\Api\AdminUserController::class, 'index']);
