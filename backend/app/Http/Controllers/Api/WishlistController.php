@@ -3,12 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\WishlistFollowUp;
 use App\Models\Wishlist;
 use App\Models\Item;
 use App\Models\Collection;
 use App\Models\Project;
 use App\Models\Catalog;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class WishlistController extends Controller
 {
