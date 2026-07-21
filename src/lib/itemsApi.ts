@@ -87,6 +87,7 @@ interface ApiItem {
 }
 
 export interface RichItem extends Item {
+  id?: number;
   collection?: CollectionRef | null;
   themeRefs?: { id: number; name: string; slug: string }[];
   categoryRefs?: { id: number; name: string; slug: string }[];
