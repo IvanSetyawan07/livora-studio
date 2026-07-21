@@ -2,7 +2,7 @@
 // Base: Document 6 (Framer Motion version)
 
 // src/pages/CatalogDetail.tsx
-
+import SaveButton from "@/components/livora/SaveButton";
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { X, ChevronLeft, ChevronRight, ArrowUpRight } from "lucide-react";
@@ -496,15 +496,17 @@ export default function CatalogDetail() {
               {catMeta.label}
             </motion.p>
 
-            {/* Main title with staggered animation */}
-            <motion.h1
-              className="serif text-5xl sm:text-6xl md:text-8xl font-light leading-[0.95] md:leading-[0.9] mb-2 text-white break-words"
-              initial={titleAnimation.initial}
-              animate={titleAnimation.animate}
-              transition={titleAnimation.transition}
-            >
-              {item.title}
-            </motion.h1>
+              <div className="flex items-start justify-between gap-4 mb-2">
+              <motion.h1
+                className="serif text-5xl sm:text-6xl md:text-8xl font-light leading-[0.95] md:leading-[0.9] text-white break-words"
+                initial={titleAnimation.initial}
+                animate={titleAnimation.animate}
+                transition={titleAnimation.transition}
+              >
+                {item.title}
+              </motion.h1>
+              <SaveButton type="catalog" id={Number(item.id)} variant="pill" />
+            </div>
 
             {/* Tagline with staggered animation */}
             <motion.p

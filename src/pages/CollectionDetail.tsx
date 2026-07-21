@@ -6,6 +6,7 @@ import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
 import { BookConsultation } from "@/components/livora/BookConsultation";
 import { CategoryBar } from "@/components/livora/CategoryBar";
+import SaveButton from "@/components/livora/SaveButton";
 import {
   getCollection,
   Collection,
@@ -188,15 +189,20 @@ export default function CollectionDetail() {
           style={{ x: textX, opacity: textOpacity, y: textY }}
         >
           <div className="max-w-[560px] w-full md:w-[46%] pt-24 md:pt-32 pr-4 md:pr-0">
-            <motion.p
-              {...eyebrowAnim}
-              className="flex items-center gap-4 text-[10px] uppercase tracking-[0.45em] text-white/80 font-light mb-8"
-            >
-              <span className="inline-block h-px w-8 bg-white/50" />
-              <Link to="/collection" className="hover:text-white transition-colors">
-                Collection
-              </Link>
-            </motion.p>
+            <div className="flex items-center justify-between mb-8">
+              <motion.p
+                {...eyebrowAnim}
+                className="flex items-center gap-4 text-[10px] uppercase tracking-[0.45em] text-white/80 font-light"
+              >
+                <span className="inline-block h-px w-8 bg-white/50" />
+                <Link to="/collection" className="hover:text-white transition-colors">
+                  Collection
+                </Link>
+              </motion.p>
+              {collection.id && (
+                <SaveButton type="collection" id={Number(collection.id)} variant="pill" />
+              )}
+            </div>
 
             <h1
               className="serif font-light text-white leading-[0.95] mb-6 md:mb-8"
