@@ -12,6 +12,16 @@ use Google_Client;
 
 class AuthController extends Controller
 {
+    /**
+     * Real-time cek apakah email sudah terdaftar — dipakai di form Register.
+     */
+    public function checkEmail(Request $request)
+    {
+        $data = $request->validate(['email' => 'required|email']);
+        $exists = \App\Models\User::where('email', $data['email'])->exists();
+        return response()->json(['exists' => $exists]);
+    }
+
     public function register(Request $request)
     {
         $validated = $request->validate([
