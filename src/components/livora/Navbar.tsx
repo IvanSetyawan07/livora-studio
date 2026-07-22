@@ -461,7 +461,8 @@ export const Navbar = () => {
                   </div>
                 )}
               </div>
-            ) : (
+              );
+            })() : (
               <Link
                 to="/login"
                 aria-label="Login"
