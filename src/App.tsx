@@ -28,6 +28,7 @@ import AdminBanners from "./pages/admin/AdminBanners";
 import AdminUsers from "./pages/admin/AdminUsers";
 import ScrollToTop from "./components/ScrollToTop.tsx";
 import SmoothScroll from "./components/SmoothScroll.tsx";
+import HeroPreloader from "./components/livora/HeroPreloader.tsx";
 import ERD from "./pages/ERD";
 import Furniture from "./pages/Furniture.tsx";
 import FurnitureFilter from "./pages/FurnitureFilter.tsx";
@@ -57,6 +58,7 @@ function App() {
         <Sonner />
         <CartProvider>
           <BrowserRouter>
+            <HeroPreloader />
             <ScrollToTop />
             <SmoothScroll />
             <Routes>
