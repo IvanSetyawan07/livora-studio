@@ -1,92 +1,114 @@
-## Ringkasan review progres
-
-**Yang sudah ada tapi bermasalah:**
-- `backend/routes/api.php` mengimpor `App\Http\Controllers\Api\Admin\ConsultationController` — **file tidak ada** → backend 500 saat boot.
-- `backend/app/Http/Controllers/Api/WishlistController.php` pakai `App\Models\Wishlist` — **model tidak ada** → endpoint wishlist gagal.
-- `src/pages/Register.tsx` seluruh isinya dikomentari — halaman register tidak berfungsi.
-- `Appointment.tsx` submit ke DB tapi **tidak mengirim email** ke user maupun admin (padahal ini requirement).
-- `Navbar.tsx` sudah deteksi login, tapi hanya link `/profile` — belum ada dropdown Profile/Logout.
-- Wishlist di `Profile.tsx` masih pakai icon `Heart` (lucide) — user minta ikon "pita" (Bookmark).
-- Belum ada tombol simpan (bookmark) di halaman Item/Collection/Project/Catalog Detail.
-- Belum ada halaman admin untuk lihat wishlist user + follow-up.
-
-**Yang sudah OK:**
-- Migration `consultations`, `consultation_status_histories`, `wishlists` sudah ada.
-- Model `Consultation` + status history sudah lengkap.
-- `AdminConsultations.tsx` list page sudah ada (list + change status + delete).
-- `ConsultationController` public store sudah handle guest + logged-in user.
+Scope besar — saya pecah jadi 6 fase supaya bisa dikerjakan bertahap dan tetap stabil. Semua fase menggunakan backend Laravel + Supabase Storage yang sudah ada, tidak menambah backend baru.
 
 ---
 
-## Rencana perbaikan
+## Fase 1 — Fix UI kecil (cepat, dikerjakan duluan)
 
-### 1. Fix backend yang crash (P0)
-- Buat `backend/app/Models/Wishlist.php` dengan konstanta TYPES = `['item','collection','project','catalog']` dan relasi polymorphic manual (via `resolveEntity` sudah ada di controller).
-- Buat `backend/app/Http/Controllers/Api/Admin/ConsultationController.php` (namespace `Api\Admin`) — `index`, `show`, `update` (ubah status + catat history + optional assign admin + jadwal meeting), `destroy`, dan endpoint baru `confirmEmail(consultation)` yang kirim email konfirmasi manual.
-
-### 2. Email flow appointment (Laravel Mail SMTP)
-- Buat 3 Mailable:
-  - `ConsultationReceived` — auto ke user setelah submit ("Kami sudah menerima permintaan konsultasimu").
-  - `NewConsultationAdminAlert` — auto ke email admin (`config('mail.admin_address')`) berisi ringkasan + link ke admin detail.
-  - `ConsultationConfirmed` — dikirim manual oleh admin via tombol "Confirm & Email User" (isi: status terkini, jadwal meeting kalau ada, admin notes/pesan).
-- Update `ConsultationController::store` untuk `Mail::send(...)` dua email pertama (dibungkus try/catch supaya submit tetap sukses meski SMTP down).
-- Route baru: `POST /admin/consultations/{consultation}/confirm-email` dengan body `{ subject, message }` opsional (fallback ke template default).
-- Blade view template email di `resources/views/emails/consultation-*.blade.php` — style ringkas, brand Livora (serif heading, cream background).
-- Config: pakai `MAIL_*` env yang sudah ada di Laravel. Kalau user belum set, akan otomatis nge-log ke `storage/logs` (fail-safe).
-
-### 3. Frontend appointment
-- Setelah submit sukses di `Appointment.tsx`, tampilkan modal konfirmasi: "Email konfirmasi sudah dikirim ke {email}. Tim kami akan meninjau dalam 1×24 jam."
-- Di `src/pages/admin/AdminConsultationDetail.tsx` (baru): tampilkan semua data, status history timeline, textarea "Pesan tambahan untuk user", tombol besar **"Confirm & Email User"** — POST ke endpoint confirm-email.
-
-### 4. Navbar profile dropdown
-- Ganti `<Link to="/profile">` di `Navbar.tsx` jadi tombol dropdown (klik → panel kecil bawah avatar) berisi:
-  - Nama + email user (header)
-  - `Profile Detail` → `/profile`
-  - `Wishlist` → `/profile?tab=wishlist`
-  - `My Consultations` → `/profile?tab=consultations`
-  - `Admin Panel` (khusus role admin) → `/admin`
-  - `Logout`
-- Tetap tampilkan `<User />` icon + nama pendek di header. Klik di luar → tutup.
-
-### 5. Wishlist: icon Bookmark + tombol simpan di detail pages
-- Buat komponen `src/components/livora/SaveButton.tsx` — pakai `Bookmark` (lucide) dengan state "saved" (filled) vs "not saved" (outline). Props: `type`, `id`. Kalau belum login → toast "Login untuk menyimpan" + redirect.
-- Pasang tombol ini di:
-  - `ItemDetail.tsx` (pojok kanan atas card produk)
-  - `CollectionDetail.tsx` (header)
-  - `ProjectDetail.tsx` (header)
-  - `CatalogDetail.tsx` (header)
-- Ganti icon `Heart` di `Profile.tsx` tab Wishlist → `Bookmark`.
-
-### 6. Admin wishlist view + follow-up
-- Halaman `src/pages/admin/AdminWishlists.tsx` (baru): tabel semua user yang punya wishlist, kelompokkan per user. Kolom: nama user, email, jumlah item disimpan, item terbaru. Klik user → drawer dengan daftar entity disimpan + tombol:
-  - **"Kirim email follow-up"** → modal, subject + message, POST ke endpoint baru `/admin/wishlists/{user}/message` (kirim email via Mailable `WishlistFollowUp`).
-  - **"Hubungi via WhatsApp"** → link `wa.me/{phone}`.
-- Endpoint backend: `GET /admin/wishlists` (grouped by user), `POST /admin/wishlists/{user}/message`.
-- Link menu baru di `AdminLayout.tsx` sidebar: "Wishlist".
-
-### 7. Fix kecil
-- **Register.tsx**: uncomment + tambahkan real-time email-exist check (endpoint baru `POST /check-email` publik → `{ exists: bool }`). Kalau exists → tampilkan inline error + link "Sudah punya akun? Login". Backend `AuthController::checkEmail`.
-- **Breadcrumb.tsx**: cek isi (37 baris), fix warna teks agar kontras di hero gelap + hilangkan segmen dinamis yang salah (mis. slug UUID). Detail bakal muncul saat implementasi.
-- **Global Hero Preloader**: buat `src/components/livora/HeroPreloader.tsx` — fade-in overlay yang tunggu `document.fonts.ready` + gambar hero pertama (`<img>` invisible dengan `onLoad`). Pasang di layout root `App.tsx` supaya semua hero page konsisten.
-
-### 8. Verifikasi
-- Cek backend boot via `php artisan route:list` (di komentar, tidak run langsung).
-- Cek build TypeScript pass.
-- Manual smoke test lewat Playwright: login → submit appointment → cek toast → login sebagai admin → tekan Confirm & Email User → cek log email.
+1. **Form Appointment fit position** — perbaiki container `Appointment.tsx` supaya form konsultasi center, padding konsisten di mobile & desktop, tidak overflow.
+2. **Tombol kembali / X di halaman Profile** — tambahkan tombol back (panah kiri) di kiri atas halaman `Profile.tsx` yang navigate(-1) atau ke `/`.
+3. **Avatar & nama user** — di Navbar dropdown dan Profile header, ganti dari email jadi "nama depan" user (`user.name.split(' ')[0]`). Inisial avatar diambil dari huruf pertama nama, bukan email.
+4. **Global Hero Preloader** — buat `HeroPreloader.tsx` full-screen overlay Livora (logo + progress). Menunggu `document.fonts.ready` + preload gambar hero halaman aktif via `<link rel="preload">` dinamis. Pasang di `App.tsx`. Kombinasi dengan `loading="eager"` + `fetchpriority="high"` untuk LCP image tiap page.
 
 ---
 
-## Breaking changes / catatan penting untuk kamu
+## Fase 2 — Appointment: cancel, history, timeline, chat
 
-- **SMTP config wajib.** File `.env` backend harus punya `MAIL_MAILER=smtp`, `MAIL_HOST`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS`, dan yang baru: `MAIL_ADMIN_ADDRESS=admin@livora.com`. Kalau belum diisi, email akan gagal tapi submit tetap masuk DB.
-- Route wishlist yang tadinya salah nested (`/wishlist` route ada di dalam group `auth:sanctum` tapi indentasinya keluar) akan saya bereskan.
-- Tombol `Heart` di beberapa tempat akan diganti `Bookmark` — icon berubah, arti sama.
-- Halaman admin baru `/admin/wishlists` dan `/admin/consultations/:id`.
+Backend:
+- Migration tambahan: `consultations` +kolom `cancelled_at`, `cancelled_by`, `cancel_reason`. Tabel baru `consultation_messages` (id, consultation_id, sender_id, sender_role, body, attachments json, read_at, created_at) + `consultation_meetings` (id, consultation_id, provider enum['zoom','meet','custom'], join_url, host_url, meeting_id, passcode, starts_at, description, created_by).
+- Endpoint user: `POST /consultations/{id}/cancel` (hanya kalau status belum `completed`/`cancelled`), `GET/POST /consultations/{id}/messages` (chat 2 arah).
+- Endpoint admin: `GET /admin/consultations/{id}/history` (gabungan status history + messages + meeting events, urut waktu), `POST /admin/consultations/{id}/meeting` (kirim Zoom link + deskripsi ke user, otomatis buat message + email notif).
+- Update Mail: template baru `ConsultationMeetingScheduled` (isi tombol "Join Zoom", tanggal, deskripsi).
+
+Frontend user:
+- `Profile.tsx` tab Consultations: tombol "Batalkan" (modal alasan) untuk consultation aktif; timeline history per consultation (status + pesan admin + jadwal meeting).
+- Chat drawer di Navbar: ikon chat (badge unread) muncul kalau user login & punya konsultasi aktif. Klik → panel chat mirip WA (list konsultasi kiri, bubble kanan). Polling `/consultations/me/unread` tiap 20 detik untuk notif. Menampilkan pesan admin + tombol Join Zoom kalau ada.
+
+Frontend admin:
+- `AdminConsultationDetail.tsx`: tab **History** (timeline lengkap: created → status changes → messages → meeting scheduled → cancelled), tab **Chat** (kirim pesan ke user), form "Schedule Zoom Meeting" (URL, waktu, deskripsi) yang otomatis kirim email + masuk ke chat user.
 
 ---
 
-## Urutan eksekusi (kalau kamu setuju plan-nya)
+## Fase 3 — PDF Catalog dinamis
 
-Fase A (backend fix + email) → Fase B (navbar + save button + profile icon) → Fase C (admin wishlist page) → Fase D (register + breadcrumb + hero preloader).
+- Library: `@react-pdf/renderer` (React-native, cocok dengan design system Livora, mendukung image + font custom, output vektor untuk teks → high-res).
+- Struktur: `src/lib/pdf/CatalogPdf.tsx` (dokumen), `src/lib/pdf/pdfTheme.ts` (font Playfair + Inter, warna & spacing dari `index.css`), fungsi `generateCatalogPdf(catalogSlug)`.
+- Data flow: pakai endpoint yang sudah ada (`GET /catalogs/{slug}` + hotspots + item detail per hotspot). Kalau data item detail belum lengkap dalam 1 request, batching parallel `Promise.all` fetch item by slug.
+- Struktur halaman dinamis (jumlah page ikut data):
+  1. Cover — hero image full bleed + logo + judul room + kategori.
+  2. Room intro — deskripsi + main image + meta.
+  3. Room implementation — grid adaptif (1/2/3-4/5+ images auto pagination).
+  4. Items index — daftar semua item (nomor + nama + kategori + thumbnail).
+  5. Item detail pages — 1 halaman per item dengan hero image + spec (dimensions, material, finish, color, category, variants). Field kosong disembunyikan.
+  6. Item gallery — kalau item punya >1 image, halaman gallery adaptif.
+  7. Materials & finishing — hanya kalau ada data.
+  8. Closing — logo, tagline, kontak, website.
+- Header/footer konsisten (nomor halaman, nama room kecil di footer).
+- Tombol "Download Full Catalog PDF" di `CatalogDetail.tsx` (di bawah hero). State: idle → "Generating your Livora catalog..." → auto download `Livora_{RoomName}_Catalog.pdf`.
+- QA: setelah generate, dev-side saya render → convert ke image lewat script → periksa overflow/potong sebelum ship.
 
-Bilang **"lanjut"** untuk mulai fase A. Kalau ada bagian yang mau di-skip atau diubah urutannya, kasih tahu sekarang.
+---
+
+## Fase 4 — Analytics: periode, history, grafik bulanan, export PDF
+
+Backend:
+- Tabel `analytics_periods` (id, name, starts_at, ends_at, closed_at, closed_by, snapshot_json, created_at). Admin bisa "Start Period" & "Close Period" — closing menyimpan snapshot lengkap ke `snapshot_json`.
+- Endpoint `GET /admin/analytics/periods`, `POST /admin/analytics/periods/start`, `POST /admin/analytics/periods/{id}/close`, `GET /admin/analytics/periods/{id}` (return snapshot).
+- Endpoint `GET /admin/analytics/monthly?from=&to=` → agregasi per bulan: unique visitors, page views, top items, top projects, top catalogs, avg session, conversion (appointment submit / wishlist saves).
+
+Frontend admin (`AdminAnalytics.tsx`):
+- Header: tombol **Start Period** & **Close Period** + list history periode.
+- Chart bulanan (recharts LineChart / BarChart): visitors per bulan, views per bulan, appointments per bulan.
+- Detail marketing: top 10 items (clicks + views + avg time), top catalogs, top projects, wishlist saves count, appointment funnel (submitted → confirmed → completed → cancelled).
+- Tombol **Download Report PDF** — generate PDF pakai `@react-pdf/renderer` dengan grafik (render chart ke SVG → embed sebagai `<Image>` via `html2canvas` fallback, atau pakai `victory` PDF-friendly). Isi: cover periode, executive summary, chart bulanan, top items table, insight & recommendations block.
+
+---
+
+## Fase 5 — Email marketing (broadcast promosi)
+
+Backend:
+- Tabel `email_campaigns` (id, subject, preheader, hero_image, body_html, cta_label, cta_url, status enum['draft','sending','sent'], recipient_filter json, sent_count, created_by, sent_at).
+- Endpoint admin: CRUD campaigns + `POST /admin/campaigns/{id}/send` (enqueue kirim ke semua user dengan filter, pakai Mail queue Laravel).
+- Mailable `MarketingCampaign` dengan Blade template editorial Livora (hero image, body, CTA button).
+- **Compliance**: setiap email otomatis include footer unsubscribe link + tabel `email_unsubscribes` (user_id, unsubscribed_at). Filter recipient exclude user yang unsub.
+
+Frontend admin (`AdminCampaigns.tsx`):
+- List campaigns + status.
+- Editor: subject, preheader, upload hero image (Supabase Storage), rich-text body (pakai `react-quill` atau textarea + markdown), CTA label + URL, target filter (all users / has appointment / has wishlist).
+- Preview panel (WYSIWYG mirip hasil email).
+- Tombol Send → confirm modal → status "sending" → real-time update sent_count.
+
+**Catatan penting untuk kamu**: kirim email marketing perlu SMTP provider yang production-grade (Mailgun/SES/Postmark) dan sudah verifikasi domain, kalau tidak akan masuk spam / diblokir. Saya bikin infrastrukturnya, tapi kredensial SMTP kamu isi sendiri di `.env`.
+
+---
+
+## Fase 6 — Performance / preloading konten landing
+
+Selain HeroPreloader (fase 1):
+- Preload gambar hero via `<link rel="preload" as="image" fetchpriority="high">` di `<head>` untuk landing page (edit `index.html` + inject dinamis per route).
+- Convert semua asset hero besar ke `webp`/`avif` via `vite-imagetools` (build-time, tanpa ubah source image).
+- Add `loading="lazy"` + `decoding="async"` di semua image non-LCP.
+- Prefetch route berikutnya (Collection/Catalog) pakai `<link rel="prefetch">` on hover Navbar.
+- Lazy-load komponen berat (Recharts, react-pdf) via `React.lazy` supaya tidak masuk bundle awal.
+
+---
+
+## Urutan eksekusi yang saya usulkan
+
+1. **Fase 1** (fix UI kecil + preloader) — cepat, langsung terlihat.
+2. **Fase 2** (appointment cancel + chat + Zoom) — paling banyak logic backend.
+3. **Fase 3** (PDF catalog).
+4. **Fase 4** (analytics + PDF report).
+5. **Fase 5** (email marketing).
+6. **Fase 6** (perf polish).
+
+---
+
+## Yang perlu kamu konfirmasi sebelum saya mulai
+
+1. **Setuju urutan 6 fase ini?** Atau ada yang mau didahulukan (misal PDF catalog duluan)?
+2. **Chat consultation**: cukup polling tiap 20 detik, atau kamu mau real-time WebSocket? (WebSocket butuh Pusher/Reverb, biaya lebih.) Rekomendasi saya: polling dulu, upgrade kalau perlu.
+3. **PDF library**: OK pakai `@react-pdf/renderer`? (alternatif: `pdfmake` atau `puppeteer` server-side — puppeteer paling akurat tapi butuh server node terpisah).
+4. **Zoom integration**: cukup admin paste link Zoom manual, atau mau auto-create meeting via Zoom API? (auto butuh Zoom OAuth app + secret). Rekomendasi: manual paste dulu.
+5. **Email marketing**: sudah ada SMTP transaction (Mailgun/SES/dll) yang mau dipakai? Tanpa itu, campaign akan gagal terkirim ke banyak alamat.
+
+Balas dengan jawaban 5 poin di atas + **"lanjut fase 1"** kalau setuju urutannya, atau kasih tahu fase mana yang mau didahulukan.
