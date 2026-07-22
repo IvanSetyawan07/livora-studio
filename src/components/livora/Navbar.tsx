@@ -465,9 +465,14 @@ export const Navbar = () => {
                       <Link
                         to="/profile?tab=consultations"
                         onClick={() => setProfileOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60"
+                        className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-secondary/60"
                       >
-                        <ClipboardList size={16} /> My Consultations
+                        <span className="flex items-center gap-3"><ClipboardList size={16} /> My Consultations</span>
+                        {unreadCount > 0 && (
+                          <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
+                            {unreadCount > 9 ? "9+" : unreadCount}
+                          </span>
+                        )}
                       </Link>
                       {authUser.role === "admin" && (
                         <Link
