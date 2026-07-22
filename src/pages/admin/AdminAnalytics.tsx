@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { pdf } from "@react-pdf/renderer";
+import { Download } from "lucide-react";
+import AnalyticsPDF from "@/components/livora/AnalyticsPDF";
 
 export default function AdminAnalytics() {
   const [data, setData] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     api.get("/admin/analytics/overview").then((r) => setData(r.data));
@@ -19,10 +23,37 @@ export default function AdminAnalytics() {
     return m > 0 ? `${m}m ${Math.round(s % 60)}s` : `${Math.round(s)}s`;
   };
 
+  const exportPDF = async () => {
+    setExporting(true);
+    try {
+      const blob = await pdf(<AnalyticsPDF overview={data} users={users} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `livora-analytics-${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div>
-      <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2">Marketing</p>
-      <h1 className="serif text-4xl mb-8">Analytics</h1>
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2">Marketing</p>
+          <h1 className="serif text-4xl">Analytics</h1>
+        </div>
+        <button
+          onClick={exportPDF}
+          disabled={exporting}
+          className="inline-flex items-center gap-2 px-4 py-2 border border-foreground text-xs uppercase tracking-[0.3em] hover:bg-foreground hover:text-background transition disabled:opacity-50"
+        >
+          <Download size={14} />
+          {exporting ? "Preparing..." : "Export PDF"}
+        </button>
+      </div>
 
       <div className="grid grid-cols-2 gap-5 mb-10">
         <ChartCard title="Top Items by Clicks" data={data.topItems} dataKey="clicks" color="hsl(var(--foreground))" />
