@@ -299,12 +299,42 @@ function ConsultationsTab() {
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const reload = () => {
+    setLoading(true);
     getMyConsultations()
       .then(setConsultations)
       .catch(() => setConsultations([]))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(reload, []);
+
+  if (loading) return <p className="text-sm text-muted-foreground">Loading...</p>;
+
+  if (consultations.length === 0) {
+    return (
+      <div className="border border-dashed border-border rounded-lg p-8 text-center">
+        <p className="text-sm text-muted-foreground mb-4">
+          You haven't submitted a design consultation yet.
+        </p>
+        <a
+          href="/appointment"
+          className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.24em] border-b border-foreground pb-1"
+        >
+          Start Your Design Journey
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {consultations.map((c) => (
+        <ConsultationCard key={c.id} consultation={c} onChanged={reload} />
+      ))}
+    </div>
+  );
+}
 
   if (loading) return <p className="text-sm text-muted-foreground">Loading...</p>;
 
