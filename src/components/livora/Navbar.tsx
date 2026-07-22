@@ -154,6 +154,22 @@ export const Navbar = () => {
     .catch(() => setAuthUser(null));
 }, []);
 
+  // Poll unread consultation messages for logged-in users
+  useEffect(() => {
+    if (!authUser) { setUnreadCount(0); return; }
+    let cancelled = false;
+    const load = () => {
+      api.get<{ unread: number }>("/my/consultations/unread")
+        .then((r) => { if (!cancelled) setUnreadCount(r.data?.unread ?? 0); })
+        .catch(() => {});
+    };
+    load();
+    const id = window.setInterval(load, 20000);
+    const onVis = () => { if (document.visibilityState === "visible") load(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { cancelled = true; window.clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
+  }, [authUser]);
+
   // Close profile dropdown on outside click
   useEffect(() => {
     if (!profileOpen) return;
