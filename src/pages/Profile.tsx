@@ -4,8 +4,13 @@ import { api, authStorage } from "@/lib/api";
 import { getMyConsultations, type Consultation } from "@/lib/consultations";
 import { updateProfile, changePassword } from "@/lib/profile";
 import { getWishlist, removeFromWishlist, type WishlistEntry } from "@/lib/wishlist";
+import { cancelConsultation } from "@/lib/consultationMessages";
+import ConsultationChat from "@/components/livora/ConsultationChat";
 import { toast } from "sonner";
-import { Check, Calendar, MapPin, Video, Bookmark, User as UserIcon, ClipboardList, ArrowLeft } from "lucide-react";
+import {
+  Check, Calendar, MapPin, Video, Bookmark, User as UserIcon,
+  ClipboardList, ArrowLeft, MessageCircle, XCircle,
+} from "lucide-react";
 
 type User = { id: number; name: string; email: string; phone?: string | null; address?: string | null };
 
@@ -294,12 +299,15 @@ function ConsultationsTab() {
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const reload = () => {
+    setLoading(true);
     getMyConsultations()
       .then(setConsultations)
       .catch(() => setConsultations([]))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(reload, []);
 
   if (loading) return <p className="text-sm text-muted-foreground">Loading...</p>;
 
@@ -322,15 +330,42 @@ function ConsultationsTab() {
   return (
     <div className="space-y-6">
       {consultations.map((c) => (
-        <ConsultationCard key={c.id} consultation={c} />
+        <ConsultationCard key={c.id} consultation={c} onChanged={reload} />
       ))}
     </div>
   );
 }
 
-function ConsultationCard({ consultation }: { consultation: Consultation }) {
+function ConsultationCard({
+  consultation,
+  onChanged,
+}: {
+  consultation: Consultation;
+  onChanged: () => void;
+}) {
   const isCancelled = consultation.status === "cancelled";
+  const isClosed = isCancelled || consultation.status === "completed";
   const currentIndex = TIMELINE_STEPS.findIndex((s) => s.key === consultation.status);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  const handleCancel = async () => {
+    const reason = window.prompt(
+      "Batalkan permintaan konsultasi ini?\n\nOpsional — tulis alasan singkat:",
+      "",
+    );
+    if (reason === null) return; // dismissed
+    setCancelling(true);
+    try {
+      await cancelConsultation(consultation.id, reason.trim() || undefined);
+      toast.success("Consultation dibatalkan.");
+      onChanged();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || "Gagal membatalkan.");
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   return (
     <div className="bg-card border border-border rounded-lg p-6">
@@ -421,6 +456,33 @@ function ConsultationCard({ consultation }: { consultation: Consultation }) {
         <p className="text-xs text-muted-foreground mt-6 pt-5 border-t border-border leading-relaxed line-clamp-2">
           "{consultation.message}"
         </p>
+      )}
+
+      <div className="mt-5 pt-4 border-t border-border flex flex-wrap items-center gap-3">
+        <button
+          onClick={() => setChatOpen((v) => !v)}
+          className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.2em] border border-border px-3 py-2 rounded hover:bg-secondary/50"
+        >
+          <MessageCircle size={13} /> {chatOpen ? "Hide Chat" : "Open Chat"}
+        </button>
+        {!isClosed && (
+          <button
+            onClick={handleCancel}
+            disabled={cancelling}
+            className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.2em] border border-red-200 text-red-600 px-3 py-2 rounded hover:bg-red-50 disabled:opacity-60"
+          >
+            <XCircle size={13} /> {cancelling ? "Cancelling…" : "Cancel Request"}
+          </button>
+        )}
+        <span className="text-[11px] text-muted-foreground ml-auto">
+          Requested {new Date(consultation.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+        </span>
+      </div>
+
+      {chatOpen && (
+        <div className="mt-4">
+          <ConsultationChat consultationId={consultation.id} mode="user" locked={isClosed} />
+        </div>
       )}
     </div>
   );

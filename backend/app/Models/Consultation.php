@@ -91,8 +91,10 @@ class Consultation extends Model
         return $this->hasMany(ConsultationStatusHistory::class)->orderByDesc('created_at');
     }
 
-    // Relasi `messages()` untuk admin <-> user messaging akan ditambahkan
-    // di Batch 3 begitu model ConsultationMessage dibuat.
+    public function messages()
+    {
+        return $this->hasMany(ConsultationMessage::class)->orderBy('created_at');
+    }
 
     public function statusLabel(): string
     {

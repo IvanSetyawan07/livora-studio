@@ -57,7 +57,11 @@ Route::post('/track/view',  [TrackingController::class, 'view']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/my/consultations', [ConsultationController::class, 'mine']);
+    Route::get('/my/consultations/unread', [ConsultationController::class, 'unreadCount']);
     Route::get('/consultations/{consultation}', [ConsultationController::class, 'show']);
+    Route::post('/consultations/{consultation}/cancel', [ConsultationController::class, 'cancel']);
+    Route::get('/consultations/{consultation}/messages', [ConsultationController::class, 'messagesIndex']);
+    Route::post('/consultations/{consultation}/messages', [ConsultationController::class, 'messagesStore']);
 
     Route::patch('/user/language', [UserLanguageController::class, 'update']);
     Route::get('/me', [AuthController::class, 'me']);
@@ -168,6 +172,8 @@ Route::delete('/wishlist/{type}/{id}', [WishlistController::class, 'destroy']);
         Route::post('/consultations/{consultation}', [AdminConsultationController::class, 'update']);
         Route::delete('/consultations/{consultation}', [AdminConsultationController::class, 'destroy']);
         Route::post('/consultations/{consultation}/confirm-email', [AdminConsultationController::class, 'confirmEmail']);
+        Route::get('/consultations/{consultation}/messages', [AdminConsultationController::class, 'messagesIndex']);
+        Route::post('/consultations/{consultation}/messages', [AdminConsultationController::class, 'messagesStore']);
 
         // Wishlist admin view
         Route::get('/wishlists', [WishlistController::class, 'adminIndex']);

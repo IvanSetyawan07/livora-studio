@@ -7,6 +7,7 @@ import {
   confirmConsultationEmail,
 } from "@/lib/adminConsultations";
 import type { Consultation } from "@/lib/consultations";
+import ConsultationChat from "@/components/livora/ConsultationChat";
 
 const STATUS_OPTIONS = [
   ["new_inquiry", "New Inquiry"],
@@ -223,6 +224,18 @@ export default function AdminConsultationDetail() {
             </div>
           </div>
         </div>
+        <div className="bg-card border border-border rounded-lg p-6">
+          <h2 className="serif text-xl mb-4">Conversation with Customer</h2>
+          <p className="text-xs text-muted-foreground mb-4">
+            Polling setiap 20 detik. Sertakan link Zoom / Google Meet di composer bawah untuk mengirim tombol "Join Meeting" langsung ke customer.
+          </p>
+          <ConsultationChat
+            consultationId={c.id}
+            mode="admin"
+            locked={c.status === "cancelled"}
+          />
+        </div>
+
 
         {history.length > 0 && (
           <div className="bg-card border border-border rounded-lg p-6">

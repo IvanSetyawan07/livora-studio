@@ -139,4 +139,92 @@ class ConsultationController extends Controller
         $arr['status_label'] = $consultation->statusLabel();
         return $arr;
     }
+
+    /**
+     * User membatalkan consultation miliknya.
+     * Hanya boleh cancel selama belum completed / cancelled.
+     */
+    public function cancel(Request $request, Consultation $consultation)
+    {
+        if ($consultation->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+        if (in_array($consultation->status, [Consultation::STATUS_COMPLETED, Consultation::STATUS_CANCELLED])) {
+            return response()->json(['message' => 'Consultation ini tidak bisa dibatalkan lagi.'], 422);
+        }
+
+        $note = trim((string) $request->input('reason', ''));
+        $consultation->changeStatus(
+            Consultation::STATUS_CANCELLED,
+            $request->user()->id,
+            $note !== '' ? "User cancel: {$note}" : 'User cancelled the consultation.',
+        );
+
+        // Catat juga sebagai pesan system supaya admin lihat konteksnya di chat.
+        \App\Models\ConsultationMessage::create([
+            'consultation_id' => $consultation->id,
+            'sender_type'     => 'system',
+            'sender_id'       => $request->user()->id,
+            'body'            => $note !== ''
+                ? "Consultation dibatalkan oleh customer. Alasan: {$note}"
+                : 'Consultation dibatalkan oleh customer.',
+        ]);
+
+        return response()->json(['ok' => true, 'status' => $consultation->status]);
+    }
+
+    /**
+     * List chat messages untuk 1 consultation (user view).
+     * Tandai semua pesan admin sebagai sudah dibaca.
+     */
+    public function messagesIndex(Request $request, Consultation $consultation)
+    {
+        if ($consultation->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        \App\Models\ConsultationMessage::where('consultation_id', $consultation->id)
+            ->where('sender_type', 'admin')
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        return $consultation->messages()->with('sender:id,name')->get();
+    }
+
+    /**
+     * User kirim pesan ke admin.
+     */
+    public function messagesStore(Request $request, Consultation $consultation)
+    {
+        if ($consultation->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+        $data = $request->validate([
+            'body' => 'required|string|max:4000',
+        ]);
+
+        $msg = \App\Models\ConsultationMessage::create([
+            'consultation_id' => $consultation->id,
+            'sender_type'     => 'user',
+            'sender_id'       => $request->user()->id,
+            'body'            => $data['body'],
+        ]);
+        return response()->json($msg->load('sender:id,name'), 201);
+    }
+
+    /**
+     * Polling ringan: berapa pesan admin baru yang belum dibaca oleh user
+     * (dipakai untuk badge notifikasi di navbar).
+     */
+    public function unreadCount(Request $request)
+    {
+        $count = \App\Models\ConsultationMessage::whereHas('consultation', function ($q) use ($request) {
+                $q->where('user_id', $request->user()->id);
+            })
+            ->where('sender_type', 'admin')
+            ->whereNull('read_at')
+            ->count();
+        return response()->json(['unread' => $count]);
+    }
 }
+
