@@ -457,6 +457,33 @@ function ConsultationCard({
           "{consultation.message}"
         </p>
       )}
+
+      <div className="mt-5 pt-4 border-t border-border flex flex-wrap items-center gap-3">
+        <button
+          onClick={() => setChatOpen((v) => !v)}
+          className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.2em] border border-border px-3 py-2 rounded hover:bg-secondary/50"
+        >
+          <MessageCircle size={13} /> {chatOpen ? "Hide Chat" : "Open Chat"}
+        </button>
+        {!isClosed && (
+          <button
+            onClick={handleCancel}
+            disabled={cancelling}
+            className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.2em] border border-red-200 text-red-600 px-3 py-2 rounded hover:bg-red-50 disabled:opacity-60"
+          >
+            <XCircle size={13} /> {cancelling ? "Cancelling…" : "Cancel Request"}
+          </button>
+        )}
+        <span className="text-[11px] text-muted-foreground ml-auto">
+          Requested {new Date(consultation.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+        </span>
+      </div>
+
+      {chatOpen && (
+        <div className="mt-4">
+          <ConsultationChat consultationId={consultation.id} mode="user" locked={isClosed} />
+        </div>
+      )}
     </div>
   );
 }
