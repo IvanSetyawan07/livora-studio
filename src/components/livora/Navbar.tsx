@@ -35,6 +35,7 @@ export const Navbar = () => {
   const [thumbnails, setThumbnails] = useState<Record<string, any>>({});
   const [authUser, setAuthUser] = useState<{ name: string; email?: string; role?: string } | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const profileRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
