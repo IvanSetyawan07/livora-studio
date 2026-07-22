@@ -35,6 +35,7 @@ export const Navbar = () => {
   const [thumbnails, setThumbnails] = useState<Record<string, any>>({});
   const [authUser, setAuthUser] = useState<{ name: string; email?: string; role?: string } | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const profileRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -152,6 +153,22 @@ export const Navbar = () => {
     .then((r) => setAuthUser({ name: r.data?.name ?? "Account", email: r.data?.email, role: r.data?.role }))
     .catch(() => setAuthUser(null));
 }, []);
+
+  // Poll unread consultation messages for logged-in users
+  useEffect(() => {
+    if (!authUser) { setUnreadCount(0); return; }
+    let cancelled = false;
+    const load = () => {
+      api.get<{ unread: number }>("/my/consultations/unread")
+        .then((r) => { if (!cancelled) setUnreadCount(r.data?.unread ?? 0); })
+        .catch(() => {});
+    };
+    load();
+    const id = window.setInterval(load, 20000);
+    const onVis = () => { if (document.visibilityState === "visible") load(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { cancelled = true; window.clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
+  }, [authUser]);
 
   // Close profile dropdown on outside click
   useEffect(() => {
@@ -395,14 +412,24 @@ export const Navbar = () => {
                     headerLight ? "text-white/90 hover:text-white" : "text-foreground/80 hover:text-foreground"
                   }`}
                 >
-                  <span
-                    className={`w-8 h-8 flex items-center justify-center rounded-full text-[11px] font-medium tracking-wide ${
-                      headerLight
-                        ? "bg-white/15 border border-white/40 text-white backdrop-blur-sm"
-                        : "bg-foreground text-background"
-                    }`}
-                  >
-                    {initial}
+                  <span className="relative">
+                    <span
+                      className={`w-8 h-8 flex items-center justify-center rounded-full text-[11px] font-medium tracking-wide ${
+                        headerLight
+                          ? "bg-white/15 border border-white/40 text-white backdrop-blur-sm"
+                          : "bg-foreground text-background"
+                      }`}
+                    >
+                      {initial}
+                    </span>
+                    {unreadCount > 0 && (
+                      <span
+                        className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-red-500 text-white text-[9px] font-semibold flex items-center justify-center border-2 border-background"
+                        aria-label={`${unreadCount} unread messages`}
+                      >
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
                   </span>
                   <span
                     className="hidden md:inline text-xs tracking-[0.1em] max-w-[120px] truncate"
@@ -438,9 +465,14 @@ export const Navbar = () => {
                       <Link
                         to="/profile?tab=consultations"
                         onClick={() => setProfileOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60"
+                        className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-secondary/60"
                       >
-                        <ClipboardList size={16} /> My Consultations
+                        <span className="flex items-center gap-3"><ClipboardList size={16} /> My Consultations</span>
+                        {unreadCount > 0 && (
+                          <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
+                            {unreadCount > 9 ? "9+" : unreadCount}
+                          </span>
+                        )}
                       </Link>
                       {authUser.role === "admin" && (
                         <Link

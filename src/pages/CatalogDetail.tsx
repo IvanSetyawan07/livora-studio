@@ -5,7 +5,9 @@
 import SaveButton from "@/components/livora/SaveButton";
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
-import { X, ChevronLeft, ChevronRight, ArrowUpRight } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, ArrowUpRight, Download } from "lucide-react";
+import { downloadCatalogPDF } from "@/components/livora/CatalogPDF";
+import { toast } from "sonner";
 import { motion, useScroll, useTransform, easeOut } from "framer-motion";
 import { Navbar } from "@/components/livora/Navbar";
 import { WhatsAppButton } from "@/components/livora/WhatsAppButton";
@@ -544,6 +546,31 @@ export default function CatalogDetail() {
 </div>
               </Link>
               
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    toast.loading("Preparing your PDF…", { id: "pdf-cat" });
+                    await downloadCatalogPDF({
+                      title: item.title,
+                      tagline: (item as any).tagline,
+                      aboutTitle: (item as any).aboutTitle,
+                      aboutBody: (item as any).description || (item as any).about_body,
+                      category: typeof item.category === "string" ? item.category : (item.category as any)?.slug,
+                      coverImage: (item as any).coverImage || (item as any).cover_image,
+                      scenes: scenes.map((s) => ({ image: s.image, alt: s.alt })),
+                      items: exploreItems.map((i) => ({ title: i.title, image: (i as any).coverImage || (i as any).cover_image, category: typeof i.category === "string" ? i.category : (i.category as any)?.slug })),
+                    });
+                    toast.success("PDF downloaded", { id: "pdf-cat" });
+                  } catch (e) {
+                    console.error(e);
+                    toast.error("Failed to generate PDF", { id: "pdf-cat" });
+                  }
+                }}
+                className="text-[10px] uppercase tracking-[0.18em] text-white/80 hover:text-white transition-colors duration-300 font-light flex items-center gap-1.5 border border-white/40 hover:border-white px-6 py-3.5"
+              >
+                <Download size={12} /> Download PDF
+              </button>
             </motion.div>
           </div>
         </motion.div>
