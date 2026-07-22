@@ -165,6 +165,10 @@ Route::delete('/wishlist/{type}/{id}', [WishlistController::class, 'destroy']);
         Route::get('/analytics/overview', [AnalyticsController::class, 'overview']);
         Route::get('/analytics/users', [AnalyticsController::class, 'activeUsers']);
 
+        // Marketing / Email blast
+        Route::get('/marketing/audience', [\App\Http\Controllers\Api\MarketingController::class, 'audience']);
+        Route::post('/marketing/send', [\App\Http\Controllers\Api\MarketingController::class, 'send']);
+
         // Consultations management
         Route::get('/consultations', [AdminConsultationController::class, 'index']);
         Route::get('/consultations/{consultation}', [AdminConsultationController::class, 'show']);
