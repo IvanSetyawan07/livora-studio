@@ -29,6 +29,7 @@ class ConsultationController extends Controller
             'user:id,name,email,phone',
             'assignedAdmin:id,name',
             'statusHistory.changedByUser:id,name',
+            'messages.sender:id,name',
         ]);
         $arr = $consultation->toArray();
         $arr['status_label'] = $consultation->statusLabel();
@@ -122,4 +123,48 @@ class ConsultationController extends Controller
 
         return response()->json(['message' => 'Email terkirim ke ' . $consultation->email]);
     }
+
+    /**
+     * List pesan chat 1 consultation (admin view).
+     * Tandai pesan dari user sebagai sudah dibaca oleh admin.
+     */
+    public function messagesIndex(Request $request, Consultation $consultation)
+    {
+        \App\Models\ConsultationMessage::where('consultation_id', $consultation->id)
+            ->where('sender_type', 'user')
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        return $consultation->messages()->with('sender:id,name')->get();
+    }
+
+    /**
+     * Admin kirim pesan ke customer. Bisa sekaligus include meeting link
+     * (Zoom / Google Meet) yang tampil sebagai tombol Join di sisi user.
+     */
+    public function messagesStore(Request $request, Consultation $consultation)
+    {
+        $data = $request->validate([
+            'body'         => 'required|string|max:4000',
+            'meeting_link' => 'nullable|url|max:500',
+        ]);
+
+        $msg = \App\Models\ConsultationMessage::create([
+            'consultation_id' => $consultation->id,
+            'sender_type'     => 'admin',
+            'sender_id'       => $request->user()->id,
+            'body'            => $data['body'],
+            'meeting_link'    => $data['meeting_link'] ?? null,
+        ]);
+
+        // Kalau admin sekaligus mengirim link meeting, sinkronkan juga
+        // ke kolom meeting_link consultation supaya muncul di card timeline.
+        if (!empty($data['meeting_link']) && empty($consultation->meeting_link)) {
+            $consultation->meeting_link = $data['meeting_link'];
+            $consultation->save();
+        }
+
+        return response()->json($msg->load('sender:id,name'), 201);
+    }
 }
+
