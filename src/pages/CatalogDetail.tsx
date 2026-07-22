@@ -557,9 +557,9 @@ export default function CatalogDetail() {
                       aboutTitle: (item as any).aboutTitle,
                       aboutBody: (item as any).description || (item as any).about_body,
                       category: typeof item.category === "string" ? item.category : (item.category as any)?.slug,
-                      coverImage: item.image,
+                      coverImage: (item as any).coverImage || (item as any).cover_image,
                       scenes: scenes.map((s) => ({ image: s.image, alt: s.alt })),
-                      items: exploreItems.map((i) => ({ title: i.title, image: i.image, category: typeof i.category === "string" ? i.category : (i.category as any)?.slug })),
+                      items: exploreItems.map((i) => ({ title: i.title, image: (i as any).coverImage || (i as any).cover_image, category: typeof i.category === "string" ? i.category : (i.category as any)?.slug })),
                     });
                     toast.success("PDF downloaded", { id: "pdf-cat" });
                   } catch (e) {
