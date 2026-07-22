@@ -4,8 +4,13 @@ import { api, authStorage } from "@/lib/api";
 import { getMyConsultations, type Consultation } from "@/lib/consultations";
 import { updateProfile, changePassword } from "@/lib/profile";
 import { getWishlist, removeFromWishlist, type WishlistEntry } from "@/lib/wishlist";
+import { cancelConsultation } from "@/lib/consultationMessages";
+import ConsultationChat from "@/components/livora/ConsultationChat";
 import { toast } from "sonner";
-import { Check, Calendar, MapPin, Video, Bookmark, User as UserIcon, ClipboardList, ArrowLeft } from "lucide-react";
+import {
+  Check, Calendar, MapPin, Video, Bookmark, User as UserIcon,
+  ClipboardList, ArrowLeft, MessageCircle, XCircle,
+} from "lucide-react";
 
 type User = { id: number; name: string; email: string; phone?: string | null; address?: string | null };
 
