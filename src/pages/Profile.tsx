@@ -336,36 +336,36 @@ function ConsultationsTab() {
   );
 }
 
-  if (loading) return <p className="text-sm text-muted-foreground">Loading...</p>;
-
-  if (consultations.length === 0) {
-    return (
-      <div className="border border-dashed border-border rounded-lg p-8 text-center">
-        <p className="text-sm text-muted-foreground mb-4">
-          You haven't submitted a design consultation yet.
-        </p>
-        <a
-          href="/appointment"
-          className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.24em] border-b border-foreground pb-1"
-        >
-          Start Your Design Journey
-        </a>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {consultations.map((c) => (
-        <ConsultationCard key={c.id} consultation={c} />
-      ))}
-    </div>
-  );
-}
-
-function ConsultationCard({ consultation }: { consultation: Consultation }) {
+function ConsultationCard({
+  consultation,
+  onChanged,
+}: {
+  consultation: Consultation;
+  onChanged: () => void;
+}) {
   const isCancelled = consultation.status === "cancelled";
+  const isClosed = isCancelled || consultation.status === "completed";
   const currentIndex = TIMELINE_STEPS.findIndex((s) => s.key === consultation.status);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  const handleCancel = async () => {
+    const reason = window.prompt(
+      "Batalkan permintaan konsultasi ini?\n\nOpsional — tulis alasan singkat:",
+      "",
+    );
+    if (reason === null) return; // dismissed
+    setCancelling(true);
+    try {
+      await cancelConsultation(consultation.id, reason.trim() || undefined);
+      toast.success("Consultation dibatalkan.");
+      onChanged();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || "Gagal membatalkan.");
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   return (
     <div className="bg-card border border-border rounded-lg p-6">
