@@ -567,7 +567,7 @@ export default function Appointment() {
         id="appointment-form"
         className="py-24 md:py-32 bg-secondary/20 border-t border-border"
       >
-        <div className="container-livora grid grid-cols-1 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.8fr)] gap-12 lg:gap-20 items-start">
+        <div className="container-livora max-w-6xl grid grid-cols-1 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] gap-10 lg:gap-16 items-start px-5 md:px-8">
           {/* Left column */}
           <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} className="lg:sticky lg:top-28">
             <Eyebrow>Livora | Start Your Consultation</Eyebrow>
@@ -586,10 +586,10 @@ export default function Appointment() {
           <motion.form
             onSubmit={handleSubmit}
             variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}
-            className="bg-white p-8 md:p-12"
+            className="bg-white p-6 md:p-10 lg:p-12 w-full"
             style={{ boxShadow: "0 30px 80px -50px rgba(0,0,0,0.25)" }}
           >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-7">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
               <Field label="First Name" required>
                 <Input value={form.first_name} onChange={(v) => upd("first_name", v)} placeholder="Enter your first name" />
               </Field>

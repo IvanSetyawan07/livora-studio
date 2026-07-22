@@ -378,28 +378,44 @@ export const Navbar = () => {
             >
               <Search size={20} />
             </button>
-            {authUser ? (
+            {authUser ? (() => {
+              // Ambil nama depan dari user.name; kalau kosong / kebetulan berbentuk email, jatuhkan ke bagian sebelum "@".
+              const rawName = (authUser.name || "").trim();
+              const firstName = rawName.includes("@")
+                ? rawName.split("@")[0].split(/[._\s]/)[0]
+                : rawName.split(/\s+/)[0] || "Account";
+              const displayName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+              const initial = displayName.charAt(0).toUpperCase();
+              return (
               <div ref={profileRef} className="relative">
                 <button
                   onClick={() => setProfileOpen((v) => !v)}
                   aria-label="Account menu"
-                  className={`p-2 flex items-center gap-2 transition-colors duration-500 ${
+                  className={`p-1.5 flex items-center gap-2 transition-colors duration-500 ${
                     headerLight ? "text-white/90 hover:text-white" : "text-foreground/80 hover:text-foreground"
                   }`}
                 >
-                  <User size={20} />
                   <span
-                    className="hidden md:inline text-xs uppercase tracking-[0.15em] max-w-[100px] truncate"
+                    className={`w-8 h-8 flex items-center justify-center rounded-full text-[11px] font-medium tracking-wide ${
+                      headerLight
+                        ? "bg-white/15 border border-white/40 text-white backdrop-blur-sm"
+                        : "bg-foreground text-background"
+                    }`}
+                  >
+                    {initial}
+                  </span>
+                  <span
+                    className="hidden md:inline text-xs tracking-[0.1em] max-w-[120px] truncate"
                     style={headerLight ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined}
                   >
-                    {authUser.name}
+                    {displayName}
                   </span>
                   <ChevronDown size={14} className={`transition-transform ${profileOpen ? "rotate-180" : ""}`} />
                 </button>
                 {profileOpen && (
                   <div className="absolute right-0 top-full mt-2 w-64 bg-background border border-border rounded-lg shadow-xl overflow-hidden z-[70] animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="px-4 py-3 border-b border-border">
-                      <p className="text-sm font-medium truncate">{authUser.name}</p>
+                      <p className="text-sm font-medium truncate">{rawName || displayName}</p>
                       {authUser.email && (
                         <p className="text-xs text-muted-foreground truncate">{authUser.email}</p>
                       )}
@@ -445,7 +461,8 @@ export const Navbar = () => {
                   </div>
                 )}
               </div>
-            ) : (
+              );
+            })() : (
               <Link
                 to="/login"
                 aria-label="Login"

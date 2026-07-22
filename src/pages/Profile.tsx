@@ -5,7 +5,7 @@ import { getMyConsultations, type Consultation } from "@/lib/consultations";
 import { updateProfile, changePassword } from "@/lib/profile";
 import { getWishlist, removeFromWishlist, type WishlistEntry } from "@/lib/wishlist";
 import { toast } from "sonner";
-import { Check, Calendar, MapPin, Video, Bookmark, User as UserIcon, ClipboardList } from "lucide-react";
+import { Check, Calendar, MapPin, Video, Bookmark, User as UserIcon, ClipboardList, ArrowLeft } from "lucide-react";
 
 type User = { id: number; name: string; email: string; phone?: string | null; address?: string | null };
 
@@ -55,15 +55,28 @@ export default function Profile() {
     navigate("/login");
   };
 
+  const rawName = (user?.name || "").trim();
+  const firstName = rawName.includes("@")
+    ? rawName.split("@")[0].split(/[._\s]/)[0]
+    : rawName.split(/\s+/)[0] || "there";
+  const displayFirst = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+
   return (
     <div className="min-h-screen bg-background p-6 md:p-10">
       <div className="max-w-3xl mx-auto">
+        <button
+          onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/"))}
+          className="mb-6 inline-flex items-center gap-2 text-xs uppercase tracking-[0.28em] text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="Back"
+        >
+          <ArrowLeft size={14} /> Back
+        </button>
         <div className="flex items-center justify-between mb-8">
           <div>
             <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground mb-1">
               Livora | My Account
             </p>
-            <h1 className="serif text-3xl">Hello, {user?.name ?? "..."}</h1>
+            <h1 className="serif text-3xl">Hello, {displayFirst}</h1>
           </div>
           <button
             onClick={logout}
