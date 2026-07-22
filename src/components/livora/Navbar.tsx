@@ -412,14 +412,24 @@ export const Navbar = () => {
                     headerLight ? "text-white/90 hover:text-white" : "text-foreground/80 hover:text-foreground"
                   }`}
                 >
-                  <span
-                    className={`w-8 h-8 flex items-center justify-center rounded-full text-[11px] font-medium tracking-wide ${
-                      headerLight
-                        ? "bg-white/15 border border-white/40 text-white backdrop-blur-sm"
-                        : "bg-foreground text-background"
-                    }`}
-                  >
-                    {initial}
+                  <span className="relative">
+                    <span
+                      className={`w-8 h-8 flex items-center justify-center rounded-full text-[11px] font-medium tracking-wide ${
+                        headerLight
+                          ? "bg-white/15 border border-white/40 text-white backdrop-blur-sm"
+                          : "bg-foreground text-background"
+                      }`}
+                    >
+                      {initial}
+                    </span>
+                    {unreadCount > 0 && (
+                      <span
+                        className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-red-500 text-white text-[9px] font-semibold flex items-center justify-center border-2 border-background"
+                        aria-label={`${unreadCount} unread messages`}
+                      >
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
                   </span>
                   <span
                     className="hidden md:inline text-xs tracking-[0.1em] max-w-[120px] truncate"
