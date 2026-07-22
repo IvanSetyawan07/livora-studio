@@ -15,134 +15,542 @@ export type CatalogPDFData = {
   aboutTitle?: string;
   aboutBody?: string;
   coverImage?: string;
-  scenes?: { image?: string; alt?: string }[];
+  scenes?: { image?: string; alt?: string; title?: string }[];
   items?: { title: string; image?: string; category?: string; slug?: string }[];
+  edition?: string; // e.g. "Autumn Edition 2026"
+  contact?: {
+    email?: string;
+    phone?: string;
+    website?: string;
+    address?: string;
+  };
+};
+
+/* ============================================================
+   Design tokens
+============================================================ */
+const C = {
+  ink: "#1a1a1a",
+  soft: "#4a4a4a",
+  muted: "#8a8072",
+  paper: "#f7f1e8",
+  card: "#ffffff",
+  gold: "#8B7355",
+  hair: "#d9cfbf",
+  overlay: "rgba(20,17,12,0.45)",
 };
 
 const styles = StyleSheet.create({
-  page: { backgroundColor: "#F7F5F0", padding: 0, fontFamily: "Helvetica", color: "#1a1a1a" },
-  cover: { height: "100%", justifyContent: "space-between", padding: 48 },
-  coverTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  brand: { fontSize: 14, letterSpacing: 4, fontFamily: "Helvetica-Bold" },
-  meta: { fontSize: 8, letterSpacing: 2, color: "#555" },
-  coverImg: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, opacity: 0.35 },
+  page: {
+    backgroundColor: C.paper,
+    padding: 0,
+    fontFamily: "Helvetica",
+    color: C.ink,
+  },
+  section: { paddingHorizontal: 56, paddingTop: 56, paddingBottom: 72 },
+
+  /* ---------- Cover ---------- */
+  coverImg: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    objectFit: "cover",
+  },
+  coverScrim: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: C.overlay,
+  },
+  coverFrame: {
+    height: "100%",
+    justifyContent: "space-between",
+    padding: 48,
+    color: "#f7f1e8",
+  },
+  coverTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    color: "#f7f1e8",
+  },
+  coverBrand: {
+    fontSize: 14,
+    letterSpacing: 6,
+    fontFamily: "Helvetica-Bold",
+    color: "#f7f1e8",
+  },
+  coverMeta: { fontSize: 8, letterSpacing: 2.5, color: "#e9e0cd" },
   coverBottom: {},
-  category: { fontSize: 9, letterSpacing: 3, color: "#8B7355", marginBottom: 16 },
-  title: { fontSize: 44, fontFamily: "Times-Roman", lineHeight: 1.1, marginBottom: 12 },
-  tagline: { fontSize: 12, color: "#333", maxWidth: 380, lineHeight: 1.5 },
-  section: { padding: 48 },
-  h1: { fontSize: 22, fontFamily: "Times-Roman", marginBottom: 4 },
-  eyebrow: { fontSize: 8, letterSpacing: 3, color: "#8B7355", marginBottom: 10 },
-  body: { fontSize: 10.5, lineHeight: 1.65, color: "#333" },
-  divider: { height: 1, backgroundColor: "#d9d2c5", marginVertical: 20 },
-  sceneImg: { width: "100%", height: 360, objectFit: "cover", marginBottom: 12 },
-  grid: { flexDirection: "row", flexWrap: "wrap", marginHorizontal: -6 },
-  card: { width: "50%", padding: 6 },
-  cardInner: { backgroundColor: "#fff", padding: 10 },
-  cardImg: { width: "100%", height: 150, objectFit: "cover", marginBottom: 8 },
-  cardTitle: { fontSize: 11, fontFamily: "Helvetica-Bold" },
-  cardCat: { fontSize: 8, color: "#8B7355", letterSpacing: 1.5, marginTop: 2 },
-  footer: { position: "absolute", bottom: 20, left: 48, right: 48, flexDirection: "row", justifyContent: "space-between", fontSize: 7, color: "#888", letterSpacing: 1.5 },
+  coverEyebrow: {
+    fontSize: 9,
+    letterSpacing: 4,
+    color: "#d4c3a3",
+    marginBottom: 20,
+  },
+  coverTitle: {
+    fontFamily: "Times-Roman",
+    fontSize: 52,
+    lineHeight: 1.05,
+    marginBottom: 16,
+    color: "#f7f1e8",
+    maxWidth: 460,
+  },
+  coverTagline: {
+    fontSize: 11.5,
+    color: "#eadfc8",
+    maxWidth: 400,
+    lineHeight: 1.6,
+  },
+  coverRule: {
+    height: 1,
+    width: 60,
+    backgroundColor: "#f7f1e8",
+    marginTop: 28,
+    marginBottom: 20,
+    opacity: 0.6,
+  },
+
+  /* ---------- TOC ---------- */
+  tocRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    paddingVertical: 12,
+    borderBottom: 0.5,
+    borderColor: C.hair,
+  },
+  tocNo: {
+    fontFamily: "Times-Roman",
+    fontSize: 14,
+    color: C.gold,
+    width: 40,
+  },
+  tocLabel: { flex: 1, fontSize: 13, fontFamily: "Times-Roman", color: C.ink },
+  tocPage: { fontSize: 10, color: C.muted, letterSpacing: 1.5 },
+
+  /* ---------- Type ---------- */
+  eyebrow: {
+    fontSize: 8,
+    letterSpacing: 3.5,
+    color: C.gold,
+    marginBottom: 12,
+  },
+  h1: {
+    fontSize: 30,
+    fontFamily: "Times-Roman",
+    lineHeight: 1.15,
+    marginBottom: 6,
+    color: C.ink,
+  },
+  h2: { fontSize: 18, fontFamily: "Times-Roman", marginBottom: 4, color: C.ink },
+  body: { fontSize: 10.5, lineHeight: 1.7, color: C.soft },
+  divider: {
+    height: 1,
+    backgroundColor: C.hair,
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  ruleShort: {
+    height: 1,
+    width: 40,
+    backgroundColor: C.gold,
+    marginTop: 8,
+    marginBottom: 20,
+  },
+
+  /* ---------- About page ---------- */
+  aboutIntro: {
+    fontSize: 14,
+    lineHeight: 1.55,
+    color: C.ink,
+    fontFamily: "Times-Roman",
+    marginBottom: 18,
+  },
+  columns: { flexDirection: "row", gap: 20 },
+  column: { flex: 1 },
+
+  /* ---------- Scene page ---------- */
+  sceneImg: {
+    width: "100%",
+    height: 380,
+    objectFit: "cover",
+  },
+  sceneCaption: {
+    marginTop: 14,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  sceneCaptionL: { flex: 1, paddingRight: 24 },
+  sceneCaptionR: {
+    fontSize: 8,
+    letterSpacing: 2,
+    color: C.muted,
+    textTransform: "uppercase",
+    alignSelf: "flex-end",
+  },
+
+  /* ---------- Grid ---------- */
+  grid: { flexDirection: "row", flexWrap: "wrap", marginHorizontal: -8 },
+  card: { width: "50%", padding: 8 },
+  cardInner: {
+    backgroundColor: C.card,
+    padding: 0,
+    borderColor: C.hair,
+    borderWidth: 0.5,
+  },
+  cardImg: { width: "100%", height: 170, objectFit: "cover" },
+  cardBody: { padding: 12 },
+  cardCat: {
+    fontSize: 7.5,
+    color: C.gold,
+    letterSpacing: 2,
+    marginBottom: 6,
+    textTransform: "uppercase",
+  },
+  cardTitle: {
+    fontSize: 12,
+    fontFamily: "Times-Roman",
+    color: C.ink,
+    marginBottom: 4,
+  },
+  cardMeta: { fontSize: 8, color: C.muted, letterSpacing: 1.2 },
+
+  /* ---------- Directory ---------- */
+  dirRow: {
+    flexDirection: "row",
+    paddingVertical: 8,
+    borderBottom: 0.5,
+    borderColor: C.hair,
+  },
+  dirNo: { width: 34, fontSize: 9, color: C.muted, letterSpacing: 1.5 },
+  dirTitle: { flex: 1, fontSize: 10.5, color: C.ink },
+  dirCat: {
+    fontSize: 8,
+    color: C.gold,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    alignSelf: "center",
+  },
+
+  /* ---------- Back cover ---------- */
+  back: {
+    height: "100%",
+    padding: 56,
+    justifyContent: "space-between",
+    backgroundColor: C.ink,
+    color: C.paper,
+  },
+  backBrand: {
+    fontSize: 32,
+    fontFamily: "Times-Roman",
+    letterSpacing: 8,
+    color: C.paper,
+  },
+  backLine: { fontSize: 10, color: "#c4b797", marginTop: 6, letterSpacing: 2 },
+  backContact: {
+    fontSize: 10,
+    color: "#e2d6b8",
+    lineHeight: 1.9,
+    letterSpacing: 0.5,
+  },
+  backKicker: {
+    fontSize: 8,
+    letterSpacing: 3,
+    color: "#c4b797",
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
+
+  /* ---------- Footer / page number ---------- */
+  footer: {
+    position: "absolute",
+    bottom: 24,
+    left: 56,
+    right: 56,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    fontSize: 7.5,
+    color: C.muted,
+    letterSpacing: 2,
+  },
+  watermark: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    top: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    opacity: 0.04,
+  },
+  watermarkText: {
+    fontSize: 140,
+    fontFamily: "Times-Roman",
+    letterSpacing: 24,
+    color: C.ink,
+  },
 });
 
 const safe = (src?: string) => (src && /^https?:\/\//.test(src) ? src : undefined);
 
-const Footer = ({ page, total }: { page: number; total: number }) => (
+const Footer = ({ label }: { label?: string }) => (
   <View style={styles.footer} fixed>
-    <Text>LIVORA · CATALOG</Text>
-    <Text>{`${page} / ${total}`}</Text>
+    <Text>LIVORA · {label || "CATALOG"}</Text>
+    <Text
+      render={({ pageNumber, totalPages }) =>
+        `${String(pageNumber).padStart(2, "0")} / ${String(totalPages).padStart(2, "0")}`
+      }
+    />
   </View>
 );
 
+const Watermark = () => (
+  <View style={styles.watermark} fixed>
+    <Text style={styles.watermarkText}>L</Text>
+  </View>
+);
+
+/* ============================================================
+   Document
+============================================================ */
 export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
   const items = data.items ?? [];
   const scenes = (data.scenes ?? []).filter((s) => safe(s.image));
   const itemsPerPage = 6;
-  const itemPages: typeof items[] = [];
-  for (let i = 0; i < items.length; i += itemsPerPage) itemPages.push(items.slice(i, i + itemsPerPage));
-  const total = 1 + (data.aboutBody ? 1 : 0) + scenes.length + itemPages.length;
+  const itemPages: (typeof items)[] = [];
+  for (let i = 0; i < items.length; i += itemsPerPage) {
+    itemPages.push(items.slice(i, i + itemsPerPage));
+  }
 
-  let page = 0;
-  const next = () => ++page;
+  const label = (data.category || "Catalog").toString().toUpperCase();
+  const edition =
+    data.edition ||
+    `Edition · ${new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}`;
+
+  /* -- Split about body into 2 columns roughly by sentence -- */
+  const aboutText = (data.aboutBody || "").trim();
+  let firstColumn = aboutText;
+  let secondColumn = "";
+  if (aboutText.length > 240) {
+    const halves = aboutText.split(/(?<=[.!?])\s+/);
+    const mid = Math.ceil(halves.length / 2);
+    firstColumn = halves.slice(0, mid).join(" ");
+    secondColumn = halves.slice(mid).join(" ");
+  }
+
+  /* -- Table of contents entries -- */
+  let cursor = 1; // cover = 1
+  const tocEntries: { label: string; page: number }[] = [];
+  cursor += 1; // TOC page itself
+  if (aboutText) {
+    tocEntries.push({ label: "About this collection", page: cursor + 1 });
+    cursor += 1;
+  }
+  scenes.forEach((_, i) => {
+    tocEntries.push({ label: `Scene ${String(i + 1).padStart(2, "0")}`, page: cursor + 1 });
+    cursor += 1;
+  });
+  if (itemPages.length) {
+    tocEntries.push({ label: "Items in this collection", page: cursor + 1 });
+    cursor += itemPages.length;
+  }
+  if (items.length) {
+    tocEntries.push({ label: "Directory", page: cursor + 1 });
+    cursor += 1;
+  }
+  tocEntries.push({ label: "Contact & Studio", page: cursor + 1 });
 
   return (
-    <Document title={data.title} author="Livora">
-      {/* Cover */}
+    <Document title={data.title} author="Livora" subject={data.tagline}>
+      {/* ========== Cover ========== */}
       <Page size="A4" style={styles.page}>
-        {safe(data.coverImage) && <PdfImage src={safe(data.coverImage)!} style={styles.coverImg} />}
-        <View style={styles.cover}>
+        {safe(data.coverImage) ? (
+          <>
+            <PdfImage src={safe(data.coverImage)!} style={styles.coverImg} />
+            <View style={styles.coverScrim} />
+          </>
+        ) : (
+          <View style={[styles.coverImg, { backgroundColor: C.ink }]} />
+        )}
+        <View style={styles.coverFrame}>
           <View style={styles.coverTop}>
-            <Text style={styles.brand}>LIVORA</Text>
-            <Text style={styles.meta}>CATALOG · {new Date().getFullYear()}</Text>
+            <Text style={styles.coverBrand}>L I V O R A</Text>
+            <Text style={styles.coverMeta}>{edition.toUpperCase()}</Text>
           </View>
           <View style={styles.coverBottom}>
-            {data.category && <Text style={styles.category}>{data.category.toUpperCase()}</Text>}
-            <Text style={styles.title}>{data.title}</Text>
-            {data.tagline && <Text style={styles.tagline}>{data.tagline}</Text>}
+            <Text style={styles.coverEyebrow}>{label}</Text>
+            <Text style={styles.coverTitle}>{data.title}</Text>
+            {data.tagline ? <Text style={styles.coverTagline}>{data.tagline}</Text> : null}
+            <View style={styles.coverRule} />
+            <Text style={styles.coverMeta}>A CURATED VOLUME · PRINTED FOR PRIVATE CLIENTS</Text>
           </View>
         </View>
-        <Footer page={next()} total={total} />
       </Page>
 
-      {/* About */}
-      {data.aboutBody && (
+      {/* ========== Table of Contents ========== */}
+      <Page size="A4" style={styles.page}>
+        <Watermark />
+        <View style={styles.section}>
+          <Text style={styles.eyebrow}>INDEX</Text>
+          <Text style={styles.h1}>Table of contents</Text>
+          <View style={styles.ruleShort} />
+          {tocEntries.map((t, i) => (
+            <View key={i} style={styles.tocRow}>
+              <Text style={styles.tocNo}>{String(i + 1).padStart(2, "0")}</Text>
+              <Text style={styles.tocLabel}>{t.label}</Text>
+              <Text style={styles.tocPage}>PAGE {String(t.page).padStart(2, "0")}</Text>
+            </View>
+          ))}
+        </View>
+        <Footer label={label} />
+      </Page>
+
+      {/* ========== About ========== */}
+      {aboutText ? (
         <Page size="A4" style={styles.page}>
+          <Watermark />
           <View style={styles.section}>
             <Text style={styles.eyebrow}>ABOUT</Text>
             <Text style={styles.h1}>{data.aboutTitle || "About this collection"}</Text>
-            <View style={styles.divider} />
-            <Text style={styles.body}>{data.aboutBody}</Text>
+            <View style={styles.ruleShort} />
+            {data.tagline ? <Text style={styles.aboutIntro}>{data.tagline}</Text> : null}
+            <View style={styles.columns}>
+              <View style={styles.column}>
+                <Text style={styles.body}>{firstColumn}</Text>
+              </View>
+              {secondColumn ? (
+                <View style={styles.column}>
+                  <Text style={styles.body}>{secondColumn}</Text>
+                </View>
+              ) : null}
+            </View>
           </View>
-          <Footer page={next()} total={total} />
+          <Footer label={label} />
         </Page>
-      )}
+      ) : null}
 
-      {/* Scenes */}
+      {/* ========== Scenes ========== */}
       {scenes.map((s, i) => (
         <Page key={`scene-${i}`} size="A4" style={styles.page}>
           <View style={styles.section}>
             <Text style={styles.eyebrow}>SCENE {String(i + 1).padStart(2, "0")}</Text>
-            <Text style={styles.h1}>{data.title}</Text>
-            <View style={styles.divider} />
+            <Text style={styles.h2}>{s.title || data.title}</Text>
+            <View style={styles.ruleShort} />
             <PdfImage src={safe(s.image)!} style={styles.sceneImg} />
-            {s.alt && <Text style={styles.body}>{s.alt}</Text>}
+            <View style={styles.sceneCaption}>
+              <View style={styles.sceneCaptionL}>
+                {s.alt ? <Text style={styles.body}>{s.alt}</Text> : null}
+              </View>
+              <Text style={styles.sceneCaptionR}>
+                Fig. {String(i + 1).padStart(2, "0")}
+              </Text>
+            </View>
           </View>
-          <Footer page={next()} total={total} />
+          <Footer label={label} />
         </Page>
       ))}
 
-      {/* Items grid */}
+      {/* ========== Items grid ========== */}
       {itemPages.map((chunk, pi) => (
         <Page key={`items-${pi}`} size="A4" style={styles.page}>
+          <Watermark />
           <View style={styles.section}>
-            <Text style={styles.eyebrow}>ITEMS IN THIS COLLECTION</Text>
+            <Text style={styles.eyebrow}>
+              ITEMS · {String(pi + 1).padStart(2, "0")} / {String(itemPages.length).padStart(2, "0")}
+            </Text>
             <Text style={styles.h1}>Curated pieces</Text>
-            <View style={styles.divider} />
+            <View style={styles.ruleShort} />
             <View style={styles.grid}>
               {chunk.map((it, i) => (
                 <View key={i} style={styles.card} wrap={false}>
                   <View style={styles.cardInner}>
-                    {safe(it.image) && <PdfImage src={safe(it.image)!} style={styles.cardImg} />}
-                    <Text style={styles.cardTitle}>{it.title}</Text>
-                    {it.category && <Text style={styles.cardCat}>{it.category.toUpperCase()}</Text>}
+                    {safe(it.image) ? (
+                      <PdfImage src={safe(it.image)!} style={styles.cardImg} />
+                    ) : (
+                      <View style={[styles.cardImg, { backgroundColor: C.hair }]} />
+                    )}
+                    <View style={styles.cardBody}>
+                      {it.category ? (
+                        <Text style={styles.cardCat}>{it.category}</Text>
+                      ) : null}
+                      <Text style={styles.cardTitle}>{it.title}</Text>
+                      <Text style={styles.cardMeta}>
+                        № {String(pi * itemsPerPage + i + 1).padStart(3, "0")}
+                      </Text>
+                    </View>
                   </View>
                 </View>
               ))}
             </View>
           </View>
-          <Footer page={next()} total={total} />
+          <Footer label={label} />
         </Page>
       ))}
+
+      {/* ========== Directory ========== */}
+      {items.length ? (
+        <Page size="A4" style={styles.page}>
+          <Watermark />
+          <View style={styles.section}>
+            <Text style={styles.eyebrow}>APPENDIX</Text>
+            <Text style={styles.h1}>Directory</Text>
+            <View style={styles.ruleShort} />
+            {items.map((it, i) => (
+              <View key={i} style={styles.dirRow}>
+                <Text style={styles.dirNo}>{String(i + 1).padStart(3, "0")}</Text>
+                <Text style={styles.dirTitle}>{it.title}</Text>
+                {it.category ? <Text style={styles.dirCat}>{it.category}</Text> : null}
+              </View>
+            ))}
+          </View>
+          <Footer label={label} />
+        </Page>
+      ) : null}
+
+      {/* ========== Back cover ========== */}
+      <Page size="A4" style={styles.page}>
+        <View style={styles.back}>
+          <View>
+            <Text style={styles.backKicker}>THANK YOU FOR READING</Text>
+            <Text style={styles.backBrand}>LIVORA</Text>
+            <Text style={styles.backLine}>{edition}</Text>
+          </View>
+          <View>
+            <Text style={styles.backKicker}>STUDIO · CONTACT</Text>
+            <Text style={styles.backContact}>
+              {data.contact?.email || "hello@livora.studio"}
+              {"\n"}
+              {data.contact?.phone || "+62 811 000 000"}
+              {"\n"}
+              {data.contact?.website || "livora.studio"}
+              {"\n"}
+              {data.contact?.address || "Bali · Jakarta · Singapore"}
+            </Text>
+            <Text style={[styles.backKicker, { marginTop: 24 }]}>
+              © {new Date().getFullYear()} LIVORA · ALL RIGHTS RESERVED
+            </Text>
+          </View>
+        </View>
+      </Page>
     </Document>
   );
 }
 
+/* ============================================================
+   Client-side download helper
+============================================================ */
 export async function downloadCatalogPDF(data: CatalogPDFData) {
   const blob = await pdf(<CatalogPDFDocument data={data} />).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${(data.title || "catalog").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.pdf`;
+  a.download = `livora-${(data.title || "catalog")
+    .replace(/[^a-z0-9]+/gi, "-")
+    .toLowerCase()}.pdf`;
   document.body.appendChild(a);
   a.click();
   a.remove();
