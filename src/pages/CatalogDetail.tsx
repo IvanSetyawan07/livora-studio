@@ -5,7 +5,9 @@
 import SaveButton from "@/components/livora/SaveButton";
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
-import { X, ChevronLeft, ChevronRight, ArrowUpRight } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, ArrowUpRight, Download } from "lucide-react";
+import { downloadCatalogPDF } from "@/components/livora/CatalogPDF";
+import { toast } from "sonner";
 import { motion, useScroll, useTransform, easeOut } from "framer-motion";
 import { Navbar } from "@/components/livora/Navbar";
 import { WhatsAppButton } from "@/components/livora/WhatsAppButton";
