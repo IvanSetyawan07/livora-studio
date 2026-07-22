@@ -172,6 +172,8 @@ Route::delete('/wishlist/{type}/{id}', [WishlistController::class, 'destroy']);
         Route::post('/consultations/{consultation}', [AdminConsultationController::class, 'update']);
         Route::delete('/consultations/{consultation}', [AdminConsultationController::class, 'destroy']);
         Route::post('/consultations/{consultation}/confirm-email', [AdminConsultationController::class, 'confirmEmail']);
+        Route::get('/consultations/{consultation}/messages', [AdminConsultationController::class, 'messagesIndex']);
+        Route::post('/consultations/{consultation}/messages', [AdminConsultationController::class, 'messagesStore']);
 
         // Wishlist admin view
         Route::get('/wishlists', [WishlistController::class, 'adminIndex']);
