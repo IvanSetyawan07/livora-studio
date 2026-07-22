@@ -14,6 +14,7 @@ import {
   Users,
   MessageCircle,
   Bookmark,
+  Mail,
 } from "lucide-react";
 
 const nav = [
@@ -29,6 +30,7 @@ const nav = [
   { to: "/admin/consultations", label: "Consultations", icon: MessageCircle },
   { to: "/admin/wishlists", label: "Saved (Wishlist)", icon: Bookmark },
   { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { to: "/admin/marketing", label: "Email Campaigns", icon: Mail },
 ];
 
 export default function AdminLayout() {

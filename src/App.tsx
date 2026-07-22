@@ -26,6 +26,7 @@ import AdminLanding from "./pages/admin/AdminLanding";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminBanners from "./pages/admin/AdminBanners";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminMarketing from "./pages/admin/AdminMarketing";
 import ScrollToTop from "./components/ScrollToTop.tsx";
 import SmoothScroll from "./components/SmoothScroll.tsx";
 import HeroPreloader from "./components/livora/HeroPreloader.tsx";
@@ -98,6 +99,7 @@ function App() {
                 <Route path="analytics" element={<AdminAnalytics />} />
                 <Route path="banners" element={<AdminBanners />} />
                 <Route path="users" element={<AdminUsers />} />
+                <Route path="marketing" element={<AdminMarketing />} />
                 
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
