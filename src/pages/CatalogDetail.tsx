@@ -232,6 +232,7 @@ export default function CatalogDetail() {
   const [heroReady, setHeroReady] = useState(false);
   const [imgReady, setImgReady] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [pdfPaper, setPdfPaper] = useState<CatalogPageSize>("A4");
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const carouselPages = Math.ceil(exploreItems.length / 4);
