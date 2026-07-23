@@ -44,11 +44,34 @@ const C = {
   overlay: "rgba(20,17,12,0.45)",
 };
 
+import { Font } from "@react-pdf/renderer";
+
+Font.register({
+  family: "Cormorant Garamond",
+  fonts: [
+    {
+      src: "https://cdn.jsdelivr.net/gh/google/fonts/ofl/cormorantgaramond/CormorantGaramond-Regular.ttf",
+      fontWeight: 400,
+    },
+    {
+      src: "https://cdn.jsdelivr.net/gh/google/fonts/ofl/cormorantgaramond/CormorantGaramond-Medium.ttf",
+      fontWeight: 500,
+    },
+    {
+      src: "https://cdn.jsdelivr.net/gh/google/fonts/ofl/cormorantgaramond/CormorantGaramond-SemiBold.ttf",
+      fontWeight: 600,
+    },
+    {
+      src: "https://cdn.jsdelivr.net/gh/google/fonts/ofl/cormorantgaramond/CormorantGaramond-Bold.ttf",
+      fontWeight: 700,
+    },
+  ],
+});
 const styles = StyleSheet.create({
   page: {
     backgroundColor: C.paper,
     padding: 0,
-    fontFamily: "Helvetica",
+    fontFamily: "Cormorant Garamond",
     color: C.ink,
   },
   section: { paddingHorizontal: 56, paddingTop: 56, paddingBottom: 72 },
@@ -85,7 +108,7 @@ const styles = StyleSheet.create({
   coverBrand: {
     fontSize: 14,
     letterSpacing: 6,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Cormorant Garamond",
     color: "#f7f1e8",
   },
   coverMeta: { fontSize: 8, letterSpacing: 2.5, color: "#e9e0cd" },
@@ -97,7 +120,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   coverTitle: {
-    fontFamily: "Times-Roman",
+    fontFamily: "Cormorant Garamond",
     fontSize: 52,
     lineHeight: 1.05,
     marginBottom: 16,
@@ -128,12 +151,12 @@ const styles = StyleSheet.create({
     borderColor: C.hair,
   },
   tocNo: {
-    fontFamily: "Times-Roman",
+    fontFamily: "Cormorant Garamond",
     fontSize: 14,
     color: C.gold,
     width: 40,
   },
-  tocLabel: { flex: 1, fontSize: 13, fontFamily: "Times-Roman", color: C.ink },
+  tocLabel: { flex: 1, fontSize: 13, fontFamily: "Cormorant Garamond", color: C.ink },
   tocPage: { fontSize: 10, color: C.muted, letterSpacing: 1.5 },
 
   /* ---------- Type ---------- */
@@ -145,12 +168,12 @@ const styles = StyleSheet.create({
   },
   h1: {
     fontSize: 30,
-    fontFamily: "Times-Roman",
+    fontFamily: "Cormorant Garamond",
     lineHeight: 1.15,
     marginBottom: 6,
     color: C.ink,
   },
-  h2: { fontSize: 18, fontFamily: "Times-Roman", marginBottom: 4, color: C.ink },
+  h2: { fontSize: 18, fontFamily: "Cormorant Garamond", marginBottom: 4, color: C.ink },
   body: { fontSize: 10.5, lineHeight: 1.7, color: C.soft },
   divider: {
     height: 1,
@@ -171,7 +194,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 1.55,
     color: C.ink,
-    fontFamily: "Times-Roman",
+    fontFamily: "Cormorant Garamond",
     marginBottom: 18,
   },
   columns: { flexDirection: "row", gap: 20 },
@@ -217,7 +240,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 12,
-    fontFamily: "Times-Roman",
+    fontFamily: "Cormorant Garamond",
     color: C.ink,
     marginBottom: 4,
   },
@@ -250,7 +273,7 @@ const styles = StyleSheet.create({
   },
   backBrand: {
     fontSize: 32,
-    fontFamily: "Times-Roman",
+    fontFamily: "Cormorant Garamond",
     letterSpacing: 8,
     color: C.paper,
   },
@@ -293,7 +316,7 @@ const styles = StyleSheet.create({
   },
   watermarkText: {
     fontSize: 140,
-    fontFamily: "Times-Roman",
+    fontFamily: "Cormorant Garamond",
     letterSpacing: 24,
     color: C.ink,
   },
@@ -379,8 +402,8 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
       <Page size={pageSize} style={styles.page}>
         {safe(data.coverImage) ? (
           <>
-            <PdfImage src={safe(data.coverImage)!} style={styles.coverImg} />
-            <View style={styles.coverScrim} />
+            <PdfImage src={safe(data.coverImage)!} style={styles.coverImg} fixed />
+            <View style={styles.coverScrim} fixed />
           </>
         ) : (
           <View style={[styles.coverImg, { backgroundColor: C.ink }]} />
@@ -444,24 +467,24 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
 
       {/* ========== Scenes ========== */}
       {scenes.map((s, i) => (
-        <Page key={`scene-${i}`} size={pageSize} style={styles.page}>
-          <View style={styles.section}>
-            <Text style={styles.eyebrow}>SCENE {String(i + 1).padStart(2, "0")}</Text>
-            <Text style={styles.h2}>{s.title || data.title}</Text>
-            <View style={styles.ruleShort} />
-            <PdfImage src={safe(s.image)!} style={styles.sceneImg} />
-            <View style={styles.sceneCaption}>
-              <View style={styles.sceneCaptionL}>
-                {s.alt ? <Text style={styles.body}>{s.alt}</Text> : null}
-              </View>
-              <Text style={styles.sceneCaptionR}>
-                Fig. {String(i + 1).padStart(2, "0")}
-              </Text>
-            </View>
-          </View>
-          <Footer label={label} />
-        </Page>
-      ))}
+  <Page key={`scene-${i}`} size={pageSize} style={styles.page}>
+    <View style={styles.section} wrap={false}>   {/* ← tambahkan ini */}
+      <Text style={styles.eyebrow}>SCENE {String(i + 1).padStart(2, "0")}</Text>
+      <Text style={styles.h2}>{s.title || data.title}</Text>
+      <View style={styles.ruleShort} />
+      <PdfImage src={safe(s.image)!} style={styles.sceneImg} />
+      <View style={styles.sceneCaption}>
+        <View style={styles.sceneCaptionL}>
+          {s.alt ? <Text style={styles.body}>{s.alt}</Text> : null}
+        </View>
+        <Text style={styles.sceneCaptionR}>
+          Fig. {String(i + 1).padStart(2, "0")}
+        </Text>
+      </View>
+    </View>
+    <Footer label={label} />
+  </Page>
+))}
 
       {/* ========== Items grid ========== */}
       {itemPages.map((chunk, pi) => (

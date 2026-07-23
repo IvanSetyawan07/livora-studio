@@ -182,10 +182,10 @@ export default function CatalogDetail() {
         const allRes = await getAllCatalogs({ per_page: 100 });
         const allRaw = allRes.data as unknown as any[];
         const siblings = allRaw
-          .filter((i) => i.category === catalogData.category && i.slug !== catalogData.slug)
-          .map((i) => normaliseCatalog(i as Catalog))
-          .slice(0, 1);
-        setExploreItems(siblings);
+  .filter((i) => i.category === catalogData.category && i.slug !== catalogData.slug)
+  .map((i) => normaliseCatalog(i as Catalog))
+  .slice(0, 1);
+setExploreItems(siblings);
       } catch (err) {
         console.error("Failed to load catalog:", err);
         setNotFound(true);
@@ -224,7 +224,22 @@ export default function CatalogDetail() {
       },
     ];
   }, [rawCatalog, hotspots, item]);
-
+const catalogItems = useMemo(() => {
+    const seen = new Set<string>();
+    const result: { title: string; image?: string; slug?: string }[] = [];
+    scenes.flatMap((s) => s.hotspots).forEach((spot: any) => {
+      const itemSlug = spot.item_slug || spot.itemSlug;
+      if (!itemSlug || seen.has(itemSlug)) return;
+      seen.add(itemSlug);
+      const detail = itemMap[itemSlug];
+      result.push({
+        title: detail?.title || spot.label,
+        image: detail?.image ? imgUrl(detail.image) : undefined,
+        slug: itemSlug,
+      });
+    });
+    return result;
+  }, [scenes, itemMap]);
   // ── UI State
   const [sceneIdx, setSceneIdx] = useState(0);
   const [activeSpot, setActiveSpot] = useState<HotspotItem | null>(null);
@@ -232,7 +247,44 @@ export default function CatalogDetail() {
   const [heroReady, setHeroReady] = useState(false);
   const [imgReady, setImgReady] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [pdfPaper, setPdfPaper] = useState<CatalogPageSize>("A4");
+ const [pdfMenuOpen, setPdfMenuOpen] = useState(false);
+const [pdfLoading, setPdfLoading] = useState(false);
+const pdfMenuRef = useRef<HTMLDivElement>(null);
+useEffect(() => {
+  const handleClickOutside = (e: MouseEvent) => {
+    if (pdfMenuRef.current && !pdfMenuRef.current.contains(e.target as Node)) {
+      setPdfMenuOpen(false);
+    }
+  };
+  document.addEventListener("mousedown", handleClickOutside);
+  return () => document.removeEventListener("mousedown", handleClickOutside);
+}, []);
+
+const handleDownloadPDF = async (size: CatalogPageSize) => {
+  setPdfMenuOpen(false);
+  setPdfLoading(true);
+  try {
+    toast.loading(`Preparing ${size} PDF…`, { id: "pdf-cat" });
+    await downloadCatalogPDF({
+      title: item.title,
+      tagline: (item as any).tagline,
+      aboutTitle: (item as any).aboutTitle,
+      aboutBody: (item as any).description || (item as any).about_body,
+      category: typeof item.category === "string" ? item.category : (item.category as any)?.slug,
+      coverImage: (item as any).coverImage || (item as any).cover_image,
+      scenes: scenes.map((s) => ({ image: s.image, alt: s.alt })),
+      items: catalogItems,
+      pageSize: size,
+      logoUrl: logoLivora,
+    });
+    toast.success("PDF downloaded", { id: "pdf-cat" });
+  } catch (e) {
+    console.error(e);
+    toast.error("Failed to generate PDF", { id: "pdf-cat" });
+  } finally {
+    setPdfLoading(false);
+  }
+};
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const carouselPages = Math.ceil(exploreItems.length / 4);
@@ -442,7 +494,7 @@ export default function CatalogDetail() {
           {!heroReady && !imgReady && (
             <div className="absolute inset-0 bg-[hsl(var(--livora-stone))]" />
           )}
-
+          
           {/* Video background */}
           <video
             ref={videoRef}
@@ -548,52 +600,31 @@ export default function CatalogDetail() {
 </div>
               </Link>
               
-              <div className="flex items-stretch border border-white/40 hover:border-white transition-colors duration-300">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      toast.loading(`Preparing ${pdfPaper} PDF…`, { id: "pdf-cat" });
-                      await downloadCatalogPDF({
-                        title: item.title,
-                        tagline: (item as any).tagline,
-                        aboutTitle: (item as any).aboutTitle,
-                        aboutBody: (item as any).description || (item as any).about_body,
-                        category: typeof item.category === "string" ? item.category : (item.category as any)?.slug,
-                        coverImage: (item as any).coverImage || (item as any).cover_image,
-                        scenes: scenes.map((s) => ({ image: s.image, alt: s.alt })),
-                        items: exploreItems.map((i) => ({ title: i.title, image: (i as any).coverImage || (i as any).cover_image, category: typeof i.category === "string" ? i.category : (i.category as any)?.slug })),
-                        pageSize: pdfPaper,
-                        logoUrl: logoLivora,
-                      });
-                      toast.success("PDF downloaded", { id: "pdf-cat" });
-                    } catch (e) {
-                      console.error(e);
-                      toast.error("Failed to generate PDF", { id: "pdf-cat" });
-                    }
-                  }}
-                  className="text-[10px] uppercase tracking-[0.18em] text-white/80 hover:text-white transition-colors duration-300 font-light flex items-center gap-1.5 px-6 py-3.5"
-                >
-                  <Download size={12} /> Download PDF
-                </button>
-                <div className="w-px bg-white/30" />
-                <div className="flex items-center">
-                  {(["A4", "LETTER"] as CatalogPageSize[]).map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => setPdfPaper(p)}
-                      className={`text-[9px] uppercase tracking-[0.2em] px-3 py-3.5 font-light transition-colors duration-200 ${
-                        pdfPaper === p
-                          ? "bg-white/15 text-white"
-                          : "text-white/60 hover:text-white"
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <div className="relative" ref={pdfMenuRef}>
+  <button
+    type="button"
+    disabled={pdfLoading}
+    onClick={() => setPdfMenuOpen((v) => !v)}
+    className="text-[10px] uppercase tracking-[0.18em] text-white/80 hover:text-white transition-colors duration-300 font-light flex items-center gap-1.5 px-6 py-3.5 border border-white/40 hover:border-white disabled:opacity-50"
+  >
+    <Download size={12} /> {pdfLoading ? "Preparing…" : "Download PDF"}
+  </button>
+
+  {pdfMenuOpen && (
+    <div className="absolute bottom-full left-0 mb-2 w-full min-w-[140px] bg-background border border-border shadow-lg z-30">
+      {(["A4", "LETTER"] as CatalogPageSize[]).map((p) => (
+        <button
+          key={p}
+          type="button"
+          onClick={() => handleDownloadPDF(p)}
+          className="w-full text-left text-[10px] uppercase tracking-[0.18em] px-4 py-3 font-light text-foreground hover:bg-secondary transition-colors duration-200"
+        >
+          {p}
+        </button>
+      ))}
+    </div>
+  )}
+</div>
             </motion.div>
           </div>
         </motion.div>
