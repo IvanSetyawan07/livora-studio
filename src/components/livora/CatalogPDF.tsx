@@ -8,6 +8,8 @@ import {
   pdf,
 } from "@react-pdf/renderer";
 
+export type CatalogPageSize = "A4" | "LETTER";
+
 export type CatalogPDFData = {
   title: string;
   tagline?: string;
@@ -24,6 +26,8 @@ export type CatalogPDFData = {
     website?: string;
     address?: string;
   };
+  pageSize?: CatalogPageSize;
+  logoUrl?: string; // PNG watermark logo (optional)
 };
 
 /* ============================================================
@@ -295,7 +299,7 @@ const styles = StyleSheet.create({
   },
 });
 
-const safe = (src?: string) => (src && /^https?:\/\//.test(src) ? src : undefined);
+const safe = (src?: string) => (src && /^(https?:|data:|blob:)/.test(src) ? src : undefined);
 
 const Footer = ({ label }: { label?: string }) => (
   <View style={styles.footer} fixed>
@@ -308,9 +312,13 @@ const Footer = ({ label }: { label?: string }) => (
   </View>
 );
 
-const Watermark = () => (
+const Watermark = ({ logo }: { logo?: string }) => (
   <View style={styles.watermark} fixed>
-    <Text style={styles.watermarkText}>L</Text>
+    {safe(logo) ? (
+      <PdfImage src={safe(logo)!} style={{ width: 320, height: 320, objectFit: "contain" }} />
+    ) : (
+      <Text style={styles.watermarkText}>L</Text>
+    )}
   </View>
 );
 
@@ -320,6 +328,7 @@ const Watermark = () => (
 export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
   const items = data.items ?? [];
   const scenes = (data.scenes ?? []).filter((s) => safe(s.image));
+  const pageSize: CatalogPageSize = data.pageSize || "A4";
   const itemsPerPage = 6;
   const itemPages: (typeof items)[] = [];
   for (let i = 0; i < items.length; i += itemsPerPage) {
@@ -367,7 +376,7 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
   return (
     <Document title={data.title} author="Livora" subject={data.tagline}>
       {/* ========== Cover ========== */}
-      <Page size="A4" style={styles.page}>
+      <Page size={pageSize} style={styles.page}>
         {safe(data.coverImage) ? (
           <>
             <PdfImage src={safe(data.coverImage)!} style={styles.coverImg} />
@@ -392,8 +401,8 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
       </Page>
 
       {/* ========== Table of Contents ========== */}
-      <Page size="A4" style={styles.page}>
-        <Watermark />
+      <Page size={pageSize} style={styles.page}>
+        <Watermark logo={data.logoUrl} />
         <View style={styles.section}>
           <Text style={styles.eyebrow}>INDEX</Text>
           <Text style={styles.h1}>Table of contents</Text>
@@ -411,8 +420,8 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
 
       {/* ========== About ========== */}
       {aboutText ? (
-        <Page size="A4" style={styles.page}>
-          <Watermark />
+        <Page size={pageSize} style={styles.page}>
+          <Watermark logo={data.logoUrl} />
           <View style={styles.section}>
             <Text style={styles.eyebrow}>ABOUT</Text>
             <Text style={styles.h1}>{data.aboutTitle || "About this collection"}</Text>
@@ -435,7 +444,7 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
 
       {/* ========== Scenes ========== */}
       {scenes.map((s, i) => (
-        <Page key={`scene-${i}`} size="A4" style={styles.page}>
+        <Page key={`scene-${i}`} size={pageSize} style={styles.page}>
           <View style={styles.section}>
             <Text style={styles.eyebrow}>SCENE {String(i + 1).padStart(2, "0")}</Text>
             <Text style={styles.h2}>{s.title || data.title}</Text>
@@ -456,8 +465,8 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
 
       {/* ========== Items grid ========== */}
       {itemPages.map((chunk, pi) => (
-        <Page key={`items-${pi}`} size="A4" style={styles.page}>
-          <Watermark />
+        <Page key={`items-${pi}`} size={pageSize} style={styles.page}>
+          <Watermark logo={data.logoUrl} />
           <View style={styles.section}>
             <Text style={styles.eyebrow}>
               ITEMS · {String(pi + 1).padStart(2, "0")} / {String(itemPages.length).padStart(2, "0")}
@@ -493,8 +502,8 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
 
       {/* ========== Directory ========== */}
       {items.length ? (
-        <Page size="A4" style={styles.page}>
-          <Watermark />
+        <Page size={pageSize} style={styles.page}>
+          <Watermark logo={data.logoUrl} />
           <View style={styles.section}>
             <Text style={styles.eyebrow}>APPENDIX</Text>
             <Text style={styles.h1}>Directory</Text>
@@ -512,7 +521,7 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
       ) : null}
 
       {/* ========== Back cover ========== */}
-      <Page size="A4" style={styles.page}>
+      <Page size={pageSize} style={styles.page}>
         <View style={styles.back}>
           <View>
             <Text style={styles.backKicker}>THANK YOU FOR READING</Text>
@@ -541,16 +550,60 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
 }
 
 /* ============================================================
+   Image proxy — bypass CORS by turning cross-origin URLs into
+   data URLs before handing them to @react-pdf/renderer.
+============================================================ */
+const imageCache = new Map<string, string>();
+
+async function proxifyImage(url?: string): Promise<string | undefined> {
+  if (!url) return undefined;
+  if (/^(data:|blob:)/.test(url)) return url;
+  if (imageCache.has(url)) return imageCache.get(url);
+  try {
+    const res = await fetch(url, { mode: "cors", credentials: "omit" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    const dataUrl: string = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.onerror = reject;
+      r.readAsDataURL(blob);
+    });
+    imageCache.set(url, dataUrl);
+    return dataUrl;
+  } catch (e) {
+    console.warn("[CatalogPDF] proxifyImage failed, falling back:", url, e);
+    return url; // let react-pdf try directly
+  }
+}
+
+async function preloadImages(data: CatalogPDFData): Promise<CatalogPDFData> {
+  const [coverImage, logoUrl, scenes, items] = await Promise.all([
+    proxifyImage(data.coverImage),
+    proxifyImage(data.logoUrl),
+    Promise.all(
+      (data.scenes ?? []).map(async (s) => ({ ...s, image: await proxifyImage(s.image) })),
+    ),
+    Promise.all(
+      (data.items ?? []).map(async (i) => ({ ...i, image: await proxifyImage(i.image) })),
+    ),
+  ]);
+  return { ...data, coverImage, logoUrl, scenes, items };
+}
+
+/* ============================================================
    Client-side download helper
 ============================================================ */
 export async function downloadCatalogPDF(data: CatalogPDFData) {
-  const blob = await pdf(<CatalogPDFDocument data={data} />).toBlob();
+  const prepared = await preloadImages(data);
+  const blob = await pdf(<CatalogPDFDocument data={prepared} />).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `livora-${(data.title || "catalog")
+  const paper = (prepared.pageSize || "A4").toLowerCase();
+  a.download = `livora-${(prepared.title || "catalog")
     .replace(/[^a-z0-9]+/gi, "-")
-    .toLowerCase()}.pdf`;
+    .toLowerCase()}-${paper}.pdf`;
   document.body.appendChild(a);
   a.click();
   a.remove();
