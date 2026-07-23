@@ -70,7 +70,7 @@ export default function HeroPreloader() {
       cancelled = true;
       clearTimeout(tIn);
     };
-  }, [location.pathname]);
+  }, []); // cuma jalan sekali saat pertama kali app di-load, bukan tiap ganti halaman
 
   if (!visible) return null;
 
