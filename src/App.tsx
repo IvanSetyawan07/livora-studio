@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
+
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -49,7 +50,17 @@ import AdminWishlists from "./pages/admin/AdminWishlists.tsx";
 import Register from "./pages/Register.tsx";
 
 
+
 const queryClient = new QueryClient();
+
+function HeroPreloaderGate() {
+  const { pathname } = useLocation();
+  const heroRoutes = ["/", "/catalog", "/collection", "/projects", "/furniture", "/about"];
+  const isHeroPage = heroRoutes.some(
+    (r) => pathname === r || pathname.startsWith(r + "/")
+  );
+  return isHeroPage ? <HeroPreloader /> : null;
+}
 
 function App() {
   return (
@@ -59,8 +70,8 @@ function App() {
         <Sonner />
         <CartProvider>
           <BrowserRouter>
-            <HeroPreloader />
-            <ScrollToTop />
+  <HeroPreloaderGate />
+  <ScrollToTop />
             <SmoothScroll />
             <Routes>
               <Route path="/erd" element={<ERD />} />
