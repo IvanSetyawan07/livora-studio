@@ -50,19 +50,19 @@ Font.register({
   family: "Cormorant Garamond",
   fonts: [
     {
-      src: "https://cdn.jsdelivr.net/gh/google/fonts/ofl/cormorantgaramond/CormorantGaramond-Regular.ttf",
+      src: "https://raw.githubusercontent.com/google/fonts/main/ofl/cormorantgaramond/CormorantGaramond%5Bwght%5D.ttf",
       fontWeight: 400,
     },
     {
-      src: "https://cdn.jsdelivr.net/gh/google/fonts/ofl/cormorantgaramond/CormorantGaramond-Medium.ttf",
+      src: "https://raw.githubusercontent.com/google/fonts/main/ofl/cormorantgaramond/CormorantGaramond%5Bwght%5D.ttf",
       fontWeight: 500,
     },
     {
-      src: "https://cdn.jsdelivr.net/gh/google/fonts/ofl/cormorantgaramond/CormorantGaramond-SemiBold.ttf",
+      src: "https://raw.githubusercontent.com/google/fonts/main/ofl/cormorantgaramond/CormorantGaramond%5Bwght%5D.ttf",
       fontWeight: 600,
     },
     {
-      src: "https://cdn.jsdelivr.net/gh/google/fonts/ofl/cormorantgaramond/CormorantGaramond-Bold.ttf",
+      src: "https://raw.githubusercontent.com/google/fonts/main/ofl/cormorantgaramond/CormorantGaramond%5Bwght%5D.ttf",
       fontWeight: 700,
     },
   ],
@@ -576,22 +576,55 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
    Image proxy — bypass CORS by turning cross-origin URLs into
    data URLs before handing them to @react-pdf/renderer.
 ============================================================ */
+
 const imageCache = new Map<string, string>();
+
+function blobToDataURL(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as string);
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+}
+
+async function convertBlobToPngDataURL(blob: Blob): Promise<string> {
+  const bitmap = await createImageBitmap(blob);
+  const canvas = document.createElement("canvas");
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas 2D context unavailable");
+  ctx.drawImage(bitmap, 0, 0);
+  bitmap.close?.();
+  return canvas.toDataURL("image/png");
+}
 
 async function proxifyImage(url?: string): Promise<string | undefined> {
   if (!url) return undefined;
+
+  // Already a data URL — still need to convert if it's webp
+  if (/^data:image\/webp/i.test(url)) {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      return await convertBlobToPngDataURL(blob);
+    } catch (e) {
+      console.warn("[CatalogPDF] webp dataURL conversion failed:", e);
+      return url;
+    }
+  }
   if (/^(data:|blob:)/.test(url)) return url;
   if (imageCache.has(url)) return imageCache.get(url);
+
   try {
     const res = await fetch(url, { mode: "cors", credentials: "omit" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const blob = await res.blob();
-    const dataUrl: string = await new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(r.result as string);
-      r.onerror = reject;
-      r.readAsDataURL(blob);
-    });
+    const isWebp = blob.type === "image/webp" || /\.webp(\?|$)/i.test(url);
+    const dataUrl = isWebp
+      ? await convertBlobToPngDataURL(blob)
+      : await blobToDataURL(blob);
     imageCache.set(url, dataUrl);
     return dataUrl;
   } catch (e) {
