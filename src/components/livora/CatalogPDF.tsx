@@ -328,6 +328,7 @@ const Watermark = ({ logo }: { logo?: string }) => (
 export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
   const items = data.items ?? [];
   const scenes = (data.scenes ?? []).filter((s) => safe(s.image));
+  const pageSize: CatalogPageSize = data.pageSize || "A4";
   const itemsPerPage = 6;
   const itemPages: (typeof items)[] = [];
   for (let i = 0; i < items.length; i += itemsPerPage) {
