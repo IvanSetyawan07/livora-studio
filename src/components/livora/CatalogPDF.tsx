@@ -375,7 +375,7 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
   return (
     <Document title={data.title} author="Livora" subject={data.tagline}>
       {/* ========== Cover ========== */}
-      <Page size="A4" style={styles.page}>
+      <Page size={pageSize} style={styles.page}>
         {safe(data.coverImage) ? (
           <>
             <PdfImage src={safe(data.coverImage)!} style={styles.coverImg} />
@@ -400,8 +400,8 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
       </Page>
 
       {/* ========== Table of Contents ========== */}
-      <Page size="A4" style={styles.page}>
-        <Watermark />
+      <Page size={pageSize} style={styles.page}>
+        <Watermark logo={data.logoUrl} />
         <View style={styles.section}>
           <Text style={styles.eyebrow}>INDEX</Text>
           <Text style={styles.h1}>Table of contents</Text>
@@ -419,8 +419,8 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
 
       {/* ========== About ========== */}
       {aboutText ? (
-        <Page size="A4" style={styles.page}>
-          <Watermark />
+        <Page size={pageSize} style={styles.page}>
+          <Watermark logo={data.logoUrl} />
           <View style={styles.section}>
             <Text style={styles.eyebrow}>ABOUT</Text>
             <Text style={styles.h1}>{data.aboutTitle || "About this collection"}</Text>
@@ -443,7 +443,7 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
 
       {/* ========== Scenes ========== */}
       {scenes.map((s, i) => (
-        <Page key={`scene-${i}`} size="A4" style={styles.page}>
+        <Page key={`scene-${i}`} size={pageSize} style={styles.page}>
           <View style={styles.section}>
             <Text style={styles.eyebrow}>SCENE {String(i + 1).padStart(2, "0")}</Text>
             <Text style={styles.h2}>{s.title || data.title}</Text>
@@ -464,8 +464,8 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
 
       {/* ========== Items grid ========== */}
       {itemPages.map((chunk, pi) => (
-        <Page key={`items-${pi}`} size="A4" style={styles.page}>
-          <Watermark />
+        <Page key={`items-${pi}`} size={pageSize} style={styles.page}>
+          <Watermark logo={data.logoUrl} />
           <View style={styles.section}>
             <Text style={styles.eyebrow}>
               ITEMS · {String(pi + 1).padStart(2, "0")} / {String(itemPages.length).padStart(2, "0")}
@@ -501,8 +501,8 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
 
       {/* ========== Directory ========== */}
       {items.length ? (
-        <Page size="A4" style={styles.page}>
-          <Watermark />
+        <Page size={pageSize} style={styles.page}>
+          <Watermark logo={data.logoUrl} />
           <View style={styles.section}>
             <Text style={styles.eyebrow}>APPENDIX</Text>
             <Text style={styles.h1}>Directory</Text>
@@ -520,7 +520,7 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
       ) : null}
 
       {/* ========== Back cover ========== */}
-      <Page size="A4" style={styles.page}>
+      <Page size={pageSize} style={styles.page}>
         <View style={styles.back}>
           <View>
             <Text style={styles.backKicker}>THANK YOU FOR READING</Text>
