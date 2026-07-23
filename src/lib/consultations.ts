@@ -30,6 +30,7 @@ export type Consultation = ConsultationPayload & {
   follow_up_date: string | null;
   created_at: string;
   updated_at: string;
+  unread_messages_count: number;
 };
 
 /** Submit form appointment/consultation. Bekerja untuk guest maupun user login. */

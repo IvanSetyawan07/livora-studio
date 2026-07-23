@@ -12,16 +12,19 @@ use Illuminate\Support\Facades\Mail;
 class ConsultationController extends Controller
 {
     public function index(Request $request)
-    {
-        return Consultation::with(['user:id,name,email', 'assignedAdmin:id,name'])
-            ->orderByDesc('created_at')
-            ->get()
-            ->map(function (Consultation $c) {
-                $arr = $c->toArray();
-                $arr['status_label'] = $c->statusLabel();
-                return $arr;
-            });
-    }
+{
+    return Consultation::with(['user:id,name,email', 'assignedAdmin:id,name'])
+        ->withCount(['messages as unread_messages_count' => function ($q) {
+            $q->where('sender_type', 'user')->whereNull('read_at');
+        }])
+        ->orderByDesc('created_at')
+        ->get()
+        ->map(function (Consultation $c) {
+            $arr = $c->toArray();
+            $arr['status_label'] = $c->statusLabel();
+            return $arr;
+        });
+}
 
     public function show(Request $request, Consultation $consultation)
     {

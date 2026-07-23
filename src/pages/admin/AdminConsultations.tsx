@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { MessageCircle, X } from "lucide-react";
 import {
   getAdminConsultations,
   updateAdminConsultation,
   deleteAdminConsultation,
 } from "@/lib/adminConsultations";
 import type { Consultation } from "@/lib/consultations";
-
+import ConsultationChat from "@/components/livora/ConsultationChat";
 const STATUS_OPTIONS = [
   { value: "new_inquiry", label: "New Inquiry" },
   { value: "under_review", label: "Under Review" },
@@ -20,26 +21,37 @@ const STATUS_OPTIONS = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
+const POLL_MS = 20_000;
+
 export default function AdminConsultations() {
   const navigate = useNavigate();
   const [items, setItems] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
+  const [chatConsultation, setChatConsultation] = useState<Consultation | null>(null);
 
-  const load = async () => {
-    setLoading(true);
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await getAdminConsultations();
       setItems(data);
     } catch {
-      toast.error("Gagal memuat data consultations.");
+      if (!silent) toast.error("Gagal memuat data consultations.");
+      // silent poll gagal -> diamkan saja, coba lagi di poll berikutnya
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     load();
+    const timer = setInterval(() => load(true), POLL_MS);
+    const onVis = () => document.visibilityState === "visible" && load(true);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, []);
 
   const handleStatusChange = async (id: number, status: string) => {
@@ -61,6 +73,15 @@ export default function AdminConsultations() {
     } catch {
       toast.error("Gagal menghapus consultation.");
     }
+  };
+
+  const openChat = (c: Consultation) => {
+    setChatConsultation(c);
+    // messagesIndex sudah menandai read_at di backend saat chat fetch pesan,
+    // ini cuma optimistic update biar badge langsung hilang di UI.
+    setItems((prev) =>
+      prev.map((it) => (it.id === c.id ? { ...it, unread_messages_count: 0 } : it))
+    );
   };
 
   const filtered = filter === "all" ? items : items.filter((c) => c.status === filter);
@@ -119,6 +140,7 @@ export default function AdminConsultations() {
                   <th className="text-left px-4 py-3">Type</th>
                   <th className="text-left px-4 py-3">Status</th>
                   <th className="text-left px-4 py-3">Submitted</th>
+                  <th className="text-left px-4 py-3">Chat</th>
                   <th className="text-left px-4 py-3">Action</th>
                 </tr>
               </thead>
@@ -154,6 +176,20 @@ export default function AdminConsultations() {
                     </td>
                     <td className="px-4 py-3">
                       <button
+                        onClick={() => openChat(c)}
+                        className="relative inline-flex items-center justify-center w-8 h-8 rounded hover:bg-secondary/60"
+                        aria-label="Buka chat"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        {c.unread_messages_count > 0 && (
+                          <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[10px] leading-4 text-center">
+                            {c.unread_messages_count > 9 ? "9+" : c.unread_messages_count}
+                          </span>
+                        )}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
                         onClick={() => handleDelete(c.id)}
                         className="text-xs text-red-600 hover:underline"
                       >
@@ -167,6 +203,35 @@ export default function AdminConsultations() {
           </div>
         )}
       </div>
+
+      {chatConsultation && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/30">
+          <div className="w-full max-w-md h-full bg-background shadow-xl border-l border-border flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <div>
+                <p className="text-sm font-medium">
+                  {chatConsultation.first_name} {chatConsultation.last_name}
+                </p>
+                <p className="text-xs text-muted-foreground">{chatConsultation.email}</p>
+              </div>
+              <button
+                onClick={() => setChatConsultation(null)}
+                className="text-muted-foreground hover:text-foreground"
+                aria-label="Tutup chat"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex-1 p-4 overflow-hidden">
+              <ConsultationChat
+                consultationId={chatConsultation.id}
+                mode="admin"
+                locked={chatConsultation.status === "cancelled"}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
