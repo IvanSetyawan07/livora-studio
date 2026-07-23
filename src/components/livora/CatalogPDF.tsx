@@ -550,16 +550,60 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
 }
 
 /* ============================================================
+   Image proxy — bypass CORS by turning cross-origin URLs into
+   data URLs before handing them to @react-pdf/renderer.
+============================================================ */
+const imageCache = new Map<string, string>();
+
+async function proxifyImage(url?: string): Promise<string | undefined> {
+  if (!url) return undefined;
+  if (/^(data:|blob:)/.test(url)) return url;
+  if (imageCache.has(url)) return imageCache.get(url);
+  try {
+    const res = await fetch(url, { mode: "cors", credentials: "omit" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    const dataUrl: string = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.onerror = reject;
+      r.readAsDataURL(blob);
+    });
+    imageCache.set(url, dataUrl);
+    return dataUrl;
+  } catch (e) {
+    console.warn("[CatalogPDF] proxifyImage failed, falling back:", url, e);
+    return url; // let react-pdf try directly
+  }
+}
+
+async function preloadImages(data: CatalogPDFData): Promise<CatalogPDFData> {
+  const [coverImage, logoUrl, scenes, items] = await Promise.all([
+    proxifyImage(data.coverImage),
+    proxifyImage(data.logoUrl),
+    Promise.all(
+      (data.scenes ?? []).map(async (s) => ({ ...s, image: await proxifyImage(s.image) })),
+    ),
+    Promise.all(
+      (data.items ?? []).map(async (i) => ({ ...i, image: await proxifyImage(i.image) })),
+    ),
+  ]);
+  return { ...data, coverImage, logoUrl, scenes, items };
+}
+
+/* ============================================================
    Client-side download helper
 ============================================================ */
 export async function downloadCatalogPDF(data: CatalogPDFData) {
-  const blob = await pdf(<CatalogPDFDocument data={data} />).toBlob();
+  const prepared = await preloadImages(data);
+  const blob = await pdf(<CatalogPDFDocument data={prepared} />).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `livora-${(data.title || "catalog")
+  const paper = (prepared.pageSize || "A4").toLowerCase();
+  a.download = `livora-${(prepared.title || "catalog")
     .replace(/[^a-z0-9]+/gi, "-")
-    .toLowerCase()}.pdf`;
+    .toLowerCase()}-${paper}.pdf`;
   document.body.appendChild(a);
   a.click();
   a.remove();
