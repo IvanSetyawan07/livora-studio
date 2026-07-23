@@ -8,6 +8,8 @@ import {
   pdf,
 } from "@react-pdf/renderer";
 
+export type CatalogPageSize = "A4" | "LETTER";
+
 export type CatalogPDFData = {
   title: string;
   tagline?: string;
@@ -24,6 +26,8 @@ export type CatalogPDFData = {
     website?: string;
     address?: string;
   };
+  pageSize?: CatalogPageSize;
+  logoUrl?: string; // PNG watermark logo (optional)
 };
 
 /* ============================================================
