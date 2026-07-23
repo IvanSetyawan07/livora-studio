@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
   },
 });
 
-const safe = (src?: string) => (src && /^https?:\/\//.test(src) ? src : undefined);
+const safe = (src?: string) => (src && /^(https?:|data:|blob:)/.test(src) ? src : undefined);
 
 const Footer = ({ label }: { label?: string }) => (
   <View style={styles.footer} fixed>
@@ -312,9 +312,13 @@ const Footer = ({ label }: { label?: string }) => (
   </View>
 );
 
-const Watermark = () => (
+const Watermark = ({ logo }: { logo?: string }) => (
   <View style={styles.watermark} fixed>
-    <Text style={styles.watermarkText}>L</Text>
+    {safe(logo) ? (
+      <PdfImage src={safe(logo)!} style={{ width: 320, height: 320, objectFit: "contain" }} />
+    ) : (
+      <Text style={styles.watermarkText}>L</Text>
+    )}
   </View>
 );
 
