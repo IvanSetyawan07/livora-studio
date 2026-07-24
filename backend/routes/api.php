@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\TaxonomyBannerController;
 use App\Http\Controllers\Api\ConsultationController;
 use App\Http\Controllers\Api\Admin\ConsultationController as AdminConsultationController;
 use App\Http\Controllers\Api\WishlistController;
+use App\Http\Controllers\Api\MarketingController;
 
 Route::get('/taxonomy-banners', [TaxonomyBannerController::class, 'index']);
 Route::get('/taxonomy-banners/{key}', [TaxonomyBannerController::class, 'byKey']);
@@ -168,6 +169,12 @@ Route::delete('/wishlist/{type}/{id}', [WishlistController::class, 'destroy']);
         // Marketing / Email blast
         Route::get('/marketing/audience', [\App\Http\Controllers\Api\MarketingController::class, 'audience']);
         Route::post('/marketing/send', [\App\Http\Controllers\Api\MarketingController::class, 'send']);
+        Route::post('/marketing/send-test', [MarketingController::class, 'sendTest']);
+        Route::post('/marketing/preview', [MarketingController::class, 'preview']);
+        Route::post('/marketing/campaigns/draft', [MarketingController::class, 'saveDraft']);
+        Route::get('/brand-settings', [MarketingController::class, 'brandSettings']);
+        Route::get('/catalog/images', [MarketingController::class, 'catalogImages']);
+        Route::post('/marketing/upload-image', [MarketingController::class, 'uploadImage']);
 
         // Consultations management
         Route::get('/consultations', [AdminConsultationController::class, 'index']);
