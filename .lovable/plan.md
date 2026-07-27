@@ -1,114 +1,92 @@
-Scope besar — saya pecah jadi 6 fase supaya bisa dikerjakan bertahap dan tetap stabil. Semua fase menggunakan backend Laravel + Supabase Storage yang sudah ada, tidak menambah backend baru.
 
----
+# My Consultation — 10-Stage Flow
 
-## Fase 1 — Fix UI kecil (cepat, dikerjakan duluan)
+Rework the current 8-status timeline into the exact 10-stage journey requested. Each stage stays clickable so users and admin can revisit past detail (notes, files, meeting info, payments, signatures, progress snapshots).
 
-1. **Form Appointment fit position** — perbaiki container `Appointment.tsx` supaya form konsultasi center, padding konsisten di mobile & desktop, tidak overflow.
-2. **Tombol kembali / X di halaman Profile** — tambahkan tombol back (panah kiri) di kiri atas halaman `Profile.tsx` yang navigate(-1) atau ke `/`.
-3. **Avatar & nama user** — di Navbar dropdown dan Profile header, ganti dari email jadi "nama depan" user (`user.name.split(' ')[0]`). Inisial avatar diambil dari huruf pertama nama, bukan email.
-4. **Global Hero Preloader** — buat `HeroPreloader.tsx` full-screen overlay Livora (logo + progress). Menunggu `document.fonts.ready` + preload gambar hero halaman aktif via `<link rel="preload">` dinamis. Pasang di `App.tsx`. Kombinasi dengan `loading="eager"` + `fetchpriority="high"` untuk LCP image tiap page.
+## 10 Stages
 
----
+1. **Inquiry Submitted** — auto on form submit
+2. **Under Review** — admin decides: **Approve** → stage 3, **Reject** → terminal with reason
+3. **Contacted** — chat room opens between user & admin
+4. **Meeting Scheduled** — date/time/link/location captured
+5. **Consultation in Progress** — meeting happening; no user review needed
+6. **Follow-up: DP Payment** — admin uploads invoice/QRIS; user marks paid + uploads proof
+7. **Sold / Project Paid** — admin uploads project agreement PDF; user signs (typed signature + timestamp) and re-uploads
+8. **Project Running** — admin posts progress updates 0–100 % (percentage + note + photos)
+9. **Completed** — compact summary card showing every prior stage collapsed but expandable
+10. **Cancelled** (parallel terminal) — user or admin, with reason
 
-## Fase 2 — Appointment: cancel, history, timeline, chat
+## Clickable History
+Every stage node in the timeline is a button. Clicking opens a side sheet showing that stage's stored payload: admin note, files, meeting info, payment proof, signature, progress snapshot. Powered by `consultation_status_histories` (already exists) plus a new `consultation_stage_data` JSON blob per stage.
 
-Backend:
-- Migration tambahan: `consultations` +kolom `cancelled_at`, `cancelled_by`, `cancel_reason`. Tabel baru `consultation_messages` (id, consultation_id, sender_id, sender_role, body, attachments json, read_at, created_at) + `consultation_meetings` (id, consultation_id, provider enum['zoom','meet','custom'], join_url, host_url, meeting_id, passcode, starts_at, description, created_by).
-- Endpoint user: `POST /consultations/{id}/cancel` (hanya kalau status belum `completed`/`cancelled`), `GET/POST /consultations/{id}/messages` (chat 2 arah).
-- Endpoint admin: `GET /admin/consultations/{id}/history` (gabungan status history + messages + meeting events, urut waktu), `POST /admin/consultations/{id}/meeting` (kirim Zoom link + deskripsi ke user, otomatis buat message + email notif).
-- Update Mail: template baru `ConsultationMeetingScheduled` (isi tombol "Join Zoom", tanggal, deskripsi).
+## Backend Changes
 
-Frontend user:
-- `Profile.tsx` tab Consultations: tombol "Batalkan" (modal alasan) untuk consultation aktif; timeline history per consultation (status + pesan admin + jadwal meeting).
-- Chat drawer di Navbar: ikon chat (badge unread) muncul kalau user login & punya konsultasi aktif. Klik → panel chat mirip WA (list konsultasi kiri, bubble kanan). Polling `/consultations/me/unread` tiap 20 detik untuk notif. Menampilkan pesan admin + tombol Join Zoom kalau ada.
+### Migration `extend_consultations_for_10_stage_flow`
+- `consultations`: add `rejection_reason`, `dp_amount`, `dp_paid_at`, `agreement_signed_at`, `agreement_signature_name`, `project_progress` (tinyint 0–100).
+- New table **`consultation_stage_files`**: `id, consultation_id, stage (string), kind (invoice|payment_proof|agreement|signed_agreement|progress_photo|other), file_path, note, uploaded_by, created_at`. Files stored in Supabase-equivalent local disk `storage/app/public/consultations/{id}/`.
+- New table **`consultation_progress_updates`**: `id, consultation_id, percentage, note, created_by, created_at` + `hasMany` files via `consultation_stage_files`.
+- Update `Consultation::STATUSES` constants:
+  ```
+  new_inquiry, under_review, contacted, meeting_scheduled,
+  in_progress, dp_pending, project_paid, project_running,
+  completed, cancelled, rejected
+  ```
 
-Frontend admin:
-- `AdminConsultationDetail.tsx`: tab **History** (timeline lengkap: created → status changes → messages → meeting scheduled → cancelled), tab **Chat** (kirim pesan ke user), form "Schedule Zoom Meeting" (URL, waktu, deskripsi) yang otomatis kirim email + masuk ke chat user.
+### Controllers
+- `Api/ConsultationController` (user):
+  - `POST /consultations/{id}/dp-proof` upload
+  - `POST /consultations/{id}/sign-agreement` (name + accept)
+  - `GET  /consultations/{id}/stage/{stage}` returns files + snapshot
+- `Api/Admin/AdminConsultationController`:
+  - `POST /admin/consultations/{id}/approve` → under_review→contacted
+  - `POST /admin/consultations/{id}/reject` (reason)
+  - `POST /admin/consultations/{id}/schedule-meeting`
+  - `POST /admin/consultations/{id}/start-meeting` (→in_progress)
+  - `POST /admin/consultations/{id}/request-dp` (amount + invoice file)
+  - `POST /admin/consultations/{id}/mark-paid`
+  - `POST /admin/consultations/{id}/upload-agreement`
+  - `POST /admin/consultations/{id}/progress` (percentage + note + photos)
+  - `POST /admin/consultations/{id}/complete`
 
----
+## Frontend Changes
 
-## Fase 3 — PDF Catalog dinamis
+### `src/lib/consultations.ts`
+Add types for stages, stage files, progress updates, and API helpers for every endpoint above.
 
-- Library: `@react-pdf/renderer` (React-native, cocok dengan design system Livora, mendukung image + font custom, output vektor untuk teks → high-res).
-- Struktur: `src/lib/pdf/CatalogPdf.tsx` (dokumen), `src/lib/pdf/pdfTheme.ts` (font Playfair + Inter, warna & spacing dari `index.css`), fungsi `generateCatalogPdf(catalogSlug)`.
-- Data flow: pakai endpoint yang sudah ada (`GET /catalogs/{slug}` + hotspots + item detail per hotspot). Kalau data item detail belum lengkap dalam 1 request, batching parallel `Promise.all` fetch item by slug.
-- Struktur halaman dinamis (jumlah page ikut data):
-  1. Cover — hero image full bleed + logo + judul room + kategori.
-  2. Room intro — deskripsi + main image + meta.
-  3. Room implementation — grid adaptif (1/2/3-4/5+ images auto pagination).
-  4. Items index — daftar semua item (nomor + nama + kategori + thumbnail).
-  5. Item detail pages — 1 halaman per item dengan hero image + spec (dimensions, material, finish, color, category, variants). Field kosong disembunyikan.
-  6. Item gallery — kalau item punya >1 image, halaman gallery adaptif.
-  7. Materials & finishing — hanya kalau ada data.
-  8. Closing — logo, tagline, kontak, website.
-- Header/footer konsisten (nomor halaman, nama room kecil di footer).
-- Tombol "Download Full Catalog PDF" di `CatalogDetail.tsx` (di bawah hero). State: idle → "Generating your Livora catalog..." → auto download `Livora_{RoomName}_Catalog.pdf`.
-- QA: setelah generate, dev-side saya render → convert ke image lewat script → periksa overflow/potong sebelum ship.
+### `src/components/livora/ConsultationTimeline.tsx` (new)
+- Vertical timeline on desktop, horizontal scroll pill on mobile.
+- Each node = button → opens `ConsultationStageSheet` (Radix Sheet).
+- Node states: `done`, `current`, `upcoming`, `blocked` (for rejected/cancelled branches).
+- Compact mode when status = `completed`: collapses all done stages into an accordion "View full journey".
 
----
+### `src/components/livora/ConsultationStageSheet.tsx` (new)
+Renders per-stage content:
+- Stage 2: rejection reason (if rejected).
+- Stage 3: link to chat.
+- Stage 4: meeting card (date/time/link, Add-to-calendar).
+- Stage 6: invoice download + upload payment proof (if user & pending).
+- Stage 7: agreement download + signature form (typed full name + checkbox).
+- Stage 8: list of progress updates with % bar and photo gallery.
+- Stage 9: compact recap of every stage.
 
-## Fase 4 — Analytics: periode, history, grafik bulanan, export PDF
+### `src/pages/Profile.tsx`
+Replace inline `TIMELINE_STEPS` block with `<ConsultationTimeline consultation={c} onStageClick={…} />`. Remove the current linear checklist.
 
-Backend:
-- Tabel `analytics_periods` (id, name, starts_at, ends_at, closed_at, closed_by, snapshot_json, created_at). Admin bisa "Start Period" & "Close Period" — closing menyimpan snapshot lengkap ke `snapshot_json`.
-- Endpoint `GET /admin/analytics/periods`, `POST /admin/analytics/periods/start`, `POST /admin/analytics/periods/{id}/close`, `GET /admin/analytics/periods/{id}` (return snapshot).
-- Endpoint `GET /admin/analytics/monthly?from=&to=` → agregasi per bulan: unique visitors, page views, top items, top projects, top catalogs, avg session, conversion (appointment submit / wishlist saves).
+### `src/pages/admin/AdminConsultationDetail.tsx`
+Add an "Actions" rail with contextual buttons matching current status (Approve / Reject / Schedule / Start Meeting / Request DP / Mark Paid / Upload Agreement / Post Progress / Complete). Show status history + files uploaded per stage.
 
-Frontend admin (`AdminAnalytics.tsx`):
-- Header: tombol **Start Period** & **Close Period** + list history periode.
-- Chart bulanan (recharts LineChart / BarChart): visitors per bulan, views per bulan, appointments per bulan.
-- Detail marketing: top 10 items (clicks + views + avg time), top catalogs, top projects, wishlist saves count, appointment funnel (submitted → confirmed → completed → cancelled).
-- Tombol **Download Report PDF** — generate PDF pakai `@react-pdf/renderer` dengan grafik (render chart ke SVG → embed sebagai `<Image>` via `html2canvas` fallback, atau pakai `victory` PDF-friendly). Isi: cover periode, executive summary, chart bulanan, top items table, insight & recommendations block.
+## Out of Scope (kept as-is)
+- Chat itself (already exists, unchanged).
+- Real payment gateway integration — DP flow is manual proof-of-transfer.
+- Legally-binding e-signature — typed name + timestamp only. Note in UI: "Digital acknowledgement, not a qualified e-signature".
 
----
+## Deliverables Order
+1. Migration + model updates.
+2. Admin controller endpoints.
+3. User controller endpoints + storage.
+4. `consultations.ts` API wrapper.
+5. `ConsultationTimeline` + `ConsultationStageSheet` components.
+6. Wire into `Profile.tsx` and `AdminConsultationDetail.tsx`.
+7. Typecheck & smoke test.
 
-## Fase 5 — Email marketing (broadcast promosi)
-
-Backend:
-- Tabel `email_campaigns` (id, subject, preheader, hero_image, body_html, cta_label, cta_url, status enum['draft','sending','sent'], recipient_filter json, sent_count, created_by, sent_at).
-- Endpoint admin: CRUD campaigns + `POST /admin/campaigns/{id}/send` (enqueue kirim ke semua user dengan filter, pakai Mail queue Laravel).
-- Mailable `MarketingCampaign` dengan Blade template editorial Livora (hero image, body, CTA button).
-- **Compliance**: setiap email otomatis include footer unsubscribe link + tabel `email_unsubscribes` (user_id, unsubscribed_at). Filter recipient exclude user yang unsub.
-
-Frontend admin (`AdminCampaigns.tsx`):
-- List campaigns + status.
-- Editor: subject, preheader, upload hero image (Supabase Storage), rich-text body (pakai `react-quill` atau textarea + markdown), CTA label + URL, target filter (all users / has appointment / has wishlist).
-- Preview panel (WYSIWYG mirip hasil email).
-- Tombol Send → confirm modal → status "sending" → real-time update sent_count.
-
-**Catatan penting untuk kamu**: kirim email marketing perlu SMTP provider yang production-grade (Mailgun/SES/Postmark) dan sudah verifikasi domain, kalau tidak akan masuk spam / diblokir. Saya bikin infrastrukturnya, tapi kredensial SMTP kamu isi sendiri di `.env`.
-
----
-
-## Fase 6 — Performance / preloading konten landing
-
-Selain HeroPreloader (fase 1):
-- Preload gambar hero via `<link rel="preload" as="image" fetchpriority="high">` di `<head>` untuk landing page (edit `index.html` + inject dinamis per route).
-- Convert semua asset hero besar ke `webp`/`avif` via `vite-imagetools` (build-time, tanpa ubah source image).
-- Add `loading="lazy"` + `decoding="async"` di semua image non-LCP.
-- Prefetch route berikutnya (Collection/Catalog) pakai `<link rel="prefetch">` on hover Navbar.
-- Lazy-load komponen berat (Recharts, react-pdf) via `React.lazy` supaya tidak masuk bundle awal.
-
----
-
-## Urutan eksekusi yang saya usulkan
-
-1. **Fase 1** (fix UI kecil + preloader) — cepat, langsung terlihat.
-2. **Fase 2** (appointment cancel + chat + Zoom) — paling banyak logic backend.
-3. **Fase 3** (PDF catalog).
-4. **Fase 4** (analytics + PDF report).
-5. **Fase 5** (email marketing).
-6. **Fase 6** (perf polish).
-
----
-
-## Yang perlu kamu konfirmasi sebelum saya mulai
-
-1. **Setuju urutan 6 fase ini?** Atau ada yang mau didahulukan (misal PDF catalog duluan)?
-2. **Chat consultation**: cukup polling tiap 20 detik, atau kamu mau real-time WebSocket? (WebSocket butuh Pusher/Reverb, biaya lebih.) Rekomendasi saya: polling dulu, upgrade kalau perlu.
-3. **PDF library**: OK pakai `@react-pdf/renderer`? (alternatif: `pdfmake` atau `puppeteer` server-side — puppeteer paling akurat tapi butuh server node terpisah).
-4. **Zoom integration**: cukup admin paste link Zoom manual, atau mau auto-create meeting via Zoom API? (auto butuh Zoom OAuth app + secret). Rekomendasi: manual paste dulu.
-5. **Email marketing**: sudah ada SMTP transaction (Mailgun/SES/dll) yang mau dipakai? Tanpa itu, campaign akan gagal terkirim ke banyak alamat.
-
-Balas dengan jawaban 5 poin di atas + **"lanjut fase 1"** kalau setuju urutannya, atau kasih tahu fase mana yang mau didahulukan.
+Confirm and I'll build it end-to-end in this order.
