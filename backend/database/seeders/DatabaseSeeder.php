@@ -10,7 +10,7 @@ class DatabaseSeeder extends Seeder
     {
         $admins = [
             ['email' => 'admin.bagusivan@gmail.com', 'name' => 'Admin 3', 'password' => 'adminivan3'],
-            ['email' => 'admin.raineradriand@gmail.com', 'name' => 'Admin 2', 'password' => 'adminrainer4'],
+            ['email' => 'admin.raineradriand@gmail.com', 'name' => 'Admin 4', 'password' => 'adminrainer4'],
             ['email' => 'admin.lala@gmail.com', 'name' => 'Admin 5', 'password' => 'adminlala5'],
             ['email' => 'admin.adit@gmail.com', 'name' => 'Admin 6', 'password' => 'adminadit6'],
             ['email' => 'admin.cinde@gmail.com', 'name' => 'Admin 1', 'password' => 'admincinde1'],
