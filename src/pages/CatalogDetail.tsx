@@ -11,7 +11,6 @@ import logoLivora from "@/assets/logo-livora.png";
 import { toast } from "sonner";
 import { motion, useScroll, useTransform, easeOut } from "framer-motion";
 import { Navbar } from "@/components/livora/Navbar";
-import { WhatsAppButton } from "@/components/livora/WhatsAppButton";
 import { Footer } from "@/components/livora/Footer";
 import { BookConsultation } from "@/components/livora/BookConsultation";
 import { api } from "@/lib/api";
@@ -906,7 +905,7 @@ const handleDownloadPDF = async (size: CatalogPageSize) => {
       <BookConsultation />
 
       <Footer />
-      <WhatsAppButton />
+      
     </div>
   );
 }

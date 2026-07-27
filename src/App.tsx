@@ -9,9 +9,9 @@ import ProjectDetail from "./pages/ProjectDetail.tsx";
 import ProjectsPage from "./pages/Projects.tsx";
 import ItemDetail from "./pages/ItemDetail.tsx";
 import AboutPage from "./pages/About.tsx";
-import { WhatsAppButton } from "./components/livora/WhatsAppButton.tsx";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile.tsx";
+import { ChatWidget } from "./components/livora/ChatWidget.tsx";
 // import Login from "./pages/Login";
 // import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
@@ -106,7 +106,8 @@ function App() {
               <Route path="*" element={<NotFound />} />
             </Routes>
             <CartDrawer />
-            <WhatsAppButton />
+            <ChatWidget />
+            {/* <WhatsAppButton /> */}
           </BrowserRouter>
         </CartProvider>
       </TooltipProvider>
