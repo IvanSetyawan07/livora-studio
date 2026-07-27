@@ -9,12 +9,12 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $admins = [
-            ['email' => 'admin.bagusivan@gmail.com', 'name' => 'Admin', 'password' => 'adminivan1'],
-            ['email' => 'admin.raineradriand@gmail.com', 'name' => 'Admin 2', 'password' => 'adminrainer2'],
-            ['email' => 'admin.lala@gmail.com', 'name' => 'Admin', 'password' => 'adminlala3'],
-            ['email' => 'admin.adit@gmail.com', 'name' => 'Admin', 'password' => 'adminadit4'],
-            ['email' => 'admin.cinde@gmail.com', 'name' => 'Admin', 'password' => 'admincinde5'],
-            ['email' => 'admin.christie@gmail.com', 'name' => 'Admin', 'password' => 'adminchristie6'],
+            ['email' => 'admin.bagusivan@gmail.com', 'name' => 'Admin 3', 'password' => 'adminivan3'],
+            ['email' => 'admin.raineradriand@gmail.com', 'name' => 'Admin 2', 'password' => 'adminrainer4'],
+            ['email' => 'admin.lala@gmail.com', 'name' => 'Admin 5', 'password' => 'adminlala5'],
+            ['email' => 'admin.adit@gmail.com', 'name' => 'Admin 6', 'password' => 'adminadit6'],
+            ['email' => 'admin.cinde@gmail.com', 'name' => 'Admin 1', 'password' => 'admincinde1'],
+            ['email' => 'admin.christie@gmail.com', 'name' => 'Admin 2', 'password' => 'adminchristie2'],
         ];
 
         foreach ($admins as $admin) {
