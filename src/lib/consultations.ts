@@ -12,7 +12,7 @@ export type ConsultationPayload = {
   project_type?: string;
   estimated_area?: string;
   preferred_style?: string;
-  message: string;
+  message?: string;
 };
 
 export type ConsultationStageFile = {

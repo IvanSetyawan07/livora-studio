@@ -18,6 +18,7 @@ import {
 import type { Consultation } from "@/lib/consultations";
 import ConsultationChat from "@/components/livora/ConsultationChat";
 import ConsultationTimeline from "@/components/livora/ConsultationTimeline";
+import { imgUrl } from "@/lib/adminApi";
 
 const STATUS_OPTIONS = [
   ["new_inquiry", "New Inquiry"],
@@ -144,8 +145,38 @@ export default function AdminConsultationDetail() {
                 <Row label="Location" value={c.location} />
                 <div className="pt-2">
                   <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Message</p>
-                  <p className="whitespace-pre-wrap">{c.message}</p>
+                  <p className="whitespace-pre-wrap">{c.message || "-"}</p>
                 </div>
+                {Array.isArray(c.attachments) && c.attachments.length > 0 && (
+                  <div className="pt-2">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                      Attachments ({c.attachments.length})
+                    </p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {c.attachments.map((path, idx) => {
+                        const url = imgUrl(path);
+                        const isImage = /\.(png|jpe?g|gif|webp|svg)$/i.test(path);
+                        return (
+                          <a
+                            key={idx}
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block border border-border rounded overflow-hidden aspect-square bg-secondary/30 hover:opacity-80 transition-opacity"
+                          >
+                            {isImage ? (
+                              <img src={url} alt={`Attachment ${idx + 1}`} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground p-1 text-center">
+                                File {idx + 1}
+                              </div>
+                            )}
+                          </a>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="bg-card border border-border rounded-lg p-6 space-y-3">
