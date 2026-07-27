@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\ConsultationController;
 use App\Http\Controllers\Api\Admin\ConsultationController as AdminConsultationController;
 use App\Http\Controllers\Api\WishlistController;
 use App\Http\Controllers\Api\MarketingController;
+use App\Http\Controllers\Api\ChatController;
 
 Route::get('/taxonomy-banners', [TaxonomyBannerController::class, 'index']);
 Route::get('/taxonomy-banners/{key}', [TaxonomyBannerController::class, 'byKey']);
@@ -31,6 +32,7 @@ Route::post('/auth/{provider}/callback', [AuthController::class, 'oauthCallback'
 
 // Public read APIs
 Route::post('/consultations', [ConsultationController::class, 'store']);
+Route::post('/chat', [ChatController::class, 'store']);
 Route::get('/projects', [ProjectController::class, 'index']);
 Route::get('/projects/{slug}', [ProjectController::class, 'show']);
 Route::get('/landing/highlights', [ProjectController::class, 'highlights']);

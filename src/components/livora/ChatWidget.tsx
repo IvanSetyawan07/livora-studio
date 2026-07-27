@@ -42,6 +42,7 @@ export function ChatWidget() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const API_URL = import.meta.env.VITE_API_URL as string;
 
   const { pathname } = useLocation();
   const isLanding = pathname === "/";
@@ -86,7 +87,7 @@ export function ChatWidget() {
 
   const sendToBackend = async (message: string, history: ChatMessage[]) => {
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch(`${API_URL}/chat`,{
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -118,7 +119,7 @@ export function ChatWidget() {
     setInput("");
     setLoading(true);
 
-    const { reply, needsEscalation } = await sendToBackend(text, nextMessages);
+    const { reply, needsEscalation } = await sendToBackend(text, messages);
 
     setMessages((prev) => [
       ...prev,
