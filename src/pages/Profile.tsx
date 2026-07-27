@@ -1,29 +1,19 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, authStorage } from "@/lib/api";
-import { getMyConsultations, type Consultation } from "@/lib/consultations";
+import { getMyConsultations, getConsultation, type Consultation } from "@/lib/consultations";
 import { updateProfile, changePassword } from "@/lib/profile";
 import { getWishlist, removeFromWishlist, type WishlistEntry } from "@/lib/wishlist";
 import { cancelConsultation } from "@/lib/consultationMessages";
 import ConsultationChat from "@/components/livora/ConsultationChat";
+import ConsultationTimeline from "@/components/livora/ConsultationTimeline";
 import { toast } from "sonner";
 import {
-  Check, Calendar, MapPin, Video, Bookmark, User as UserIcon,
+  Bookmark, User as UserIcon,
   ClipboardList, ArrowLeft, MessageCircle, XCircle,
 } from "lucide-react";
 
 type User = { id: number; name: string; email: string; phone?: string | null; address?: string | null };
-
-const TIMELINE_STEPS = [
-  { key: "new_inquiry", label: "Inquiry Submitted" },
-  { key: "under_review", label: "Under Review" },
-  { key: "contacted", label: "Contacted" },
-  { key: "meeting_scheduled", label: "Meeting Scheduled" },
-  { key: "in_progress", label: "Consultation in Progress" },
-  { key: "follow_up_required", label: "Follow-up Required" },
-  { key: "proposal_sent", label: "Proposal Sent" },
-  { key: "completed", label: "Completed" },
-];
 
 const TABS = [
   { key: "profile", label: "Edit Profile", icon: UserIcon },
@@ -343,22 +333,31 @@ function ConsultationCard({
   consultation: Consultation;
   onChanged: () => void;
 }) {
-  const isCancelled = consultation.status === "cancelled";
-  const isClosed = isCancelled || consultation.status === "completed";
-  const currentIndex = TIMELINE_STEPS.findIndex((s) => s.key === consultation.status);
   const [chatOpen, setChatOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [detail, setDetail] = useState<Consultation>(consultation);
+
+  useEffect(() => {
+    // Load full detail (with stage_files, progress_updates, status_history) once.
+    getConsultation(consultation.id).then(setDetail).catch(() => {});
+  }, [consultation.id]);
+
+  const isCancelled = detail.status === "cancelled";
+  const isRejected = detail.status === "rejected";
+  const isClosed = isCancelled || isRejected || detail.status === "completed";
 
   const handleCancel = async () => {
     const reason = window.prompt(
       "Batalkan permintaan konsultasi ini?\n\nOpsional — tulis alasan singkat:",
       "",
     );
-    if (reason === null) return; // dismissed
+    if (reason === null) return;
     setCancelling(true);
     try {
-      await cancelConsultation(consultation.id, reason.trim() || undefined);
+      await cancelConsultation(detail.id, reason.trim() || undefined);
       toast.success("Consultation dibatalkan.");
+      const fresh = await getConsultation(detail.id);
+      setDetail(fresh);
       onChanged();
     } catch (e: any) {
       toast.error(e?.response?.data?.message || "Gagal membatalkan.");
@@ -367,94 +366,40 @@ function ConsultationCard({
     }
   };
 
+  const badgeClass = isCancelled
+    ? "bg-red-50 text-red-600"
+    : isRejected
+    ? "bg-amber-50 text-amber-700"
+    : detail.status === "completed"
+    ? "bg-emerald-50 text-emerald-700"
+    : "bg-secondary text-foreground";
+
   return (
     <div className="bg-card border border-border rounded-lg p-6">
       <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-1">
-            {consultation.service_type ?? "Design Consultation"}
+            {detail.service_type ?? "Design Consultation"}
           </p>
-          <h3 className="serif text-xl">{consultation.project_type ?? "Consultation"} Request</h3>
+          <h3 className="serif text-xl">{detail.project_type ?? "Consultation"} Request</h3>
         </div>
-        <span
-          className={`text-xs px-3 py-1.5 rounded-full uppercase tracking-wider ${
-            isCancelled
-              ? "bg-red-50 text-red-600"
-              : consultation.status === "completed"
-              ? "bg-green-50 text-green-700"
-              : "bg-secondary text-foreground"
-          }`}
-        >
-          {isCancelled ? "Cancelled" : consultation.status_label ?? consultation.status}
+        <span className={`text-xs px-3 py-1.5 rounded-full uppercase tracking-wider ${badgeClass}`}>
+          {detail.status_label ?? detail.status}
         </span>
       </div>
 
-      {(consultation.meeting_date || consultation.meeting_location || consultation.meeting_link) && (
-        <div className="flex flex-wrap gap-4 mb-5 text-xs text-muted-foreground">
-          {consultation.meeting_date && (
-            <span className="inline-flex items-center gap-1.5">
-              <Calendar size={13} />
-              {new Date(consultation.meeting_date).toLocaleDateString("id-ID", {
-                day: "numeric", month: "long", year: "numeric",
-              })}
-              {consultation.meeting_time ? ` · ${consultation.meeting_time}` : ""}
-            </span>
-          )}
-          {consultation.meeting_location && (
-            <span className="inline-flex items-center gap-1.5">
-              <MapPin size={13} /> {consultation.meeting_location}
-            </span>
-          )}
-          {consultation.meeting_link && (
-            <a
-              href={consultation.meeting_link}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 underline"
-            >
-              <Video size={13} /> Join Meeting Link
-            </a>
-          )}
-        </div>
-      )}
+      <ConsultationTimeline
+        consultation={detail}
+        role="user"
+        onChanged={(c) => {
+          setDetail(c);
+          onChanged();
+        }}
+      />
 
-      {!isCancelled && (
-        <div className="relative flex items-start justify-between mt-2">
-          {TIMELINE_STEPS.map((step, i) => {
-            const reached = currentIndex >= 0 && i <= currentIndex;
-            const isLast = i === TIMELINE_STEPS.length - 1;
-            return (
-              <div key={step.key} className="flex-1 flex flex-col items-center relative">
-                {!isLast && (
-                  <div
-                    className={`absolute top-3 left-1/2 w-full h-[2px] ${
-                      i < currentIndex ? "bg-foreground" : "bg-border"
-                    }`}
-                  />
-                )}
-                <div
-                  className={`relative z-10 w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${
-                    reached ? "bg-foreground text-background" : "bg-secondary text-muted-foreground"
-                  }`}
-                >
-                  {reached ? <Check size={12} /> : i + 1}
-                </div>
-                <p
-                  className={`mt-2 text-[10px] text-center leading-tight max-w-[70px] ${
-                    reached ? "text-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  {step.label}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {consultation.message && (
+      {detail.message && (
         <p className="text-xs text-muted-foreground mt-6 pt-5 border-t border-border leading-relaxed line-clamp-2">
-          "{consultation.message}"
+          "{detail.message}"
         </p>
       )}
 
@@ -475,13 +420,13 @@ function ConsultationCard({
           </button>
         )}
         <span className="text-[11px] text-muted-foreground ml-auto">
-          Requested {new Date(consultation.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+          Requested {new Date(detail.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
         </span>
       </div>
 
       {chatOpen && (
         <div className="mt-4">
-          <ConsultationChat consultationId={consultation.id} mode="user" locked={isClosed} />
+          <ConsultationChat consultationId={detail.id} mode="user" locked={isClosed} />
         </div>
       )}
     </div>
