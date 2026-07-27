@@ -8,6 +8,7 @@ import { cancelConsultation } from "@/lib/consultationMessages";
 import ConsultationChat from "@/components/livora/ConsultationChat";
 import ConsultationTimeline from "@/components/livora/ConsultationTimeline";
 import { toast } from "sonner";
+import { imgUrl } from "@/lib/adminApi";
 import {
   Bookmark, User as UserIcon,
   ClipboardList, ArrowLeft, MessageCircle, XCircle,
@@ -478,7 +479,7 @@ function WishlistTab() {
           <div className="aspect-square bg-secondary/40 overflow-hidden">
             {entry.entity?.image ? (
               <img
-                src={entry.entity.image}
+                src={imgUrl(entry.entity.image)}
                 alt={entry.entity.name ?? ""}
                 className="w-full h-full object-cover"
               />
