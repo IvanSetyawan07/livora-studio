@@ -394,7 +394,7 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
     tocEntries.push({ label: "Directory", page: cursor + 1 });
     cursor += 1;
   }
-  tocEntries.push({ label: "Contact & Studio", page: cursor + 1 });
+  tocEntries.push({ label: "Contact", page: cursor + 1 });
 
   return (
     <Document title={data.title} author="Livora" subject={data.tagline}>
@@ -554,13 +554,13 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
           <View>
             <Text style={styles.backKicker}>STUDIO · CONTACT</Text>
             <Text style={styles.backContact}>
-              {data.contact?.email || "hello@livora.studio"}
+              {data.contact?.email || "livoralcrmarketing@gmail.com"}
               {"\n"}
-              {data.contact?.phone || "+62 811 000 000"}
+              {data.contact?.phone || "+62 821 2043 307"}
               {"\n"}
-              {data.contact?.website || "livora.studio"}
+              {data.contact?.website || "www.livoralcr.com"}
               {"\n"}
-              {data.contact?.address || "Bali · Jakarta · Singapore"}
+              {data.contact?.address || "Jl. Bangka Raya No.45 · Jakarta Selatan · Indonesia"}
             </Text>
             <Text style={[styles.backKicker, { marginTop: 24 }]}>
               © {new Date().getFullYear()} LIVORA · ALL RIGHTS RESERVED
