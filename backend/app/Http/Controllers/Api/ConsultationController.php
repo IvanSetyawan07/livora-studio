@@ -29,7 +29,7 @@ class ConsultationController extends Controller
             'project_type'       => 'nullable|string|max:100',
             'estimated_area'     => 'nullable|string|max:50',
             'preferred_style'    => 'nullable|string|max:100',
-            'message'            => 'required|string',
+            'message'            => 'nullable|string',
             'attachments'        => 'nullable|array',
             'attachments.*'      => 'file',
         ]);
@@ -65,7 +65,7 @@ class ConsultationController extends Controller
             'project_type'       => $data['project_type'] ?? null,
             'estimated_area'     => $data['estimated_area'] ?? null,
             'preferred_style'    => $data['preferred_style'] ?? null,
-            'message'            => $data['message'],
+            'message'            => $data['message'] ?? null,
             'attachments'        => $attachmentPaths,
             'status'             => Consultation::STATUS_NEW_INQUIRY,
         ]);
