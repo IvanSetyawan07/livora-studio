@@ -63,6 +63,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/consultations/{consultation}/cancel', [ConsultationController::class, 'cancel']);
     Route::get('/consultations/{consultation}/messages', [ConsultationController::class, 'messagesIndex']);
     Route::post('/consultations/{consultation}/messages', [ConsultationController::class, 'messagesStore']);
+    Route::post('/consultations/{consultation}/dp-proof', [ConsultationController::class, 'uploadDpProof']);
+    Route::post('/consultations/{consultation}/sign-agreement', [ConsultationController::class, 'signAgreement']);
 
     Route::patch('/user/language', [UserLanguageController::class, 'update']);
     Route::get('/me', [AuthController::class, 'me']);
@@ -185,6 +187,15 @@ Route::delete('/wishlist/{type}/{id}', [WishlistController::class, 'destroy']);
         Route::post('/consultations/{consultation}/confirm-email', [AdminConsultationController::class, 'confirmEmail']);
         Route::get('/consultations/{consultation}/messages', [AdminConsultationController::class, 'messagesIndex']);
         Route::post('/consultations/{consultation}/messages', [AdminConsultationController::class, 'messagesStore']);
+        Route::post('/consultations/{consultation}/approve', [AdminConsultationController::class, 'approve']);
+        Route::post('/consultations/{consultation}/reject', [AdminConsultationController::class, 'reject']);
+        Route::post('/consultations/{consultation}/schedule-meeting', [AdminConsultationController::class, 'scheduleMeeting']);
+        Route::post('/consultations/{consultation}/start-meeting', [AdminConsultationController::class, 'startMeeting']);
+        Route::post('/consultations/{consultation}/request-dp', [AdminConsultationController::class, 'requestDp']);
+        Route::post('/consultations/{consultation}/mark-paid', [AdminConsultationController::class, 'markPaid']);
+        Route::post('/consultations/{consultation}/upload-agreement', [AdminConsultationController::class, 'uploadAgreement']);
+        Route::post('/consultations/{consultation}/progress', [AdminConsultationController::class, 'postProgress']);
+        Route::post('/consultations/{consultation}/complete', [AdminConsultationController::class, 'complete']);
 
         // Wishlist admin view
         Route::get('/wishlists', [WishlistController::class, 'adminIndex']);
