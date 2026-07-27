@@ -1,4 +1,5 @@
 import { ArrowRight, User, Box, Palette, Truck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface Props {
   image?: string;
@@ -9,10 +10,20 @@ const DEFAULT_IMAGE =
   "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=1600&q=80&auto=format&fit=crop";
 
 /**
- * Dark, wide consultation banner. Purely presentational — the CTA is a plain
- * button that logs a click for now (no route yet). Drop into detail pages.
+ * Dark, wide consultation banner. CTA navigates to the appointment/consultation
+ * page by default, or runs a custom onBook handler if provided.
  */
 export function BookConsultation({ image = DEFAULT_IMAGE, onBook }: Props) {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    if (onBook) {
+      onBook();
+    } else {
+      navigate("/appointment"); // sesuaikan path ini dengan route Appointment.tsx di router kamu
+    }
+  };
+
   const perks = [
     { icon: User, label: "Personalized Consultation" },
     { icon: Box, label: "3D Room Planning" },
@@ -44,7 +55,7 @@ export function BookConsultation({ image = DEFAULT_IMAGE, onBook }: Props) {
             </h3>
             <button
               type="button"
-              onClick={onBook}
+              onClick={handleClick}
               className="inline-flex items-center gap-3 self-start bg-white text-neutral-900 px-6 py-3 text-[11px] tracking-[0.28em] uppercase hover:bg-white/90 transition-colors"
             >
               Book Consultation
