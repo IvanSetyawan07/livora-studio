@@ -142,8 +142,6 @@ export default function AdminConsultationDetail() {
                 <Row label="Meeting Type" value={c.consultation_type} />
                 <Row label="Contact Method" value={c.contact_method} />
                 <Row label="Location" value={c.location} />
-                <Row label="Estimated Area" value={c.estimated_area} />
-                <Row label="Preferred Style" value={c.preferred_style} />
                 <div className="pt-2">
                   <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Message</p>
                   <p className="whitespace-pre-wrap">{c.message}</p>

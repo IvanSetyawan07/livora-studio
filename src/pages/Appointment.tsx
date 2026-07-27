@@ -83,6 +83,44 @@ const VALUES = [
   { icon: Palette, title: "From Concept to Completion", desc: "We take care of every detail so you can enjoy a beautiful, well-designed space." },
 ];
 
+// 34 provinsi Indonesia — dipakai untuk search Location/City (statis, tanpa API)
+const PROVINSI_INDONESIA = [
+  "Aceh",
+  "Sumatera Utara",
+  "Sumatera Barat",
+  "Riau",
+  "Kepulauan Riau",
+  "Jambi",
+  "Sumatera Selatan",
+  "Bangka Belitung",
+  "Bengkulu",
+  "Lampung",
+  "DKI Jakarta",
+  "Jawa Barat",
+  "Jawa Tengah",
+  "DI Yogyakarta",
+  "Jawa Timur",
+  "Banten",
+  "Bali",
+  "Nusa Tenggara Barat",
+  "Nusa Tenggara Timur",
+  "Kalimantan Barat",
+  "Kalimantan Tengah",
+  "Kalimantan Selatan",
+  "Kalimantan Timur",
+  "Kalimantan Utara",
+  "Sulawesi Utara",
+  "Sulawesi Tengah",
+  "Sulawesi Selatan",
+  "Sulawesi Tenggara",
+  "Gorontalo",
+  "Sulawesi Barat",
+  "Maluku",
+  "Maluku Utara",
+  "Papua",
+  "Papua Barat",
+];
+
 /* ────────── Small primitives ────────── */
 
 const Eyebrow = ({ children, light = false }: { children: React.ReactNode; light?: boolean }) => (
@@ -99,6 +137,7 @@ const Eyebrow = ({ children, light = false }: { children: React.ReactNode; light
 export default function Appointment() {
   const [meetChoice, setMeetChoice] = useState<string>("showroom");
   const [helpChoice, setHelpChoice] = useState<string>("");
+  const [helpChoiceOther, setHelpChoiceOther] = useState<string>("");
   const [videoPlaying, setVideoPlaying] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
@@ -139,15 +178,13 @@ export default function Appointment() {
   const navbarBlur = useMotionTemplate`blur(${navbarBlurAmount}px)`;
 
   const [form, setForm] = useState({
-    first_name: "",
-    last_name: "",
+    name: "",
     email: "",
     phone: "",
     contact_method: "",
     location: "",
     project_type: "",
-    estimated_area: "",
-    preferred_style: "",
+    project_type_other: "",
     message: "",
     agree: false,
   });
@@ -167,18 +204,19 @@ export default function Appointment() {
 
   const resetForm = () => {
     setForm({
-      first_name: "", last_name: "", email: "", phone: "",
-      contact_method: "", location: "", project_type: "",
-      estimated_area: "", preferred_style: "", message: "", agree: false,
+      name: "", email: "", phone: "",
+      contact_method: "", location: "", project_type: "", project_type_other: "",
+      message: "", agree: false,
     });
     setHelpChoice("");
+    setHelpChoiceOther("");
     setFiles([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.first_name || !form.email || !form.message) {
-      toast.error("Please fill in your name, email and message.");
+    if (!form.name || !form.email) {
+      toast.error("Please fill in your name/company and email.");
       return;
     }
     if (!form.agree) {
@@ -186,22 +224,22 @@ export default function Appointment() {
       return;
     }
 
+    const resolvedServiceType = helpChoice === "Other" ? (helpChoiceOther || "Other") : helpChoice;
+    const resolvedProjectType = form.project_type === "Other" ? (form.project_type_other || "Other") : form.project_type;
+
     setSubmitting(true);
     try {
       await submitConsultation(
         {
-          first_name: form.first_name,
-          last_name: form.last_name || undefined,
+          first_name: form.name,
           email: form.email,
           phone: form.phone ? `+62${form.phone}` : undefined,
           contact_method: form.contact_method || undefined,
           consultation_type: meetChoice || undefined,
           location: form.location || undefined,
-          service_type: helpChoice || undefined,
-          project_type: form.project_type || undefined,
-          estimated_area: form.estimated_area || undefined,
-          preferred_style: form.preferred_style || undefined,
-          message: form.message,
+          service_type: resolvedServiceType || undefined,
+          project_type: resolvedProjectType || undefined,
+          message: form.message || undefined,
         },
         files
       );
@@ -590,11 +628,8 @@ export default function Appointment() {
             style={{ boxShadow: "0 30px 80px -50px rgba(0,0,0,0.25)" }}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
-              <Field label="First Name" required>
-                <Input value={form.first_name} onChange={(v) => upd("first_name", v)} placeholder="Enter your first name" />
-              </Field>
-              <Field label="Last Name" required>
-                <Input value={form.last_name} onChange={(v) => upd("last_name", v)} placeholder="Enter your last name" />
+              <Field label="Nama / Company" required full>
+                <Input value={form.name} onChange={(v) => upd("name", v)} placeholder="Enter your name or company name" />
               </Field>
               <Field label="Email Address" required>
                 <Input type="email" value={form.email} onChange={(v) => upd("email", v)} placeholder="Enter your email" />
@@ -614,39 +649,45 @@ export default function Appointment() {
 
               <Field label="Preferred Contact Method" required>
                 <Select value={form.contact_method} onChange={(v) => upd("contact_method", v)}
-                  options={["WhatsApp", "Email", "Google Meet / Video Call", "Phone Call"]}
+                  options={["WhatsApp", "Email", "Google Meet / Video Call", "Phone Call", "Other"]}
                   placeholder="Select an option" />
               </Field>
 
               <Field label="Location / City" required>
-                <Select value={form.location} onChange={(v) => upd("location", v)}
-                  options={["Jakarta", "Bandung", "Surabaya", "Bali", "Other"]}
-                  placeholder="Select your city" />
+                <LocationSearch value={form.location} onChange={(v) => upd("location", v)} />
               </Field>
 
               <Field label="What are you looking for?" required>
                 <Select value={helpChoice} onChange={setHelpChoice}
-                  options={HELP_CARDS.map((c) => c.title)}
+                  options={[...HELP_CARDS.map((c) => c.title), "Other"]}
                   placeholder="Select an option" />
+                {helpChoice === "Other" && (
+                  <div className="mt-3">
+                    <Input
+                      value={helpChoiceOther}
+                      onChange={setHelpChoiceOther}
+                      placeholder="Please specify"
+                    />
+                  </div>
+                )}
               </Field>
 
               <Field label="Project Type" required>
                 <Select value={form.project_type} onChange={(v) => upd("project_type", v)}
-                  options={["Residential", "Apartment", "Villa", "Hospitality", "Office", "Retail"]}
+                  options={["Residential", "Apartment", "Villa", "Hospitality", "Office", "Retail", "Other"]}
                   placeholder="Select an option" />
+                {form.project_type === "Other" && (
+                  <div className="mt-3">
+                    <Input
+                      value={form.project_type_other}
+                      onChange={(v) => upd("project_type_other", v)}
+                      placeholder="Please specify"
+                    />
+                  </div>
+                )}
               </Field>
 
-              <Field label="Estimated Area (sqm)">
-                <Input value={form.estimated_area} onChange={(v) => upd("estimated_area", v)} placeholder="Enter area" />
-              </Field>
-
-              <Field label="Preferred Style">
-                <Select value={form.preferred_style} onChange={(v) => upd("preferred_style", v)}
-                  options={["Modern", "Classic", "Japandi", "Scandinavian", "Industrial", "Mid-century", "Contemporary Luxury"]}
-                  placeholder="Select your style" />
-              </Field>
-
-              <Field label="Tell us about your project" required full>
+              <Field label="Tell us about your question" full>
                 <textarea
                   value={form.message}
                   onChange={(e) => upd("message", e.target.value)}
@@ -771,5 +812,61 @@ function Select({
       <option value="">{placeholder ?? "Select an option"}</option>
       {options.map((o) => <option key={o} value={o}>{o}</option>)}
     </select>
+  );
+}
+
+/**
+ * Searchable location combobox — daftar 34 provinsi Indonesia (statis, tanpa API).
+ * Kalau nilai yang diketik tidak cocok dengan daftar, nilai tetap tersimpan
+ * apa adanya (isian manual fallback) — dropdown hanya membantu, tidak memaksa.
+ */
+function LocationSearch({
+  value, onChange, placeholder,
+}: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  const filtered = value.trim()
+    ? PROVINSI_INDONESIA.filter((p) => p.toLowerCase().includes(value.trim().toLowerCase()))
+    : PROVINSI_INDONESIA;
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <input
+        value={value}
+        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        placeholder={placeholder ?? "Ketik nama provinsi..."}
+        className="w-full border border-[#e5e5e5] px-3 py-3 text-sm font-light outline-none focus:border-black transition-colors bg-white"
+      />
+      {open && filtered.length > 0 && (
+        <ul
+          data-lenis-prevent
+          className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto overscroll-contain bg-white border border-[#e5e5e5] shadow-lg"
+        >
+          {filtered.map((p) => (
+            <li key={p}>
+              <button
+                type="button"
+                onClick={() => { onChange(p); setOpen(false); }}
+                className="w-full text-left px-3 py-2 text-sm font-light hover:bg-[#fafafa] transition-colors"
+              >
+                {p}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
