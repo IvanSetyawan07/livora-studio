@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Send, Video } from "lucide-react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { Send, Video, Paperclip, X, FileText } from "lucide-react";
 import { toast } from "sonner";
 import {
   getMyMessages,
@@ -8,76 +8,151 @@ import {
   sendAdminMessage,
   type ConsultationMessage,
 } from "@/lib/consultationMessages";
+import { API_BASE_URL } from "@/lib/api";
 
 type Props = {
   consultationId: number;
   mode: "user" | "admin";
-  /** disabled composer (e.g. cancelled) */
   locked?: boolean;
 };
 
-const POLL_MS = 20_000;
+// Fast polling; incremental (only fetches new messages via ?since=lastId)
+const POLL_ACTIVE_MS = 3_000;
+const POLL_IDLE_MS = 15_000;
 
-/**
- * Two-way chat between user & admin for a single consultation.
- * - Polls every 20s (no realtime backend on Laravel side).
- * - Admin composer can attach a Zoom / Google Meet link that renders
- *   as a "Join Meeting" button on the user's side.
- */
+const FILE_HOST = API_BASE_URL.replace(/\/api\/?$/, "");
+const resolveUrl = (path: string) =>
+  /^https?:\/\//i.test(path) ? path : `${FILE_HOST}${path}`;
+
+const URL_REGEX = /(https?:\/\/[^\s<]+)/gi;
+
+function renderBody(text: string) {
+  if (!text) return null;
+  const parts = text.split(URL_REGEX);
+  return parts.map((part, i) => {
+    if (URL_REGEX.test(part)) {
+      URL_REGEX.lastIndex = 0;
+      return (
+        <a
+          key={i}
+          href={part}
+          target="_blank"
+          rel="noreferrer"
+          className="underline break-all hover:opacity-80"
+        >
+          {part}
+        </a>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
+
 export default function ConsultationChat({ consultationId, mode, locked }: Props) {
   const [messages, setMessages] = useState<ConsultationMessage[]>([]);
   const [body, setBody] = useState("");
   const [meetingLink, setMeetingLink] = useState("");
+  const [attachment, setAttachment] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const lastIdRef = useRef<number>(0);
+  const isVisibleRef = useRef<boolean>(true);
 
-  const fetcher = mode === "user" ? getMyMessages : getAdminMessages;
-
-  const load = async () => {
+  const load = useCallback(async (incremental: boolean) => {
     try {
-      const data = await fetcher(consultationId);
-      setMessages(data);
+      const since = incremental ? lastIdRef.current || undefined : undefined;
+      const data =
+        mode === "user"
+          ? await getMyMessages(consultationId, since)
+          : await getAdminMessages(consultationId, since);
+
+      if (!data || data.length === 0) {
+        if (!incremental) setMessages([]);
+        return;
+      }
+      if (incremental) {
+        setMessages((prev) => {
+          const seen = new Set(prev.map((m) => m.id));
+          const merged = [...prev, ...data.filter((m) => !seen.has(m.id))];
+          return merged;
+        });
+      } else {
+        setMessages(data);
+      }
+      const maxId = data.reduce((m, x) => Math.max(m, x.id), lastIdRef.current);
+      lastIdRef.current = maxId;
     } catch {
-      // silent — polling
+      /* silent */
     } finally {
       setLoading(false);
     }
-  };
+  }, [consultationId, mode]);
 
   useEffect(() => {
-    load();
-    const timer = setInterval(load, POLL_MS);
-    const onVis = () => document.visibilityState === "visible" && load();
+    lastIdRef.current = 0;
+    setLoading(true);
+    load(false);
+
+    let timer: number | undefined;
+    const schedule = () => {
+      const interval = isVisibleRef.current ? POLL_ACTIVE_MS : POLL_IDLE_MS;
+      timer = window.setTimeout(async () => {
+        await load(true);
+        schedule();
+      }, interval);
+    };
+    schedule();
+
+    const onVis = () => {
+      isVisibleRef.current = document.visibilityState === "visible";
+      if (isVisibleRef.current) load(true);
+    };
     document.addEventListener("visibilitychange", onVis);
     return () => {
-      clearInterval(timer);
+      if (timer) clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVis);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [consultationId, mode]);
+  }, [consultationId, mode, load]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages.length]);
 
+  const pickFile = (f: File | null) => {
+    if (!f) return;
+    if (f.size > 20 * 1024 * 1024) {
+      toast.error("File maksimal 20MB.");
+      return;
+    }
+    setAttachment(f);
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!body.trim() || sending || locked) return;
+    if ((!body.trim() && !attachment) || sending || locked) return;
     setSending(true);
     try {
       let msg: ConsultationMessage;
       if (mode === "admin") {
         msg = await sendAdminMessage(consultationId, {
-          body: body.trim(),
+          body: body.trim() || undefined,
           meeting_link: meetingLink.trim() || undefined,
+          attachment: attachment ?? undefined,
         });
         setMeetingLink("");
       } else {
-        msg = await sendMyMessage(consultationId, body.trim());
+        msg = await sendMyMessage(consultationId, {
+          body: body.trim() || undefined,
+          attachment: attachment ?? undefined,
+        });
       }
-      setMessages((prev) => [...prev, msg]);
+      setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
+      lastIdRef.current = Math.max(lastIdRef.current, msg.id);
       setBody("");
+      setAttachment(null);
+      if (fileRef.current) fileRef.current.value = "";
     } catch {
       toast.error("Gagal mengirim pesan.");
     } finally {
@@ -114,13 +189,12 @@ export default function ConsultationChat({ consultationId, mode, locked }: Props
                 </div>
               );
             }
+            const isImage = m.attachment_type?.startsWith("image/");
             return (
               <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div
                   className={`max-w-[78%] rounded-lg px-3.5 py-2.5 text-sm ${
-                    mine
-                      ? "bg-foreground text-background"
-                      : "bg-secondary text-foreground"
+                    mine ? "bg-foreground text-background" : "bg-secondary text-foreground"
                   }`}
                 >
                   {!mine && m.sender?.name && (
@@ -128,7 +202,40 @@ export default function ConsultationChat({ consultationId, mode, locked }: Props
                       {m.sender.name}
                     </p>
                   )}
-                  <p className="whitespace-pre-wrap leading-relaxed">{m.body}</p>
+                  {m.body && (
+                    <p className="whitespace-pre-wrap leading-relaxed break-words">
+                      {renderBody(m.body)}
+                    </p>
+                  )}
+                  {m.attachment_url && (
+                    <div className="mt-2">
+                      {isImage ? (
+                        <a href={resolveUrl(m.attachment_url)} target="_blank" rel="noreferrer">
+                          <img
+                            src={resolveUrl(m.attachment_url)}
+                            alt={m.attachment_name || "attachment"}
+                            className="rounded max-h-56 object-cover"
+                          />
+                        </a>
+                      ) : (
+                        <a
+                          href={resolveUrl(m.attachment_url)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`inline-flex items-center gap-2 rounded border px-2.5 py-1.5 text-[11px] ${
+                            mine
+                              ? "border-background/30 text-background"
+                              : "border-border text-foreground"
+                          }`}
+                        >
+                          <FileText size={12} />
+                          <span className="truncate max-w-[180px]">
+                            {m.attachment_name || "Download file"}
+                          </span>
+                        </a>
+                      )}
+                    </div>
+                  )}
                   {m.meeting_link && (
                     <a
                       href={m.meeting_link}
@@ -166,7 +273,40 @@ export default function ConsultationChat({ consultationId, mode, locked }: Props
             className="w-full border border-border rounded px-3 py-2 text-xs bg-background outline-none focus:border-foreground"
           />
         )}
-        <div className="flex gap-2">
+        {attachment && (
+          <div className="flex items-center justify-between gap-2 text-[11px] bg-secondary/60 border border-border rounded px-2.5 py-1.5">
+            <span className="truncate flex items-center gap-1.5">
+              <Paperclip size={12} /> {attachment.name}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setAttachment(null);
+                if (fileRef.current) fileRef.current.value = "";
+              }}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        )}
+        <div className="flex gap-2 items-end">
+          <input
+            ref={fileRef}
+            type="file"
+            className="hidden"
+            onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
+            accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={locked || sending}
+            title="Attach file"
+            className="border border-border rounded p-2 text-muted-foreground hover:text-foreground disabled:opacity-50"
+          >
+            <Paperclip size={14} />
+          </button>
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
@@ -183,8 +323,8 @@ export default function ConsultationChat({ consultationId, mode, locked }: Props
           />
           <button
             type="submit"
-            disabled={sending || locked || !body.trim()}
-            className="bg-foreground text-background px-4 rounded text-xs uppercase tracking-[0.2em] disabled:opacity-50 flex items-center gap-1.5"
+            disabled={sending || locked || (!body.trim() && !attachment)}
+            className="bg-foreground text-background px-4 py-2 rounded text-xs uppercase tracking-[0.2em] disabled:opacity-50 flex items-center gap-1.5"
           >
             <Send size={14} /> {sending ? "…" : "Send"}
           </button>
