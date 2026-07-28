@@ -80,7 +80,7 @@ export default function AnalyticsPDF({ overview, users }: { overview: any; users
           ))}
         </View>
 
-        <Text style={s.footer}>Livora — Design Consultation Studio</Text>
+        <Text style={s.footer}>Livora — Design PT. Langgeng Cipta Ruango</Text>
       </Page>
 
       <Page size="A4" style={s.page}>
@@ -103,7 +103,7 @@ export default function AnalyticsPDF({ overview, users }: { overview: any; users
           </View>
         ))}
 
-        <Text style={s.footer}>Livora — Design Consultation Studio</Text>
+        <Text style={s.footer}>Livora — PT. Langgeng Cipta Ruang</Text>
       </Page>
     </Document>
   );

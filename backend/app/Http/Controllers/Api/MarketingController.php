@@ -24,7 +24,7 @@ class MarketingController extends Controller
     {
         return [
             'logoText'       => 'LIVORA',
-            'studioLabel'    => 'DESIGN CONSULTATION STUDIO',
+            'studioLabel'    => 'PT. Langgeng Cipta Ruang',
             'websiteUrl'     => config('app.url'),
             'instagramUrl'   => 'https://instagram.com/livora',
             'bookingUrl'     => config('app.url') . '/consultation',

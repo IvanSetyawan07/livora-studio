@@ -15,7 +15,7 @@
           {!! $slot !!}
         </td></tr>
         <tr><td style="padding:24px 40px;border-top:1px solid #e6dfd2;font-family:Arial,sans-serif;font-size:11px;color:#8a8072;letter-spacing:.15em;text-transform:uppercase;">
-          Livora — Design Consultation Studio
+          Livora — PT. Langgeng Cipta Ruang
         </td></tr>
       </table>
     </td></tr>
