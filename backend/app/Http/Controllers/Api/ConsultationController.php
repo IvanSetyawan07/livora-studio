@@ -175,7 +175,11 @@ class ConsultationController extends Controller
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
 
-        return $consultation->messages()->with('sender:id,name')->get();
+        $query = $consultation->messages()->with('sender:id,name');
+        if ($since = $request->query('since')) {
+            $query->where('id', '>', (int) $since);
+        }
+        return $query->get();
     }
 
     public function messagesStore(Request $request, Consultation $consultation)
@@ -183,12 +187,30 @@ class ConsultationController extends Controller
         if ($consultation->user_id !== $request->user()->id) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
-        $data = $request->validate(['body' => 'required|string|max:4000']);
+        $data = $request->validate([
+            'body' => 'nullable|string|max:4000',
+            'attachment' => 'nullable|file|max:20480',
+        ]);
+        $attachmentUrl = null;
+        $attachmentType = null;
+        $attachmentName = null;
+        if ($request->hasFile('attachment')) {
+            $file = $request->file('attachment');
+            $attachmentUrl = '/storage/' . $file->store('consultation-chat', 'public');
+            $attachmentType = $file->getMimeType();
+            $attachmentName = $file->getClientOriginalName();
+        }
+        if (empty($data['body']) && !$attachmentUrl) {
+            return response()->json(['message' => 'Empty message'], 422);
+        }
         $msg = \App\Models\ConsultationMessage::create([
             'consultation_id' => $consultation->id,
             'sender_type'     => 'user',
             'sender_id'       => $request->user()->id,
-            'body'            => $data['body'],
+            'body'            => $data['body'] ?? '',
+            'attachment_url'  => $attachmentUrl,
+            'attachment_type' => $attachmentType,
+            'attachment_name' => $attachmentName,
         ]);
         return response()->json($msg->load('sender:id,name'), 201);
     }

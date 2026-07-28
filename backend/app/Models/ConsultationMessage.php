@@ -12,6 +12,9 @@ class ConsultationMessage extends Model
         'sender_id',
         'body',
         'meeting_link',
+        'attachment_url',
+        'attachment_type',
+        'attachment_name',
         'read_at',
     ];
 

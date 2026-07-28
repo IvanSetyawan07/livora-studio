@@ -127,22 +127,43 @@ class ConsultationController extends Controller
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
 
-        return $consultation->messages()->with('sender:id,name')->get();
+        $query = $consultation->messages()->with('sender:id,name');
+        if ($since = $request->query('since')) {
+            $query->where('id', '>', (int) $since);
+        }
+        return $query->get();
     }
 
     public function messagesStore(Request $request, Consultation $consultation)
     {
         $data = $request->validate([
-            'body'         => 'required|string|max:4000',
+            'body'         => 'nullable|string|max:4000',
             'meeting_link' => 'nullable|url|max:500',
+            'attachment'   => 'nullable|file|max:20480',
         ]);
+
+        $attachmentUrl = null;
+        $attachmentType = null;
+        $attachmentName = null;
+        if ($request->hasFile('attachment')) {
+            $file = $request->file('attachment');
+            $attachmentUrl = '/storage/' . $file->store('consultation-chat', 'public');
+            $attachmentType = $file->getMimeType();
+            $attachmentName = $file->getClientOriginalName();
+        }
+        if (empty($data['body']) && !$attachmentUrl && empty($data['meeting_link'])) {
+            return response()->json(['message' => 'Empty message'], 422);
+        }
 
         $msg = \App\Models\ConsultationMessage::create([
             'consultation_id' => $consultation->id,
             'sender_type'     => 'admin',
             'sender_id'       => $request->user()->id,
-            'body'            => $data['body'],
+            'body'            => $data['body'] ?? '',
             'meeting_link'    => $data['meeting_link'] ?? null,
+            'attachment_url'  => $attachmentUrl,
+            'attachment_type' => $attachmentType,
+            'attachment_name' => $attachmentName,
         ]);
 
         if (!empty($data['meeting_link']) && empty($consultation->meeting_link)) {
