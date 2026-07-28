@@ -14,7 +14,7 @@ export const Footer = () => (
       {[
         { title: "Catalog", links: CATALOG_CATEGORIES.map((c) => c.label) },
         { title: "Company", links: ["About", "Projects", "Furniture", "Style", "Contact"] },
-        { title: "Contact", links: ["Jakarta, Indonesia", "PT. Langgeng Cipta Ruang", "hello@livoralcr.com"] },
+        { title: "Contact", links: ["Jakarta, Indonesia", "PT. Langgeng Cipta Ruang", "livoralcrmarketing@gmail.com"] },
       ].map((col) => (
         <div key={col.title}>
           <p className="text-[9px] uppercase tracking-[0.2em] text-background/30 mb-4 font-light">
