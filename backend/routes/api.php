@@ -90,6 +90,14 @@ Route::delete('/wishlist/{type}/{id}', [WishlistController::class, 'destroy']);
     Route::post('/activities', [AuthController::class, 'trackActivity']);
 
     Route::middleware('admin')->prefix('admin')->group(function () {
+        // Support chat
+        Route::get('/support/sessions', [\App\Http\Controllers\Api\Admin\SupportChatController::class, 'index']);
+        Route::get('/support/sessions/{session}/messages', [\App\Http\Controllers\Api\Admin\SupportChatController::class, 'messages']);
+        Route::post('/support/sessions/{session}/accept', [\App\Http\Controllers\Api\Admin\SupportChatController::class, 'accept']);
+        Route::post('/support/sessions/{session}/messages', [\App\Http\Controllers\Api\Admin\SupportChatController::class, 'store']);
+        Route::post('/support/sessions/{session}/close', [\App\Http\Controllers\Api\Admin\SupportChatController::class, 'close']);
+
+
         // Projects
         Route::post('/projects', [ProjectController::class, 'store']);
         Route::post('/projects/{project}', [ProjectController::class, 'update']);
