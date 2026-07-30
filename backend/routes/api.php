@@ -33,6 +33,13 @@ Route::post('/auth/{provider}/callback', [AuthController::class, 'oauthCallback'
 // Public read APIs
 Route::post('/consultations', [ConsultationController::class, 'store']);
 Route::post('/chat', [ChatController::class, 'store']);
+
+// Support chat (AI concierge + eskalasi ke customer service)
+Route::post('/support/session', [\App\Http\Controllers\Api\SupportChatController::class, 'session']);
+Route::get('/support/sessions/{session}/messages', [\App\Http\Controllers\Api\SupportChatController::class, 'messages']);
+Route::post('/support/sessions/{session}/messages', [\App\Http\Controllers\Api\SupportChatController::class, 'store']);
+Route::post('/support/sessions/{session}/request-cs', [\App\Http\Controllers\Api\SupportChatController::class, 'requestCs']);
+
 Route::get('/projects', [ProjectController::class, 'index']);
 Route::get('/projects/{slug}', [ProjectController::class, 'show']);
 Route::get('/landing/highlights', [ProjectController::class, 'highlights']);
