@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronRight, ChevronDown, ImageIcon } from "lucide-react";
+import { ChevronRight, ChevronDown, ImageIcon, MessageCircle } from "lucide-react";
+import { askConcierge } from "@/lib/supportChat";
+
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/livora/Navbar";
 import { PageBreadcrumb } from "@/components/livora/Breadcrumb";
