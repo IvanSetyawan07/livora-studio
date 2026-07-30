@@ -46,6 +46,7 @@ import Appointment from "./pages/Appointment.tsx";
 import AdminConsultations from "./pages/admin/AdminConsultations.tsx";
 import AdminConsultationDetail from "./pages/admin/AdminConsultationDetail.tsx";
 import AdminWishlists from "./pages/admin/AdminWishlists.tsx";
+import AdminSupportChat from "./pages/admin/AdminSupportChat.tsx";
 import Register from "./pages/Register.tsx";
 
 
@@ -86,6 +87,7 @@ function App() {
                <Route path="consultations" element={<AdminConsultations />} />
                <Route path="consultations/:id" element={<AdminConsultationDetail />} />
                <Route path="wishlists" element={<AdminWishlists />} />
+               <Route path="support" element={<AdminSupportChat />} />
               <Route path="catalogs"          element={<CatalogListAdmin />} />
                 <Route path="catalogs/create"   element={<CatalogFormAdmin />} />
                 <Route path="catalogs/:id/edit" element={<CatalogFormAdmin />} />

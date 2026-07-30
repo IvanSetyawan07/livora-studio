@@ -29,6 +29,7 @@ const nav = [
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/consultations", label: "Consultations", icon: MessageCircle },
   { to: "/admin/wishlists", label: "Saved (Wishlist)", icon: Bookmark },
+  { to: "/admin/support", label: "Chat Support", icon: MessageCircle },
   { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/admin/marketing", label: "Email Campaigns", icon: Mail },
 ];

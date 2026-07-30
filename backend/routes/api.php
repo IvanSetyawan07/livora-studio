@@ -33,6 +33,13 @@ Route::post('/auth/{provider}/callback', [AuthController::class, 'oauthCallback'
 // Public read APIs
 Route::post('/consultations', [ConsultationController::class, 'store']);
 Route::post('/chat', [ChatController::class, 'store']);
+
+// Support chat (AI concierge + eskalasi ke customer service)
+Route::post('/support/session', [\App\Http\Controllers\Api\SupportChatController::class, 'session']);
+Route::get('/support/sessions/{session}/messages', [\App\Http\Controllers\Api\SupportChatController::class, 'messages']);
+Route::post('/support/sessions/{session}/messages', [\App\Http\Controllers\Api\SupportChatController::class, 'store']);
+Route::post('/support/sessions/{session}/request-cs', [\App\Http\Controllers\Api\SupportChatController::class, 'requestCs']);
+
 Route::get('/projects', [ProjectController::class, 'index']);
 Route::get('/projects/{slug}', [ProjectController::class, 'show']);
 Route::get('/landing/highlights', [ProjectController::class, 'highlights']);
@@ -83,6 +90,14 @@ Route::delete('/wishlist/{type}/{id}', [WishlistController::class, 'destroy']);
     Route::post('/activities', [AuthController::class, 'trackActivity']);
 
     Route::middleware('admin')->prefix('admin')->group(function () {
+        // Support chat
+        Route::get('/support/sessions', [\App\Http\Controllers\Api\Admin\SupportChatController::class, 'index']);
+        Route::get('/support/sessions/{session}/messages', [\App\Http\Controllers\Api\Admin\SupportChatController::class, 'messages']);
+        Route::post('/support/sessions/{session}/accept', [\App\Http\Controllers\Api\Admin\SupportChatController::class, 'accept']);
+        Route::post('/support/sessions/{session}/messages', [\App\Http\Controllers\Api\Admin\SupportChatController::class, 'store']);
+        Route::post('/support/sessions/{session}/close', [\App\Http\Controllers\Api\Admin\SupportChatController::class, 'close']);
+
+
         // Projects
         Route::post('/projects', [ProjectController::class, 'store']);
         Route::post('/projects/{project}', [ProjectController::class, 'update']);

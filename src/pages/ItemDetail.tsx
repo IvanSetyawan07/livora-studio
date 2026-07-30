@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronRight, ChevronDown, ImageIcon } from "lucide-react";
+import { ChevronRight, ChevronDown, ImageIcon, MessageCircle } from "lucide-react";
+import { askConcierge } from "@/lib/supportChat";
+
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/livora/Navbar";
 import { PageBreadcrumb } from "@/components/livora/Breadcrumb";
@@ -447,6 +449,26 @@ const ItemDetail = () => {
 
             <p style={goldLabel}>Availability</p>
             <p style={{ fontSize: 14, color: "#1A1A1A", marginTop: 6 }}>{item.specs.availability}</p>
+
+            <button
+              onClick={() =>
+                askConcierge({
+                  text: `Saya tertarik dengan ${item.name}${item.code ? ` (${item.code})` : ""}. Bisa jelaskan detail produk ini — material, finishing, dan cara pemesanannya?`,
+                  item_slug: item.slug,
+                  item_name: item.name,
+                })
+              }
+              className="mt-6 inline-flex items-center gap-2 uppercase hover:opacity-80 transition-opacity"
+              style={{
+                background: "#1A1A1A", color: "#fff", border: "none",
+                fontSize: 11, letterSpacing: "0.18em", padding: "12px 18px", cursor: "pointer",
+              }}
+            >
+              <MessageCircle size={14} strokeWidth={1.5} />
+              Tanya tentang produk ini
+            </button>
+
+
 
             <button
               onClick={() => navigate(-1)}
