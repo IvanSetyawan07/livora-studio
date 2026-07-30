@@ -287,7 +287,7 @@ export function ChatWidget() {
                 <p className="serif text-base font-light leading-none mb-1">
                   {status === "active" ? "Livora Customer Service" : "Livora Concierge"}
                 </p>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-black/50 font-light">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-white/60 font-light">
                   {statusLabel}
                 </p>
               </div>
@@ -295,7 +295,7 @@ export function ChatWidget() {
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Tutup chat"
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
               >
                 <X size={16} strokeWidth={1.5} />
               </button>
@@ -329,8 +329,8 @@ export function ChatWidget() {
                         className="px-4 py-3 text-sm font-light leading-relaxed whitespace-pre-wrap"
                         style={
                           m.sender === "user"
-                            ? { backgroundColor: WHITE, color: BLACK }
-                            : { backgroundColor: BLACK, color: WHITE, border: "1px solid #e5e5e5" }
+                            ? { backgroundColor: BLACK, color: WHITE }
+                            : { backgroundColor: WHITE, color: BLACK, border: "1px solid #e5e5e5" }
                         }
                       >
                         {m.text}
@@ -341,7 +341,7 @@ export function ChatWidget() {
                           type="button"
                           onClick={handleTalkToCS}
                           className="mt-2 inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] font-light border-b pb-0.5"
-                          style={{ color: WHITE, borderColor: WHITE }}
+                          style={{ color: BLACK, borderColor: BLACK }}
                         >
                           <Headset size={12} strokeWidth={1.5} />
                           Hubungkan ke customer service
@@ -356,7 +356,7 @@ export function ChatWidget() {
                 <div className="flex justify-start">
                   <div
                     className="px-4 py-3 text-sm font-light flex items-center gap-2"
-                    style={{ backgroundColor: BLACK, color: WHITE, border: "1px solid #e5e5e5" }}
+                    style={{ backgroundColor: WHITE, color: BLACK, border: "1px solid #e5e5e5" }}
                   >
                     <Loader2 size={14} className="animate-spin" strokeWidth={1.5} />
                     Mengetik...
