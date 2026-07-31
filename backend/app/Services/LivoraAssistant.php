@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Log;
  * Livora Concierge — AI assistant.
  *
  * Menggabungkan brand profile (static knowledge) + retrieval dari database
- * (items, collections, projects, catalogs), lalu memanggil Claude API.
+ * (items, collections, projects, catalogs), lalu memanggil Gemini API.
  */
 class LivoraAssistant
 {
@@ -82,7 +82,8 @@ TXT;
                 'contents'           => $contents,
                 'generationConfig'   => [
                     'responseMimeType' => 'application/json',
-                    'maxOutputTokens'  => 700,
+                    'maxOutputTokens'  => 1024,
+                    'thinkingConfig'   => ['thinkingBudget' => 0], // matikan thinking, tidak perlu untuk chat reply pendek
                 ],
             ]);
 
@@ -91,11 +92,22 @@ TXT;
                 throw new \RuntimeException('Gemini API request failed');
             }
 
-            $rawText = $response->json('candidates.0.content.parts.0.text', '');
+            // Ambil semua part teks, skip part "thought" (reasoning internal model)
+            // supaya tidak pernah bocor ke user.
+            $parts = $response->json('candidates.0.content.parts', []);
+            $rawText = '';
+            foreach ($parts as $part) {
+                if (!empty($part['thought'])) {
+                    continue;
+                }
+                $rawText .= $part['text'] ?? '';
+            }
+
             $cleaned = trim(preg_replace('/```json|```/', '', $rawText));
             $parsed  = json_decode($cleaned, true);
 
             if (!is_array($parsed) || !isset($parsed['reply'])) {
+                Log::warning('LivoraAssistant: gagal parse JSON dari model', ['raw' => $rawText]);
                 return [
                     'reply' => $rawText !== '' ? $rawText : 'Maaf, saya belum bisa menjawab itu. Mau saya hubungkan ke customer service kami?',
                     'needs_escalation' => $rawText === '',
@@ -270,22 +282,22 @@ PROMPT;
     }
 
     private function describeItem($item)
-{
-    $typeName = $item->type ? $item->type->name : null;
-    $collectionName = $item->collection ? $item->collection->name : null;
+    {
+        $typeName = $item->type ? $item->type->name : null;
+        $collectionName = $item->collection ? $item->collection->name : null;
 
-    $parts = [];
-    $parts[] = "Nama: {$item->title}";
-    if ($typeName) $parts[] = "Kategori: {$typeName}";
-    if ($collectionName) $parts[] = "Koleksi: {$collectionName}";
-    if ($item->description) $parts[] = "Deskripsi: {$item->description}";
-    if ($item->texture) $parts[] = "Tekstur: {$item->texture}";
-    if ($item->finish) $parts[] = "Finishing: {$item->finish}";
-    if ($item->availability) $parts[] = "Ketersediaan: {$item->availability}";
-    $parts[] = "Slug: {$item->slug}";
+        $parts = [];
+        $parts[] = "Nama: {$item->title}";
+        if ($typeName) $parts[] = "Kategori: {$typeName}";
+        if ($collectionName) $parts[] = "Koleksi: {$collectionName}";
+        if ($item->description) $parts[] = "Deskripsi: {$item->description}";
+        if ($item->texture) $parts[] = "Tekstur: {$item->texture}";
+        if ($item->finish) $parts[] = "Finishing: {$item->finish}";
+        if ($item->availability) $parts[] = "Ketersediaan: {$item->availability}";
+        $parts[] = "Slug: {$item->slug}";
 
-    return implode(" | ", $parts);
-}
+        return implode(" | ", $parts);
+    }
 
     private function extractKeywords(string $message): array
     {
