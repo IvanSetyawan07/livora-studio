@@ -203,12 +203,16 @@ function GoogleButton({ mountRef }: { mountRef: React.RefObject<HTMLDivElement> 
         Continue with Google
       </button>
       {/* Google's real button, rendered here by google.accounts.id.renderButton,
-          stretched to fill this box and made invisible but clickable. */}
+          stretched to fill this box and made invisible but clickable. The
+          inner wrapper/iframe are forced to 100% w/h so every pixel of the
+          visible button is a real click target (otherwise taps near the
+          edges land on nothing and the button feels dead). */}
       <div
         ref={mountRef}
-        className="absolute inset-0 overflow-hidden rounded-lg opacity-0"
+        className="absolute inset-0 overflow-hidden rounded-lg opacity-0 [&>div]:!w-full [&>div]:!h-full [&_iframe]:!w-full [&_iframe]:!h-full [&_iframe]:!m-0 [&_iframe]:!p-0"
         style={{ colorScheme: "light" }}
       />
+
     </div>
   );
 }
@@ -802,17 +806,26 @@ export default function Auth() {
   // mount points, sized to match each container's actual rendered width
   // (rather than a hardcoded value) so the invisible click-target always
   // lines up with the visible fake button, on every breakpoint.
-  const renderGoogleButtons = () => {
+  const renderGoogleButtons = (force = false) => {
     const w = window as any;
     if (!w.google?.accounts?.id) return;
 
     const renderInto = (el: HTMLDivElement | null) => {
       if (!el) return;
+      const measured = Math.floor(el.offsetWidth);
+      // Container not laid out yet (hidden panel / collapsed sheet): skip,
+      // the ResizeObserver below will render it as soon as it has a width.
+      if (!measured) return;
+      // Skip a pointless re-render (which briefly destroys the iframe and
+      // makes the very first tap do nothing) when nothing changed.
+      if (!force && el.dataset.gsiWidth === String(measured) && el.childElementCount) return;
+
       el.innerHTML = "";
-      const width = Math.min(Math.floor(el.offsetWidth) || 320, 400); // GSI max width is 400
+      el.dataset.gsiWidth = String(measured);
       w.google.accounts.id.renderButton(el, {
         type: "standard",
-        width,
+        size: "large",
+        width: Math.min(measured, 400), // GSI max width is 400
         text: "continue_with",
       });
     };
@@ -820,6 +833,21 @@ export default function Auth() {
     renderInto(googleDesktopRef.current);
     renderInto(googleMobileRef.current);
   };
+
+  // Keep both invisible click-targets in sync with their container size.
+  // Panels animate/resize (and the mobile sheet starts collapsed), so
+  // without this the real button can stay 0-width or misaligned — which is
+  // exactly what "the button doesn't respond to the first tap" looks like.
+  useEffect(() => {
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => renderGoogleButtons());
+    [googleDesktopRef.current, googleMobileRef.current].forEach((el) => {
+      if (el) ro.observe(el);
+    });
+    return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLogin]);
+
 
   // 1) Initial setup: initialize GSI once the script has loaded, then do
   // the first render of both buttons. The Google Identity Services script
@@ -872,8 +900,9 @@ export default function Auth() {
     let timeout: ReturnType<typeof setTimeout>;
     const handleFocus = () => {
       clearTimeout(timeout);
-      timeout = setTimeout(renderGoogleButtons, 200);
+      timeout = setTimeout(() => renderGoogleButtons(true), 200);
     };
+
 
     window.addEventListener("focus", handleFocus);
     return () => {
