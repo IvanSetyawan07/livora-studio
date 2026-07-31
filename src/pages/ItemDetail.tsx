@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronRight, ChevronDown, ImageIcon, MessageCircle } from "lucide-react";
+import { ChevronRight, ChevronDown, ImageIcon, MessageCircle, QrCode } from "lucide-react";
+import ItemQRCode from "@/components/livora/ItemQRCode";
+
 import { askConcierge } from "@/lib/supportChat";
 
 import { motion, AnimatePresence } from "framer-motion";
@@ -26,7 +28,9 @@ const ItemDetail = () => {
   const { project } = useProjectBySlug(projectSlug ?? undefined);
   const { item, loading } = useItemBySlug(slug);
 
+  const [showQR, setShowQR] = useState(false);
   const [activeVariantId, setActiveVariantId] = useState<number | null>(null);
+
   const [sheetCategory, setSheetCategory] = useState<string | null>(null);
   const [showGallery, setShowGallery] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -235,10 +239,24 @@ const ItemDetail = () => {
                   {item.code}
                 </p>
               </div>
-              {item.apiId && (
-                <SaveButton type="item" id={Number(item.apiId)} size={20} className="mt-1" />
-              )}
+              <div className="flex items-center gap-1 mt-1">
+                <button
+                  onClick={() => setShowQR(true)}
+                  title="QR Identity"
+                  className="p-1.5 rounded hover:bg-black/5 transition-colors"
+                  aria-label="Show QR code for this item"
+                >
+                  <QrCode className="w-5 h-5" style={{ color: "#1A1A1A" }} />
+                </button>
+                {item.apiId && (
+                  <SaveButton type="item" id={Number(item.apiId)} size={20} />
+                )}
+              </div>
             </div>
+            {showQR && (
+              <ItemQRCode slug={item.slug} name={item.name} code={item.code} onClose={() => setShowQR(false)} />
+            )}
+
 
             {activeVariant?.description && (
               <p key={activeVariant.id} className="animate-fade-in" style={{ fontSize: 14, color: "#5A5A5A", marginTop: 16, lineHeight: 1.7 }}>

@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
-import { Pencil, Trash2, Plus, Settings2, Search, Filter, Download, X, ArrowUpDown } from "lucide-react";
+import { Pencil, Trash2, Plus, Settings2, Search, Filter, Download, X, ArrowUpDown, QrCode } from "lucide-react";
+import ItemQRCode from "@/components/livora/ItemQRCode";
+
 
 type SortKey = "name-asc" | "name-desc" | "date-desc" | "date-asc";
 
@@ -14,6 +16,8 @@ export default function AdminItems() {
   const [collections, setCollections] = useState<any[]>([]);
   const [editing, setEditing] = useState<any | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [qrItem, setQrItem] = useState<any | null>(null);
+
 
   // filter / search / sort
   const [query, setQuery] = useState("");
@@ -219,9 +223,13 @@ export default function AdminItems() {
                 <td className="p-3 text-xs">{i.availability}</td>
                 <td className="p-3 text-xs whitespace-nowrap">{fmtDate(i.created_at)}</td>
                 <td className="p-3 text-right whitespace-nowrap">
+                  <button onClick={() => setQrItem(i)} title="QR Identity" className="p-1.5 hover:bg-muted rounded" disabled={!i.slug}>
+                    <QrCode className="w-3.5 h-3.5" />
+                  </button>
                   <button onClick={() => downloadImage(i)} title="Download image" className="p-1.5 hover:bg-muted rounded" disabled={!i.image}>
                     <Download className="w-3.5 h-3.5" />
                   </button>
+
                   <Link to={`/admin/items/${i.id}/experience`} title="Manage Experience" className="p-1.5 hover:bg-muted rounded inline-flex">
                     <Settings2 className="w-3.5 h-3.5" />
                   </Link>
@@ -243,8 +251,23 @@ export default function AdminItems() {
 
       {showForm && (
         <ItemForm item={editing} types={types} themes={themes} cats={cats} collections={collections}
-          onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />
+          onClose={() => setShowForm(false)}
+          onSaved={(saved: any, isNew: boolean) => {
+            setShowForm(false);
+            load();
+            if (isNew && saved?.slug) setQrItem(saved); // auto-generate QR untuk item baru
+          }} />
       )}
+
+      {qrItem && (
+        <ItemQRCode
+          slug={qrItem.slug}
+          name={qrItem.title}
+          code={qrItem.code}
+          onClose={() => setQrItem(null)}
+        />
+      )}
+
     </div>
   );
 }
@@ -283,8 +306,9 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
       catIds.forEach((id) => fd.append("category_ids[]", id.toString()));
       if (file) fd.append("image", file);
       const url = item ? `/admin/items/${item.id}` : "/admin/items";
-      await api.post(url, fd, { headers: { "Content-Type": "multipart/form-data" } });
-      onSaved();
+      const res = await api.post(url, fd, { headers: { "Content-Type": "multipart/form-data" } });
+      onSaved(res.data, !item);
+
     } catch (err: any) {
       alert(err?.response?.data?.message || "Gagal");
     } finally { setSaving(false); }
