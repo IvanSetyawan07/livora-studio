@@ -900,8 +900,9 @@ export default function Auth() {
     let timeout: ReturnType<typeof setTimeout>;
     const handleFocus = () => {
       clearTimeout(timeout);
-      timeout = setTimeout(renderGoogleButtons, 200);
+      timeout = setTimeout(() => renderGoogleButtons(true), 200);
     };
+
 
     window.addEventListener("focus", handleFocus);
     return () => {
