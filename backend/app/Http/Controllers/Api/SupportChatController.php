@@ -28,16 +28,29 @@ class SupportChatController extends Controller
             'email'      => 'nullable|email|max:180',
         ]);
 
+        $loginUser = auth('sanctum')->user();
+        $ip = $request->ip();
+
         $session = SupportSession::where('visitor_id', $data['visitor_id'])
             ->orderByDesc('id')
             ->first();
 
         if (!$session) {
+            $visitorNumber = optional(
+                SupportSession::where('ip_address', $ip)->whereNotNull('visitor_number')->first()
+            )->visitor_number;
+
+            if (!$visitorNumber) {
+                $visitorNumber = (SupportSession::max('visitor_number') ?? 0) + 1;
+            }
+
             $session = SupportSession::create([
                 'visitor_id'      => $data['visitor_id'],
-                'user_id'         => optional($request->user())->id,
-                'name'            => $data['name'] ?? optional($request->user())->name,
-                'email'           => $data['email'] ?? optional($request->user())->email,
+                'user_id'         => optional($loginUser)->id,
+                'name'            => $data['name'] ?? optional($loginUser)->name,
+                'email'           => $data['email'] ?? optional($loginUser)->email,
+                'ip_address'      => $ip,
+                'visitor_number'  => $visitorNumber,
                 'status'          => SupportSession::STATUS_BOT,
                 'last_message_at' => now(),
             ]);
@@ -48,12 +61,16 @@ class SupportChatController extends Controller
             ]);
         }
 
-        if ($request->user() && !$session->user_id) {
+        if ($loginUser && !$session->user_id) {
             $session->update([
-                'user_id' => $request->user()->id,
-                'name'    => $session->name ?: $request->user()->name,
-                'email'   => $session->email ?: $request->user()->email,
+                'user_id' => $loginUser->id,
+                'name'    => $session->name ?: $loginUser->name,
+                'email'   => $session->email ?: $loginUser->email,
             ]);
+        }
+
+        if (!$session->ip_address) {
+            $session->update(['ip_address' => $ip]);
         }
 
         return response()->json($this->payload($session->fresh('messages')));

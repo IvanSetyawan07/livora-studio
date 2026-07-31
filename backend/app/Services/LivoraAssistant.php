@@ -52,18 +52,18 @@ TXT;
 
         $systemPrompt = $this->systemPrompt($context);
 
-        $messages = [];
+        $contents = [];
         foreach ($history as $h) {
-            $role = ($h['role'] ?? 'user') === 'user' ? 'user' : 'assistant';
+            $role = ($h['role'] ?? 'user') === 'user' ? 'user' : 'model';
             $text = trim((string) ($h['text'] ?? ''));
             if ($text === '') {
                 continue;
             }
-            $messages[] = ['role' => $role, 'content' => $text];
+            $contents[] = ['role' => $role, 'parts' => [['text' => $text]]];
         }
-        $messages[] = ['role' => 'user', 'content' => $message];
+        $contents[] = ['role' => 'user', 'parts' => [['text' => $message]]];
 
-        $apiKey = config('services.anthropic.api_key');
+        $apiKey = config('services.gemini.api_key');
         if (!$apiKey) {
             return [
                 'reply' => 'Maaf, asisten AI kami sedang tidak aktif. Mau saya hubungkan ke customer service Livora?',
@@ -71,27 +71,29 @@ TXT;
             ];
         }
 
+        $model = config('services.gemini.model', 'gemini-2.5-flash');
+
         try {
             $response = Http::timeout(45)->withHeaders([
-                'x-api-key'         => $apiKey,
-                'anthropic-version' => '2023-06-01',
-                'content-type'      => 'application/json',
-            ])->post('https://api.anthropic.com/v1/messages', [
-                'model'      => config('services.anthropic.model', 'claude-sonnet-4-5'),
-                'max_tokens' => 700,
-                'system'     => $systemPrompt,
-                'messages'   => $messages,
+                'x-goog-api-key' => $apiKey,
+                'content-type'   => 'application/json',
+            ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
+                'system_instruction' => ['parts' => [['text' => $systemPrompt]]],
+                'contents'           => $contents,
+                'generationConfig'   => [
+                    'responseMimeType' => 'application/json',
+                    'maxOutputTokens'  => 700,
+                ],
             ]);
 
             if (!$response->successful()) {
-                Log::error('Claude API error: ' . $response->body());
-                throw new \RuntimeException('Claude API request failed');
+                Log::error('Gemini API error: ' . $response->body());
+                throw new \RuntimeException('Gemini API request failed');
             }
 
-            $textBlock = collect($response->json('content', []))->firstWhere('type', 'text');
-            $rawText   = $textBlock['text'] ?? '';
-            $cleaned   = trim(preg_replace('/```json|```/', '', $rawText));
-            $parsed    = json_decode($cleaned, true);
+            $rawText = $response->json('candidates.0.content.parts.0.text', '');
+            $cleaned = trim(preg_replace('/```json|```/', '', $rawText));
+            $parsed  = json_decode($cleaned, true);
 
             if (!is_array($parsed) || !isset($parsed['reply'])) {
                 return [
@@ -172,6 +174,7 @@ PROMPT;
                           ->orWhere('finish', 'like', "%{$kw}%");
                     }
                 })
+                ->with(['type', 'collection'])
                 ->limit(5)
                 ->get();
 
@@ -198,15 +201,15 @@ PROMPT;
             $collections = Collection::query()
                 ->where(function ($q) use ($keywords) {
                     foreach ($keywords as $kw) {
-                        $q->orWhere('title', 'like', "%{$kw}%")
+                        $q->orWhere('name', 'like', "%{$kw}%")
                           ->orWhere('description', 'like', "%{$kw}%");
                     }
                 })
                 ->limit(3)
-                ->get(['id', 'title', 'description']);
+                ->get(['id', 'name', 'description']);
 
             foreach ($collections as $c) {
-                $chunks[] = "[Collection] {$c->title} — {$c->description}";
+                $chunks[] = "[Collection] {$c->name} — {$c->description}";
             }
 
             $catalogs = Catalog::query()
@@ -226,7 +229,44 @@ PROMPT;
             }
         }
 
+        if (empty($chunks)) {
+            $chunks[] = $this->generalSummary();
+        }
+
         return implode("\n", $chunks);
+    }
+
+    private function generalSummary(): string
+    {
+        $collections = Collection::query()
+            ->orderBy('display_order')
+            ->limit(8)
+            ->pluck('name')
+            ->filter()
+            ->implode(', ');
+
+        $types = \App\Models\FurnitureType::query()
+            ->limit(10)
+            ->pluck('name')
+            ->filter()
+            ->implode(', ');
+
+        $catalogs = Catalog::query()
+            ->limit(5)
+            ->pluck('title')
+            ->filter()
+            ->implode(', ');
+
+        $lines = [];
+        if ($collections !== '') { $lines[] = "Koleksi tersedia: {$collections}."; }
+        if ($types !== '') { $lines[] = "Kategori furniture: {$types}."; }
+        if ($catalogs !== '') { $lines[] = "Beberapa katalog: {$catalogs}."; }
+
+        if (empty($lines)) {
+            return '[Info umum] Data katalog belum tersedia saat ini.';
+        }
+
+        return "[Info umum]\n" . implode("\n", $lines);
     }
 
     private function describeItem($item)
