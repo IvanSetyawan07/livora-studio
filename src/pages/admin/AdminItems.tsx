@@ -251,8 +251,23 @@ export default function AdminItems() {
 
       {showForm && (
         <ItemForm item={editing} types={types} themes={themes} cats={cats} collections={collections}
-          onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />
+          onClose={() => setShowForm(false)}
+          onSaved={(saved: any, isNew: boolean) => {
+            setShowForm(false);
+            load();
+            if (isNew && saved?.slug) setQrItem(saved); // auto-generate QR untuk item baru
+          }} />
       )}
+
+      {qrItem && (
+        <ItemQRCode
+          slug={qrItem.slug}
+          name={qrItem.title}
+          code={qrItem.code}
+          onClose={() => setQrItem(null)}
+        />
+      )}
+
     </div>
   );
 }
