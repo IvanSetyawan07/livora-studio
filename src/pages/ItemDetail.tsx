@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronRight, ChevronDown, ImageIcon, MessageCircle } from "lucide-react";
+import { ChevronRight, ChevronDown, ImageIcon, MessageCircle, QrCode } from "lucide-react";
+import ItemQRCode from "@/components/livora/ItemQRCode";
+
 import { askConcierge } from "@/lib/supportChat";
 
 import { motion, AnimatePresence } from "framer-motion";
