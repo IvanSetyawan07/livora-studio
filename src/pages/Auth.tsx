@@ -209,7 +209,7 @@ function GoogleButton({ mountRef }: { mountRef: React.RefObject<HTMLDivElement> 
           edges land on nothing and the button feels dead). */}
       <div
         ref={mountRef}
-        className="absolute inset-0 overflow-hidden rounded-lg opacity-0 [&>div]:!w-full [&>div]:!h-full [&_iframe]:!w-full [&_iframe]:!h-full [&_iframe]:!m-0 [&_iframe]:!p-0 [&_iframe]:!position-static"
+        className="absolute inset-0 overflow-hidden rounded-lg opacity-0 [&>div]:!w-full [&>div]:!h-full [&_iframe]:!w-full [&_iframe]:!h-full [&_iframe]:!m-0 [&_iframe]:!p-0"
         style={{ colorScheme: "light" }}
       />
 
