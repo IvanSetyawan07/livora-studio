@@ -203,12 +203,16 @@ function GoogleButton({ mountRef }: { mountRef: React.RefObject<HTMLDivElement> 
         Continue with Google
       </button>
       {/* Google's real button, rendered here by google.accounts.id.renderButton,
-          stretched to fill this box and made invisible but clickable. */}
+          stretched to fill this box and made invisible but clickable. The
+          inner wrapper/iframe are forced to 100% w/h so every pixel of the
+          visible button is a real click target (otherwise taps near the
+          edges land on nothing and the button feels dead). */}
       <div
         ref={mountRef}
-        className="absolute inset-0 overflow-hidden rounded-lg opacity-0"
+        className="absolute inset-0 overflow-hidden rounded-lg opacity-0 [&>div]:!w-full [&>div]:!h-full [&_iframe]:!w-full [&_iframe]:!h-full [&_iframe]:!m-0 [&_iframe]:!p-0 [&_iframe]:!position-static"
         style={{ colorScheme: "light" }}
       />
+
     </div>
   );
 }
