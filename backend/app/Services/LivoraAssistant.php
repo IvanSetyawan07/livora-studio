@@ -198,15 +198,15 @@ PROMPT;
             $collections = Collection::query()
                 ->where(function ($q) use ($keywords) {
                     foreach ($keywords as $kw) {
-                        $q->orWhere('title', 'like', "%{$kw}%")
+                        $q->orWhere('name', 'like', "%{$kw}%")
                           ->orWhere('description', 'like', "%{$kw}%");
                     }
                 })
                 ->limit(3)
-                ->get(['id', 'title', 'description']);
+                ->get(['id', 'name', 'description']);
 
             foreach ($collections as $c) {
-                $chunks[] = "[Collection] {$c->title} — {$c->description}";
+                $chunks[] = "[Collection] {$c->name} — {$c->description}";
             }
 
             $catalogs = Catalog::query()
