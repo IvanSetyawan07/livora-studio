@@ -52,18 +52,18 @@ TXT;
 
         $systemPrompt = $this->systemPrompt($context);
 
-        $messages = [];
+        $contents = [];
         foreach ($history as $h) {
-            $role = ($h['role'] ?? 'user') === 'user' ? 'user' : 'assistant';
+            $role = ($h['role'] ?? 'user') === 'user' ? 'user' : 'model';
             $text = trim((string) ($h['text'] ?? ''));
             if ($text === '') {
                 continue;
             }
-            $messages[] = ['role' => $role, 'content' => $text];
+            $contents[] = ['role' => $role, 'parts' => [['text' => $text]]];
         }
-        $messages[] = ['role' => 'user', 'content' => $message];
+        $contents[] = ['role' => 'user', 'parts' => [['text' => $message]]];
 
-        $apiKey = config('services.anthropic.api_key');
+        $apiKey = config('services.gemini.api_key');
         if (!$apiKey) {
             return [
                 'reply' => 'Maaf, asisten AI kami sedang tidak aktif. Mau saya hubungkan ke customer service Livora?',
@@ -71,27 +71,29 @@ TXT;
             ];
         }
 
+        $model = config('services.gemini.model', 'gemini-2.5-flash');
+
         try {
             $response = Http::timeout(45)->withHeaders([
-                'x-api-key'         => $apiKey,
-                'anthropic-version' => '2023-06-01',
-                'content-type'      => 'application/json',
-            ])->post('https://api.anthropic.com/v1/messages', [
-                'model'      => config('services.anthropic.model', 'claude-sonnet-4-5'),
-                'max_tokens' => 700,
-                'system'     => $systemPrompt,
-                'messages'   => $messages,
+                'x-goog-api-key' => $apiKey,
+                'content-type'   => 'application/json',
+            ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
+                'system_instruction' => ['parts' => [['text' => $systemPrompt]]],
+                'contents'           => $contents,
+                'generationConfig'   => [
+                    'responseMimeType' => 'application/json',
+                    'maxOutputTokens'  => 700,
+                ],
             ]);
 
             if (!$response->successful()) {
-                Log::error('Claude API error: ' . $response->body());
-                throw new \RuntimeException('Claude API request failed');
+                Log::error('Gemini API error: ' . $response->body());
+                throw new \RuntimeException('Gemini API request failed');
             }
 
-            $textBlock = collect($response->json('content', []))->firstWhere('type', 'text');
-            $rawText   = $textBlock['text'] ?? '';
-            $cleaned   = trim(preg_replace('/```json|```/', '', $rawText));
-            $parsed    = json_decode($cleaned, true);
+            $rawText = $response->json('candidates.0.content.parts.0.text', '');
+            $cleaned = trim(preg_replace('/```json|```/', '', $rawText));
+            $parsed  = json_decode($cleaned, true);
 
             if (!is_array($parsed) || !isset($parsed['reply'])) {
                 return [
