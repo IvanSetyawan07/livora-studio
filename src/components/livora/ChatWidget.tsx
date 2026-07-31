@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { MessageCircle, X, Send, Loader2, Headset } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import { MessageCircle, X, Send, Loader2, Headset, ArrowRight, CalendarCheck, Sparkles } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   openSession,
   fetchMessages,
@@ -16,6 +16,23 @@ import {
 const BLACK = "#ffffff";
 const WHITE = "#000000";
 const ease = [0.22, 1, 0.36, 1] as const;
+
+/** Satu kartu rekomendasi (item/collection/catalog/project) yang dikirim backend. */
+interface Recommendation {
+  type: "item" | "collection" | "catalog" | "project";
+  title: string;
+  subtitle?: string | null;
+  description?: string | null;
+  image?: string | null;
+  url: string;
+}
+
+const TYPE_CTA: Record<Recommendation["type"], string> = {
+  item: "Lihat Produk",
+  collection: "Lihat Koleksi",
+  catalog: "Lihat Katalog",
+  project: "Lihat Project",
+};
 
 /**
  * Popup chat widget — Livora Concierge.
@@ -36,6 +53,7 @@ export function ChatWidget() {
   const [unread, setUnread] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const contextRef = useRef<{ item_slug?: string; item_name?: string }>({});
+  const navigate = useNavigate();
 
   const { pathname } = useLocation();
   const isLanding = pathname === "/";
@@ -211,6 +229,12 @@ export function ChatWidget() {
     }
   };
 
+  /** Navigasi ke halaman produk/koleksi/katalog/project — tetap di dalam SPA. */
+  const goToRecommendation = (url: string) => {
+    setOpen(false);
+    navigate(url);
+  };
+
   const status = session?.status ?? "bot";
   const statusLabel =
     status === "pending_cs"
@@ -319,7 +343,7 @@ export function ChatWidget() {
                   </p>
                 ) : (
                   <div key={m.id} className={`flex ${m.sender === "user" ? "justify-end" : "justify-start"}`}>
-                    <div className="max-w-[85%]">
+                    <div className="max-w-[85%] w-full">
                       {m.sender === "admin" && (
                         <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-1">
                           Customer Service
@@ -335,6 +359,63 @@ export function ChatWidget() {
                       >
                         {m.text}
                       </div>
+
+                      {/* Kartu rekomendasi produk/koleksi/katalog/project dari AI */}
+                      {m.sender === "bot" && Array.isArray(m.meta?.recommendations) && m.meta.recommendations.length > 0 && (
+                        <div className="mt-3">
+                          <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-2">
+                            <Sparkles size={11} strokeWidth={1.5} />
+                            Rekomendasi untuk Anda
+                          </p>
+                          <div className="space-y-2">
+                            {(m.meta.recommendations as Recommendation[]).map((rec, i) => (
+                              <button
+                                key={`${m.id}-rec-${i}`}
+                                type="button"
+                                onClick={() => goToRecommendation(rec.url)}
+                                className="w-full text-left border border-[#e5e5e5] bg-white hover:border-black transition-colors flex gap-3 overflow-hidden group"
+                              >
+                                {rec.image && (
+                                  <div className="w-20 h-20 shrink-0 bg-[#f2f2f2] overflow-hidden">
+                                    <img
+                                      src={rec.image}
+                                      alt={rec.title}
+                                      className="w-full h-full object-cover"
+                                      loading="lazy"
+                                      onError={(e) => {
+                                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                                <div className="py-2.5 pr-3 flex-1 min-w-0">
+                                  <p className="text-sm font-light leading-snug truncate">{rec.title}</p>
+                                  {rec.subtitle && (
+                                    <p className="text-[11px] text-muted-foreground truncate">{rec.subtitle}</p>
+                                  )}
+                                  <span className="mt-1 inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.14em] font-light group-hover:gap-1.5 transition-all">
+                                    {TYPE_CTA[rec.type] ?? "Lihat"}
+                                    <ArrowRight size={11} strokeWidth={1.5} />
+                                  </span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* CTA konsultasi */}
+                      {m.sender === "bot" && m.meta?.show_consultation && (
+                        <button
+                          type="button"
+                          onClick={() => goToRecommendation(m.meta?.consultation_url ?? "/appointment")}
+                          className="mt-2 w-full inline-flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.18em] font-light px-4 py-2.5"
+                          style={{ backgroundColor: BLACK, color: WHITE }}
+                        >
+                          <CalendarCheck size={13} strokeWidth={1.5} />
+                          Jadwalkan Konsultasi
+                        </button>
+                      )}
 
                       {m.sender === "bot" && m.meta?.needs_escalation && status === "bot" && (
                         <button

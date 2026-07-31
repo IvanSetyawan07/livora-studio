@@ -146,7 +146,12 @@ class SupportChatController extends Controller
             $botMsg = $session->messages()->create([
                 'sender' => 'bot',
                 'text'   => $result['reply'],
-                'meta'   => ['needs_escalation' => (bool) $result['needs_escalation']],
+                'meta'   => [
+                    'needs_escalation'  => (bool) ($result['needs_escalation'] ?? false),
+                    'recommendations'   => $result['recommendations'] ?? [],
+                    'show_consultation' => (bool) ($result['show_consultation'] ?? false),
+                    'consultation_url'  => $assistant->consultationUrl(),
+                ],
             ]);
             $session->update(['last_message_at' => now()]);
 

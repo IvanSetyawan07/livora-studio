@@ -14,9 +14,27 @@ use Illuminate\Support\Facades\Log;
  *
  * Menggabungkan brand profile (static knowledge) + retrieval dari database
  * (items, collections, projects, catalogs), lalu memanggil Gemini API.
+ *
+ * PENTING: model (Gemini) HANYA memilih `type` + `slug` dari data yang sudah
+ * disediakan di context. Gambar dan URL asli SELALU di-resolve ulang di sini
+ * dari database — supaya tidak ada link/gambar hasil karangan model.
  */
 class LivoraAssistant
 {
+    /**
+     * Mapping tipe konten -> pola URL halaman detail di frontend.
+     * SESUAIKAN kalau route React kamu bukan singular seperti ini.
+     */
+    private const FRONTEND_PATHS = [
+        'item'       => '/item/%s',
+        'collection' => '/collection/%s',
+        'catalog'    => '/catalog/%s',
+        'project'    => '/project/%s',
+    ];
+
+    /** Halaman untuk booking konsultasi. Sesuaikan kalau path-nya beda. */
+    private const CONSULTATION_PATH = '/appointment';
+
     /** Brand/company knowledge — dipakai untuk pertanyaan profil perusahaan. */
     public const BRAND_PROFILE = <<<'TXT'
 Livora Studio adalah studio interior design & furniture asal Indonesia (Bandung) yang menangani
@@ -68,6 +86,8 @@ TXT;
             return [
                 'reply' => 'Maaf, asisten AI kami sedang tidak aktif. Mau saya hubungkan ke customer service Livora?',
                 'needs_escalation' => true,
+                'recommendations' => [],
+                'show_consultation' => false,
             ];
         }
 
@@ -113,18 +133,26 @@ TXT;
                 return [
                     'reply' => $rawText !== '' ? $rawText : 'Maaf, saya belum bisa menjawab itu. Mau saya hubungkan ke customer service kami?',
                     'needs_escalation' => $rawText === '',
+                    'recommendations' => [],
+                    'show_consultation' => false,
                 ];
             }
+
+            $recommendations = $this->resolveRecommendations($parsed['recommendations'] ?? []);
 
             return [
                 'reply' => (string) $parsed['reply'],
                 'needs_escalation' => (bool) ($parsed['needs_escalation'] ?? false),
+                'recommendations' => $recommendations,
+                'show_consultation' => (bool) ($parsed['show_consultation'] ?? false),
             ];
         } catch (\Throwable $e) {
             Log::error('LivoraAssistant error: ' . $e->getMessage());
             return [
                 'reply' => 'Maaf, saya sedang tidak bisa memproses pertanyaan itu. Mau saya hubungkan ke customer service kami?',
                 'needs_escalation' => true,
+                'recommendations' => [],
+                'show_consultation' => false,
             ];
         }
     }
@@ -137,9 +165,11 @@ TXT;
 Kamu adalah Livora Concierge, asisten AI resmi Livora Studio.
 
 Peranmu: menjawab pertanyaan tentang profil perusahaan, layanan, alur kerja, dan product knowledge
-(furniture, material, finishing, koleksi, project) berdasarkan informasi di bawah.
+(furniture, material, finishing, koleksi, project) berdasarkan informasi di bawah, sekaligus
+merekomendasikan konten yang relevan (furniture / collection / catalog / project) supaya user
+bisa langsung melihat kartu visualnya di chat.
 
-Aturan:
+Aturan jawaban:
 - Untuk pertanyaan profil/layanan/alur kerja, jawab dari bagian "Profil Livora".
 - Untuk pertanyaan produk, jawab dari bagian "Data produk relevan". Jangan mengarang spesifikasi,
   dimensi, stok, atau harga yang tidak tercantum.
@@ -152,8 +182,34 @@ Aturan:
 - Bahasa Indonesia yang hangat, ringkas, dan profesional. Balas dalam Bahasa Inggris jika user
   menulis dalam Bahasa Inggris.
 - Jawaban maksimal ~120 kata, boleh pakai bullet pendek.
-- Balas HANYA JSON valid, tanpa teks lain:
-{"reply": "isi jawaban", "needs_escalation": true atau false}
+- JANGAN PERNAH menulis URL atau menyebut nama file gambar di dalam teks "reply". Semua link dan
+  gambar HANYA lewat field "recommendations" di bawah — sistem yang akan mengisi gambar & link asli.
+
+Aturan rekomendasi (field "recommendations"):
+- Setiap entri WAJIB pakai "slug" yang benar-benar tercantum di bagian "Data produk relevan" di
+  bawah (lihat "Slug: ..." pada tiap baris [Item]/[Collection]/[Catalog]/[Project]). JANGAN mengarang
+  slug yang tidak ada di context.
+- Maksimal 3 rekomendasi. Prioritaskan kualitas relevansi, bukan jumlah.
+- "type" harus salah satu dari: "item", "collection", "catalog", "project".
+- Kalau user bertanya soal suasana/gaya ruangan ("cozy", "tenang", "scandinavian", "minimalis") →
+  rekomendasikan "collection" atau "catalog" yang relevan.
+- Kalau user bertanya soal barang spesifik ("sofa", "meja kopi", "kursi makan") → rekomendasikan
+  "item".
+- Kalau user minta lihat portofolio/project → rekomendasikan "project".
+- Kalau tidak ada yang benar-benar relevan di context, kirim array kosong — jangan memaksakan.
+
+Set "show_consultation" true kalau user tampak siap lanjut ke tahap konsultasi (misalnya sudah
+menentukan pilihan, atau minta booking/jadwal).
+
+Balas HANYA JSON valid, tanpa teks lain, dengan format persis ini:
+{
+  "reply": "isi jawaban natural, tanpa URL/nama file",
+  "needs_escalation": true atau false,
+  "show_consultation": true atau false,
+  "recommendations": [
+    {"type": "item atau collection atau catalog atau project", "slug": "slug-yang-ada-di-context"}
+  ]
+}
 
 Profil Livora:
 {$brand}
@@ -161,6 +217,157 @@ Profil Livora:
 Data produk relevan:
 {$context}
 PROMPT;
+    }
+
+    /**
+     * Ubah daftar {type, slug} dari model menjadi kartu lengkap (judul, gambar,
+     * url) dengan query ulang ke database. Slug yang tidak ditemukan di-skip
+     * diam-diam (bukan error) supaya tidak ada card kosong/rusak yang tampil.
+     */
+    private function resolveRecommendations(array $items): array
+    {
+        $cards = [];
+
+        foreach (array_slice($items, 0, 3) as $rec) {
+            $type = is_array($rec) ? ($rec['type'] ?? null) : null;
+            $slug = is_array($rec) ? ($rec['slug'] ?? null) : null;
+            if (!$type || !$slug || !isset(self::FRONTEND_PATHS[$type])) {
+                continue;
+            }
+
+            $card = match ($type) {
+                'item'       => $this->cardFromItem($slug),
+                'collection' => $this->cardFromCollection($slug),
+                'catalog'    => $this->cardFromCatalog($slug),
+                'project'    => $this->cardFromProject($slug),
+                default      => null,
+            };
+
+            if ($card) {
+                $cards[] = $card;
+            }
+        }
+
+        return $cards;
+    }
+
+    private function cardFromItem(string $slug): ?array
+    {
+        $item = Item::query()->with(['type', 'collection'])->where('slug', $slug)->first();
+        if (!$item) {
+            return null;
+        }
+
+        return [
+            'type'        => 'item',
+            'title'       => $item->title,
+            'subtitle'    => optional($item->type)->name ?? optional($item->collection)->name,
+            'description' => $this->shorten($item->description),
+            'image'       => $this->absoluteUrl($item->thumbnail),
+            'url'         => $this->frontendUrl('item', $item->slug),
+        ];
+    }
+
+    private function cardFromCollection(string $slug): ?array
+    {
+        $c = Collection::query()->where('slug', $slug)->first();
+        if (!$c) {
+            return null;
+        }
+
+        return [
+            'type'        => 'collection',
+            'title'       => $c->name,
+            'subtitle'    => 'Living Collection',
+            'description' => $this->shorten($c->description),
+            'image'       => $this->absoluteUrl($this->firstNonEmpty($c, ['thumbnail', 'image', 'cover_image', 'banner'])),
+            'url'         => $this->frontendUrl('collection', $c->slug),
+        ];
+    }
+
+    private function cardFromCatalog(string $slug): ?array
+    {
+        $cat = Catalog::query()->where('slug', $slug)->first();
+        if (!$cat) {
+            return null;
+        }
+
+        return [
+            'type'        => 'catalog',
+            'title'       => $cat->title,
+            'subtitle'    => $cat->category ?? $cat->taxonomy,
+            'description' => $this->shorten($cat->description),
+            'image'       => $this->absoluteUrl($this->firstNonEmpty($cat, ['thumbnail', 'image', 'cover_image', 'banner'])),
+            'url'         => $this->frontendUrl('catalog', $cat->slug),
+        ];
+    }
+
+    private function cardFromProject(string $slug): ?array
+    {
+        $p = Project::query()->where('slug', $slug)->first();
+        if (!$p) {
+            return null;
+        }
+
+        $subtitle = trim(($p->location ?? '') . ($p->year ? " · {$p->year}" : ''));
+
+        return [
+            'type'        => 'project',
+            'title'       => $p->title,
+            'subtitle'    => $subtitle !== '' ? $subtitle : null,
+            'description' => $this->shorten($p->description),
+            'image'       => $this->absoluteUrl($this->firstNonEmpty($p, ['thumbnail', 'image', 'cover_image'])),
+            'url'         => $this->frontendUrl('project', $p->slug),
+        ];
+    }
+
+    /** Ambil field pertama yang tidak kosong dari sebuah model (dicoba berurutan). */
+    private function firstNonEmpty($model, array $fields): ?string
+    {
+        foreach ($fields as $f) {
+            if (!empty($model->{$f})) {
+                return (string) $model->{$f};
+            }
+        }
+        return null;
+    }
+
+    private function shorten(?string $text, int $limit = 90): ?string
+    {
+        if (!$text) {
+            return null;
+        }
+        $text = trim($text);
+        return mb_strlen($text) > $limit ? mb_substr($text, 0, $limit - 1) . '…' : $text;
+    }
+
+    private function frontendUrl(string $type, string $slug): string
+    {
+        $pattern = self::FRONTEND_PATHS[$type] ?? '/%s';
+        return sprintf($pattern, $slug);
+    }
+
+    /** Path konsultasi, dipakai frontend saat show_consultation true. */
+    public function consultationUrl(): string
+    {
+        return self::CONSULTATION_PATH;
+    }
+
+    /**
+     * Ubah path storage relatif jadi URL absolut. Mengikuti pola yang sudah
+     * dipakai di project ini: base URL storage = APP_URL tanpa "/api".
+     */
+    private function absoluteUrl(?string $path): ?string
+    {
+        if (!$path) {
+            return null;
+        }
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        $base = rtrim(str_replace('/api', '', config('app.url')), '/');
+        return $base . '/storage/' . ltrim($path, '/');
     }
 
     /** Retrieval dari database + item yang sedang dilihat user (kalau ada). */
@@ -206,10 +413,10 @@ PROMPT;
                     }
                 })
                 ->limit(3)
-                ->get(['id', 'title', 'subtitle', 'description', 'location', 'year']);
+                ->get(['id', 'title', 'subtitle', 'description', 'location', 'year', 'slug']);
 
             foreach ($projects as $p) {
-                $chunks[] = "[Project] {$p->title} ({$p->location}, {$p->year}) — {$p->description}";
+                $chunks[] = "[Project] {$p->title} ({$p->location}, {$p->year}) — {$p->description} | Slug: {$p->slug}";
             }
 
             $collections = Collection::query()
@@ -220,10 +427,10 @@ PROMPT;
                     }
                 })
                 ->limit(3)
-                ->get(['id', 'name', 'description']);
+                ->get(['id', 'name', 'description', 'slug']);
 
             foreach ($collections as $c) {
-                $chunks[] = "[Collection] {$c->name} — {$c->description}";
+                $chunks[] = "[Collection] {$c->name} — {$c->description} | Slug: {$c->slug}";
             }
 
             $catalogs = Catalog::query()
@@ -236,10 +443,10 @@ PROMPT;
                     }
                 })
                 ->limit(3)
-                ->get(['id', 'title', 'description', 'category', 'taxonomy']);
+                ->get(['id', 'title', 'description', 'category', 'taxonomy', 'slug']);
 
             foreach ($catalogs as $cat) {
-                $chunks[] = "[Catalog] {$cat->title} (Kategori: {$cat->category}, Gaya: {$cat->taxonomy}) — {$cat->description}";
+                $chunks[] = "[Catalog] {$cat->title} (Kategori: {$cat->category}, Gaya: {$cat->taxonomy}) — {$cat->description} | Slug: {$cat->slug}";
             }
         }
 
