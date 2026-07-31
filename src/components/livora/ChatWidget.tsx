@@ -302,7 +302,7 @@ export function ChatWidget() {
             </div>
 
             {/* Messages */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-5 space-y-4 bg-[#fafafa]">
+            <div ref={scrollRef} data-lenis-prevent className="flex-1 overflow-y-auto overscroll-contain px-5 py-5 space-y-4 bg-[#fafafa]">
               {booting && (
                 <div className="flex justify-center">
                   <Loader2 size={16} className="animate-spin text-muted-foreground" />
