@@ -82,8 +82,10 @@ TXT;
                 'contents'           => $contents,
                 'generationConfig'   => [
                     'responseMimeType' => 'application/json',
-                    'maxOutputTokens'  => 1024,
-                    'thinkingConfig'   => ['thinkingBudget' => 0], // matikan thinking, tidak perlu untuk chat reply pendek
+                    'maxOutputTokens'  => 1536,
+                    // Gemini 3.x pakai thinkingLevel (bukan thinkingBudget seperti di 2.5).
+                    // gemini-3.6-flash tidak bisa full thinking-off, jadi pakai level paling rendah.
+                    'thinkingConfig'   => ['thinkingLevel' => 'low'],
                 ],
             ]);
 
