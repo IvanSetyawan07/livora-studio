@@ -16,6 +16,8 @@ export default function AdminItems() {
   const [collections, setCollections] = useState<any[]>([]);
   const [editing, setEditing] = useState<any | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [qrItem, setQrItem] = useState<any | null>(null);
+
 
   // filter / search / sort
   const [query, setQuery] = useState("");
