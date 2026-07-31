@@ -7,6 +7,8 @@ export interface AdminSupportSession {
   name: string | null;
   email: string | null;
   user_id: number | null;
+  visitor_number: number | null;
+  display_name: string;
   admin_name: string | null;
   request_reason: string | null;
   requested_at: string | null;

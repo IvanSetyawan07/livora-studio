@@ -171,7 +171,7 @@ export default function AdminSupportChat() {
                 }`}
               >
                 <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className="text-sm">{s.name || s.email || `Visitor #${s.id}`}</span>
+                  <span className="text-sm">{s.display_name}</span>
                   <span
                     className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full ${
                       s.status === "pending_cs"
@@ -205,7 +205,7 @@ export default function AdminSupportChat() {
             <>
               <div className="p-4 border-b border-border flex items-center justify-between gap-3 flex-wrap">
                 <div>
-                  <p className="text-sm">{active.name || active.email || `Visitor #${active.id}`}</p>
+                  <p className="text-sm">{active.display_name}</p>
                   <p className="text-xs text-muted-foreground">
                     {STATUS_LABEL[active.status]} {active.admin_name ? `· ${active.admin_name}` : ""}
                     {active.request_reason ? ` · ${active.request_reason}` : ""}

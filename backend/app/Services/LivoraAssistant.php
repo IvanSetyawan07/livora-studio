@@ -229,21 +229,23 @@ PROMPT;
         return implode("\n", $chunks);
     }
 
-    private function describeItem(Item $item): string
-    {
-        $parts = [];
-        $parts[] = $item->title;
-        if (!empty($item->description)) {
-            $parts[] = $item->description;
-        }
-        $meta = [];
-        if (!empty($item->texture))      { $meta[] = "Material/tekstur: {$item->texture}"; }
-        if (!empty($item->finish))       { $meta[] = "Finishing: {$item->finish}"; }
-        if (!empty($item->availability)) { $meta[] = "Ketersediaan: {$item->availability}"; }
-        if (!empty($item->slug))         { $meta[] = "Halaman: /items/{$item->slug}"; }
+    private function describeItem($item)
+{
+    $typeName = $item->type ? $item->type->name : null;
+    $collectionName = $item->collection ? $item->collection->name : null;
 
-        return implode(' — ', $parts) . (empty($meta) ? '' : ' (' . implode(', ', $meta) . ')');
-    }
+    $parts = [];
+    $parts[] = "Nama: {$item->title}";
+    if ($typeName) $parts[] = "Kategori: {$typeName}";
+    if ($collectionName) $parts[] = "Koleksi: {$collectionName}";
+    if ($item->description) $parts[] = "Deskripsi: {$item->description}";
+    if ($item->texture) $parts[] = "Tekstur: {$item->texture}";
+    if ($item->finish) $parts[] = "Finishing: {$item->finish}";
+    if ($item->availability) $parts[] = "Ketersediaan: {$item->availability}";
+    $parts[] = "Slug: {$item->slug}";
+
+    return implode(" | ", $parts);
+}
 
     private function extractKeywords(string $message): array
     {
