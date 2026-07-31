@@ -223,9 +223,13 @@ export default function AdminItems() {
                 <td className="p-3 text-xs">{i.availability}</td>
                 <td className="p-3 text-xs whitespace-nowrap">{fmtDate(i.created_at)}</td>
                 <td className="p-3 text-right whitespace-nowrap">
+                  <button onClick={() => setQrItem(i)} title="QR Identity" className="p-1.5 hover:bg-muted rounded" disabled={!i.slug}>
+                    <QrCode className="w-3.5 h-3.5" />
+                  </button>
                   <button onClick={() => downloadImage(i)} title="Download image" className="p-1.5 hover:bg-muted rounded" disabled={!i.image}>
                     <Download className="w-3.5 h-3.5" />
                   </button>
+
                   <Link to={`/admin/items/${i.id}/experience`} title="Manage Experience" className="p-1.5 hover:bg-muted rounded inline-flex">
                     <Settings2 className="w-3.5 h-3.5" />
                   </Link>
