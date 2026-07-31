@@ -172,6 +172,7 @@ PROMPT;
                           ->orWhere('finish', 'like', "%{$kw}%");
                     }
                 })
+                ->with(['type', 'collection'])
                 ->limit(5)
                 ->get();
 
