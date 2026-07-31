@@ -15,7 +15,7 @@ class SupportSession extends Model
     public const STATUS_CLOSED     = 'closed';
 
     protected $fillable = [
-        'visitor_id', 'user_id', 'name', 'email', 'status', 'admin_id',
+        'visitor_id', 'user_id', 'name', 'email', 'ip_address', 'visitor_number', 'status', 'admin_id',
         'request_reason', 'requested_at', 'accepted_at', 'closed_at',
         'last_message_at', 'unread_admin', 'unread_user',
     ];

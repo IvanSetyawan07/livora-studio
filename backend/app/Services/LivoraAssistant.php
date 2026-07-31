@@ -226,7 +226,44 @@ PROMPT;
             }
         }
 
+        if (empty($chunks)) {
+            $chunks[] = $this->generalSummary();
+        }
+
         return implode("\n", $chunks);
+    }
+
+    private function generalSummary(): string
+    {
+        $collections = Collection::query()
+            ->orderBy('display_order')
+            ->limit(8)
+            ->pluck('name')
+            ->filter()
+            ->implode(', ');
+
+        $types = \App\Models\FurnitureType::query()
+            ->limit(10)
+            ->pluck('name')
+            ->filter()
+            ->implode(', ');
+
+        $catalogs = Catalog::query()
+            ->limit(5)
+            ->pluck('title')
+            ->filter()
+            ->implode(', ');
+
+        $lines = [];
+        if ($collections !== '') { $lines[] = "Koleksi tersedia: {$collections}."; }
+        if ($types !== '') { $lines[] = "Kategori furniture: {$types}."; }
+        if ($catalogs !== '') { $lines[] = "Beberapa katalog: {$catalogs}."; }
+
+        if (empty($lines)) {
+            return '[Info umum] Data katalog belum tersedia saat ini.';
+        }
+
+        return "[Info umum]\n" . implode("\n", $lines);
     }
 
     private function describeItem($item)

@@ -15,7 +15,7 @@ class SupportChatController extends Controller
         $status = $request->query('status');
 
         $sessions = SupportSession::query()
-            ->with('admin:id,name')
+            ->with(['admin:id,name', 'user:id,name'])
             ->when($status && $status !== 'all', fn ($q) => $q->where('status', $status))
             ->orderByRaw("CASE status WHEN 'pending_cs' THEN 0 WHEN 'active' THEN 1 WHEN 'bot' THEN 2 ELSE 3 END")
             ->orderByDesc('last_message_at')
@@ -29,6 +29,8 @@ class SupportChatController extends Controller
                     'name'            => $s->name,
                     'email'           => $s->email,
                     'user_id'         => $s->user_id,
+                    'visitor_number'  => $s->visitor_number,
+                    'display_name'    => $this->displayName($s),
                     'admin_name'      => optional($s->admin)->name,
                     'request_reason'  => $s->request_reason,
                     'requested_at'    => optional($s->requested_at)->toIso8601String(),
@@ -128,12 +130,21 @@ class SupportChatController extends Controller
     private function sessionData(SupportSession $session): array
     {
         return [
-            'id'         => $session->id,
-            'status'     => $session->status,
-            'name'       => $session->name,
-            'email'      => $session->email,
-            'admin_name' => optional($session->admin)->name,
+            'id'           => $session->id,
+            'status'       => $session->status,
+            'name'         => $session->name,
+            'email'        => $session->email,
+            'display_name' => $this->displayName($session),
+            'admin_name'   => optional($session->admin)->name,
         ];
+    }
+
+    private function displayName(SupportSession $s): string
+    {
+        if ($s->user_id) {
+            return optional($s->user)->name ?: ($s->name ?: 'Visitor #' . ($s->visitor_number ?? $s->id));
+        }
+        return $s->name ?: 'Visitor #' . ($s->visitor_number ?? $s->id);
     }
 
     private function messageData(SupportMessage $m): array
