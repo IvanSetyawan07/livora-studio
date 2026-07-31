@@ -28,7 +28,9 @@ const ItemDetail = () => {
   const { project } = useProjectBySlug(projectSlug ?? undefined);
   const { item, loading } = useItemBySlug(slug);
 
+  const [showQR, setShowQR] = useState(false);
   const [activeVariantId, setActiveVariantId] = useState<number | null>(null);
+
   const [sheetCategory, setSheetCategory] = useState<string | null>(null);
   const [showGallery, setShowGallery] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
