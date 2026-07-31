@@ -806,7 +806,7 @@ export default function Auth() {
   // mount points, sized to match each container's actual rendered width
   // (rather than a hardcoded value) so the invisible click-target always
   // lines up with the visible fake button, on every breakpoint.
-  const renderGoogleButtons = () => {
+  const renderGoogleButtons = (force = false) => {
     const w = window as any;
     if (!w.google?.accounts?.id) return;
 
@@ -818,7 +818,8 @@ export default function Auth() {
       if (!measured) return;
       // Skip a pointless re-render (which briefly destroys the iframe and
       // makes the very first tap do nothing) when nothing changed.
-      if (el.dataset.gsiWidth === String(measured) && el.childElementCount) return;
+      if (!force && el.dataset.gsiWidth === String(measured) && el.childElementCount) return;
+
       el.innerHTML = "";
       el.dataset.gsiWidth = String(measured);
       w.google.accounts.id.renderButton(el, {
