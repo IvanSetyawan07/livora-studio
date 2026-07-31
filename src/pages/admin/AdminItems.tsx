@@ -291,8 +291,9 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
       catIds.forEach((id) => fd.append("category_ids[]", id.toString()));
       if (file) fd.append("image", file);
       const url = item ? `/admin/items/${item.id}` : "/admin/items";
-      await api.post(url, fd, { headers: { "Content-Type": "multipart/form-data" } });
-      onSaved();
+      const res = await api.post(url, fd, { headers: { "Content-Type": "multipart/form-data" } });
+      onSaved(res.data, !item);
+
     } catch (err: any) {
       alert(err?.response?.data?.message || "Gagal");
     } finally { setSaving(false); }
