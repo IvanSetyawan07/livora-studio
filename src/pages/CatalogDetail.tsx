@@ -246,7 +246,18 @@ setExploreItems(siblings);
   }, [rawCatalog, hotspots, item]);
 const catalogItems = useMemo(() => {
     const seen = new Set<string>();
-    const result: { title: string; image?: string; slug?: string }[] = [];
+    const result: {
+      title: string;
+      image?: string;
+      slug?: string;
+      code?: string;
+      category?: string;
+      texture?: string;
+      finish?: string;
+      availability?: string;
+      collection?: string;
+      description?: string;
+    }[] = [];
     scenes.flatMap((s) => s.hotspots).forEach((spot: any) => {
       const itemSlug = spot.item_slug || spot.itemSlug;
       if (!itemSlug || seen.has(itemSlug)) return;
@@ -256,6 +267,13 @@ const catalogItems = useMemo(() => {
         title: detail?.title || spot.label,
         image: detail?.image ? imgUrl(detail.image) : undefined,
         slug: itemSlug,
+        code: detail?.code,
+        category: detail?.type,
+        texture: detail?.texture,
+        finish: detail?.finish,
+        availability: detail?.availability,
+        collection: detail?.collection,
+        description: detail?.description,
       });
     });
     return result;
