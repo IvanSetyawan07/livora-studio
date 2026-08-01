@@ -8,6 +8,7 @@ use App\Models\Item;
 use App\Models\Project;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;  
 
 /**
  * Livora Concierge — AI assistant.
@@ -34,7 +35,8 @@ class LivoraAssistant
 
     /** Halaman untuk booking konsultasi. Sesuaikan kalau path-nya beda. */
     private const CONSULTATION_PATH = '/appointment';
-
+private const DAILY_QUOTA_LIMIT = 1500;
+private const DAILY_QUOTA_BUFFER = 5;
     /** Brand/company knowledge — dipakai untuk pertanyaan profil perusahaan. */
     public const BRAND_PROFILE = <<<'TXT'
 Livora Studio adalah studio interior design & furniture asal Indonesia (Bandung) yang menangani
@@ -66,6 +68,18 @@ TXT;
 
     public function reply(string $message, array $history = [], array $options = []): array
     {
+        $quotaKey = 'gemini_quota_' . now('UTC')->format('Y-m-d');
+    $used = (int) Cache::get($quotaKey, 0);
+
+    if ($used >= self::DAILY_QUOTA_LIMIT - self::DAILY_QUOTA_BUFFER) {
+        return [
+            'reply' => 'Concierge AI kami sedang ramai dipakai hari ini 🙏 Coba lagi beberapa saat lagi, atau saya hubungkan langsung ke customer service kami sekarang?',
+            'needs_escalation' => true,
+            'recommendations' => [],
+            'show_consultation' => false,
+        ];
+    }
+
         $context = $this->buildContext($message, $options);
 
         $systemPrompt = $this->systemPrompt($context);
@@ -111,8 +125,13 @@ TXT;
 
             if (!$response->successful()) {
                 Log::error('Gemini API error: ' . $response->body());
+                if ($response->status() === 429) {
+                    Cache::put($quotaKey, self::DAILY_QUOTA_LIMIT, now('UTC')->endOfDay());
+                }
                 throw new \RuntimeException('Gemini API request failed');
             }
+
+            Cache::put($quotaKey, $used + 1, now('UTC')->endOfDay());
 
             // Ambil semua part teks, skip part "thought" (reasoning internal model)
             // supaya tidak pernah bocor ke user.
