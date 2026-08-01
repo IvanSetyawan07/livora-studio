@@ -282,7 +282,7 @@ PROMPT;
             'title'       => $item->title,
             'subtitle'    => optional($item->type)->name ?? optional($item->collection)->name,
             'description' => $this->shorten($item->description),
-            'image'       => $this->absoluteUrl($item->thumbnail),
+            'image'       => $this->absoluteUrl($this->firstNonEmpty($item, ['image', 'thumbnail', 'cover_image'])),
             'url'         => $this->frontendUrl('item', $item->slug),
         ];
     }
@@ -299,7 +299,7 @@ PROMPT;
             'title'       => $c->name,
             'subtitle'    => 'Living Collection',
             'description' => $this->shorten($c->description),
-            'image'       => $this->absoluteUrl($this->firstNonEmpty($c, ['thumbnail', 'image', 'cover_image', 'banner'])),
+            'image'       => $this->absoluteUrl($this->firstNonEmpty($c, ['card_banner', 'featured_image', 'hero_banner', 'thumbnail', 'image', 'cover_image', 'banner'])),
             'url'         => $this->frontendUrl('collection', $c->slug),
         ];
     }
@@ -316,7 +316,7 @@ PROMPT;
             'title'       => $cat->title,
             'subtitle'    => $cat->category ?? $cat->taxonomy,
             'description' => $this->shorten($cat->description),
-            'image'       => $this->absoluteUrl($this->firstNonEmpty($cat, ['thumbnail', 'image', 'cover_image', 'banner'])),
+            'image'       => $this->absoluteUrl($this->firstNonEmpty($cat, ['cover_image', 'scene_1_image', 'thumbnail', 'image', 'banner'])),
             'url'         => $this->frontendUrl('catalog', $cat->slug),
         ];
     }
@@ -335,7 +335,7 @@ PROMPT;
             'title'       => $p->title,
             'subtitle'    => $subtitle !== '' ? $subtitle : null,
             'description' => $this->shorten($p->description),
-            'image'       => $this->absoluteUrl($this->firstNonEmpty($p, ['thumbnail', 'image', 'cover_image'])),
+            'image'       => $this->absoluteUrl($this->firstNonEmpty($p, ['hero_image', 'thumbnail', 'image', 'cover_image'])),
             'url'         => $this->frontendUrl('project', $p->slug),
         ];
     }
