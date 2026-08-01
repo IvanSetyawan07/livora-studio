@@ -235,13 +235,21 @@ const styles = StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", marginHorizontal: -8 },
   card: { width: "50%", padding: 8 },
   cardInner: {
-    backgroundColor: C.card,
+    backgroundColor: C.paper,
     padding: 0,
     borderColor: C.hair,
     borderWidth: 0.5,
   },
-  cardImg: { width: "100%", height: 170, objectFit: "cover" },
-  cardBody: { padding: 12 },
+  cardImgWrap: {
+    width: "100%",
+    height: 150,
+    backgroundColor: C.paper,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 8,
+  },
+  cardImg: { width: "100%", height: "100%", objectFit: "contain" },
+  cardBody: { padding: 12, borderTop: 0.5, borderColor: C.hair },
   cardCat: {
     fontSize: 7.5,
     color: C.gold,
@@ -250,12 +258,28 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   cardTitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: "Cormorant Garamond",
     color: C.ink,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   cardMeta: { fontSize: 8, color: C.muted, letterSpacing: 1.2 },
+  specRow: { flexDirection: "row", marginTop: 3 },
+  specKey: {
+    width: 58,
+    fontSize: 7,
+    letterSpacing: 1.4,
+    color: C.muted,
+    textTransform: "uppercase",
+  },
+  specVal: { flex: 1, fontSize: 8.5, color: C.soft, lineHeight: 1.4 },
+  cardDesc: {
+    fontSize: 8,
+    color: C.soft,
+    lineHeight: 1.5,
+    marginTop: 6,
+  },
+
 
   /* ---------- Directory ---------- */
   dirRow: {
