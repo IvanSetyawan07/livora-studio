@@ -105,7 +105,22 @@ export default function CatalogDetail() {
   const [rawCatalog, setRawCatalog] = useState<any>(null);
   const [hotspots, setHotspots] = useState<HotspotItem[]>([]);
   // Tambah ini — map item_slug → item detail untuk lookup gambar
-  const [itemMap, setItemMap] = useState<Record<string, { title: string; image?: string; code?: string }>>({});
+  const [itemMap, setItemMap] = useState<
+    Record<
+      string,
+      {
+        title: string;
+        image?: string;
+        code?: string;
+        texture?: string;
+        finish?: string;
+        availability?: string;
+        description?: string;
+        type?: string;
+        collection?: string;
+      }
+    >
+  >({});
   const [heroHeight, setHeroHeight] = useState(800);
 
   useEffect(() => {
