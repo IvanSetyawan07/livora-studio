@@ -150,19 +150,25 @@ export default function CatalogDetail() {
 
     if (slugs.length > 0) {
       try {
-        const { data: allItemsRes } = await api.get<any>('/items');'/items'
+        const { data: allItemsRes } = await api.get<any>('/items');
 
         const allItems: any[] = Array.isArray(allItemsRes)
           ? allItemsRes
           : (allItemsRes.data ?? []);
 
-        const map: Record<string, { title: string; image?: string; code?: string }> = {};
+        const map: Record<string, any> = {};
         allItems.forEach((item: any) => {
           if (slugs.includes(item.slug)) {
             map[item.slug] = {
               title: item.title,
               image: item.image ?? item.cover_image ?? undefined,
               code: item.code,
+              texture: item.texture ?? undefined,
+              finish: item.finish ?? undefined,
+              availability: item.availability ?? undefined,
+              description: item.description ?? undefined,
+              type: item.type?.name ?? undefined,
+              collection: item.collection?.name ?? undefined,
             };
           }
         });
