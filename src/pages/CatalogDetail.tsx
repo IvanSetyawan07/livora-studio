@@ -310,7 +310,20 @@ const handleDownloadPDF = async (size: CatalogPageSize) => {
       aboutBody: (item as any).description || (item as any).about_body,
       category: typeof item.category === "string" ? item.category : (item.category as any)?.slug,
       coverImage: (item as any).coverImage || (item as any).cover_image,
-      scenes: scenes.map((s) => ({ image: s.image, alt: s.alt })),
+      scenes: scenes
+        .filter((s) => !!s.image)
+        .map((s, i) => ({
+          image: s.image,
+          alt: s.alt,
+          title: `${item.title} — Scene ${i + 1}`,
+          items: (s.hotspots ?? [])
+            .map((spot: any) => {
+              const sl = spot.item_slug || spot.itemSlug;
+              const detail = sl ? itemMap[sl] : undefined;
+              return detail?.title || spot.label;
+            })
+            .filter(Boolean),
+        })),
       items: catalogItems,
       pageSize: size,
       logoUrl: logoLivora,
