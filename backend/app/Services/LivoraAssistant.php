@@ -377,17 +377,17 @@ PROMPT;
      * dipakai di project ini: base URL storage = APP_URL tanpa "/api".
      */
     private function absoluteUrl(?string $path): ?string
-    {
-        if (!$path) {
-            return null;
-        }
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-            return $path;
-        }
-
-        $base = rtrim(str_replace('/api', '', config('app.url')), '/');
-        return $base . '/storage/' . ltrim($path, '/');
+{
+    if (!$path) {
+        return null;
     }
+    if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+        return $path;
+    }
+
+    $base = rtrim(preg_replace('#/api/?$#', '', config('app.url')), '/');
+    return $base . '/storage/' . ltrim($path, '/');
+}
 
     /** Retrieval dari database + item yang sedang dilihat user (kalau ada). */
     public function buildContext(string $message, array $options = []): string
@@ -470,11 +470,45 @@ PROMPT;
         }
 
         if (empty($chunks)) {
-            $chunks[] = $this->generalSummary();
-        }
+    $chunks = $this->generalPicks();
+}
 
-        return implode("\n", $chunks);
+return implode("\n", $chunks);
     }
+    private function generalPicks(): array
+{
+    $chunks = [];
+
+    $items = Item::query()->with(['type', 'collection'])
+        ->inRandomOrder()->limit(4)->get();
+    foreach ($items as $item) {
+        $chunks[] = '[Item] ' . $this->describeItem($item);
+    }
+
+    $collections = Collection::query()->orderBy('display_order')
+        ->limit(3)->get(['id', 'name', 'description', 'slug']);
+    foreach ($collections as $c) {
+        $chunks[] = "[Collection] {$c->name} — {$c->description} | Slug: {$c->slug}";
+    }
+
+    $catalogs = Catalog::query()->limit(2)
+        ->get(['id', 'title', 'description', 'category', 'taxonomy', 'slug']);
+    foreach ($catalogs as $cat) {
+        $chunks[] = "[Catalog] {$cat->title} (Kategori: {$cat->category}, Gaya: {$cat->taxonomy}) — {$cat->description} | Slug: {$cat->slug}";
+    }
+
+    $projects = Project::query()->limit(2)
+        ->get(['id', 'title', 'subtitle', 'description', 'location', 'year', 'slug']);
+    foreach ($projects as $p) {
+        $chunks[] = "[Project] {$p->title} ({$p->location}, {$p->year}) — {$p->description} | Slug: {$p->slug}";
+    }
+
+    if (empty($chunks)) {
+        $chunks[] = $this->generalSummary();
+    }
+
+    return $chunks;
+}
 
     private function generalSummary(): string
     {
