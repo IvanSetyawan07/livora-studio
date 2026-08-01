@@ -704,8 +704,15 @@ async function proxifyImage(url?: string): Promise<string | undefined> {
     imageCache.set(url, dataUrl);
     return dataUrl;
   } catch (e) {
-    console.warn("[CatalogPDF] proxifyImage failed, falling back:", url, e);
-    return url; // let react-pdf try directly
+    console.warn("[CatalogPDF] fetch failed, trying canvas fallback:", url, e);
+    try {
+      const dataUrl = await imageElementToDataURL(url);
+      imageCache.set(url, dataUrl);
+      return dataUrl;
+    } catch (e2) {
+      console.warn("[CatalogPDF] image unavailable, skipping:", url, e2);
+      return undefined; // skip instead of breaking the whole document
+    }
   }
 }
 
