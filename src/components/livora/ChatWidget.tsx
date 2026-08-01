@@ -392,19 +392,24 @@ export function ChatWidget() {
                                 onClick={() => goToRecommendation(rec.url)}
                                 className="text-left bg-white flex flex-col overflow-hidden group"
                               >
-                                {rec.image && (
-                                  <div className="w-full aspect-square bg-[#f2f2f2] overflow-hidden rounded-lg">
+                                <div className="w-full aspect-square bg-[#f2f2f2] overflow-hidden rounded-lg relative">
+                                  {rec.image ? (
                                     <img
                                       src={rec.image}
                                       alt={rec.title}
                                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                       loading="lazy"
                                       onError={(e) => {
-                                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                                        const el = e.currentTarget as HTMLImageElement;
+                                        el.style.display = "none";
+                                        el.parentElement?.classList.add("rec-fallback");
                                       }}
                                     />
-                                  </div>
-                                )}
+                                  ) : null}
+                                  <span className="absolute inset-0 -z-0 flex items-center justify-center serif text-lg text-[#b9b0a4] pointer-events-none">
+                                    {rec.title?.charAt(0)?.toUpperCase() ?? "L"}
+                                  </span>
+                                </div>
                                 <div className="pt-2">
                                   <p className="text-[12px] font-light leading-snug line-clamp-2">{rec.title}</p>
                                   {rec.subtitle && (

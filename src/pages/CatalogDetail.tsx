@@ -105,7 +105,22 @@ export default function CatalogDetail() {
   const [rawCatalog, setRawCatalog] = useState<any>(null);
   const [hotspots, setHotspots] = useState<HotspotItem[]>([]);
   // Tambah ini — map item_slug → item detail untuk lookup gambar
-  const [itemMap, setItemMap] = useState<Record<string, { title: string; image?: string; code?: string }>>({});
+  const [itemMap, setItemMap] = useState<
+    Record<
+      string,
+      {
+        title: string;
+        image?: string;
+        code?: string;
+        texture?: string;
+        finish?: string;
+        availability?: string;
+        description?: string;
+        type?: string;
+        collection?: string;
+      }
+    >
+  >({});
   const [heroHeight, setHeroHeight] = useState(800);
 
   useEffect(() => {
@@ -150,19 +165,25 @@ export default function CatalogDetail() {
 
     if (slugs.length > 0) {
       try {
-        const { data: allItemsRes } = await api.get<any>('/items');'/items'
+        const { data: allItemsRes } = await api.get<any>('/items');
 
         const allItems: any[] = Array.isArray(allItemsRes)
           ? allItemsRes
           : (allItemsRes.data ?? []);
 
-        const map: Record<string, { title: string; image?: string; code?: string }> = {};
+        const map: Record<string, any> = {};
         allItems.forEach((item: any) => {
           if (slugs.includes(item.slug)) {
             map[item.slug] = {
               title: item.title,
               image: item.image ?? item.cover_image ?? undefined,
               code: item.code,
+              texture: item.texture ?? undefined,
+              finish: item.finish ?? undefined,
+              availability: item.availability ?? undefined,
+              description: item.description ?? undefined,
+              type: item.type?.name ?? undefined,
+              collection: item.collection?.name ?? undefined,
             };
           }
         });
@@ -225,7 +246,18 @@ setExploreItems(siblings);
   }, [rawCatalog, hotspots, item]);
 const catalogItems = useMemo(() => {
     const seen = new Set<string>();
-    const result: { title: string; image?: string; slug?: string }[] = [];
+    const result: {
+      title: string;
+      image?: string;
+      slug?: string;
+      code?: string;
+      category?: string;
+      texture?: string;
+      finish?: string;
+      availability?: string;
+      collection?: string;
+      description?: string;
+    }[] = [];
     scenes.flatMap((s) => s.hotspots).forEach((spot: any) => {
       const itemSlug = spot.item_slug || spot.itemSlug;
       if (!itemSlug || seen.has(itemSlug)) return;
@@ -235,6 +267,13 @@ const catalogItems = useMemo(() => {
         title: detail?.title || spot.label,
         image: detail?.image ? imgUrl(detail.image) : undefined,
         slug: itemSlug,
+        code: detail?.code,
+        category: detail?.type,
+        texture: detail?.texture,
+        finish: detail?.finish,
+        availability: detail?.availability,
+        collection: detail?.collection,
+        description: detail?.description,
       });
     });
     return result;
@@ -271,7 +310,20 @@ const handleDownloadPDF = async (size: CatalogPageSize) => {
       aboutBody: (item as any).description || (item as any).about_body,
       category: typeof item.category === "string" ? item.category : (item.category as any)?.slug,
       coverImage: (item as any).coverImage || (item as any).cover_image,
-      scenes: scenes.map((s) => ({ image: s.image, alt: s.alt })),
+      scenes: scenes
+        .filter((s) => !!s.image)
+        .map((s, i) => ({
+          image: s.image,
+          alt: s.alt,
+          title: `${item.title} — Scene ${i + 1}`,
+          items: (s.hotspots ?? [])
+            .map((spot: any) => {
+              const sl = spot.item_slug || spot.itemSlug;
+              const detail = sl ? itemMap[sl] : undefined;
+              return detail?.title || spot.label;
+            })
+            .filter(Boolean),
+        })),
       items: catalogItems,
       pageSize: size,
       logoUrl: logoLivora,
