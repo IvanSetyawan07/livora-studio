@@ -17,8 +17,19 @@ export type CatalogPDFData = {
   aboutTitle?: string;
   aboutBody?: string;
   coverImage?: string;
-  scenes?: { image?: string; alt?: string; title?: string }[];
-  items?: { title: string; image?: string; category?: string; slug?: string }[];
+  scenes?: { image?: string; alt?: string; title?: string; items?: string[] }[];
+  items?: {
+    title: string;
+    image?: string;
+    category?: string;
+    slug?: string;
+    code?: string;
+    texture?: string;
+    finish?: string;
+    availability?: string;
+    collection?: string;
+    description?: string;
+  }[];
   edition?: string; // e.g. "Autumn Edition 2026"
   contact?: {
     email?: string;
