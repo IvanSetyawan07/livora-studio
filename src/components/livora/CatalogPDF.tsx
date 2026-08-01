@@ -676,6 +676,28 @@ async function convertBlobToPngDataURL(blob: Blob): Promise<string> {
   return canvas.toDataURL("image/png");
 }
 
+function imageElementToDataURL(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) throw new Error("no ctx");
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL("image/png"));
+      } catch (err) {
+        reject(err);
+      }
+    };
+    img.onerror = () => reject(new Error("image load error"));
+    img.src = url;
+  });
+}
+
 async function proxifyImage(url?: string): Promise<string | undefined> {
   if (!url) return undefined;
 
