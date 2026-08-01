@@ -125,16 +125,27 @@ export default function CollectionCategory() {
           {displayItems.map((it, i) => (
             <motion.div
               key={it.id}
+              id={`item-${it.slug}`}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
               transition={{ duration: 0.5, delay: (i % 6) * 0.05 }}
+              className="scroll-mt-32"
             >
               <Link
                 to={`/items/${it.slug}`}
-                className="group block bg-card border border-border/70 rounded-lg overflow-hidden transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_15px_40px_-15px_rgba(0,0,0,0.2)]"
+                className={`group block bg-card border rounded-lg overflow-hidden transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_15px_40px_-15px_rgba(0,0,0,0.2)] ${
+                  highlightSlug === it.slug
+                    ? "border-foreground ring-2 ring-foreground/70 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.35)]"
+                    : "border-border/70"
+                }`}
               >
                 <div className="relative aspect-[4/3] overflow-hidden bg-white">
+                  {highlightSlug === it.slug && (
+                    <span className="absolute top-3 left-3 z-10 text-[10px] tracking-[0.15em] uppercase bg-foreground text-background px-2.5 py-1 rounded-full">
+                      Your pick
+                    </span>
+                  )}
                   {it.image ? (
                     <img
                       src={it.image}

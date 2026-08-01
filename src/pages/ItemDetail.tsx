@@ -683,7 +683,11 @@ const ItemDetail = () => {
             {related.map((r) => (
               <Link
                 key={r.slug}
-                to={`/items/${r.slug}${projectSlug ? `?from=${projectSlug}` : ""}`}
+                to={
+                  item.collection
+                    ? `/collection/${item.collection.slug}/all?highlight=${r.slug}`
+                    : `/items/${r.slug}${projectSlug ? `?from=${projectSlug}` : ""}`
+                }
                 className="item-card"
                 style={{
                   flex: "0 0 240px",
