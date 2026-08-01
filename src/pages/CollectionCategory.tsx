@@ -66,6 +66,18 @@ export default function CollectionCategory() {
     return Array.from(map.values());
   }, [activePackage, items, category]);
 
+  // Scroll ke item yang di-highlight (datang dari halaman item detail)
+  useEffect(() => {
+    if (!highlightSlug || loading) return;
+    const el = document.getElementById(`item-${highlightSlug}`);
+    if (!el) return;
+    const t = window.setTimeout(
+      () => el.scrollIntoView({ behavior: "smooth", block: "center" }),
+      350,
+    );
+    return () => window.clearTimeout(t);
+  }, [highlightSlug, loading, displayItems]);
+
   useEffect(() => {
     document.title = `${activeTab.label} — ${collection?.name ?? "Collection"} — LIVORA`;
   }, [activeTab, collection]);
