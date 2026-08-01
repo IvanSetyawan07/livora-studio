@@ -282,7 +282,7 @@ PROMPT;
             'title'       => $item->title,
             'subtitle'    => optional($item->type)->name ?? optional($item->collection)->name,
             'description' => $this->shorten($item->description),
-            'image'       => $this->absoluteUrl($item->thumbnail),
+            'image'       => $this->absoluteUrl($this->firstNonEmpty($item, ['image', 'thumbnail', 'cover_image'])),
             'url'         => $this->frontendUrl('item', $item->slug),
         ];
     }
@@ -299,7 +299,7 @@ PROMPT;
             'title'       => $c->name,
             'subtitle'    => 'Living Collection',
             'description' => $this->shorten($c->description),
-            'image'       => $this->absoluteUrl($this->firstNonEmpty($c, ['thumbnail', 'image', 'cover_image', 'banner'])),
+            'image'       => $this->absoluteUrl($this->firstNonEmpty($c, ['card_banner', 'featured_image', 'hero_banner', 'thumbnail', 'image', 'cover_image', 'banner'])),
             'url'         => $this->frontendUrl('collection', $c->slug),
         ];
     }
@@ -316,7 +316,7 @@ PROMPT;
             'title'       => $cat->title,
             'subtitle'    => $cat->category ?? $cat->taxonomy,
             'description' => $this->shorten($cat->description),
-            'image'       => $this->absoluteUrl($this->firstNonEmpty($cat, ['thumbnail', 'image', 'cover_image', 'banner'])),
+            'image'       => $this->absoluteUrl($this->firstNonEmpty($cat, ['cover_image', 'scene_1_image', 'thumbnail', 'image', 'banner'])),
             'url'         => $this->frontendUrl('catalog', $cat->slug),
         ];
     }
@@ -335,7 +335,7 @@ PROMPT;
             'title'       => $p->title,
             'subtitle'    => $subtitle !== '' ? $subtitle : null,
             'description' => $this->shorten($p->description),
-            'image'       => $this->absoluteUrl($this->firstNonEmpty($p, ['thumbnail', 'image', 'cover_image'])),
+            'image'       => $this->absoluteUrl($this->firstNonEmpty($p, ['hero_image', 'thumbnail', 'image', 'cover_image'])),
             'url'         => $this->frontendUrl('project', $p->slug),
         ];
     }
@@ -377,17 +377,17 @@ PROMPT;
      * dipakai di project ini: base URL storage = APP_URL tanpa "/api".
      */
     private function absoluteUrl(?string $path): ?string
-    {
-        if (!$path) {
-            return null;
-        }
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-            return $path;
-        }
-
-        $base = rtrim(str_replace('/api', '', config('app.url')), '/');
-        return $base . '/storage/' . ltrim($path, '/');
+{
+    if (!$path) {
+        return null;
     }
+    if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+        return $path;
+    }
+
+    $base = rtrim(preg_replace('#/api/?$#', '', config('app.url')), '/');
+    return $base . '/storage/' . ltrim($path, '/');
+}
 
     /** Retrieval dari database + item yang sedang dilihat user (kalau ada). */
     public function buildContext(string $message, array $options = []): string
@@ -470,11 +470,45 @@ PROMPT;
         }
 
         if (empty($chunks)) {
-            $chunks[] = $this->generalSummary();
-        }
+    $chunks = $this->generalPicks();
+}
 
-        return implode("\n", $chunks);
+return implode("\n", $chunks);
     }
+    private function generalPicks(): array
+{
+    $chunks = [];
+
+    $items = Item::query()->with(['type', 'collection'])
+        ->inRandomOrder()->limit(4)->get();
+    foreach ($items as $item) {
+        $chunks[] = '[Item] ' . $this->describeItem($item);
+    }
+
+    $collections = Collection::query()->orderBy('display_order')
+        ->limit(3)->get(['id', 'name', 'description', 'slug']);
+    foreach ($collections as $c) {
+        $chunks[] = "[Collection] {$c->name} — {$c->description} | Slug: {$c->slug}";
+    }
+
+    $catalogs = Catalog::query()->limit(2)
+        ->get(['id', 'title', 'description', 'category', 'taxonomy', 'slug']);
+    foreach ($catalogs as $cat) {
+        $chunks[] = "[Catalog] {$cat->title} (Kategori: {$cat->category}, Gaya: {$cat->taxonomy}) — {$cat->description} | Slug: {$cat->slug}";
+    }
+
+    $projects = Project::query()->limit(2)
+        ->get(['id', 'title', 'subtitle', 'description', 'location', 'year', 'slug']);
+    foreach ($projects as $p) {
+        $chunks[] = "[Project] {$p->title} ({$p->location}, {$p->year}) — {$p->description} | Slug: {$p->slug}";
+    }
+
+    if (empty($chunks)) {
+        $chunks[] = $this->generalSummary();
+    }
+
+    return $chunks;
+}
 
     private function generalSummary(): string
     {

@@ -17,8 +17,19 @@ export type CatalogPDFData = {
   aboutTitle?: string;
   aboutBody?: string;
   coverImage?: string;
-  scenes?: { image?: string; alt?: string; title?: string }[];
-  items?: { title: string; image?: string; category?: string; slug?: string }[];
+  scenes?: { image?: string; alt?: string; title?: string; items?: string[] }[];
+  items?: {
+    title: string;
+    image?: string;
+    category?: string;
+    slug?: string;
+    code?: string;
+    texture?: string;
+    finish?: string;
+    availability?: string;
+    collection?: string;
+    description?: string;
+  }[];
   edition?: string; // e.g. "Autumn Edition 2026"
   contact?: {
     email?: string;
@@ -224,13 +235,21 @@ const styles = StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", marginHorizontal: -8 },
   card: { width: "50%", padding: 8 },
   cardInner: {
-    backgroundColor: C.card,
+    backgroundColor: C.paper,
     padding: 0,
     borderColor: C.hair,
     borderWidth: 0.5,
   },
-  cardImg: { width: "100%", height: 170, objectFit: "cover" },
-  cardBody: { padding: 12 },
+  cardImgWrap: {
+    width: "100%",
+    height: 150,
+    backgroundColor: C.paper,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 8,
+  },
+  cardImg: { width: "100%", height: "100%", objectFit: "contain" },
+  cardBody: { padding: 12, borderTop: 0.5, borderColor: C.hair },
   cardCat: {
     fontSize: 7.5,
     color: C.gold,
@@ -239,12 +258,28 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   cardTitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: "Cormorant Garamond",
     color: C.ink,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   cardMeta: { fontSize: 8, color: C.muted, letterSpacing: 1.2 },
+  specRow: { flexDirection: "row", marginTop: 3 },
+  specKey: {
+    width: 58,
+    fontSize: 7,
+    letterSpacing: 1.4,
+    color: C.muted,
+    textTransform: "uppercase",
+  },
+  specVal: { flex: 1, fontSize: 8.5, color: C.soft, lineHeight: 1.4 },
+  cardDesc: {
+    fontSize: 8,
+    color: C.soft,
+    lineHeight: 1.5,
+    marginTop: 6,
+  },
+
 
   /* ---------- Directory ---------- */
   dirRow: {
@@ -352,7 +387,7 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
   const items = data.items ?? [];
   const scenes = (data.scenes ?? []).filter((s) => safe(s.image));
   const pageSize: CatalogPageSize = data.pageSize || "A4";
-  const itemsPerPage = 6;
+  const itemsPerPage = 4;
   const itemPages: (typeof items)[] = [];
   for (let i = 0; i < items.length; i += itemsPerPage) {
     itemPages.push(items.slice(i, i + itemsPerPage));
@@ -467,24 +502,33 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
 
       {/* ========== Scenes ========== */}
       {scenes.map((s, i) => (
-  <Page key={`scene-${i}`} size={pageSize} style={styles.page}>
-    <View style={styles.section} wrap={false}>   {/* ← tambahkan ini */}
-      <Text style={styles.eyebrow}>SCENE {String(i + 1).padStart(2, "0")}</Text>
-      <Text style={styles.h2}>{s.title || data.title}</Text>
-      <View style={styles.ruleShort} />
-      <PdfImage src={safe(s.image)!} style={styles.sceneImg} />
-      <View style={styles.sceneCaption}>
-        <View style={styles.sceneCaptionL}>
-          {s.alt ? <Text style={styles.body}>{s.alt}</Text> : null}
-        </View>
-        <Text style={styles.sceneCaptionR}>
-          Fig. {String(i + 1).padStart(2, "0")}
-        </Text>
-      </View>
-    </View>
-    <Footer label={label} />
-  </Page>
-))}
+        <Page key={`scene-${i}`} size={pageSize} style={styles.page}>
+          <View style={styles.section}>
+            <Text style={styles.eyebrow}>SCENE {String(i + 1).padStart(2, "0")}</Text>
+            <Text style={styles.h2}>{s.title || data.title}</Text>
+            <View style={styles.ruleShort} />
+            <PdfImage src={safe(s.image)!} style={styles.sceneImg} />
+            <View style={styles.sceneCaption}>
+              <View style={styles.sceneCaptionL}>
+                {s.alt ? <Text style={styles.body}>{s.alt}</Text> : null}
+              </View>
+              <Text style={styles.sceneCaptionR}>Fig. {String(i + 1).padStart(2, "0")}</Text>
+            </View>
+            {s.items && s.items.length ? (
+              <View style={{ marginTop: 18 }}>
+                <Text style={styles.eyebrow}>PIECES IN THIS SCENE</Text>
+                {s.items.map((label, li) => (
+                  <View key={li} style={styles.dirRow}>
+                    <Text style={styles.dirNo}>{String(li + 1).padStart(2, "0")}</Text>
+                    <Text style={styles.dirTitle}>{label}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </View>
+          <Footer label={label} />
+        </Page>
+      ))}
 
       {/* ========== Items grid ========== */}
       {itemPages.map((chunk, pi) => (
@@ -500,19 +544,50 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
               {chunk.map((it, i) => (
                 <View key={i} style={styles.card} wrap={false}>
                   <View style={styles.cardInner}>
-                    {safe(it.image) ? (
-                      <PdfImage src={safe(it.image)!} style={styles.cardImg} />
-                    ) : (
-                      <View style={[styles.cardImg, { backgroundColor: C.hair }]} />
-                    )}
-                    <View style={styles.cardBody}>
-                      {it.category ? (
-                        <Text style={styles.cardCat}>{it.category}</Text>
+                    <View style={styles.cardImgWrap}>
+                      {safe(it.image) ? (
+                        <PdfImage src={safe(it.image)!} style={styles.cardImg} />
                       ) : null}
+                    </View>
+                    <View style={styles.cardBody}>
+                      {it.category ? <Text style={styles.cardCat}>{it.category}</Text> : null}
                       <Text style={styles.cardTitle}>{it.title}</Text>
                       <Text style={styles.cardMeta}>
                         № {String(pi * itemsPerPage + i + 1).padStart(3, "0")}
+                        {it.code ? ` · ${it.code}` : ""}
                       </Text>
+
+                      {it.collection ? (
+                        <View style={styles.specRow}>
+                          <Text style={styles.specKey}>Collection</Text>
+                          <Text style={styles.specVal}>{it.collection}</Text>
+                        </View>
+                      ) : null}
+                      {it.texture ? (
+                        <View style={styles.specRow}>
+                          <Text style={styles.specKey}>Material</Text>
+                          <Text style={styles.specVal}>{it.texture}</Text>
+                        </View>
+                      ) : null}
+                      {it.finish ? (
+                        <View style={styles.specRow}>
+                          <Text style={styles.specKey}>Finish</Text>
+                          <Text style={styles.specVal}>{it.finish}</Text>
+                        </View>
+                      ) : null}
+                      {it.availability ? (
+                        <View style={styles.specRow}>
+                          <Text style={styles.specKey}>Availability</Text>
+                          <Text style={styles.specVal}>{it.availability}</Text>
+                        </View>
+                      ) : null}
+                      {it.description ? (
+                        <Text style={styles.cardDesc}>
+                          {it.description.length > 190
+                            ? `${it.description.slice(0, 189)}…`
+                            : it.description}
+                        </Text>
+                      ) : null}
                     </View>
                   </View>
                 </View>
@@ -522,6 +597,7 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
           <Footer label={label} />
         </Page>
       ))}
+
 
       {/* ========== Directory ========== */}
       {items.length ? (
@@ -600,6 +676,28 @@ async function convertBlobToPngDataURL(blob: Blob): Promise<string> {
   return canvas.toDataURL("image/png");
 }
 
+function imageElementToDataURL(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) throw new Error("no ctx");
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL("image/png"));
+      } catch (err) {
+        reject(err);
+      }
+    };
+    img.onerror = () => reject(new Error("image load error"));
+    img.src = url;
+  });
+}
+
 async function proxifyImage(url?: string): Promise<string | undefined> {
   if (!url) return undefined;
 
@@ -628,8 +726,15 @@ async function proxifyImage(url?: string): Promise<string | undefined> {
     imageCache.set(url, dataUrl);
     return dataUrl;
   } catch (e) {
-    console.warn("[CatalogPDF] proxifyImage failed, falling back:", url, e);
-    return url; // let react-pdf try directly
+    console.warn("[CatalogPDF] fetch failed, trying canvas fallback:", url, e);
+    try {
+      const dataUrl = await imageElementToDataURL(url);
+      imageCache.set(url, dataUrl);
+      return dataUrl;
+    } catch (e2) {
+      console.warn("[CatalogPDF] image unavailable, skipping:", url, e2);
+      return undefined; // skip instead of breaking the whole document
+    }
   }
 }
 

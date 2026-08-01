@@ -33,6 +33,12 @@ const TYPE_CTA: Record<Recommendation["type"], string> = {
   catalog: "Lihat Katalog",
   project: "Lihat Project",
 };
+const formatTime = (iso?: string | null): string | null => {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+};
 
 /**
  * Popup chat widget — Livora Concierge.
@@ -181,7 +187,10 @@ export function ChatWidget() {
     }
 
     setLoading(true);
-    setMessages((prev) => [...prev, { id: Date.now(), sender: "user", text: trimmed }]);
+    setMessages((prev) => [
+  ...prev,
+  { id: Date.now(), sender: "user", text: trimmed, created_at: new Date().toISOString() },
+]);
     try {
       const data = await sendMessage(active.id, trimmed, ctx ?? contextRef.current);
       setSession(data.session);
@@ -342,7 +351,15 @@ export function ChatWidget() {
                     {m.text}
                   </p>
                 ) : (
-                  <div key={m.id} className={`flex ${m.sender === "user" ? "justify-end" : "justify-start"}`}>
+                  <div key={m.id} className={`flex gap-2 ${m.sender === "user" ? "justify-end" : "justify-start"}`}>
+                    {m.sender !== "user" && (
+                      <div
+                        className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 serif text-xs font-medium"
+                        style={{ backgroundColor: BLACK, color: WHITE }}
+                      >
+                        L
+                      </div>
+                    )}
                     <div className="max-w-[85%] w-full">
                       {m.sender === "admin" && (
                         <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-1">
@@ -367,35 +384,40 @@ export function ChatWidget() {
                             <Sparkles size={11} strokeWidth={1.5} />
                             Rekomendasi untuk Anda
                           </p>
-                          <div className="space-y-2">
+                          <div className="grid grid-cols-3 gap-2">
                             {(m.meta.recommendations as Recommendation[]).map((rec, i) => (
                               <button
                                 key={`${m.id}-rec-${i}`}
                                 type="button"
                                 onClick={() => goToRecommendation(rec.url)}
-                                className="w-full text-left border border-[#e5e5e5] bg-white hover:border-black transition-colors flex gap-3 overflow-hidden group"
+                                className="text-left bg-white flex flex-col overflow-hidden group"
                               >
-                                {rec.image && (
-                                  <div className="w-20 h-20 shrink-0 bg-[#f2f2f2] overflow-hidden">
+                                <div className="w-full aspect-square bg-[#f2f2f2] overflow-hidden rounded-lg relative">
+                                  {rec.image ? (
                                     <img
                                       src={rec.image}
                                       alt={rec.title}
-                                      className="w-full h-full object-cover"
+                                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                       loading="lazy"
                                       onError={(e) => {
-                                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                                        const el = e.currentTarget as HTMLImageElement;
+                                        el.style.display = "none";
+                                        el.parentElement?.classList.add("rec-fallback");
                                       }}
                                     />
-                                  </div>
-                                )}
-                                <div className="py-2.5 pr-3 flex-1 min-w-0">
-                                  <p className="text-sm font-light leading-snug truncate">{rec.title}</p>
+                                  ) : null}
+                                  <span className="absolute inset-0 -z-0 flex items-center justify-center serif text-lg text-[#b9b0a4] pointer-events-none">
+                                    {rec.title?.charAt(0)?.toUpperCase() ?? "L"}
+                                  </span>
+                                </div>
+                                <div className="pt-2">
+                                  <p className="text-[12px] font-light leading-snug line-clamp-2">{rec.title}</p>
                                   {rec.subtitle && (
-                                    <p className="text-[11px] text-muted-foreground truncate">{rec.subtitle}</p>
+                                    <p className="text-[10px] text-muted-foreground truncate mt-0.5">{rec.subtitle}</p>
                                   )}
-                                  <span className="mt-1 inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.14em] font-light group-hover:gap-1.5 transition-all">
+                                  <span className="mt-1.5 inline-flex items-center gap-1 text-[10px] tracking-[0.08em] font-light text-muted-foreground group-hover:text-black transition-colors">
                                     {TYPE_CTA[rec.type] ?? "Lihat"}
-                                    <ArrowRight size={11} strokeWidth={1.5} />
+                                    <ArrowRight size={10} strokeWidth={1.5} />
                                   </span>
                                 </div>
                               </button>
@@ -428,13 +450,28 @@ export function ChatWidget() {
                           Hubungkan ke customer service
                         </button>
                       )}
+                      {formatTime(m.created_at) && (
+  <p
+    className={`mt-1 text-[10px] text-muted-foreground font-light ${
+      m.sender === "user" ? "text-right" : "text-left"
+    }`}
+  >
+    {formatTime(m.created_at)}
+  </p>
+)}
                     </div>
                   </div>
                 ),
               )}
 
               {loading && (
-                <div className="flex justify-start">
+                <div className="flex justify-start gap-2">
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 serif text-xs font-medium"
+                    style={{ backgroundColor: BLACK, color: WHITE }}
+                  >
+                    L
+                  </div>
                   <div
                     className="px-4 py-3 text-sm font-light flex items-center gap-2"
                     style={{ backgroundColor: WHITE, color: BLACK, border: "1px solid #e5e5e5" }}
