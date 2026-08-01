@@ -21,6 +21,8 @@ export default function CollectionCategory() {
   const { slug, category } = useParams<{ slug: string; category: string }>();
   const [searchParams] = useSearchParams();
   const packageSlug = searchParams.get("package");
+  const highlightSlug = searchParams.get("highlight");
+
   const navigate = useNavigate();
   const [items, setItems] = useState<CollectionItemRef[]>([]);
   const [collection, setCollection] = useState<Collection | null>(null);
