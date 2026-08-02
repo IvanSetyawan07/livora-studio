@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Menu, X, User, ChevronDown, ChevronRight, Plus, Search, ArrowLeft, Package, LogOut, Bookmark, ClipboardList, Shield } from "lucide-react";
+import { Menu, X, User, ChevronDown, ChevronRight, Plus, Search, ArrowLeft, Package, LogOut, Bookmark, ClipboardList, Shield, Camera } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/livora/LanguageSwitcher";
@@ -8,7 +8,6 @@ import SearchOverlay from "@/components/livora/SearchOverlay";
 import { api, authStorage } from "@/lib/api";
 import { getAllThumbnails, subscribeThumbnails } from "@/lib/themeThumbnails";
 import { toast } from "sonner";
-
 type NavLink = {
   label: string;
   to?: string;
@@ -474,6 +473,15 @@ export const Navbar = () => {
                           </span>
                         )}
                       </Link>
+                      {authUser.role === "sales" && (
+                      <Link
+                        to="/sales/scan"
+                        onClick={() => setProfileOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60 border-t border-border"
+                      >
+                        <Camera size={16} /> Scan QR
+                      </Link>
+                    )}
                       {authUser.role === "admin" && (
                         <Link
                           to="/admin"

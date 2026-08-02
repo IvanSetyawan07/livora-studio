@@ -11,6 +11,7 @@ export default function AdminScan() {
   const navigate = useNavigate();
   const regionId = "admin-qr-region";
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const startingRef = useRef(false);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [manual, setManual] = useState("");
@@ -29,6 +30,12 @@ export default function AdminScan() {
   };
 
   const stop = async () => {
+    // Kalau start() masih berjalan, tunggu bentar biar nggak race dengan play().
+    let tries = 0;
+    while (startingRef.current && tries < 20) {
+      await new Promise((r) => setTimeout(r, 50));
+      tries++;
+    }
     try {
       await scannerRef.current?.stop();
       await scannerRef.current?.clear();
@@ -41,6 +48,7 @@ export default function AdminScan() {
 
   const start = async () => {
     setError(null);
+    startingRef.current = true;
     try {
       const scanner = new Html5Qrcode(regionId);
       scannerRef.current = scanner;
@@ -58,6 +66,8 @@ export default function AdminScan() {
     } catch (e: any) {
       setError(e?.message ?? "Kamera tidak bisa diakses. Pastikan izin kamera diberikan.");
       setScanning(false);
+    } finally {
+      startingRef.current = false;
     }
   };
 
@@ -85,8 +95,13 @@ export default function AdminScan() {
       </p>
 
       <div className="rounded-xl border border-border overflow-hidden bg-card">
-        <div id={regionId} className="w-full min-h-[280px] bg-muted/40 flex items-center justify-center">
-          {!scanning && <span className="text-xs text-muted-foreground">Kamera belum aktif</span>}
+        <div className="relative w-full min-h-[280px] bg-muted/40">
+          <div id={regionId} className="w-full h-full" />
+          {!scanning && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <span className="text-xs text-muted-foreground">Kamera belum aktif</span>
+            </div>
+          )}
         </div>
         <div className="p-4 flex flex-wrap gap-2 items-center border-t border-border">
           {!scanning ? (
