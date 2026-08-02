@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
-import { Pencil, Trash2, Plus, Settings2, Search, Filter, Download, X, ArrowUpDown, QrCode } from "lucide-react";
+import { Pencil, Trash2, Plus, Settings2, Search, Filter, Download, X, ArrowUpDown, QrCode, ClipboardList } from "lucide-react";
 import ItemQRCode from "@/components/livora/ItemQRCode";
 
 
