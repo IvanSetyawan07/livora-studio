@@ -229,6 +229,9 @@ export default function AdminItems() {
                   <button onClick={() => downloadImage(i)} title="Download image" className="p-1.5 hover:bg-muted rounded" disabled={!i.image}>
                     <Download className="w-3.5 h-3.5" />
                   </button>
+                  <Link to={`/admin/items/${i.slug}/detail`} title="Rincian internal (stok, harga, dimensi)" className="p-1.5 hover:bg-muted rounded inline-flex">
+                    <ClipboardList className="w-3.5 h-3.5" />
+                  </Link>
 
                   <Link to={`/admin/items/${i.id}/experience`} title="Manage Experience" className="p-1.5 hover:bg-muted rounded inline-flex">
                     <Settings2 className="w-3.5 h-3.5" />
