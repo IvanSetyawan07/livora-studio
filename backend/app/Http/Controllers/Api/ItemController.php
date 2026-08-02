@@ -110,6 +110,14 @@ class ItemController extends Controller
             'category_ids' => 'nullable|array',
             'category_ids.*' => 'integer|exists:categories,id',
             'image' => 'nullable|file|image',
+            'stock' => 'nullable|integer|min:0',
+            'price' => 'nullable|numeric|min:0',
+            'weight_kg' => 'nullable|numeric|min:0',
+            'width_cm' => 'nullable|numeric|min:0',
+            'depth_cm' => 'nullable|numeric|min:0',
+            'height_cm' => 'nullable|numeric|min:0',
+            'material_detail' => 'nullable|string',
+            'warehouse_note' => 'nullable|string',
         ]);
     }
 
