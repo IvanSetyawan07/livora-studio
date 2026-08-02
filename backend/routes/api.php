@@ -111,6 +111,7 @@ Route::delete('/wishlist/{type}/{id}', [WishlistController::class, 'destroy']);
         Route::delete('/photos/{photo}', [ProjectPhotoController::class, 'destroy']);
 
         // Items
+        Route::get('/items/lookup/{slug}', [ItemController::class, 'adminShow']);
         Route::post('/items', [ItemController::class, 'store']);
         Route::post('/items/{item}', [ItemController::class, 'update']);
         Route::delete('/items/{item}', [ItemController::class, 'destroy']);

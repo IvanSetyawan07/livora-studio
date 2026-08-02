@@ -1,3 +1,4 @@
+import { QrCode as QrCodeIcon } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { api, authStorage } from "@/lib/api";
@@ -21,6 +22,7 @@ const nav = [
   { to: "/admin", end: true, label: "Overview", icon: LayoutDashboard },
   { to: "/admin/projects", label: "Projects", icon: FolderKanban },
   { to: "/admin/items", label: "Items / Furniture", icon: Sofa },
+  { to: "/admin/scan", label: "QR Scanner", icon: QrCodeIcon },
   { to: "/admin/collections", label: "Collections", icon: BookOpen },
   { to: "/admin/catalogs", label: "Catalogs", icon: BookOpen },
   { to: "/admin/taxonomies", label: "Taxonomies", icon: Tags },

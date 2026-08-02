@@ -10,7 +10,12 @@ import {
   type SupportMessage,
   type SupportSessionInfo,
   type AskBotDetail,
+  touchActivity,
+  resetVisitor,
+  shouldResetSession,
+  IDLE_RESET_MS,
 } from "@/lib/supportChat";
+import { imgUrl } from "@/lib/adminApi";
 
 /* ────────── Design tokens (konsisten dengan komponen Livora lainnya) ────────── */
 const BLACK = "#ffffff";
@@ -33,6 +38,19 @@ const TYPE_CTA: Record<Recommendation["type"], string> = {
   catalog: "Lihat Katalog",
   project: "Lihat Project",
 };
+/** Perbaiki path lama/legacy dari backend supaya tidak jatuh ke halaman 404. */
+const normalizeRecUrl = (url?: string | null): string => {
+  if (!url) return "/";
+  let u = url.trim();
+  if (/^https?:\/\//i.test(u)) {
+    try { u = new URL(u).pathname; } catch { /* noop */ }
+  }
+  if (!u.startsWith("/")) u = `/${u}`;
+  u = u.replace(/^\/item\//, "/items/").replace(/^\/project\//, "/projects/");
+  u = u.replace(/^\/collections\//, "/collection/");
+  return u;
+};
+
 const formatTime = (iso?: string | null): string | null => {
   if (!iso) return null;
   const date = new Date(iso);
@@ -104,6 +122,8 @@ export function ChatWidget() {
     if (session || booting) return;
     setBooting(true);
     try {
+      if (shouldResetSession()) resetVisitor();
+      touchActivity();
       const data = await openSession();
       setSession(data.session);
       setMessages(data.messages);
@@ -151,8 +171,25 @@ export function ChatWidget() {
   }, [session, lastId, open]);
 
   useEffect(() => {
-    if (open) setUnread(0);
+    if (open) {
+      setUnread(0);
+      touchActivity();
+    }
   }, [open]);
+
+  /* Idle reset: 10 menit tanpa interaksi -> sesi & cache visitor dibuang. */
+  useEffect(() => {
+    const check = () => {
+      if (!shouldResetSession()) return;
+      resetVisitor();
+      setSession(null);
+      setMessages([]);
+      setUnread(0);
+      setOpen(false);
+    };
+    const id = window.setInterval(check, 30000);
+    return () => window.clearInterval(id);
+  }, []);
 
   /* Trigger dari halaman lain, mis. tombol "Tanya tentang produk ini" di ItemDetail */
   useEffect(() => {
@@ -186,6 +223,7 @@ export function ChatWidget() {
       }
     }
 
+    touchActivity();
     setLoading(true);
     setMessages((prev) => [
   ...prev,
@@ -241,7 +279,7 @@ export function ChatWidget() {
   /** Navigasi ke halaman produk/koleksi/katalog/project — tetap di dalam SPA. */
   const goToRecommendation = (url: string) => {
     setOpen(false);
-    navigate(url);
+    navigate(normalizeRecUrl(url));
   };
 
   const status = session?.status ?? "bot";
@@ -395,7 +433,7 @@ export function ChatWidget() {
                                 <div className="w-full aspect-square bg-[#f2f2f2] overflow-hidden rounded-lg relative">
                                   {rec.image ? (
                                     <img
-                                      src={rec.image}
+                                      src={imgUrl(rec.image)}
                                       alt={rec.title}
                                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                       loading="lazy"

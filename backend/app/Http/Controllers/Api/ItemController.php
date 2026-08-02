@@ -38,6 +38,31 @@ class ItemController extends Controller
         return $arr;
     }
 
+    /**
+     * Admin-only: rincian internal item (stok, harga, dimensi, material lengkap)
+     * + daftar item serupa. Dipakai halaman Admin QR Scan / Item Detail.
+     */
+    public function adminShow($slug)
+    {
+        $item = Item::with(['type','collection','themes','categories','variants'])
+            ->where('slug', $slug)->orWhere('code', $slug)->firstOrFail();
+
+        $similar = Item::with(['type','collection'])
+            ->where('id', '!=', $item->id)
+            ->where(function ($q) use ($item) {
+                if ($item->type_id)       $q->orWhere('type_id', $item->type_id);
+                if ($item->collection_id) $q->orWhere('collection_id', $item->collection_id);
+            })
+            ->orderByRaw('CASE WHEN type_id = ? THEN 0 ELSE 1 END', [$item->type_id])
+            ->limit(24)
+            ->get();
+
+        return [
+            'item'    => $item,
+            'similar' => $similar,
+        ];
+    }
+
     public function store(Request $r)
     {
         $data = $this->validateData($r);
@@ -85,6 +110,14 @@ class ItemController extends Controller
             'category_ids' => 'nullable|array',
             'category_ids.*' => 'integer|exists:categories,id',
             'image' => 'nullable|file|image',
+            'stock' => 'nullable|integer|min:0',
+            'price' => 'nullable|numeric|min:0',
+            'weight_kg' => 'nullable|numeric|min:0',
+            'width_cm' => 'nullable|numeric|min:0',
+            'depth_cm' => 'nullable|numeric|min:0',
+            'height_cm' => 'nullable|numeric|min:0',
+            'material_detail' => 'nullable|string',
+            'warehouse_note' => 'nullable|string',
         ]);
     }
 
