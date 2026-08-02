@@ -38,6 +38,31 @@ class ItemController extends Controller
         return $arr;
     }
 
+    /**
+     * Admin-only: rincian internal item (stok, harga, dimensi, material lengkap)
+     * + daftar item serupa. Dipakai halaman Admin QR Scan / Item Detail.
+     */
+    public function adminShow($slug)
+    {
+        $item = Item::with(['type','collection','themes','categories','variants'])
+            ->where('slug', $slug)->orWhere('code', $slug)->firstOrFail();
+
+        $similar = Item::with(['type','collection'])
+            ->where('id', '!=', $item->id)
+            ->where(function ($q) use ($item) {
+                if ($item->type_id)       $q->orWhere('type_id', $item->type_id);
+                if ($item->collection_id) $q->orWhere('collection_id', $item->collection_id);
+            })
+            ->orderByRaw('CASE WHEN type_id = ? THEN 0 ELSE 1 END', [$item->type_id])
+            ->limit(24)
+            ->get();
+
+        return [
+            'item'    => $item,
+            'similar' => $similar,
+        ];
+    }
+
     public function store(Request $r)
     {
         $data = $this->validateData($r);
