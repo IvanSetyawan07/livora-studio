@@ -88,7 +88,11 @@ Route::delete('/wishlist/{type}/{id}', [WishlistController::class, 'destroy']);
         return ['ok' => true];
     });
     Route::post('/activities', [AuthController::class, 'trackActivity']);
-
+    Route::middleware('sales')->prefix('sales')->group(function () {
+    // Reuse method yang sama persis dengan admin — datanya identik
+    // (stock, harga, dimensi, dll) + daftar item serupa.
+    Route::get('/items/lookup/{slug}', [ItemController::class, 'adminShow']);
+});
     Route::middleware('admin')->prefix('admin')->group(function () {
         // Support chat
         Route::get('/support/sessions', [\App\Http\Controllers\Api\Admin\SupportChatController::class, 'index']);

@@ -8,7 +8,6 @@ import SearchOverlay from "@/components/livora/SearchOverlay";
 import { api, authStorage } from "@/lib/api";
 import { getAllThumbnails, subscribeThumbnails } from "@/lib/themeThumbnails";
 import { toast } from "sonner";
-
 type NavLink = {
   label: string;
   to?: string;

@@ -50,7 +50,8 @@ import AdminSupportChat from "./pages/admin/AdminSupportChat.tsx";
 import Register from "./pages/Register.tsx";
 import AdminScan from "./pages/admin/AdminScan.tsx";
 import AdminItemDetail from "./pages/admin/AdminItemDetail.tsx";
-
+import SalesScan from "./pages/sales/SalesScan.tsx";
+import SalesItemDetail from "./pages/sales/SalesItemDetail.tsx";
 
 const queryClient = new QueryClient();
 
@@ -84,6 +85,8 @@ function App() {
               <Route path="/login" element={<Auth />} />
               <Route path="/register" element={<Auth />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/sales/scan" element={<SalesScan />} />
+              <Route path="/sales/items/:slug" element={<SalesItemDetail />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/admin" element={<AdminLayout />}>
                <Route path="consultations" element={<AdminConsultations />} />
