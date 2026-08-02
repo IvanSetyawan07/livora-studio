@@ -2,7 +2,16 @@
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 class Item extends Model {
-    protected $fillable = ['type_id','collection_id','title','slug','code','texture','finish','availability','image','description'];
+    protected $fillable = ['type_id','collection_id','title','slug','code','texture','finish','availability','image','description',
+        'stock','price','weight_kg','width_cm','depth_cm','height_cm','material_detail','warehouse_note'];
+    protected $casts = [
+        'stock'     => 'integer',
+        'price'     => 'float',
+        'weight_kg' => 'float',
+        'width_cm'  => 'float',
+        'depth_cm'  => 'float',
+        'height_cm' => 'float',
+    ];
     public function type(){ return $this->belongsTo(FurnitureType::class, 'type_id'); }
     public function collection(){ return $this->belongsTo(Collection::class); }
     public function themes(){ return $this->belongsToMany(Theme::class, 'item_theme'); }
