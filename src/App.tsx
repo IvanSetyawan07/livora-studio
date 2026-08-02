@@ -48,6 +48,8 @@ import AdminConsultationDetail from "./pages/admin/AdminConsultationDetail.tsx";
 import AdminWishlists from "./pages/admin/AdminWishlists.tsx";
 import AdminSupportChat from "./pages/admin/AdminSupportChat.tsx";
 import Register from "./pages/Register.tsx";
+import AdminScan from "./pages/admin/AdminScan.tsx";
+import AdminItemDetail from "./pages/admin/AdminItemDetail.tsx";
 
 
 const queryClient = new QueryClient();
@@ -95,6 +97,8 @@ function App() {
                 <Route path="projects" element={<AdminProjects />} />
                 <Route path="items" element={<AdminItems />} />
                 <Route path="items/:id/experience" element={<AdminItemExperience />} />
+                <Route path="items/:slug/detail" element={<AdminItemDetail />} />
+                <Route path="scan" element={<AdminScan />} />
                 <Route path="collections" element={<AdminCollections />} />
                 <Route path="taxonomies" element={<AdminTaxonomies />} />
                 <Route path="landing" element={<AdminLanding />} />

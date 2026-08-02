@@ -27,10 +27,10 @@ class LivoraAssistant
      * SESUAIKAN kalau route React kamu bukan singular seperti ini.
      */
     private const FRONTEND_PATHS = [
-        'item'       => '/item/%s',
+        'item'       => '/items/%s',
         'collection' => '/collection/%s',
         'catalog'    => '/catalog/%s',
-        'project'    => '/project/%s',
+        'project'    => '/projects/%s',
     ];
 
     /** Halaman untuk booking konsultasi. Sesuaikan kalau path-nya beda. */
@@ -317,7 +317,7 @@ PROMPT;
             'subtitle'    => $cat->category ?? $cat->taxonomy,
             'description' => $this->shorten($cat->description),
             'image'       => $this->absoluteUrl($this->firstNonEmpty($cat, ['cover_image', 'scene_1_image', 'thumbnail', 'image', 'banner'])),
-            'url'         => $this->frontendUrl('catalog', $cat->slug),
+            'url'         => '/catalog/' . \Illuminate\Support\Str::slug($cat->category ?: 'all') . '/' . $cat->slug,
         ];
     }
 
@@ -385,8 +385,10 @@ PROMPT;
         return $path;
     }
 
-    $base = rtrim(preg_replace('#/api/?$#', '', config('app.url')), '/');
-    return $base . '/storage/' . ltrim($path, '/');
+    // Kembalikan path relatif "/storage/..." saja — frontend (imgUrl) yang
+    // menempelkan origin backend, supaya tidak bergantung APP_URL yang bisa salah.
+    $path = '/' . ltrim($path, '/');
+    return str_starts_with($path, '/storage/') ? $path : '/storage' . $path;
 }
 
     /** Retrieval dari database + item yang sedang dilihat user (kalau ada). */
