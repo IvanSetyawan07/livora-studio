@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronRight, ChevronDown, ImageIcon, MessageCircle, QrCode } from "lucide-react";
+import { ChevronRight, ChevronDown, ImageIcon, MessageCircle, QrCode, Info } from "lucide-react";
 import ItemQRCode from "@/components/livora/ItemQRCode";
 
 import { askConcierge } from "@/lib/supportChat";
@@ -30,6 +30,7 @@ const ItemDetail = () => {
 
   const [showQR, setShowQR] = useState(false);
   const [activeVariantId, setActiveVariantId] = useState<number | null>(null);
+  const [showProductDetails, setShowProductDetails] = useState(false);
 
   const [sheetCategory, setSheetCategory] = useState<string | null>(null);
   const [showGallery, setShowGallery] = useState(false);
@@ -348,38 +349,6 @@ const ItemDetail = () => {
 
             <div className="h-px w-full bg-[#1A1A1A]/10" style={{ margin: "28px 0" }} />
 
-            {/* TEXTURE + FINISH — always visible below Choose Your Design */}
-            {(item.textures?.length > 0 || item.specs.finish) && (
-              <div style={{ marginBottom: 24 }}>
-                {item.textures?.length > 0 && (
-                  <div style={{ marginBottom: 18 }}>
-                    <p style={goldLabel}>Texture</p>
-                    <p style={{ fontSize: 14, color: "#1A1A1A", marginTop: 6 }}>
-                      {item.textures.join(", ")}
-                    </p>
-                  </div>
-                )}
-                {item.specs.finish && item.specs.finish !== "—" && (
-                  <div>
-                    <p style={goldLabel}>Finish</p>
-                    <p style={{ fontSize: 14, color: "#1A1A1A", marginTop: 6 }}>
-                      {item.specs.finish}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ABOUT THIS FURNITURE (description) */}
-            {item.description && (
-              <div style={{ marginBottom: 24 }}>
-                <p style={goldLabel}>About this Furniture</p>
-                <p style={{ fontSize: 14, color: "#1A1A1A", marginTop: 6, lineHeight: 1.7 }}>
-                  {item.description}
-                </p>
-              </div>
-            )}
-
             {/* THEMES / CATEGORIES / COLLECTION — clickable filter buttons */}
             {((item.themeRefs && item.themeRefs.length > 0) ||
               (item.categoryRefs && item.categoryRefs.length > 0) ||
@@ -442,7 +411,7 @@ const ItemDetail = () => {
                     <p style={goldLabel}>Collection</p>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
                       <button
-                        onClick={() => navigate(`/furniture/collection/${item.collection!.slug}`)}
+                        onClick={() => navigate(`/collection/${item.collection!.slug}`)}
                         className="hover:opacity-90 transition-opacity"
                         style={{
                           fontSize: 12,
@@ -465,8 +434,75 @@ const ItemDetail = () => {
 
             <div className="h-px w-full bg-[#1A1A1A]/10" style={{ margin: "28px 0" }} />
 
-            <p style={goldLabel}>Availability</p>
-            <p style={{ fontSize: 14, color: "#1A1A1A", marginTop: 6 }}>{item.specs.availability}</p>
+            {/* PRODUCT DETAILS — collapsible accordion (Texture, Finish, About, Availability) */}
+            <button
+              type="button"
+              onClick={() => setShowProductDetails((v) => !v)}
+              className="w-full flex items-center justify-between"
+              style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
+            >
+              <span className="flex items-center gap-2" style={{ fontSize: 14, color: "#1A1A1A" }}>
+                <Info size={16} strokeWidth={1.5} style={{ color: GOLD }} />
+                Product details
+              </span>
+              <motion.span
+                animate={{ rotate: showProductDetails ? 90 : 0 }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                className="inline-flex"
+              >
+                <ChevronRight size={16} className="text-[#9A9A9A]" />
+              </motion.span>
+            </button>
+
+            <AnimatePresence initial={false}>
+              {showProductDetails && (
+                <motion.div
+                  key="product-details"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div style={{ paddingTop: 20 }}>
+                    {(item.textures?.length > 0 || item.specs.finish) && (
+                      <div style={{ marginBottom: 24 }}>
+                        {item.textures?.length > 0 && (
+                          <div style={{ marginBottom: 18 }}>
+                            <p style={goldLabel}>Texture</p>
+                            <p style={{ fontSize: 14, color: "#1A1A1A", marginTop: 6 }}>
+                              {item.textures.join(", ")}
+                            </p>
+                          </div>
+                        )}
+                        {item.specs.finish && item.specs.finish !== "—" && (
+                          <div>
+                            <p style={goldLabel}>Finish</p>
+                            <p style={{ fontSize: 14, color: "#1A1A1A", marginTop: 6 }}>
+                              {item.specs.finish}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {item.description && (
+                      <div style={{ marginBottom: 24 }}>
+                        <p style={goldLabel}>About this Furniture</p>
+                        <p style={{ fontSize: 14, color: "#1A1A1A", marginTop: 6, lineHeight: 1.7 }}>
+                          {item.description}
+                        </p>
+                      </div>
+                    )}
+
+                    <div>
+                      <p style={goldLabel}>Availability</p>
+                      <p style={{ fontSize: 14, color: "#1A1A1A", marginTop: 6 }}>{item.specs.availability}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <button
               onClick={() =>
@@ -484,19 +520,6 @@ const ItemDetail = () => {
             >
               <MessageCircle size={14} strokeWidth={1.5} />
               Tanya tentang produk ini
-            </button>
-
-
-
-            <button
-              onClick={() => navigate(-1)}
-              className="mt-10 uppercase hover:opacity-70 transition-opacity"
-              style={{
-                color: GOLD, background: "none", border: "none",
-                fontSize: 12, letterSpacing: "0.1em", padding: 0, cursor: "pointer",
-              }}
-            >
-              ← Back
             </button>
           </div>
         </section>

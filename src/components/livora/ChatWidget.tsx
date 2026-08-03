@@ -296,17 +296,17 @@ export function ChatWidget() {
     <>
       {/* Floating toggle button */}
       <motion.button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-label={open ? "Tutup chat" : "Buka chat"}
-        className="fixed bottom-6 right-6 z-[60] w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-500 ease-out hover:scale-110"
-        style={{
-          backgroundColor: INK,
-          color: PAPER,
-          opacity: visible ? 1 : 0,
-          transform: visible ? "translateY(0)" : "translateY(16px)",
-          pointerEvents: visible ? "auto" : "none",
-        }}
+  type="button"
+  onClick={() => setOpen((v) => !v)}
+  aria-label={open ? "Tutup chat" : "Buka chat"}
+  className="fixed bottom-6 right-6 z-[60] w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-500 ease-out hover:scale-110"
+  style={{
+    backgroundColor: PAPER,
+    color: INK,
+    opacity: visible ? 1 : 0,
+    transform: visible ? "translateY(0)" : "translateY(16px)",
+    pointerEvents: visible ? "auto" : "none",
+  }}
         initial={false}
         whileTap={{ scale: 0.95 }}
       >
@@ -463,6 +463,7 @@ export function ChatWidget() {
                                   )}
                                   <span
                                     className="mt-1.5 inline-flex items-center gap-1 text-[10px] tracking-[0.08em] font-light transition-colors"
+                                   
                                     style={{ color: GOLD }}
                                   >
                                     {TYPE_CTA[rec.type] ?? "Lihat"}
@@ -506,7 +507,7 @@ export function ChatWidget() {
                           }`}
                         >
                           {formatTime(m.created_at)}
-                          {m.sender === "user" && <Check size={11} strokeWidth={1.5} style={{ color: GOLD }} />}
+                          {m.sender === "user" && <Check size={11} strokeWidth={1.5} style={{ color: "#1E3A8A" }} />}
                         </p>
                       )}
                     </div>
