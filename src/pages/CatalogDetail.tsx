@@ -224,26 +224,16 @@ setExploreItems(siblings);
   );
 
   const scenes = useMemo(() => {
-    if (!rawCatalog) return [];
-
-    const sceneHotspots1 = hotspots.filter((h) => h.scene_number === "scene-1");
-    const sceneHotspots2 = hotspots.filter((h) => h.scene_number === "scene-2");
-
-    return [
-      {
-        id: "scene-1",
-        image: rawCatalog.scene_1_image ? imgUrl(rawCatalog.scene_1_image) : "",
-        alt: `${item?.title} scene 1`,
-        hotspots: sceneHotspots1,
-      },
-      {
-        id: "scene-2",
-        image: rawCatalog.scene_2_image ? imgUrl(rawCatalog.scene_2_image) : "",
-        alt: `${item?.title} scene 2`,
-        hotspots: sceneHotspots2,
-      },
-    ];
-  }, [rawCatalog, hotspots, item]);
+  if (!rawCatalog?.scenes) return [];
+  return [...rawCatalog.scenes]
+    .sort((a: any, b: any) => a.order - b.order)
+    .map((s: any) => ({
+      id: s.scene_key,
+      image: s.image ? imgUrl(s.image) : "",
+      alt: s.alt || `${item?.title} — ${s.scene_key}`,
+      hotspots: hotspots.filter((h) => h.scene_number === s.scene_key),
+    }));
+}, [rawCatalog, hotspots, item]);
 const catalogItems = useMemo(() => {
     const seen = new Set<string>();
     const result: {

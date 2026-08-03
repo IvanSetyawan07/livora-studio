@@ -6,6 +6,7 @@ import {
   CatalogResponse,
   Taxonomy,
   CatalogCategoryEntity,
+  CatalogScene,
 } from "@/types/catalog";
 
 const API_BASE = '/admin/catalogs';   // create, update, delete (admin)
@@ -45,19 +46,9 @@ export const getCatalogsByCategory = async (
 };
 
 // GET single catalog by slug + hotspots
-export const getCatalogBySlug = async (slug: string): Promise<Catalog & { scene_1_image?: string; scene_2_image?: string; hotspots?: any[] }> => {
+export const getCatalogBySlug = async (slug: string): Promise<Catalog & { hotspots?: any[] }> => {
   const response = await api.get<any>(`${API_PUBLIC}/${slug}`);
-  const catalog = response.data;
-  
-  // Normalize scene image URLs
-  if (catalog.scene_1_image) {
-    catalog.scene_1_image = buildStorageUrl(catalog.scene_1_image);
-  }
-  if (catalog.scene_2_image) {
-    catalog.scene_2_image = buildStorageUrl(catalog.scene_2_image);
-  }
-  
-  return catalog;
+  return response.data;
 };
 
 // GET random catalogs
@@ -168,6 +159,62 @@ export const batchHotspots = async (
   const response = await api.post<Hotspot[]>(
     `${API_BASE}/${catalogId}/hotspots/batch`,
     { hotspots }
+  );
+  return response.data;
+};
+
+// ─── SCENE ENDPOINTS ──────────────────────────────────────
+
+// GET all scenes for a catalog (public)
+export const getCatalogScenes = async (catalogId: string): Promise<CatalogScene[]> => {
+  const response = await api.get<CatalogScene[]>(`${API_PUBLIC}/${catalogId}/scenes`);
+  return response.data;
+};
+
+// CREATE scene (admin)
+export const createCatalogScene = async (
+  catalogId: string,
+  formData: FormData
+): Promise<CatalogScene> => {
+  const response = await api.post<CatalogScene>(
+    `${API_BASE}/${catalogId}/scenes`,
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } }
+  );
+  return response.data;
+};
+
+// UPDATE scene (admin) — replace image and/or alt text
+export const updateCatalogScene = async (
+  catalogId: string,
+  sceneId: number,
+  formData: FormData
+): Promise<CatalogScene> => {
+  formData.append("_method", "PUT");
+  const response = await api.post<CatalogScene>(
+    `${API_BASE}/${catalogId}/scenes/${sceneId}`,
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } }
+  );
+  return response.data;
+};
+
+// DELETE scene (admin)
+export const deleteCatalogScene = async (
+  catalogId: string,
+  sceneId: number
+): Promise<void> => {
+  await api.delete(`${API_BASE}/${catalogId}/scenes/${sceneId}`);
+};
+
+// REORDER scenes (admin)
+export const reorderCatalogScenes = async (
+  catalogId: string,
+  order: { id: number; order: number }[]
+): Promise<CatalogScene[]> => {
+  const response = await api.post<CatalogScene[]>(
+    `${API_BASE}/${catalogId}/scenes/reorder`,
+    { order }
   );
   return response.data;
 };

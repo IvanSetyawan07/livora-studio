@@ -142,20 +142,19 @@ class CatalogController extends Controller
      * GET /api/catalogs/{id}
      */
     public function show(string $id)
-    {
-        try {
-            // Coba cari berdasarkan ID jika numeric, fallback ke slug
-            $catalog = is_numeric($id)
-                ? Catalog::findOrFail($id)
-                : Catalog::where('slug', $id)->firstOrFail();
+{
+    try {
+        $catalog = is_numeric($id)
+            ? Catalog::findOrFail($id)
+            : Catalog::where('slug', $id)->firstOrFail();
 
-            return response()->json($catalog);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'message' => 'Catalog not found',
-            ], 404);
-        }
+        $catalog->load(['scenes' => fn ($q) => $q->orderBy('order')]);
+
+        return response()->json($catalog);
+    } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        return response()->json(['message' => 'Catalog not found'], 404);
     }
+}
 
     /**
      * Update the specified resource in storage.

@@ -73,54 +73,59 @@ export default function FurnitureFilter() {
             <p style={{ fontSize: 14, color: "#5A5A5A" }}>Belum ada item untuk kategori ini.</p>
           )}
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-10">
             {items.map((it: any) => {
               const image = imgUrl(it.image);
               return (
                 <Link
                   key={it.id}
                   to={`/items/${it.slug}`}
-                  className="block group"
-                  style={{
-                    background: "#FAFAF8",
-                    border: "1px solid #E8E4DF",
-                    borderRadius: 10,
-                    padding: 18,
-                    textDecoration: "none",
-                    transition: "all 0.3s ease",
-                  }}
+                  className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <div
+                    className="item-card"
                     style={{
-                      height: 200,
+                      background: "#FAFAF8",
+                      border: "1px solid #E8E4DF",
+                      borderRadius: "10px",
+                      overflow: "hidden",
+                      aspectRatio: "31 / 20",
+                      boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
+                      transition: "all 0.3s ease",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      overflow: "hidden",
-                      background: "#FFFFFF",
-                      borderRadius: 6,
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "#C9A97A";
+                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(201,169,122,0.12)";
+                      e.currentTarget.style.transform = "translateY(-4px)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "#E8E4DF";
+                      e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.04)";
+                      e.currentTarget.style.transform = "translateY(0)";
                     }}
                   >
                     {image ? (
                       <img
                         src={image}
                         alt={it.title}
-                        style={{
-                          maxWidth: "100%",
-                          maxHeight: "100%",
-                          objectFit: "contain",
-                          transition: "transform 0.5s ease",
-                        }}
-                        className="group-hover:scale-105"
+                        className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
-                      <ItemIllustration name={it.title} />
+                      <div className="w-2/3 h-2/3 transition-transform duration-500 group-hover:scale-105">
+                        <ItemIllustration name={it.title} size={260} />
+                      </div>
                     )}
                   </div>
-                  <p style={{ fontSize: 14, color: "#1A1A1A", marginTop: 14 }}>{it.title}</p>
-                  {it.code && (
-                    <p style={{ fontSize: 11, color: "#9A9A9A", letterSpacing: "0.15em", marginTop: 4 }}>{it.code}</p>
-                  )}
+                  <div className="mt-4 px-1">
+                    <h3 className="text-sm font-normal text-foreground leading-snug">{it.title}</h3>
+                    {it.code && (
+                      <p className="text-[11px] uppercase tracking-[0.15em] text-foreground/50 mt-1">{it.code}</p>
+                    )}
+                  </div>
                 </Link>
               );
             })}

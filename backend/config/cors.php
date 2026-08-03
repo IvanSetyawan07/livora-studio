@@ -15,9 +15,8 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie', 'storage/*'],
-
-    'allowed_methods' => ['*'],
+    'paths' => ['api/*', 'storage/*', 'sanctum/csrf-cookie'],
+'allowed_origins' => ['*'], // atau domain frontend spesifik
 
     'allowed_origins' => [],
     'allowed_origins_patterns' => [
