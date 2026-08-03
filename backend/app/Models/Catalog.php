@@ -33,6 +33,10 @@ class Catalog extends Model
     /**
      * Relationship: A catalog has many hotspots
      */
+    public function scenes()
+{
+    return $this->hasMany(CatalogScene::class)->orderBy('order');
+}
     public function hotspots()
     {
         return $this->hasMany(Hotspot::class);

@@ -385,7 +385,7 @@ const Watermark = ({ logo }: { logo?: string }) => (
 ============================================================ */
 export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
   const items = data.items ?? [];
-  const scenes = (data.scenes ?? []).filter((s) => safe(s.image));
+  const scenes = data.scenes ?? [];
   const pageSize: CatalogPageSize = data.pageSize || "A4";
   const itemsPerPage = 4;
   const itemPages: (typeof items)[] = [];
@@ -507,7 +507,13 @@ export function CatalogPDFDocument({ data }: { data: CatalogPDFData }) {
             <Text style={styles.eyebrow}>SCENE {String(i + 1).padStart(2, "0")}</Text>
             <Text style={styles.h2}>{s.title || data.title}</Text>
             <View style={styles.ruleShort} />
-            <PdfImage src={safe(s.image)!} style={styles.sceneImg} />
+            {safe(s.image) ? (
+  <PdfImage src={safe(s.image)!} style={styles.sceneImg} />
+) : (
+  <View style={[styles.sceneImg, { backgroundColor: C.hair, alignItems: "center", justifyContent: "center" }]}>
+    <Text style={{ fontSize: 9, color: C.muted }}>Image unavailable</Text>
+  </View>
+)}
             <View style={styles.sceneCaption}>
               <View style={styles.sceneCaptionL}>
                 {s.alt ? <Text style={styles.body}>{s.alt}</Text> : null}

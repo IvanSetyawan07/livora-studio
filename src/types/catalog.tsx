@@ -29,7 +29,14 @@ export interface CatalogItem {
   galleryImages?: string[];
   featured?: boolean;
 }
-
+export interface CatalogScene {
+  id: number;
+  catalog_id: number;
+  scene_key: string;
+  image: string;
+  alt?: string | null;
+  order: number;
+}
 export const CATALOG_TAXONOMIES = [
   "All",
   "Modern",

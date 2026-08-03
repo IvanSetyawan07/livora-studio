@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\Admin\ConsultationController as AdminConsultationCo
 use App\Http\Controllers\Api\WishlistController;
 use App\Http\Controllers\Api\MarketingController;
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\CatalogSceneController;
 
 Route::get('/taxonomy-banners', [TaxonomyBannerController::class, 'index']);
 Route::get('/taxonomy-banners/{key}', [TaxonomyBannerController::class, 'byKey']);
@@ -60,7 +61,7 @@ Route::get('/catalogs', [CatalogController::class, 'index']);
 Route::get('/catalogs/{slug}', [CatalogController::class, 'show']);
 Route::get('/catalogs/{catalog}/hotspots', [HotspotController::class, 'index']);
 Route::get('/catalogs/{catalog}/hotspots/{scene}', [HotspotController::class, 'getByScene']);
-
+Route::get('/catalogs/{catalog}/scenes', [CatalogSceneController::class, 'index']);
 // Public tracking
 Route::post('/track/click', [TrackingController::class, 'click']);
 Route::post('/track/view',  [TrackingController::class, 'view']);
@@ -101,6 +102,7 @@ Route::delete('/wishlist/{type}/{id}', [WishlistController::class, 'destroy']);
         Route::post('/support/sessions/{session}/messages', [\App\Http\Controllers\Api\Admin\SupportChatController::class, 'store']);
         Route::post('/support/sessions/{session}/close', [\App\Http\Controllers\Api\Admin\SupportChatController::class, 'close']);
 
+        
 
         // Projects
         Route::post('/projects', [ProjectController::class, 'store']);
@@ -144,7 +146,14 @@ Route::delete('/wishlist/{type}/{id}', [WishlistController::class, 'destroy']);
         Route::post('/gallery/{gallery}', [FurnitureExperienceController::class, 'galleryUpdate']);
         Route::delete('/gallery/{gallery}', [FurnitureExperienceController::class, 'galleryDestroy']);
         Route::post('/items/{item}/gallery/reorder', [FurnitureExperienceController::class, 'galleryReorder']);
-
+        Route::prefix('catalogs/{catalog}/scenes')->group(function () {
+    Route::get('/', [CatalogSceneController::class, 'index']);
+    Route::post('/', [CatalogSceneController::class, 'store']);
+    Route::post('reorder', [CatalogSceneController::class, 'reorder']); // ← pindah ke sini, SEBELUM {scene}
+    Route::post('{scene}', [CatalogSceneController::class, 'update']);
+    Route::put('{scene}', [CatalogSceneController::class, 'update']);
+    Route::delete('{scene}', [CatalogSceneController::class, 'destroy']);
+});
         Route::get('/items/{item}/lifestyle', [FurnitureExperienceController::class, 'lifestyleIndex']);
         Route::post('/items/{item}/lifestyle', [FurnitureExperienceController::class, 'lifestyleStore']);
         Route::post('/lifestyle/{lifestyle}', [FurnitureExperienceController::class, 'lifestyleUpdate']);
