@@ -7,6 +7,7 @@ import { Footer } from "@/components/livora/Footer";
 import { BookConsultation } from "@/components/livora/BookConsultation";
 import { CategoryBar } from "@/components/livora/CategoryBar";
 import SaveButton from "@/components/livora/SaveButton";
+import { trackClick, trackView } from "@/lib/adminApi";
 import {
   getCollection,
   Collection,
@@ -53,6 +54,14 @@ export default function CollectionDetail() {
       .catch(() => setCollection(null))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  useEffect(() => {
+    if (!collection?.id) return;
+    const id = Number(collection.id);
+    trackClick("collection", id);
+    const start = Date.now();
+    return () => trackView("collection", id, Math.round((Date.now() - start) / 1000));
+  }, [collection?.id]);
 
   useEffect(() => {
     if (!collection) return;
