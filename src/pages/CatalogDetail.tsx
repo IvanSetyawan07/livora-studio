@@ -21,7 +21,7 @@ import {
   Catalog,
 } from "@/types/catalog";
 import { getCatalogBySlug, getAllCatalogs, getPublicHotspots } from "@/lib/catalogApi";
-import { imgUrl } from "@/lib/adminApi";
+import { imgUrl, trackClick, trackView } from "@/lib/adminApi";
 
 // ─────────────────────────────────────────────
 // Helper: normalise API Catalog → CatalogItem
@@ -122,6 +122,14 @@ export default function CatalogDetail() {
     >
   >({});
   const [heroHeight, setHeroHeight] = useState(800);
+
+  useEffect(() => {
+    const id = Number((rawCatalog as any)?.id ?? (item as any)?.id);
+    if (!id) return;
+    trackClick("catalog", id);
+    const start = Date.now();
+    return () => trackView("catalog", id, Math.round((Date.now() - start) / 1000));
+  }, [(rawCatalog as any)?.id]);
 
   useEffect(() => {
   if (item) {
