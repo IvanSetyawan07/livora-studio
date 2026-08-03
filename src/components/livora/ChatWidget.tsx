@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { MessageCircle, X, Send, Loader2, Headset, ArrowRight, CalendarCheck, Sparkles } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, Headset, ArrowRight, CalendarCheck, Sparkles, Check } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   openSession,
@@ -18,8 +18,10 @@ import {
 import { imgUrl } from "@/lib/adminApi";
 
 /* ────────── Design tokens (konsisten dengan komponen Livora lainnya) ────────── */
-const BLACK = "#ffffff";
-const WHITE = "#000000";
+const INK = "#000000";
+const PAPER = "#ffffff";
+const GOLD = "#C9974A";
+const USER_BUBBLE = "#f0ede7";
 const ease = [0.22, 1, 0.36, 1] as const;
 
 /** Satu kartu rekomendasi (item/collection/catalog/project) yang dikirim backend. */
@@ -55,7 +57,7 @@ const formatTime = (iso?: string | null): string | null => {
   if (!iso) return null;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 };
 
 /**
@@ -299,8 +301,8 @@ export function ChatWidget() {
         aria-label={open ? "Tutup chat" : "Buka chat"}
         className="fixed bottom-6 right-6 z-[60] w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-500 ease-out hover:scale-110"
         style={{
-          backgroundColor: BLACK,
-          color: WHITE,
+          backgroundColor: INK,
+          color: PAPER,
           opacity: visible ? 1 : 0,
           transform: visible ? "translateY(0)" : "translateY(16px)",
           pointerEvents: visible ? "auto" : "none",
@@ -352,13 +354,13 @@ export function ChatWidget() {
             {/* Header */}
             <div
               className="px-5 py-4 flex items-center justify-between"
-              style={{ backgroundColor: BLACK, color: WHITE }}
+              style={{ backgroundColor: PAPER, color: INK }}
             >
               <div>
                 <p className="serif text-base font-light leading-none mb-1">
                   {status === "active" ? "Livora Customer Service" : "Livora Concierge"}
                 </p>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-white/60 font-light">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-black/50 font-light">
                   {statusLabel}
                 </p>
               </div>
@@ -366,7 +368,7 @@ export function ChatWidget() {
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Tutup chat"
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors"
               >
                 <X size={16} strokeWidth={1.5} />
               </button>
@@ -393,32 +395,38 @@ export function ChatWidget() {
                     {m.sender !== "user" && (
                       <div
                         className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 serif text-xs font-medium"
-                        style={{ backgroundColor: BLACK, color: WHITE }}
+                        style={{ backgroundColor: INK, color: PAPER }}
                       >
                         L
                       </div>
                     )}
-                    <div className="max-w-[85%] w-full">
+                    <div className="max-w-[85%] w-fit">
                       {m.sender === "admin" && (
                         <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-1">
                           Customer Service
                         </p>
                       )}
-                      <div
-                        className="px-4 py-3 text-sm font-light leading-relaxed whitespace-pre-wrap"
-                        style={
-                          m.sender === "user"
-                            ? { backgroundColor: BLACK, color: WHITE }
-                            : { backgroundColor: WHITE, color: BLACK, border: "1px solid #e5e5e5" }
-                        }
-                      >
-                        {m.text}
-                      </div>
+
+                     <div
+                      className={`px-4 py-3 text-sm font-light leading-relaxed whitespace-pre-wrap rounded-2xl ${
+                        m.sender === "user" ? "rounded-br-md" : ""
+                      }`}
+                      style={
+                        m.sender === "user"
+                          ? { backgroundColor: USER_BUBBLE, color: INK }
+                          : { backgroundColor: "#f5f2ec", color: INK, border: "1px solid #eee8de" }
+                      }
+                    >
+                      {m.text}
+                    </div>
 
                       {/* Kartu rekomendasi produk/koleksi/katalog/project dari AI */}
                       {m.sender === "bot" && Array.isArray(m.meta?.recommendations) && m.meta.recommendations.length > 0 && (
                         <div className="mt-3">
-                          <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-2">
+                          <p
+                            className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] mb-2"
+                            style={{ color: GOLD }}
+                          >
                             <Sparkles size={11} strokeWidth={1.5} />
                             Rekomendasi untuk Anda
                           </p>
@@ -453,7 +461,10 @@ export function ChatWidget() {
                                   {rec.subtitle && (
                                     <p className="text-[10px] text-muted-foreground truncate mt-0.5">{rec.subtitle}</p>
                                   )}
-                                  <span className="mt-1.5 inline-flex items-center gap-1 text-[10px] tracking-[0.08em] font-light text-muted-foreground group-hover:text-black transition-colors">
+                                  <span
+                                    className="mt-1.5 inline-flex items-center gap-1 text-[10px] tracking-[0.08em] font-light transition-colors"
+                                    style={{ color: GOLD }}
+                                  >
                                     {TYPE_CTA[rec.type] ?? "Lihat"}
                                     <ArrowRight size={10} strokeWidth={1.5} />
                                   </span>
@@ -469,8 +480,8 @@ export function ChatWidget() {
                         <button
                           type="button"
                           onClick={() => goToRecommendation(m.meta?.consultation_url ?? "/appointment")}
-                          className="mt-2 w-full inline-flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.18em] font-light px-4 py-2.5"
-                          style={{ backgroundColor: BLACK, color: WHITE }}
+                          className="mt-2 w-full inline-flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.18em] font-light px-4 py-2.5 rounded-full"
+                          style={{ backgroundColor: INK, color: PAPER }}
                         >
                           <CalendarCheck size={13} strokeWidth={1.5} />
                           Jadwalkan Konsultasi
@@ -482,21 +493,22 @@ export function ChatWidget() {
                           type="button"
                           onClick={handleTalkToCS}
                           className="mt-2 inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] font-light border-b pb-0.5"
-                          style={{ color: BLACK, borderColor: BLACK }}
+                          style={{ color: INK, borderColor: INK }}
                         >
                           <Headset size={12} strokeWidth={1.5} />
                           Hubungkan ke customer service
                         </button>
                       )}
                       {formatTime(m.created_at) && (
-  <p
-    className={`mt-1 text-[10px] text-muted-foreground font-light ${
-      m.sender === "user" ? "text-right" : "text-left"
-    }`}
-  >
-    {formatTime(m.created_at)}
-  </p>
-)}
+                        <p
+                          className={`mt-1 flex items-center gap-1 text-[10px] text-muted-foreground font-light ${
+                            m.sender === "user" ? "justify-end" : "justify-start"
+                          }`}
+                        >
+                          {formatTime(m.created_at)}
+                          {m.sender === "user" && <Check size={11} strokeWidth={1.5} style={{ color: GOLD }} />}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ),
@@ -506,13 +518,13 @@ export function ChatWidget() {
                 <div className="flex justify-start gap-2">
                   <div
                     className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 serif text-xs font-medium"
-                    style={{ backgroundColor: BLACK, color: WHITE }}
+                    style={{ backgroundColor: INK, color: PAPER }}
                   >
                     L
                   </div>
                   <div
-                    className="px-4 py-3 text-sm font-light flex items-center gap-2"
-                    style={{ backgroundColor: WHITE, color: BLACK, border: "1px solid #e5e5e5" }}
+                    className="text-sm font-light flex items-center gap-2"
+                    style={{ color: INK }}
                   >
                     <Loader2 size={14} className="animate-spin" strokeWidth={1.5} />
                     Mengetik...
@@ -553,15 +565,15 @@ export function ChatWidget() {
                 placeholder={
                   status === "active" ? "Tulis pesan untuk CS..." : "Tulis pertanyaan kamu..."
                 }
-                className="flex-1 border border-[#e5e5e5] px-3 py-2.5 text-sm font-light outline-none focus:border-black transition-colors bg-white"
+                className="flex-1 border border-[#e5e5e5] rounded-full px-4 py-2.5 text-sm font-light outline-none focus:border-black transition-colors bg-white"
               />
               <button
                 type="button"
                 onClick={handleSend}
                 disabled={loading || !input.trim()}
                 aria-label="Kirim pesan"
-                className="w-10 h-10 flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
-                style={{ backgroundColor: BLACK, color: WHITE }}
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
+                style={{ backgroundColor: INK, color: PAPER }}
               >
                 <Send size={15} strokeWidth={1.5} />
               </button>
