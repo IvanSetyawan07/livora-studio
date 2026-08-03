@@ -10,7 +10,7 @@ class TrackingController extends Controller
     public function click(Request $r)
     {
         $data = $r->validate([
-            'target_type' => 'required|in:item,project',
+            'target_type' => 'required|in:item,project,collection,catalog',
             'target_id' => 'required|integer',
         ]);
         DB::table('item_clicks')->insert([
@@ -25,7 +25,7 @@ class TrackingController extends Controller
     public function view(Request $r)
     {
         $data = $r->validate([
-            'target_type' => 'required|in:item,project',
+            'target_type' => 'required|in:item,project,collection,catalog',
             'target_id' => 'required|integer',
             'duration_seconds' => 'nullable|integer|min:0|max:86400',
         ]);
