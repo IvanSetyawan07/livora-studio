@@ -10,6 +10,7 @@ import {
   type AdminSupportSession,
 } from "@/lib/adminSupportChat";
 import type { SupportMessage } from "@/lib/supportChat";
+import { playChatSound, unlockChatSound } from "@/lib/chatSound";
 
 const FILTERS = [
   { key: "all", label: "Semua" },
@@ -36,6 +37,7 @@ export default function AdminSupportChat() {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const prevPendingRef = useRef(0);
 
   const active = useMemo(() => sessions.find((s) => s.id === activeId) ?? null, [sessions, activeId]);
   const lastId = messages.length ? messages[messages.length - 1].id : 0;
@@ -55,10 +57,16 @@ export default function AdminSupportChat() {
   useEffect(() => {
     setLoading(true);
     loadSessions();
-    const i = window.setInterval(loadSessions, 8000);
+    const i = window.setInterval(loadSessions, 4000);
     return () => window.clearInterval(i);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
+
+  /* Nada dering saat ada permintaan CS baru masuk. */
+  useEffect(() => {
+    if (pending > prevPendingRef.current) playChatSound("alert");
+    prevPendingRef.current = pending;
+  }, [pending]);
 
   useEffect(() => {
     if (!activeId) return;
@@ -75,11 +83,14 @@ export default function AdminSupportChat() {
     const i = window.setInterval(async () => {
       try {
         const d = await getSupportMessages(activeId, lastId);
-        if (d.messages.length) setMessages((prev) => [...prev, ...d.messages]);
+        if (d.messages.length) {
+          setMessages((prev) => [...prev, ...d.messages]);
+          if (d.messages.some((m) => m.sender === "user")) playChatSound("incoming");
+        }
       } catch {
         /* ignore */
       }
-    }, 4000);
+    }, 1500);
     return () => window.clearInterval(i);
   }, [activeId, lastId]);
 
@@ -116,6 +127,8 @@ export default function AdminSupportChat() {
   const send = async () => {
     const body = text.trim();
     if (!body || !activeId || sending) return;
+    unlockChatSound();
+    playChatSound("sent");
     setSending(true);
     setText("");
     try {
@@ -130,7 +143,7 @@ export default function AdminSupportChat() {
   };
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="p-6 md:p-8" onPointerDown={unlockChatSound}>
       <div className="mb-6">
         <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground mb-1">Livora | Support</p>
         <h1 className="serif text-2xl">

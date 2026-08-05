@@ -1,6 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import styleEuropean from "@/assets/style-european.jpg";
 import styleJapandi from "@/assets/style-japandi.jpg";
 import styleScandinavian from "@/assets/style-scandinavian.jpg";
@@ -80,7 +79,6 @@ export const StyleGlassmorphism = () => {
 
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState(1);
-  const [paused, setPaused] = useState(false);
 
   const go = useCallback((next: number, dir: 1 | -1) => {
     setDirection(dir);
@@ -90,15 +88,14 @@ export const StyleGlassmorphism = () => {
   const next = useCallback(() => go(index + 1, 1), [go, index]);
   const prev = useCallback(() => go(index - 1, -1), [go, index]);
 
-  // Auto-slide every 3s
+  // Auto-slide every 3s — always runs, no hover/pause dependency
   useEffect(() => {
-    if (paused) return;
     const t = setInterval(() => {
       setDirection(1);
       setIndex((i) => (i + 1) % SLIDES.length);
     }, AUTOPLAY_MS);
     return () => clearInterval(t);
-  }, [paused]);
+  }, []);
 
   const slide = SLIDES[index];
 
@@ -118,8 +115,6 @@ export const StyleGlassmorphism = () => {
           y: typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches ? y : 0,
         }}
         className="mx-auto w-full max-w-6xl rounded-3xl md:rounded-[40px] border border-white/12 bg-white/8 backdrop-blur-xl p-6 md:p-10 lg:p-24 shadow-2xl transition-all"
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
       >
         <div className="grid md:grid-cols-12 gap-8 md:gap-12 lg:gap-20 items-center">
           {/* Text Content */}
@@ -144,7 +139,7 @@ export const StyleGlassmorphism = () => {
                   transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
                   className="space-y-6 md:space-y-8"
                 >
-                  <h2 className="serif text-4xl md:text-6xl lg:text-8xl font-light leading-[1.0]">
+                  <h2 className="serif text-4xl md:text-5xl lg:text-6xl font-light leading-[1.05]">
                     {slide.titleLines[0]}
                     <br />
                     {slide.titleLines[1]}
@@ -194,7 +189,7 @@ export const StyleGlassmorphism = () => {
           {/* Image Carousel */}
           <div className="md:col-span-7 order-1 md:order-2 relative">
             <div className="relative rounded-[32px] overflow-hidden shadow-xl aspect-[4/5] md:aspect-[5/4] bg-black/10">
-              <AnimatePresence mode="wait" custom={direction}>
+              <AnimatePresence custom={direction}>
                 <motion.img
                   key={slide.key + "-img"}
                   src={slide.image}
@@ -211,40 +206,22 @@ export const StyleGlassmorphism = () => {
                 />
               </AnimatePresence>
 
-              {/* Mobile tap zones (hidden on md+) */}
-              <button
+              {/* Tap zones — the only manual controls: left = prev, right = next */}
+               <button
                 type="button"
                 aria-label="Previous style"
                 onClick={prev}
-                className="md:hidden absolute inset-y-0 left-0 w-1/3 z-10"
+                className="absolute inset-y-0 left-0 w-1/2 z-10 cursor-pointer"
               />
               <button
                 type="button"
                 aria-label="Next style"
                 onClick={next}
-                className="md:hidden absolute inset-y-0 right-0 w-1/3 z-10"
+                className="absolute inset-y-0 right-0 w-1/2 z-10 cursor-pointer"
               />
-
-              {/* Desktop arrows */}
-              <button
-                type="button"
-                aria-label="Previous style"
-                onClick={prev}
-                className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-10 h-11 w-11 items-center justify-center rounded-full bg-white/70 backdrop-blur border border-white/60 text-foreground shadow-md hover:bg-white transition-all hover:-translate-x-0.5"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <button
-                type="button"
-                aria-label="Next style"
-                onClick={next}
-                className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-10 h-11 w-11 items-center justify-center rounded-full bg-white/70 backdrop-blur border border-white/60 text-foreground shadow-md hover:bg-white transition-all hover:translate-x-0.5"
-              >
-                <ChevronRight size={20} />
-              </button>
 
               {/* Style label chip */}
-              <div className="absolute top-4 left-4 md:top-6 md:left-6 px-3 py-1.5 rounded-full bg-black/35 backdrop-blur text-white text-[10px] md:text-[11px] uppercase tracking-[0.3em]">
+              <div className="absolute top-4 left-4 md:top-6 md:left-6 px-3 py-1.5 rounded-full bg-black/35 backdrop-blur text-white text-[10px] md:text-[11px] uppercase tracking-[0.3em] pointer-events-none">
                 {slide.emphasis.replace(".", "")}
               </div>
             </div>
