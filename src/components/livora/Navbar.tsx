@@ -51,7 +51,7 @@ export const Navbar = () => {
         { label: "Dining Rooms", to: "/catalog/dining-rooms" },
         { label: "Bedrooms", to: "/catalog/bedrooms" },
         { label: "Outdoor Spaces", to: "/catalog/outdoor-spaces" },
-        { label: "Home Office", to: "/catalog/home-office" },
+        { label: "Office Spaces", to: "/catalog/office-spaces" },
         { label: "Public Spaces", to: "/catalog/public-spaces" },
       ],
     },
