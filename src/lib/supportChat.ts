@@ -98,6 +98,19 @@ export async function requestCs(sessionId: number, payload?: { name?: string; em
   return data as { session: SupportSessionInfo; messages: SupportMessage[] };
 }
 
+/** Live chat idle: peringatan setelah 3 menit, lalu 30 detik sebelum balik ke AI. */
+export const LIVE_IDLE_WARN_MS = 3 * 60 * 1000;
+export const LIVE_IDLE_GRACE_MS = 30 * 1000;
+
+/** Kembalikan sesi live chat ke AI concierge. */
+export async function resumeBot(sessionId: number) {
+  const { data } = await api.post(`/support/sessions/${sessionId}/resume-bot`, {
+    visitor_id: getVisitorId(),
+  });
+  return data as { session: SupportSessionInfo; messages: SupportMessage[] };
+}
+
+
 /** Dipakai halaman lain (mis. ItemDetail) untuk membuka chat dengan konteks produk. */
 export type AskBotDetail = { text: string; item_slug?: string; item_name?: string };
 
