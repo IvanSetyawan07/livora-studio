@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Gem, Leaf, Infinity } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { motion, VariantLabels, Variants } from "framer-motion";
 import accessories from "@/assets/landing-furniture/accecories.png";
