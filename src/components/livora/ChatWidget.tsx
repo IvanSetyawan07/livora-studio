@@ -433,6 +433,24 @@ export function ChatWidget() {
               </button>
             </div>
 
+            {/* Peringatan idle live chat */}
+            <AnimatePresence>
+              {idleCountdown !== null && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden border-b"
+                  style={{ borderColor: "rgba(0,0,0,0.06)", background: "rgba(201,151,74,0.12)" }}
+                >
+                  <p className="px-5 py-2.5 text-[11px] leading-relaxed" style={{ color: "#7a5a20" }}>
+                    Masih di sana? Sesi live chat akan kembali ke Livora Concierge (AI) dalam{" "}
+                    <strong>{idleCountdown} detik</strong>. Kirim pesan untuk tetap terhubung dengan customer service.
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Messages */}
             <div ref={scrollRef} data-lenis-prevent className="flex-1 overflow-y-auto overscroll-contain px-5 py-5 space-y-4 bg-[#fafafa]">
               {booting && (
