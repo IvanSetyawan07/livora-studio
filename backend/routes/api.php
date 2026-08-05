@@ -40,6 +40,7 @@ Route::post('/support/session', [\App\Http\Controllers\Api\SupportChatController
 Route::get('/support/sessions/{session}/messages', [\App\Http\Controllers\Api\SupportChatController::class, 'messages']);
 Route::post('/support/sessions/{session}/messages', [\App\Http\Controllers\Api\SupportChatController::class, 'store']);
 Route::post('/support/sessions/{session}/request-cs', [\App\Http\Controllers\Api\SupportChatController::class, 'requestCs']);
+Route::post('/support/sessions/{session}/resume-bot', [\App\Http\Controllers\Api\SupportChatController::class, 'resumeBot']);
 
 Route::get('/projects', [ProjectController::class, 'index']);
 Route::get('/projects/{slug}', [ProjectController::class, 'show']);
