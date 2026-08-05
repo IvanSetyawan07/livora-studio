@@ -7,6 +7,7 @@ import {
   fetchMessages,
   sendMessage,
   requestCs,
+  resumeBot,
   type SupportMessage,
   type SupportSessionInfo,
   type AskBotDetail,
@@ -14,7 +15,10 @@ import {
   resetVisitor,
   shouldResetSession,
   IDLE_RESET_MS,
+  LIVE_IDLE_WARN_MS,
+  LIVE_IDLE_GRACE_MS,
 } from "@/lib/supportChat";
+import { playChatSound, unlockChatSound } from "@/lib/chatSound";
 import { imgUrl } from "@/lib/adminApi";
 
 /* ────────── Design tokens (konsisten dengan komponen Livora lainnya) ────────── */
@@ -77,7 +81,9 @@ export function ChatWidget() {
   const [loading, setLoading] = useState(false);
   const [booting, setBooting] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [idleCountdown, setIdleCountdown] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastInteractionRef = useRef<number>(Date.now());
   const contextRef = useRef<{ item_slug?: string; item_name?: string }>({});
   const navigate = useNavigate();
 
@@ -146,26 +152,31 @@ export function ChatWidget() {
     if (open) boot();
   }, [open, boot]);
 
-  /* Polling pesan baru saat menunggu / live chat dengan CS */
+  /* Polling pesan baru saat menunggu / live chat dengan CS (cepat: 1.5 detik) */
   useEffect(() => {
     if (!session) return;
     if (session.status !== "pending_cs" && session.status !== "active") return;
 
     let alive = true;
     const tick = async () => {
+      if (document.hidden && open) return;
       try {
         const data = await fetchMessages(session.id, lastId);
         if (!alive) return;
         setSession(data.session);
         if (data.messages.length) {
           setMessages((prev) => [...prev, ...data.messages]);
+          if (data.messages.some((m) => m.sender === "admin" || m.sender === "bot")) {
+            playChatSound("incoming");
+          }
           if (!open) setUnread((u) => u + data.messages.length);
         }
       } catch {
         /* ignore */
       }
     };
-    const interval = window.setInterval(tick, open ? 4000 : 15000);
+    void tick();
+    const interval = window.setInterval(tick, open ? 1500 : 8000);
     return () => {
       alive = false;
       window.clearInterval(interval);
@@ -176,6 +187,8 @@ export function ChatWidget() {
     if (open) {
       setUnread(0);
       touchActivity();
+      unlockChatSound();
+      lastInteractionRef.current = Date.now();
     }
   }, [open]);
 
@@ -192,6 +205,45 @@ export function ChatWidget() {
     const id = window.setInterval(check, 30000);
     return () => window.clearInterval(id);
   }, []);
+
+  /**
+   * Live chat idle guard: 3 menit tanpa interaksi -> notifikasi + hitung mundur
+   * 30 detik; kalau tetap tidak ada aktivitas, sesi dikembalikan ke AI.
+   */
+  useEffect(() => {
+    if (!session || session.status !== "active") {
+      setIdleCountdown(null);
+      return;
+    }
+    const id = window.setInterval(async () => {
+      const idleFor = Date.now() - lastInteractionRef.current;
+      if (idleFor < LIVE_IDLE_WARN_MS) {
+        setIdleCountdown(null);
+        return;
+      }
+      const remaining = Math.ceil((LIVE_IDLE_WARN_MS + LIVE_IDLE_GRACE_MS - idleFor) / 1000);
+      if (remaining > 0) {
+        setIdleCountdown((prev) => {
+          if (prev === null) playChatSound("alert");
+          return remaining;
+        });
+        return;
+      }
+      setIdleCountdown(null);
+      try {
+        const data = await resumeBot(session.id);
+        setSession(data.session);
+        setMessages(data.messages);
+        playChatSound("incoming");
+      } catch {
+        /* ignore */
+      }
+      lastInteractionRef.current = Date.now();
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [session]);
+
+
 
   /* Trigger dari halaman lain, mis. tombol "Tanya tentang produk ini" di ItemDetail */
   useEffect(() => {
@@ -226,6 +278,10 @@ export function ChatWidget() {
     }
 
     touchActivity();
+    unlockChatSound();
+    lastInteractionRef.current = Date.now();
+    setIdleCountdown(null);
+    playChatSound("sent");
     setLoading(true);
     setMessages((prev) => [
   ...prev,
@@ -238,6 +294,9 @@ export function ChatWidget() {
         const withoutOptimistic = prev.filter((m) => !(m.sender === "user" && m.text === trimmed && m.id > 1e12));
         return [...withoutOptimistic, ...data.messages];
       });
+      if (data.messages.some((m) => m.sender === "bot" || m.sender === "admin")) {
+        playChatSound("incoming");
+      }
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -373,6 +432,24 @@ export function ChatWidget() {
                 <X size={16} strokeWidth={1.5} />
               </button>
             </div>
+
+            {/* Peringatan idle live chat */}
+            <AnimatePresence>
+              {idleCountdown !== null && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden border-b"
+                  style={{ borderColor: "rgba(0,0,0,0.06)", background: "rgba(201,151,74,0.12)" }}
+                >
+                  <p className="px-5 py-2.5 text-[11px] leading-relaxed" style={{ color: "#7a5a20" }}>
+                    Masih di sana? Sesi live chat akan kembali ke Livora Concierge (AI) dalam{" "}
+                    <strong>{idleCountdown} detik</strong>. Kirim pesan untuk tetap terhubung dengan customer service.
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Messages */}
             <div ref={scrollRef} data-lenis-prevent className="flex-1 overflow-y-auto overscroll-contain px-5 py-5 space-y-4 bg-[#fafafa]">

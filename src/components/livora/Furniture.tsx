@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Gem, Leaf, Infinity } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { motion, VariantLabels, Variants } from "framer-motion";
 import accessories from "@/assets/landing-furniture/accecories.png";
@@ -228,17 +229,17 @@ const FurnitureCollectionCard = () => {
             >
               {[
                 {
-                  icon: "✓",
+                  Icon: Gem,
                   label: "Premium",
                   description: "Suppliers",
                 },
                 {
-                  icon: "✓",
+                  Icon: Leaf,
                   label: "Curated",
                   description: "Collections",
                 },
                 {
-                  icon: "✓",
+                  Icon: Infinity,
                   label: "Endless",
                   description: "Possibilities",
                 },
@@ -247,22 +248,24 @@ const FurnitureCollectionCard = () => {
                   key={i}
                   custom={i}
                   variants={iconVariants}
-                  className="flex flex-col items-center gap-2"
+                  className="flex flex-col items-center gap-2.5 group"
                 >
                   <div
-                    className="w-10 h-10 flex items-center justify-center rounded-full text-base transition-all duration-300"
+                    className="w-12 h-12 flex items-center justify-center rounded-full transition-all duration-500 group-hover:scale-105"
                     style={{
-                      background: "rgba(201, 169, 122, 0.1)",
-                      color: "#1A1A1A",
+                      background:
+                        "linear-gradient(145deg, rgba(201,169,122,0.18), rgba(201,169,122,0.05))",
+                      border: "1px solid rgba(201,169,122,0.35)",
+                      color: "#9A7B45",
                     }}
                   >
-                    {feature.icon}
+                    <feature.Icon size={19} strokeWidth={1.3} />
                   </div>
                   <div className="text-center">
-                    <p className="text-xs font-medium text-foreground">
+                    <p className="text-xs font-medium text-foreground tracking-wide">
                       {feature.label}
                     </p>
-                    <p className="text-[10px] text-foreground/60">
+                    <p className="text-[10px] text-foreground/55 tracking-wide">
                       {feature.description}
                     </p>
                   </div>

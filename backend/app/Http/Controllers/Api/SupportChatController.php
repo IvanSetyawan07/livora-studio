@@ -197,6 +197,32 @@ class SupportChatController extends Controller
         return response()->json($this->payload($session->fresh('messages')));
     }
 
+    /**
+     * POST /api/support/session/{session}/resume-bot
+     * Dipanggil saat live chat dengan CS idle terlalu lama — sesi dikembalikan ke AI.
+     */
+    public function resumeBot(Request $request, SupportSession $session)
+    {
+        $this->authorizeVisitor($request, $session);
+
+        if (!in_array($session->status, [SupportSession::STATUS_PENDING_CS, SupportSession::STATUS_ACTIVE], true)) {
+            return response()->json($this->payload($session->load('messages')));
+        }
+
+        $session->update([
+            'status'    => SupportSession::STATUS_BOT,
+            'admin_id'  => null,
+            'closed_at' => null,
+        ]);
+
+        $session->messages()->create([
+            'sender' => 'system',
+            'text'   => 'Sesi live chat berakhir karena tidak ada aktivitas. Kamu kembali terhubung dengan Livora Concierge (AI). Ketik "customer service" kapan saja untuk terhubung lagi dengan tim kami.',
+        ]);
+
+        return response()->json($this->payload($session->fresh('messages')));
+    }
+
     private function authorizeVisitor(Request $request, SupportSession $session): void
     {
         $visitorId = $request->input('visitor_id', $request->query('visitor_id'));
