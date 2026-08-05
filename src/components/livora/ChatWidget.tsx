@@ -294,6 +294,9 @@ export function ChatWidget() {
         const withoutOptimistic = prev.filter((m) => !(m.sender === "user" && m.text === trimmed && m.id > 1e12));
         return [...withoutOptimistic, ...data.messages];
       });
+      if (data.messages.some((m) => m.sender === "bot" || m.sender === "admin")) {
+        playChatSound("incoming");
+      }
     } catch {
       setMessages((prev) => [
         ...prev,
