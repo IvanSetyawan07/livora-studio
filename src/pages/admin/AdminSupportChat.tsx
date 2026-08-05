@@ -143,7 +143,7 @@ export default function AdminSupportChat() {
   };
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="p-6 md:p-8" onPointerDown={unlockChatSound}>
       <div className="mb-6">
         <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground mb-1">Livora | Support</p>
         <h1 className="serif text-2xl">
