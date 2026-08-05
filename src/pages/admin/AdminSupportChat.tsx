@@ -127,6 +127,8 @@ export default function AdminSupportChat() {
   const send = async () => {
     const body = text.trim();
     if (!body || !activeId || sending) return;
+    unlockChatSound();
+    playChatSound("sent");
     setSending(true);
     setText("");
     try {
