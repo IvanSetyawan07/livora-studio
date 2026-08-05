@@ -10,6 +10,7 @@ import {
   type AdminSupportSession,
 } from "@/lib/adminSupportChat";
 import type { SupportMessage } from "@/lib/supportChat";
+import { playChatSound, unlockChatSound } from "@/lib/chatSound";
 
 const FILTERS = [
   { key: "all", label: "Semua" },
