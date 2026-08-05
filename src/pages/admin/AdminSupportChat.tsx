@@ -37,6 +37,7 @@ export default function AdminSupportChat() {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const prevPendingRef = useRef(0);
 
   const active = useMemo(() => sessions.find((s) => s.id === activeId) ?? null, [sessions, activeId]);
   const lastId = messages.length ? messages[messages.length - 1].id : 0;
