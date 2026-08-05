@@ -7,6 +7,7 @@ import {
   fetchMessages,
   sendMessage,
   requestCs,
+  resumeBot,
   type SupportMessage,
   type SupportSessionInfo,
   type AskBotDetail,
@@ -14,7 +15,10 @@ import {
   resetVisitor,
   shouldResetSession,
   IDLE_RESET_MS,
+  LIVE_IDLE_WARN_MS,
+  LIVE_IDLE_GRACE_MS,
 } from "@/lib/supportChat";
+import { playChatSound, unlockChatSound } from "@/lib/chatSound";
 import { imgUrl } from "@/lib/adminApi";
 
 /* ────────── Design tokens (konsisten dengan komponen Livora lainnya) ────────── */
