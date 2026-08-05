@@ -278,6 +278,10 @@ export function ChatWidget() {
     }
 
     touchActivity();
+    unlockChatSound();
+    lastInteractionRef.current = Date.now();
+    setIdleCountdown(null);
+    playChatSound("sent");
     setLoading(true);
     setMessages((prev) => [
   ...prev,
