@@ -55,10 +55,16 @@ export default function AdminSupportChat() {
   useEffect(() => {
     setLoading(true);
     loadSessions();
-    const i = window.setInterval(loadSessions, 8000);
+    const i = window.setInterval(loadSessions, 4000);
     return () => window.clearInterval(i);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
+
+  /* Nada dering saat ada permintaan CS baru masuk. */
+  useEffect(() => {
+    if (pending > prevPendingRef.current) playChatSound("alert");
+    prevPendingRef.current = pending;
+  }, [pending]);
 
   useEffect(() => {
     if (!activeId) return;
@@ -75,11 +81,14 @@ export default function AdminSupportChat() {
     const i = window.setInterval(async () => {
       try {
         const d = await getSupportMessages(activeId, lastId);
-        if (d.messages.length) setMessages((prev) => [...prev, ...d.messages]);
+        if (d.messages.length) {
+          setMessages((prev) => [...prev, ...d.messages]);
+          if (d.messages.some((m) => m.sender === "user")) playChatSound("incoming");
+        }
       } catch {
         /* ignore */
       }
-    }, 4000);
+    }, 1500);
     return () => window.clearInterval(i);
   }, [activeId, lastId]);
 
