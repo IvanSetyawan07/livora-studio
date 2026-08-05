@@ -146,26 +146,31 @@ export function ChatWidget() {
     if (open) boot();
   }, [open, boot]);
 
-  /* Polling pesan baru saat menunggu / live chat dengan CS */
+  /* Polling pesan baru saat menunggu / live chat dengan CS (cepat: 1.5 detik) */
   useEffect(() => {
     if (!session) return;
     if (session.status !== "pending_cs" && session.status !== "active") return;
 
     let alive = true;
     const tick = async () => {
+      if (document.hidden && open) return;
       try {
         const data = await fetchMessages(session.id, lastId);
         if (!alive) return;
         setSession(data.session);
         if (data.messages.length) {
           setMessages((prev) => [...prev, ...data.messages]);
+          if (data.messages.some((m) => m.sender === "admin" || m.sender === "bot")) {
+            playChatSound("incoming");
+          }
           if (!open) setUnread((u) => u + data.messages.length);
         }
       } catch {
         /* ignore */
       }
     };
-    const interval = window.setInterval(tick, open ? 4000 : 15000);
+    void tick();
+    const interval = window.setInterval(tick, open ? 1500 : 8000);
     return () => {
       alive = false;
       window.clearInterval(interval);
@@ -176,6 +181,8 @@ export function ChatWidget() {
     if (open) {
       setUnread(0);
       touchActivity();
+      unlockChatSound();
+      lastInteractionRef.current = Date.now();
     }
   }, [open]);
 
@@ -192,6 +199,45 @@ export function ChatWidget() {
     const id = window.setInterval(check, 30000);
     return () => window.clearInterval(id);
   }, []);
+
+  /**
+   * Live chat idle guard: 3 menit tanpa interaksi -> notifikasi + hitung mundur
+   * 30 detik; kalau tetap tidak ada aktivitas, sesi dikembalikan ke AI.
+   */
+  useEffect(() => {
+    if (!session || session.status !== "active") {
+      setIdleCountdown(null);
+      return;
+    }
+    const id = window.setInterval(async () => {
+      const idleFor = Date.now() - lastInteractionRef.current;
+      if (idleFor < LIVE_IDLE_WARN_MS) {
+        setIdleCountdown(null);
+        return;
+      }
+      const remaining = Math.ceil((LIVE_IDLE_WARN_MS + LIVE_IDLE_GRACE_MS - idleFor) / 1000);
+      if (remaining > 0) {
+        setIdleCountdown((prev) => {
+          if (prev === null) playChatSound("alert");
+          return remaining;
+        });
+        return;
+      }
+      setIdleCountdown(null);
+      try {
+        const data = await resumeBot(session.id);
+        setSession(data.session);
+        setMessages(data.messages);
+        playChatSound("incoming");
+      } catch {
+        /* ignore */
+      }
+      lastInteractionRef.current = Date.now();
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [session]);
+
+
 
   /* Trigger dari halaman lain, mis. tombol "Tanya tentang produk ini" di ItemDetail */
   useEffect(() => {
