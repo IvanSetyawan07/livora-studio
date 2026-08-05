@@ -81,7 +81,9 @@ export function ChatWidget() {
   const [loading, setLoading] = useState(false);
   const [booting, setBooting] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [idleCountdown, setIdleCountdown] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastInteractionRef = useRef<number>(Date.now());
   const contextRef = useRef<{ item_slug?: string; item_name?: string }>({});
   const navigate = useNavigate();
 
