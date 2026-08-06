@@ -3,6 +3,7 @@ import GridLayout, { Layout } from "react-grid-layout/legacy";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
 import { getCatalogItemLayouts, saveCatalogItemLayouts } from "@/lib/catalogApi";
 
@@ -11,6 +12,13 @@ interface HotspotItem {
   label: string;
   item_slug?: string;
   image?: string;
+}
+
+interface ApiItem {
+  slug: string;
+  title: string;
+  image?: string | null;
+  cover_image?: string | null;
 }
 
 interface Props {
@@ -26,6 +34,7 @@ export function ItemsGridEditor({ catalogId, hotspots }: Props) {
   const [layout, setLayout] = useState<Layout>([]);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [itemsBySlug, setItemsBySlug] = useState<Record<string, ApiItem>>({});
 
   const uniqueItems = useMemo(() => {
     const seen = new Set<string>();
@@ -35,6 +44,22 @@ export function ItemsGridEditor({ catalogId, hotspots }: Props) {
       return true;
     });
   }, [hotspots]);
+
+  // ── Fetch daftar item (untuk ambil foto produk asli)
+  useEffect(() => {
+    api.get<any>("/items").then(({ data }) => {
+      const list: ApiItem[] = Array.isArray(data) ? data : data.data ?? [];
+      const map: Record<string, ApiItem> = {};
+      list.forEach((it) => {
+        map[it.slug] = {
+          slug: it.slug,
+          title: it.title,
+          image: it.image ?? it.cover_image ?? null,
+        };
+      });
+      setItemsBySlug(map);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (uniqueItems.length === 0) {
@@ -91,8 +116,9 @@ export function ItemsGridEditor({ catalogId, hotspots }: Props) {
         }))
       );
       toast.success("Layout tersimpan");
-    } catch {
-      toast.error("Gagal menyimpan layout");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Gagal menyimpan layout";
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -110,7 +136,7 @@ export function ItemsGridEditor({ catalogId, hotspots }: Props) {
     );
   }
 
-  const itemBySlug = new Map(uniqueItems.map((i) => [i.item_slug, i]));
+  const hotspotBySlug = new Map(uniqueItems.map((i) => [i.item_slug, i]));
 
   return (
     <div className="space-y-4">
@@ -145,23 +171,31 @@ export function ItemsGridEditor({ catalogId, hotspots }: Props) {
           preventCollision={true}
         >
           {layout.map((l) => {
-            const item = itemBySlug.get(l.i);
+            const hotspot = hotspotBySlug.get(l.i);
+            const itemDetail = itemsBySlug[l.i];
+            const label = hotspot?.label || itemDetail?.title || l.i;
+            const imageSrc = itemDetail?.image;
+
             return (
               <div
                 key={l.i}
                 className="bg-background border border-border rounded overflow-hidden flex flex-col"
               >
                 <div className="flex-1 flex items-center justify-center bg-secondary p-2">
-                  {item?.image && (
+                  {imageSrc ? (
                     <img
-                      src={imgUrl(item.image)}
-                      alt={item.label}
+                      src={imgUrl(imageSrc)}
+                      alt={label}
                       className="max-w-full max-h-full object-contain"
                     />
+                  ) : (
+                    <span className="text-[9px] text-muted-foreground uppercase tracking-wide">
+                      No image
+                    </span>
                   )}
                 </div>
                 <p className="text-[10px] px-2 py-1 truncate border-t border-border">
-                  {item?.label}
+                  {label}
                 </p>
               </div>
             );
