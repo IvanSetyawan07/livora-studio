@@ -682,4 +682,44 @@ public function buildContext(string $message, array $options = []): string
 
     return array_slice(array_values(array_unique($expanded)), 0, 12);
 }
+
+    /**
+     * Kelompokkan keyword jadi "permintaan" terpisah. Kata yang punya padanan
+     * di KEYWORD_SYNONYMS (mis. "sofa", "meja") jadi grup sendiri bersama
+     * sinonimnya; sisanya digabung jadi satu grup umum. Ini membuat query item
+     * dijalankan per jenis barang, jadi permintaan multi-barang
+     * ("sofa dan meja") terwakili semuanya.
+     */
+    private function keywordGroups(array $keywords): array
+    {
+        $reverse = [];
+        foreach (self::KEYWORD_SYNONYMS as $id => $syns) {
+            foreach ([$id, ...$syns] as $w) {
+                $reverse[$w] = $id;
+            }
+        }
+
+        $groups = [];
+        $rest = [];
+        foreach ($keywords as $kw) {
+            $canonical = $reverse[$kw] ?? null;
+            if ($canonical === null) {
+                $rest[] = $kw;
+                continue;
+            }
+            if (!isset($groups[$canonical])) {
+                $groups[$canonical] = array_values(array_unique([$canonical, ...self::KEYWORD_SYNONYMS[$canonical]]));
+            }
+        }
+
+        $result = array_values($groups);
+        if (!empty($rest)) {
+            $result[] = $rest;
+        }
+        if (empty($result)) {
+            $result[] = $keywords;
+        }
+
+        return array_slice($result, 0, 4);
+    }
 }
