@@ -29,8 +29,8 @@ class CatalogItemLayoutController extends Controller
             'layouts.*.item_slug' => 'required|string',
             'layouts.*.pos_x' => 'required|integer|min:0',
             'layouts.*.pos_y' => 'required|integer|min:0',
-            'layouts.*.width' => 'required|integer|min:1|max:4',
-            'layouts.*.height' => 'required|integer|min:1|max:3',
+            'layouts.*.width' => 'required|integer|min:1|max:5',
+            'layouts.*.height' => 'required|integer|min:1|max:6',
         ]);
 
         DB::transaction(function () use ($catalog, $validated) {
