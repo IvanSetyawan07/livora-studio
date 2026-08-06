@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
 import { toast } from "sonner";
 import { HotspotVisualEditor } from "./HotspotVisualEditor";
+import { ItemsGridEditor } from "./ItemsGridEditor";
 import {
   getCatalogScenes,
   createCatalogScene,
@@ -593,6 +594,9 @@ export default function CatalogFormAdmin() {
                   onHotspotUpdate={handleHotspotUpdate}
                   onHotspotDelete={handleHotspotDelete}
                 />
+                <div className="mt-10 pt-8 border-t border-border">
+  <ItemsGridEditor catalogId={catalogId!} hotspots={hotspots} />
+</div>
               </>
             )}
           </div>

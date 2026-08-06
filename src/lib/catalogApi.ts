@@ -73,6 +73,27 @@ export const createCatalog = async (data: FormData): Promise<Catalog> => {
   return response.data;
 };
 
+export interface CatalogItemLayoutData {
+  item_slug: string;
+  pos_x: number;
+  pos_y: number;
+  width: number;
+  height: number;
+}
+
+export async function getCatalogItemLayouts(catalogId: string | number) {
+  const { data } = await api.get<CatalogItemLayoutData[]>(`/catalogs/${catalogId}/item-layouts`);
+  return data;
+}
+
+export async function saveCatalogItemLayouts(
+  catalogId: string | number,
+  layouts: CatalogItemLayoutData[]
+) {
+  const { data } = await api.post(`/admin/catalogs/${catalogId}/item-layouts`, { layouts });
+  return data;
+}
+
 // UPDATE catalog (metadata only — hotspots saved separately now)
 export const updateCatalog = async (id: string, data: FormData): Promise<Catalog> => {
   data.append('_method', 'PUT');

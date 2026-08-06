@@ -15,6 +15,8 @@ class Hotspot extends Model
         'item_slug',
         'description',
         'image',
+        'display_order',
+        'is_featured',
     ];
 
     protected $casts = [
@@ -22,6 +24,8 @@ class Hotspot extends Model
         'y' => 'float',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'is_featured' => 'boolean',
+        'display_order' => 'integer',
     ];
 
     /**
