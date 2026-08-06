@@ -80,6 +80,10 @@ export function ItemsGridEditor({ catalogId, hotspots }: Props) {
             y: s?.pos_y ?? Math.floor(i / COLS),
             w: s?.width ?? 1,
             h: s?.height ?? 1,
+            minH: 1,
+            maxH: 8,
+            minW: 1,
+            maxW: COLS,
           };
         });
         setLayout(next);

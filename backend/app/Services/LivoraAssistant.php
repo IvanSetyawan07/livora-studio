@@ -67,11 +67,18 @@ Kebijakan komunikasi:
 TXT;
 
     public function reply(string $message, array $history = [], array $options = []): array
-    {
-        $quotaKey = 'gemini_quota_' . now('UTC')->format('Y-m-d');
-    $used = (int) Cache::get($quotaKey, 0);
+{
+    $quotaKey = 'gemini_quota_' . now('UTC')->format('Y-m-d');
+    $requestId = (string) \Illuminate\Support\Str::uuid();
+    $startedAt = microtime(true);
 
-    if ($used >= self::DAILY_QUOTA_LIMIT - self::DAILY_QUOTA_BUFFER) {
+    // Atomic: Cache::increment tidak punya race condition seperti get() + put()
+    $used = Cache::increment($quotaKey);
+    if ($used === 1) {
+        Cache::put($quotaKey, 1, now('UTC')->endOfDay());
+    }
+
+    if ($used > self::DAILY_QUOTA_LIMIT - self::DAILY_QUOTA_BUFFER) {
         return [
             'reply' => 'Concierge AI kami sedang ramai dipakai hari ini 🙏 Coba lagi beberapa saat lagi, atau saya hubungkan langsung ke customer service kami sekarang?',
             'needs_escalation' => true,
@@ -80,103 +87,117 @@ TXT;
         ];
     }
 
-        $context = $this->buildContext($message, $options);
+    $context = $this->buildContext($message, $options);
+    $systemPrompt = $this->systemPrompt($context);
 
-        $systemPrompt = $this->systemPrompt($context);
-
-        $contents = [];
-        foreach ($history as $h) {
-            $role = ($h['role'] ?? 'user') === 'user' ? 'user' : 'model';
-            $text = trim((string) ($h['text'] ?? ''));
-            if ($text === '') {
-                continue;
-            }
-            $contents[] = ['role' => $role, 'parts' => [['text' => $text]]];
+    $contents = [];
+    foreach ($history as $h) {
+        $role = ($h['role'] ?? 'user') === 'user' ? 'user' : 'model';
+        $text = trim((string) ($h['text'] ?? ''));
+        if ($text === '') {
+            continue;
         }
-        $contents[] = ['role' => 'user', 'parts' => [['text' => $message]]];
+        $contents[] = ['role' => $role, 'parts' => [['text' => $text]]];
+    }
+    $contents[] = ['role' => 'user', 'parts' => [['text' => $message]]];
 
-        $apiKey = config('services.gemini.api_key');
-        if (!$apiKey) {
-            return [
-                'reply' => 'Maaf, asisten AI kami sedang tidak aktif. Mau saya hubungkan ke customer service Livora?',
-                'needs_escalation' => true,
-                'recommendations' => [],
-                'show_consultation' => false,
-            ];
-        }
-
-        $model = config('services.gemini.model', 'gemini-2.5-flash');
-
-        try {
-            $response = Http::timeout(45)->withHeaders([
-                'x-goog-api-key' => $apiKey,
-                'content-type'   => 'application/json',
-            ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
-                'system_instruction' => ['parts' => [['text' => $systemPrompt]]],
-                'contents'           => $contents,
-                'generationConfig'   => [
-                    'responseMimeType' => 'application/json',
-                    'maxOutputTokens'  => 1536,
-                    // Gemini 3.x pakai thinkingLevel (bukan thinkingBudget seperti di 2.5).
-                    // gemini-3.6-flash tidak bisa full thinking-off, jadi pakai level paling rendah.
-                    'thinkingConfig'   => ['thinkingLevel' => 'low'],
-                ],
-            ]);
-
-            if (!$response->successful()) {
-                Log::error('Gemini API error: ' . $response->body());
-                if ($response->status() === 429) {
-                    Cache::put($quotaKey, self::DAILY_QUOTA_LIMIT, now('UTC')->endOfDay());
-                }
-                throw new \RuntimeException('Gemini API request failed');
-            }
-
-            Cache::put($quotaKey, $used + 1, now('UTC')->endOfDay());
-
-            // Ambil semua part teks, skip part "thought" (reasoning internal model)
-            // supaya tidak pernah bocor ke user.
-            $parts = $response->json('candidates.0.content.parts', []);
-            $rawText = '';
-            foreach ($parts as $part) {
-                if (!empty($part['thought'])) {
-                    continue;
-                }
-                $rawText .= $part['text'] ?? '';
-            }
-
-            $cleaned = trim(preg_replace('/```json|```/', '', $rawText));
-            $parsed  = json_decode($cleaned, true);
-
-            if (!is_array($parsed) || !isset($parsed['reply'])) {
-                Log::warning('LivoraAssistant: gagal parse JSON dari model', ['raw' => $rawText]);
-                return [
-                    'reply' => $rawText !== '' ? $rawText : 'Maaf, saya belum bisa menjawab itu. Mau saya hubungkan ke customer service kami?',
-                    'needs_escalation' => $rawText === '',
-                    'recommendations' => [],
-                    'show_consultation' => false,
-                ];
-            }
-
-            $recommendations = $this->resolveRecommendations($parsed['recommendations'] ?? []);
-
-            return [
-                'reply' => (string) $parsed['reply'],
-                'needs_escalation' => (bool) ($parsed['needs_escalation'] ?? false),
-                'recommendations' => $recommendations,
-                'show_consultation' => (bool) ($parsed['show_consultation'] ?? false),
-            ];
-        } catch (\Throwable $e) {
-            Log::error('LivoraAssistant error: ' . $e->getMessage());
-            return [
-                'reply' => 'Maaf, saya sedang tidak bisa memproses pertanyaan itu. Mau saya hubungkan ke customer service kami?',
-                'needs_escalation' => true,
-                'recommendations' => [],
-                'show_consultation' => false,
-            ];
-        }
+    $apiKey = config('services.gemini.api_key');
+    if (!$apiKey) {
+        return [
+            'reply' => 'Maaf, asisten AI kami sedang tidak aktif. Mau saya hubungkan ke customer service Livora?',
+            'needs_escalation' => true,
+            'recommendations' => [],
+            'show_consultation' => false,
+        ];
     }
 
-    private function systemPrompt(string $context): string
+    $model = config('services.gemini.model');
+    if (!$model) {
+        Log::critical('LivoraAssistant: GEMINI_MODEL tidak diset di .env/config');
+        return [
+            'reply' => 'Maaf, asisten AI kami sedang tidak aktif. Mau saya hubungkan ke customer service Livora?',
+            'needs_escalation' => true,
+            'recommendations' => [],
+            'show_consultation' => false,
+        ];
+    }
+
+    try {
+        $response = Http::timeout(45)->withHeaders([
+            'x-goog-api-key' => $apiKey,
+            'content-type'   => 'application/json',
+        ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
+            'system_instruction' => ['parts' => [['text' => $systemPrompt]]],
+            'contents'           => $contents,
+            'generationConfig'   => [
+                'responseMimeType' => 'application/json',
+                'maxOutputTokens'  => 1536,
+                'thinkingConfig'   => ['thinkingLevel' => 'low'],
+            ],
+        ]);
+
+        if (!$response->successful()) {
+            Log::error('Gemini API error', [
+                'request_id' => $requestId,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+            if ($response->status() === 429) {
+                Cache::put($quotaKey, self::DAILY_QUOTA_LIMIT, now('UTC')->endOfDay());
+            }
+            throw new \RuntimeException('Gemini API request failed');
+        }
+
+        // Ambil semua part teks, skip part "thought" (reasoning internal model)
+        // supaya tidak pernah bocor ke user.
+        $parts = $response->json('candidates.0.content.parts', []);
+        $rawText = '';
+        foreach ($parts as $part) {
+            if (!empty($part['thought'])) {
+                continue;
+            }
+            $rawText .= $part['text'] ?? '';
+        }
+
+        $cleaned = trim(preg_replace('/```json|```/', '', $rawText));
+        $parsed  = json_decode($cleaned, true);
+
+        if (!is_array($parsed) || !isset($parsed['reply'])) {
+            Log::warning('LivoraAssistant: gagal parse JSON dari model', ['raw' => $rawText]);
+            return [
+                'reply' => $rawText !== '' ? $rawText : 'Maaf, saya belum bisa menjawab itu. Mau saya hubungkan ke customer service kami?',
+                'needs_escalation' => $rawText === '',
+                'recommendations' => [],
+                'show_consultation' => false,
+            ];
+        }
+
+        $recommendations = $this->resolveRecommendations($parsed['recommendations'] ?? []);
+
+        Log::info('LivoraAssistant reply', [
+            'request_id' => $requestId,
+            'duration_ms' => round((microtime(true) - $startedAt) * 1000),
+            'needs_escalation' => (bool) ($parsed['needs_escalation'] ?? false),
+            'recommendation_count' => count($recommendations),
+        ]);
+
+        return [
+            'reply' => (string) $parsed['reply'],
+            'needs_escalation' => (bool) ($parsed['needs_escalation'] ?? false),
+            'recommendations' => $recommendations,
+            'show_consultation' => (bool) ($parsed['show_consultation'] ?? false),
+        ];
+    } catch (\Throwable $e) {
+        Log::error('LivoraAssistant error: ' . $e->getMessage());
+        return [
+            'reply' => 'Maaf, saya sedang tidak bisa memproses pertanyaan itu. Mau saya hubungkan ke customer service kami?',
+            'needs_escalation' => true,
+            'recommendations' => [],
+            'show_consultation' => false,
+        ];
+    }
+}
+ private function systemPrompt(string $context): string
     {
         $brand = self::BRAND_PROFILE;
 
@@ -392,20 +413,29 @@ PROMPT;
 }
 
     /** Retrieval dari database + item yang sedang dilihat user (kalau ada). */
-    public function buildContext(string $message, array $options = []): string
-    {
-        $chunks = [];
+    /** Retrieval dari database + item yang sedang dilihat user (kalau ada). */
+public function buildContext(string $message, array $options = []): string
+{
+    $chunks = [];
 
-        $focusSlug = $options['item_slug'] ?? null;
-        if ($focusSlug) {
-            $item = Item::query()->where('slug', $focusSlug)->first();
-            if ($item) {
-                $chunks[] = '[Item yang sedang dilihat user] ' . $this->describeItem($item);
-            }
+    $focusSlug = $options['item_slug'] ?? null;
+    if ($focusSlug) {
+        $item = Item::query()->where('slug', $focusSlug)->first();
+        if ($item) {
+            $chunks[] = '[Item yang sedang dilihat user] ' . $this->describeItem($item);
         }
+    }
 
-        $keywords = $this->extractKeywords($message);
-        if (!empty($keywords)) {
+    $keywords = $this->extractKeywords($message);
+    $intent = (new \App\Services\IntentClassifier())->classify($message);
+
+    if (!empty($keywords)) {
+        // product_search / general → boleh query Item (style_mood skip,
+        // karena user tanya suasana/gaya, bukan barang spesifik)
+        if (in_array($intent, [
+            \App\Services\IntentClassifier::PRODUCT_SEARCH,
+            \App\Services\IntentClassifier::GENERAL,
+        ], true)) {
             $items = Item::query()
                 ->when($focusSlug, fn ($q) => $q->where('slug', '!=', $focusSlug))
                 ->where(function ($q) use ($keywords) {
@@ -423,7 +453,13 @@ PROMPT;
             foreach ($items as $item) {
                 $chunks[] = '[Item] ' . $this->describeItem($item);
             }
+        }
 
+        // portfolio / general → boleh query Project
+        if (in_array($intent, [
+            \App\Services\IntentClassifier::PORTFOLIO,
+            \App\Services\IntentClassifier::GENERAL,
+        ], true)) {
             $projects = Project::query()
                 ->where(function ($q) use ($keywords) {
                     foreach ($keywords as $kw) {
@@ -439,7 +475,14 @@ PROMPT;
             foreach ($projects as $p) {
                 $chunks[] = "[Project] {$p->title} ({$p->location}, {$p->year}) — {$p->description} | Slug: {$p->slug}";
             }
+        }
 
+        // product_search / style_mood / general → boleh query Collection
+        if (in_array($intent, [
+            \App\Services\IntentClassifier::PRODUCT_SEARCH,
+            \App\Services\IntentClassifier::STYLE_MOOD,
+            \App\Services\IntentClassifier::GENERAL,
+        ], true)) {
             $collections = Collection::query()
                 ->where(function ($q) use ($keywords) {
                     foreach ($keywords as $kw) {
@@ -453,7 +496,13 @@ PROMPT;
             foreach ($collections as $c) {
                 $chunks[] = "[Collection] {$c->name} — {$c->description} | Slug: {$c->slug}";
             }
+        }
 
+        // style_mood / general → boleh query Catalog
+        if (in_array($intent, [
+            \App\Services\IntentClassifier::STYLE_MOOD,
+            \App\Services\IntentClassifier::GENERAL,
+        ], true)) {
             $catalogs = Catalog::query()
                 ->where(function ($q) use ($keywords) {
                     foreach ($keywords as $kw) {
@@ -470,13 +519,17 @@ PROMPT;
                 $chunks[] = "[Catalog] {$cat->title} (Kategori: {$cat->category}, Gaya: {$cat->taxonomy}) — {$cat->description} | Slug: {$cat->slug}";
             }
         }
-
-        if (empty($chunks)) {
-    $chunks = $this->generalPicks();
-}
-
-return implode("\n", $chunks);
     }
+
+    // company_info: sengaja tidak query apapun di atas — brand profile
+    // di systemPrompt() sudah cukup untuk jawab pertanyaan jenis ini.
+
+    if (empty($chunks)) {
+        $chunks = $this->generalPicks();
+    }
+
+    return implode("\n", $chunks);
+}
     private function generalPicks(): array
 {
     $chunks = [];
