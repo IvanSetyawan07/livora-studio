@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\WishlistController;
 use App\Http\Controllers\Api\MarketingController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\CatalogSceneController;
+use App\Http\Controllers\Api\CatalogItemLayoutController;
 
 Route::get('/taxonomy-banners', [TaxonomyBannerController::class, 'index']);
 Route::get('/taxonomy-banners/{key}', [TaxonomyBannerController::class, 'byKey']);
@@ -63,6 +64,7 @@ Route::get('/catalogs/{slug}', [CatalogController::class, 'show']);
 Route::get('/catalogs/{catalog}/hotspots', [HotspotController::class, 'index']);
 Route::get('/catalogs/{catalog}/hotspots/{scene}', [HotspotController::class, 'getByScene']);
 Route::get('/catalogs/{catalog}/scenes', [CatalogSceneController::class, 'index']);
+Route::get('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::class, 'index']);
 // Public tracking
 Route::post('/track/click', [TrackingController::class, 'click']);
 Route::post('/track/view',  [TrackingController::class, 'view']);
@@ -82,8 +84,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/me', [AuthController::class, 'updateProfile']);
     Route::post('/me/password', [AuthController::class, 'changePassword']);
     Route::get('/wishlist', [WishlistController::class, 'index']);
-Route::post('/wishlist', [WishlistController::class, 'store']);
-Route::delete('/wishlist/{type}/{id}', [WishlistController::class, 'destroy']);
+    Route::post('/wishlist', [WishlistController::class, 'store']);
+    Route::delete('/wishlist/{type}/{id}', [WishlistController::class, 'destroy']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/heartbeat', function (Request $r) {
         $u = $r->user(); $u->last_seen_at = now(); $u->save();
@@ -148,12 +150,12 @@ Route::delete('/wishlist/{type}/{id}', [WishlistController::class, 'destroy']);
         Route::delete('/gallery/{gallery}', [FurnitureExperienceController::class, 'galleryDestroy']);
         Route::post('/items/{item}/gallery/reorder', [FurnitureExperienceController::class, 'galleryReorder']);
         Route::prefix('catalogs/{catalog}/scenes')->group(function () {
-    Route::get('/', [CatalogSceneController::class, 'index']);
-    Route::post('/', [CatalogSceneController::class, 'store']);
-    Route::post('reorder', [CatalogSceneController::class, 'reorder']); // ← pindah ke sini, SEBELUM {scene}
-    Route::post('{scene}', [CatalogSceneController::class, 'update']);
-    Route::put('{scene}', [CatalogSceneController::class, 'update']);
-    Route::delete('{scene}', [CatalogSceneController::class, 'destroy']);
+        Route::get('/', [CatalogSceneController::class, 'index']);
+        Route::post('/', [CatalogSceneController::class, 'store']);
+        Route::post('reorder', [CatalogSceneController::class, 'reorder']); // ← pindah ke sini, SEBELUM {scene}
+        Route::post('{scene}', [CatalogSceneController::class, 'update']);
+        Route::put('{scene}', [CatalogSceneController::class, 'update']);
+        Route::delete('{scene}', [CatalogSceneController::class, 'destroy']);
 });
         Route::get('/items/{item}/lifestyle', [FurnitureExperienceController::class, 'lifestyleIndex']);
         Route::post('/items/{item}/lifestyle', [FurnitureExperienceController::class, 'lifestyleStore']);
@@ -194,7 +196,10 @@ Route::delete('/wishlist/{type}/{id}', [WishlistController::class, 'destroy']);
             Route::post('batch', [HotspotController::class, 'batch']);
             // FIX #3: Route hotspot by scene juga perlu ada di admin
             Route::get('scene/{scene}', [HotspotController::class, 'getByScene']);
+            
         });
+        Route::get('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::class, 'index']);
+Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::class, 'save']);
 
         // Analytics
         Route::get('/analytics/overview', [AnalyticsController::class, 'overview']);

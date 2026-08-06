@@ -149,6 +149,29 @@ class HotspotController extends Controller
             ], 500);
         }
     }
+    // Batch update urutan & featured dari admin panel
+public function reorder(Request $request, Catalog $catalog)
+{
+    $validated = $request->validate([
+        'items' => 'required|array',
+        'items.*.id' => 'required|integer|exists:hotspots,id',
+        'items.*.display_order' => 'required|integer|min:0',
+        'items.*.is_featured' => 'nullable|boolean',
+    ]);
+
+    DB::transaction(function () use ($catalog, $validated) {
+        foreach ($validated['items'] as $item) {
+            Hotspot::where('id', $item['id'])
+                ->where('catalog_id', $catalog->id)   // ← scoping wajib
+                ->update([
+                    'display_order' => $item['display_order'],
+                    'is_featured' => $item['is_featured'] ?? false,
+                ]);
+        }
+    });
+
+    return response()->json(['message' => 'Order updated']);
+}
 
     /**
      * Delete a hotspot

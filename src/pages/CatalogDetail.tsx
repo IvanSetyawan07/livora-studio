@@ -76,6 +76,8 @@ interface HotspotItem {
   item_slug?: string;
   image?: string;
   description?: string;
+  display_order?: number;
+  is_featured?: boolean;
 }
 
 interface GalleryScene {
@@ -120,7 +122,22 @@ export default function CatalogDetail() {
         collection?: string;
       }
     >
+    
   >({});
+  const [itemLayouts, setItemLayouts] = useState<Record<string, { pos_x: number; pos_y: number; width: number; height: number }>>({});
+  useEffect(() => {
+  if (!rawCatalog?.id) return;
+  api
+    .get(`/catalogs/${rawCatalog.id}/item-layouts`)
+    .then(({ data }) => {
+      const map: Record<string, any> = {};
+      data.forEach((l: any) => {
+        map[l.item_slug] = l;
+      });
+      setItemLayouts(map);
+    })
+    .catch(() => {});
+}, [rawCatalog?.id]);
   const [heroHeight, setHeroHeight] = useState(800);
 
   useEffect(() => {
@@ -200,6 +217,7 @@ export default function CatalogDetail() {
         console.warn('Failed to fetch item details for hotspots:', err);
       }
     }
+    
 
   } catch (err) {
     console.warn("Failed to fetch hotspots:", err);
@@ -559,21 +577,19 @@ const handleDownloadPDF = async (size: CatalogPageSize) => {
 
         {/* Scroll-driven gradient (appears as user scrolls) */}
         <motion.div
-          className="absolute inset-x-0 bottom-0 h-1/2 pointer-events-none bg-gradient-to-t from-background via-background/40 to-transparent"
-          style={{ opacity: gradientOpacity }}
-        />
+  className="absolute inset-x-0 bottom-0 h-1/2 pointer-events-none bg-gradient-to-t from-background via-background/40 to-transparent"
+  style={{ opacity: gradientOpacity } as React.CSSProperties}
+/>
 
-        {/* Dynamic shadow overlay (intensifies on scroll) */}
-        <motion.div
-          className="absolute inset-0 bg-black pointer-events-none"
-          style={{ opacity: shadowOpacity }}
-        />
+<motion.div
+  className="absolute inset-0 bg-black pointer-events-none"
+  style={{ opacity: shadowOpacity } as React.CSSProperties}
+/>
 
-        {/* Content with scroll-driven text motion (horizontal parallax) */}
-        <motion.div
-          className="relative z-10 container-livora w-full"
-          style={{ x: textX, opacity: textOpacity, y: textY }}
-        >
+<motion.div
+  className="relative z-10 container-livora w-full"
+  style={{ x: textX, opacity: textOpacity, y: textY } as React.CSSProperties}
+>
           {/* Navigation breadcrumb */}
           <motion.nav
             className="flex items-center gap-2 text-[9px] uppercase tracking-[0.2em] text-white/70 mb-8 font-light"
@@ -813,50 +829,68 @@ const handleDownloadPDF = async (size: CatalogPageSize) => {
           4. ITEMS GRID
       ════════════════════════════════════════ */}
       <section className="py-20 md:py-28 border-b border-border">
-        <div className="container-livora">
-          <div className="mb-12">
-            <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground mb-2 font-light">
-              Livora &nbsp;|&nbsp; Pieces
-            </p>
-            <h2 className="serif text-3xl md:text-4xl font-light text-foreground">
-              Items in this <em className="italic">Collection</em>
-            </h2>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
-            {scenes.flatMap((s) => s.hotspots).slice(0, 7).map((spot, i) => {
-              const itemSlug = (spot as any).item_slug || (spot as any).itemSlug;
-              const itemDetail = itemSlug ? itemMap[itemSlug] : undefined;
-              return (
-                <Link
-                  key={spot.id}
-                  to={itemSlug ? `/items/${itemSlug}` : "#"}
-                  className={`group relative bg-secondary overflow-hidden ${i === 0 ? "md:col-span-2 md:row-span-2" : ""}`}
-                  style={{ aspectRatio: i === 0 ? "auto" : "3/4", minHeight: i === 0 ? "360px" : undefined }}
-                >
-                  <div className="absolute inset-0 bg-[hsl(var(--livora-stone))]">
-        {itemDetail?.image && (                                   // ← CHANGED
-          <img src={imgUrl(itemDetail.image)} alt={spot.label} className="w-full h-full object-cover" />
-        )}
-      </div>
-                  <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors duration-500" />
-                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background/80 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-500">
-                    <p className="text-[9px] uppercase tracking-[0.15em] text-foreground/60 mb-0.5 font-light">{item.taxonomy}</p>
-                    <div className="flex items-center justify-between">
-                      <p className="serif text-sm font-light text-foreground">{spot.label}</p>
-                      <ArrowUpRight size={14} className="text-foreground/60" />
-                    </div>
-                  </div>
-                  <div className="absolute top-3 left-3">
-                    <span className="text-[8px] uppercase tracking-[0.1em] bg-background/80 text-muted-foreground px-2 py-0.5 font-light">
-                      {spot.label}
-                    </span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+  <div className="container-livora">
+    <div className="mb-12">
+      <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground mb-2 font-light">
+        Livora &nbsp;|&nbsp; Pieces
+      </p>
+      <h2 className="serif text-3xl md:text-4xl font-light text-foreground">
+        Items in this <em className="italic">Collection</em>
+      </h2>
+    </div>
+    <div
+      className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5"
+      style={{ gridAutoRows: "180px" }}
+    >
+      {scenes.flatMap((s) => s.hotspots).slice(0, 7).map((spot) => {
+        const itemSlug = (spot as any).item_slug || (spot as any).itemSlug;
+        const itemDetail = itemSlug ? itemMap[itemSlug] : undefined;
+        const layout = itemSlug ? itemLayouts[itemSlug] : undefined;
+
+        return (
+          <Link
+            key={spot.id}
+            to={itemSlug ? `/items/${itemSlug}` : "#"}
+            className="group relative bg-secondary overflow-hidden"
+            style={
+              layout
+                ? {
+                    gridColumn: `${layout.pos_x + 1} / span ${layout.width}`,
+                    gridRow: `${layout.pos_y + 1} / span ${layout.height}`,
+                  }
+                : undefined
+            }
+          >
+            <div className="absolute inset-0 bg-[hsl(var(--livora-stone))] flex items-center justify-center p-4">
+              {itemDetail?.image && (
+                <img
+                  src={imgUrl(itemDetail.image)}
+                  alt={spot.label}
+                  className="max-w-full max-h-full object-contain"
+                />
+              )}
+            </div>
+            <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors duration-500" />
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background/80 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-500">
+              <p className="text-[9px] uppercase tracking-[0.15em] text-foreground/60 mb-0.5 font-light">
+                {item.taxonomy}
+              </p>
+              <div className="flex items-center justify-between">
+                <p className="serif text-sm font-light text-foreground">{spot.label}</p>
+                <ArrowUpRight size={14} className="text-foreground/60" />
+              </div>
+            </div>
+            <div className="absolute top-3 left-3">
+              <span className="text-[8px] uppercase tracking-[0.1em] bg-background/80 text-muted-foreground px-2 py-0.5 font-light">
+                {spot.label}
+              </span>
+            </div>
+          </Link>
+        );
+      })}
+    </div>
+  </div>
+</section>
 
       {/* ════════════════════════════════════════
           5. EXPLORE MORE CAROUSEL
