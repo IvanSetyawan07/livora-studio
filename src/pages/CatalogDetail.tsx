@@ -578,17 +578,17 @@ const handleDownloadPDF = async (size: CatalogPageSize) => {
         {/* Scroll-driven gradient (appears as user scrolls) */}
         <motion.div
   className="absolute inset-x-0 bottom-0 h-1/2 pointer-events-none bg-gradient-to-t from-background via-background/40 to-transparent"
-  style={{ opacity: gradientOpacity } as React.CSSProperties}
+  style={{ opacity: gradientOpacity }}
 />
 
 <motion.div
   className="absolute inset-0 bg-black pointer-events-none"
-  style={{ opacity: shadowOpacity } as React.CSSProperties}
+  style={{ opacity: shadowOpacity }}
 />
 
 <motion.div
   className="relative z-10 container-livora w-full"
-  style={{ x: textX, opacity: textOpacity, y: textY } as React.CSSProperties}
+  style={{ x: textX, opacity: textOpacity, y: textY }}
 >
           {/* Navigation breadcrumb */}
           <motion.nav

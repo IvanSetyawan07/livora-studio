@@ -34,7 +34,27 @@ class LivoraAssistant
     ];
 
     /** Halaman untuk booking konsultasi. Sesuaikan kalau path-nya beda. */
-    private const CONSULTATION_PATH = '/appointment';
+private const CONSULTATION_PATH = '/appointment';
+/**
+ * Sinonim EN<->ID untuk keyword furniture, supaya query "meja" tetap match
+ * title bahasa Inggris ("table") dan sebaliknya. Ini cuma MEMPERLUAS kata
+ * kunci pencarian, bukan mengganti kata kunci asli user.
+ */
+private const KEYWORD_SYNONYMS = [
+    'meja'    => ['table'],
+    'kursi'   => ['chair'],
+    'sofa'    => ['couch'],
+    'lemari'  => ['cabinet', 'wardrobe', 'closet'],
+    'rak'     => ['shelf', 'shelving', 'rack'],
+    'tidur'   => ['bed'],
+    'kasur'   => ['mattress', 'bed'],
+    'lampu'   => ['lamp', 'light', 'lighting'],
+    'karpet'  => ['rug', 'carpet'],
+    'cermin'  => ['mirror'],
+    'bantal'  => ['pillow', 'cushion'],
+    'gorden'  => ['curtain'],
+    'partisi' => ['partition', 'divider'],
+];
 private const DAILY_QUOTA_LIMIT = 1500;
 private const DAILY_QUOTA_BUFFER = 5;
     /** Brand/company knowledge — dipakai untuk pertanyaan profil perusahaan. */
@@ -617,14 +637,28 @@ public function buildContext(string $message, array $options = []): string
     }
 
     private function extractKeywords(string $message): array
-    {
-        $stopwords = ['yang', 'dan', 'atau', 'saya', 'kamu', 'ada', 'ini', 'itu', 'untuk', 'dengan',
-            'apakah', 'apa', 'bagaimana', 'mau', 'bisa', 'tentang', 'produk', 'the', 'and', 'is',
-            'are', 'for', 'about', 'this', 'that', 'you'];
+{
+    $stopwords = ['yang', 'dan', 'atau', 'saya', 'kamu', 'ada', 'ini', 'itu', 'untuk', 'dengan',
+        'apakah', 'apa', 'bagaimana', 'mau', 'bisa', 'tentang', 'produk', 'the', 'and', 'is',
+        'are', 'for', 'about', 'this', 'that', 'you'];
 
-        $words = preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower(trim($message)));
-        $words = array_filter($words ?: [], fn ($w) => mb_strlen($w) > 2 && !in_array($w, $stopwords, true));
+    $words = preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower(trim($message)));
+    $words = array_filter($words ?: [], fn ($w) => mb_strlen($w) > 2 && !in_array($w, $stopwords, true));
+    $words = array_values(array_unique($words));
 
-        return array_slice(array_values(array_unique($words)), 0, 8);
+    // Perluas kata kunci Indonesia dengan padanan Inggris (dan sebaliknya)
+    // supaya tetap match kalau title/description produk ditulis dalam
+    // bahasa Inggris di database. Kata kunci asli tetap dipertahankan,
+    // sinonim cuma ditambahkan di belakang.
+    $expanded = $words;
+    foreach ($words as $w) {
+        if (isset(self::KEYWORD_SYNONYMS[$w])) {
+            foreach (self::KEYWORD_SYNONYMS[$w] as $syn) {
+                $expanded[] = $syn;
+            }
+        }
     }
+
+    return array_slice(array_values(array_unique($expanded)), 0, 12);
+}
 }
