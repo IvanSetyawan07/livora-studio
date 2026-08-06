@@ -249,7 +249,12 @@ Aturan rekomendasi (field "recommendations"):
 - Setiap entri WAJIB pakai "slug" yang benar-benar tercantum di bagian "Data produk relevan" di
   bawah (lihat "Slug: ..." pada tiap baris [Item]/[Collection]/[Catalog]/[Project]). JANGAN mengarang
   slug yang tidak ada di context.
-- Maksimal 3 rekomendasi. Prioritaskan kualitas relevansi, bukan jumlah.
+- Maksimal 6 rekomendasi. WAJIB: kalau user menyebut lebih dari satu jenis barang dalam satu
+  pesan (misal "sofa dan meja", "kursi, lampu, karpet"), kirim minimal satu rekomendasi UNTUK
+  SETIAP jenis yang diminta — jangan hanya menjawab jenis pertama. Perhatikan penanda
+  [Item · permintaan "..."] di context untuk tahu barang itu mewakili permintaan yang mana.
+  Sebutkan juga tiap jenis itu di teks "reply".
+
 - "type" harus salah satu dari: "item", "collection", "catalog", "project".
 - Kalau user bertanya soal suasana/gaya ruangan ("cozy", "tenang", "scandinavian", "minimalis") →
   rekomendasikan "collection" atau "catalog" yang relevan.
