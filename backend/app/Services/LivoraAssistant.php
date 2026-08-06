@@ -456,23 +456,39 @@ public function buildContext(string $message, array $options = []): string
             \App\Services\IntentClassifier::PRODUCT_SEARCH,
             \App\Services\IntentClassifier::GENERAL,
         ], true)) {
-            $items = Item::query()
-                ->when($focusSlug, fn ($q) => $q->where('slug', '!=', $focusSlug))
-                ->where(function ($q) use ($keywords) {
-                    foreach ($keywords as $kw) {
-                        $q->orWhere('title', 'like', "%{$kw}%")
-                          ->orWhere('description', 'like', "%{$kw}%")
-                          ->orWhere('texture', 'like', "%{$kw}%")
-                          ->orWhere('finish', 'like', "%{$kw}%");
-                    }
-                })
-                ->with(['type', 'collection'])
-                ->limit(5)
-                ->get();
+            // Kalau user minta beberapa jenis barang sekaligus ("sofa dan meja"),
+            // jalankan query TERPISAH untuk tiap jenis supaya semua permintaan
+            // terwakili — bukan cuma jenis pertama yang kebetulan match duluan.
+            $groups = $this->keywordGroups($keywords);
+            $seen = [];
 
-            foreach ($items as $item) {
-                $chunks[] = '[Item] ' . $this->describeItem($item);
+            foreach ($groups as $group) {
+                $items = Item::query()
+                    ->when($focusSlug, fn ($q) => $q->where('slug', '!=', $focusSlug))
+                    ->when($seen, fn ($q) => $q->whereNotIn('slug', $seen))
+                    ->where(function ($q) use ($group) {
+                        foreach ($group as $kw) {
+                            $q->orWhere('title', 'like', "%{$kw}%")
+                              ->orWhere('description', 'like', "%{$kw}%")
+                              ->orWhere('texture', 'like', "%{$kw}%")
+                              ->orWhere('finish', 'like', "%{$kw}%");
+                        }
+                    })
+                    ->with(['type', 'collection'])
+                    ->limit(4)
+                    ->get();
+
+                if ($items->isEmpty()) {
+                    continue;
+                }
+
+                $label = $group[0];
+                foreach ($items as $item) {
+                    $seen[] = $item->slug;
+                    $chunks[] = "[Item · permintaan \"{$label}\"] " . $this->describeItem($item);
+                }
             }
+
         }
 
         // portfolio / general → boleh query Project
