@@ -73,12 +73,11 @@ const formatTime = (iso?: string | null): string | null => {
  *  - status "active"     : live chat dengan customer service
  *  - status "closed"     : ditutup admin, chat berikutnya kembali ke AI
  */
-type ChatSize = "sm" | "md" | "lg";
+type ChatSize = "md" | "lg";
 
 const CHAT_SIZE_KEY = "livora_chat_size";
 
 const CHAT_SIZES: Record<ChatSize, { className: string }> = {
-  sm: { className: "w-[88vw] max-w-[320px] h-[54vh] max-h-[420px]" },
   md: { className: "w-[92vw] max-w-[380px] h-[70vh] max-h-[560px]" },
   lg: { className: "w-[94vw] max-w-[520px] h-[82vh] max-h-[760px]" },
 };
@@ -92,7 +91,7 @@ export function ChatWidget() {
   });
 
   const cycleSize = (dir: number) => {
-    const order: ChatSize[] = ["sm", "md", "lg"];
+    const order: ChatSize[] = ["md", "lg"];
     const next = order[Math.min(order.length - 1, Math.max(0, order.indexOf(size) + dir))];
     setSize(next);
     try {
@@ -453,31 +452,36 @@ export function ChatWidget() {
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => cycleSize(-1)}
-                  disabled={size === "sm"}
-                  aria-label="Perkecil ukuran chat"
-                  title="Perkecil"
-                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors disabled:opacity-30"
+                  onClick={() => cycleSize(size === "md" ? 1 : -1)}
+                  aria-label={size === "md" ? "Perbesar ukuran chat" : "Perkecil ukuran chat"}
+                  title={size === "md" ? "Perbesar" : "Perkecil"}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors overflow-hidden"
                 >
-                  <Minimize2 size={14} strokeWidth={1.5} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => cycleSize(1)}
-                  disabled={size === "lg"}
-                  aria-label="Perbesar ukuran chat"
-                  title="Perbesar"
-                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors disabled:opacity-30"
-                >
-                  <Maximize2 size={14} strokeWidth={1.5} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  aria-label="Tutup chat"
-                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors"
-                >
-                  <X size={16} strokeWidth={1.5} />
+                  <AnimatePresence mode="wait" initial={false}>
+                    {size === "md" ? (
+                      <motion.span
+                        key="expand"
+                        initial={{ opacity: 0, rotate: -90, scale: 0.6 }}
+                        animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                        exit={{ opacity: 0, rotate: 90, scale: 0.6 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex items-center justify-center"
+                      >
+                        <Maximize2 size={14} strokeWidth={1.5} />
+                      </motion.span>
+                    ) : (
+                      <motion.span
+                        key="shrink"
+                        initial={{ opacity: 0, rotate: 90, scale: 0.6 }}
+                        animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                        exit={{ opacity: 0, rotate: -90, scale: 0.6 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex items-center justify-center"
+                      >
+                        <Minimize2 size={14} strokeWidth={1.5} />
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </button>
               </div>
             </div>
