@@ -293,7 +293,7 @@ PROMPT;
     {
         $cards = [];
 
-        foreach (array_slice($items, 0, 3) as $rec) {
+        foreach (array_slice($items, 0, 6) as $rec) {
             $type = is_array($rec) ? ($rec['type'] ?? null) : null;
             $slug = is_array($rec) ? ($rec['slug'] ?? null) : null;
             if (!$type || !$slug || !isset(self::FRONTEND_PATHS[$type])) {
