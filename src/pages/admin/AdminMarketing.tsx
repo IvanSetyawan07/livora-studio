@@ -321,7 +321,7 @@ export default function AdminMarketing() {
                   <p className="text-sm text-muted-foreground">Loading audience...</p>
                 ) : (
                   <div className="max-h-[320px] overflow-y-auto border border-border rounded">
-                    <table className="w-full text-sm">
+                    <div className="w-full overflow-x-auto"><table className="w-full text-sm">
                       <thead className="text-xs uppercase tracking-[0.15em] text-muted-foreground sticky top-0 bg-card">
                         <tr>
                           <th className="p-2 text-left w-8">
@@ -357,7 +357,7 @@ export default function AdminMarketing() {
                           </tr>
                         )}
                       </tbody>
-                    </table>
+                    </table></div>
                   </div>
                 )}
               </div>

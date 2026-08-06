@@ -245,7 +245,7 @@ export default function AdminAnalytics() {
               </div>
 
               <Card title="Engagement (Views & Duration)">
-                <table className="w-full text-sm">
+                <div className="w-full overflow-x-auto"><table className="w-full text-sm">
                   <thead className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
                     <tr>
                       <th className="text-left p-2">Content</th>
@@ -267,7 +267,7 @@ export default function AdminAnalytics() {
                     ))}
                     {data.viewStats.length === 0 && <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Belum ada data view pada masa ini.</td></tr>}
                   </tbody>
-                </table>
+                </table></div>
               </Card>
             </>
           )}
@@ -308,7 +308,7 @@ export default function AdminAnalytics() {
               </div>
 
               <Card title="Campaign Log">
-                <table className="w-full text-sm">
+                <div className="w-full overflow-x-auto"><table className="w-full text-sm">
                   <thead className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
                     <tr>
                       <th className="text-left p-2">Campaign</th>
@@ -334,14 +334,14 @@ export default function AdminAnalytics() {
                       <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Belum ada campaign pada masa ini.</td></tr>
                     )}
                   </tbody>
-                </table>
+                </table></div>
               </Card>
             </>
           )}
 
           {showAudience && (
             <Card title="User Activity">
-              <table className="w-full text-sm">
+              <div className="w-full overflow-x-auto"><table className="w-full text-sm">
                 <thead className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
                   <tr>
                     <th className="text-left p-2">User</th>
@@ -368,7 +368,7 @@ export default function AdminAnalytics() {
                   ))}
                   {users.length === 0 && <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Belum ada user aktif.</td></tr>}
                 </tbody>
-              </table>
+              </table></div>
             </Card>
           )}
         </>

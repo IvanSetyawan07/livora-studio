@@ -132,7 +132,7 @@ export default function AdminConsultations() {
           <p className="text-sm text-muted-foreground">Tidak ada consultation untuk filter ini.</p>
         ) : (
           <div className="bg-card border border-border rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
+            <div className="w-full overflow-x-auto"><table className="w-full text-sm">
               <thead className="bg-secondary/40 text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>
                   <th className="text-left px-4 py-3">Name</th>
@@ -199,7 +199,7 @@ export default function AdminConsultations() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </div>
         )}
       </div>
