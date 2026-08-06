@@ -408,7 +408,7 @@ export function ChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.97 }}
             transition={{ duration: 0.35, ease }}
-            className="fixed bottom-24 right-6 z-[60] w-[92vw] max-w-[380px] h-[70vh] max-h-[560px] flex flex-col bg-white border border-[#e5e5e5] shadow-2xl"
+            className={`fixed bottom-24 right-6 z-[60] flex flex-col bg-white border border-[#e5e5e5] shadow-2xl transition-[width,height] duration-300 ${CHAT_SIZES[size].className}`}
           >
             {/* Header */}
             <div
@@ -423,15 +423,38 @@ export function ChatWidget() {
                   {statusLabel}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                aria-label="Tutup chat"
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors"
-              >
-                <X size={16} strokeWidth={1.5} />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => cycleSize(-1)}
+                  disabled={size === "sm"}
+                  aria-label="Perkecil ukuran chat"
+                  title="Perkecil"
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors disabled:opacity-30"
+                >
+                  <Minimize2 size={14} strokeWidth={1.5} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => cycleSize(1)}
+                  disabled={size === "lg"}
+                  aria-label="Perbesar ukuran chat"
+                  title="Perbesar"
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors disabled:opacity-30"
+                >
+                  <Maximize2 size={14} strokeWidth={1.5} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  aria-label="Tutup chat"
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors"
+                >
+                  <X size={16} strokeWidth={1.5} />
+                </button>
+              </div>
             </div>
+
 
             {/* Peringatan idle live chat */}
             <AnimatePresence>
