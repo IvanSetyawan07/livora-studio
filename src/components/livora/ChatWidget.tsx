@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { MessageCircle, X, Send, Loader2, Headset, ArrowRight, CalendarCheck, Sparkles, Check } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, Headset, ArrowRight, CalendarCheck, Sparkles, Check, Minimize2, Maximize2 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   openSession,
@@ -73,8 +73,35 @@ const formatTime = (iso?: string | null): string | null => {
  *  - status "active"     : live chat dengan customer service
  *  - status "closed"     : ditutup admin, chat berikutnya kembali ke AI
  */
+type ChatSize = "sm" | "md" | "lg";
+
+const CHAT_SIZE_KEY = "livora_chat_size";
+
+const CHAT_SIZES: Record<ChatSize, { className: string }> = {
+  sm: { className: "w-[88vw] max-w-[320px] h-[54vh] max-h-[420px]" },
+  md: { className: "w-[92vw] max-w-[380px] h-[70vh] max-h-[560px]" },
+  lg: { className: "w-[94vw] max-w-[520px] h-[82vh] max-h-[760px]" },
+};
+
 export function ChatWidget() {
   const [open, setOpen] = useState(false);
+  const [size, setSize] = useState<ChatSize>(() => {
+    if (typeof window === "undefined") return "md";
+    const saved = window.localStorage.getItem(CHAT_SIZE_KEY) as ChatSize | null;
+    return saved && saved in CHAT_SIZES ? saved : "md";
+  });
+
+  const cycleSize = (dir: number) => {
+    const order: ChatSize[] = ["sm", "md", "lg"];
+    const next = order[Math.min(order.length - 1, Math.max(0, order.indexOf(size) + dir))];
+    setSize(next);
+    try {
+      window.localStorage.setItem(CHAT_SIZE_KEY, next);
+    } catch {
+      /* ignore */
+    }
+  };
+
   const [session, setSession] = useState<SupportSessionInfo | null>(null);
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [input, setInput] = useState("");
