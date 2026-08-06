@@ -56,6 +56,7 @@ const C = {
 };
 
 import { Font } from "@react-pdf/renderer";
+import { BACKEND_ORIGIN } from "@/lib/adminApi";
 
 Font.register({
   family: "Cormorant Garamond",
