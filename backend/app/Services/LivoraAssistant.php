@@ -249,7 +249,12 @@ Aturan rekomendasi (field "recommendations"):
 - Setiap entri WAJIB pakai "slug" yang benar-benar tercantum di bagian "Data produk relevan" di
   bawah (lihat "Slug: ..." pada tiap baris [Item]/[Collection]/[Catalog]/[Project]). JANGAN mengarang
   slug yang tidak ada di context.
-- Maksimal 3 rekomendasi. Prioritaskan kualitas relevansi, bukan jumlah.
+- Maksimal 6 rekomendasi. WAJIB: kalau user menyebut lebih dari satu jenis barang dalam satu
+  pesan (misal "sofa dan meja", "kursi, lampu, karpet"), kirim minimal satu rekomendasi UNTUK
+  SETIAP jenis yang diminta — jangan hanya menjawab jenis pertama. Perhatikan penanda
+  [Item · permintaan "..."] di context untuk tahu barang itu mewakili permintaan yang mana.
+  Sebutkan juga tiap jenis itu di teks "reply".
+
 - "type" harus salah satu dari: "item", "collection", "catalog", "project".
 - Kalau user bertanya soal suasana/gaya ruangan ("cozy", "tenang", "scandinavian", "minimalis") →
   rekomendasikan "collection" atau "catalog" yang relevan.
@@ -288,7 +293,7 @@ PROMPT;
     {
         $cards = [];
 
-        foreach (array_slice($items, 0, 3) as $rec) {
+        foreach (array_slice($items, 0, 6) as $rec) {
             $type = is_array($rec) ? ($rec['type'] ?? null) : null;
             $slug = is_array($rec) ? ($rec['slug'] ?? null) : null;
             if (!$type || !$slug || !isset(self::FRONTEND_PATHS[$type])) {
@@ -456,23 +461,39 @@ public function buildContext(string $message, array $options = []): string
             \App\Services\IntentClassifier::PRODUCT_SEARCH,
             \App\Services\IntentClassifier::GENERAL,
         ], true)) {
-            $items = Item::query()
-                ->when($focusSlug, fn ($q) => $q->where('slug', '!=', $focusSlug))
-                ->where(function ($q) use ($keywords) {
-                    foreach ($keywords as $kw) {
-                        $q->orWhere('title', 'like', "%{$kw}%")
-                          ->orWhere('description', 'like', "%{$kw}%")
-                          ->orWhere('texture', 'like', "%{$kw}%")
-                          ->orWhere('finish', 'like', "%{$kw}%");
-                    }
-                })
-                ->with(['type', 'collection'])
-                ->limit(5)
-                ->get();
+            // Kalau user minta beberapa jenis barang sekaligus ("sofa dan meja"),
+            // jalankan query TERPISAH untuk tiap jenis supaya semua permintaan
+            // terwakili — bukan cuma jenis pertama yang kebetulan match duluan.
+            $groups = $this->keywordGroups($keywords);
+            $seen = [];
 
-            foreach ($items as $item) {
-                $chunks[] = '[Item] ' . $this->describeItem($item);
+            foreach ($groups as $group) {
+                $items = Item::query()
+                    ->when($focusSlug, fn ($q) => $q->where('slug', '!=', $focusSlug))
+                    ->when($seen, fn ($q) => $q->whereNotIn('slug', $seen))
+                    ->where(function ($q) use ($group) {
+                        foreach ($group as $kw) {
+                            $q->orWhere('title', 'like', "%{$kw}%")
+                              ->orWhere('description', 'like', "%{$kw}%")
+                              ->orWhere('texture', 'like', "%{$kw}%")
+                              ->orWhere('finish', 'like', "%{$kw}%");
+                        }
+                    })
+                    ->with(['type', 'collection'])
+                    ->limit(4)
+                    ->get();
+
+                if ($items->isEmpty()) {
+                    continue;
+                }
+
+                $label = $group[0];
+                foreach ($items as $item) {
+                    $seen[] = $item->slug;
+                    $chunks[] = "[Item · permintaan \"{$label}\"] " . $this->describeItem($item);
+                }
             }
+
         }
 
         // portfolio / general → boleh query Project
@@ -661,4 +682,44 @@ public function buildContext(string $message, array $options = []): string
 
     return array_slice(array_values(array_unique($expanded)), 0, 12);
 }
+
+    /**
+     * Kelompokkan keyword jadi "permintaan" terpisah. Kata yang punya padanan
+     * di KEYWORD_SYNONYMS (mis. "sofa", "meja") jadi grup sendiri bersama
+     * sinonimnya; sisanya digabung jadi satu grup umum. Ini membuat query item
+     * dijalankan per jenis barang, jadi permintaan multi-barang
+     * ("sofa dan meja") terwakili semuanya.
+     */
+    private function keywordGroups(array $keywords): array
+    {
+        $reverse = [];
+        foreach (self::KEYWORD_SYNONYMS as $id => $syns) {
+            foreach ([$id, ...$syns] as $w) {
+                $reverse[$w] = $id;
+            }
+        }
+
+        $groups = [];
+        $rest = [];
+        foreach ($keywords as $kw) {
+            $canonical = $reverse[$kw] ?? null;
+            if ($canonical === null) {
+                $rest[] = $kw;
+                continue;
+            }
+            if (!isset($groups[$canonical])) {
+                $groups[$canonical] = array_values(array_unique([$canonical, ...self::KEYWORD_SYNONYMS[$canonical]]));
+            }
+        }
+
+        $result = array_values($groups);
+        if (!empty($rest)) {
+            $result[] = $rest;
+        }
+        if (empty($result)) {
+            $result[] = $keywords;
+        }
+
+        return array_slice($result, 0, 4);
+    }
 }

@@ -24,6 +24,27 @@ use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\CatalogSceneController;
 use App\Http\Controllers\Api\CatalogItemLayoutController;
 
+/**
+ * Media proxy — melayani file dari storage lewat route API supaya selalu
+ * membawa header CORS. Dipakai generator PDF (canvas/fetch) yang butuh
+ * gambar bebas taint saat file statis /storage tidak mengirim header CORS.
+ */
+Route::get('/media', function (\Illuminate\Http\Request $request) {
+    $path = ltrim((string) $request->query('path', ''), '/');
+    $path = preg_replace('#^storage/#', '', $path);
+
+    abort_if($path === '' || str_contains($path, '..'), 404);
+    abort_unless(\Illuminate\Support\Facades\Storage::disk('public')->exists($path), 404);
+
+    $disk = \Illuminate\Support\Facades\Storage::disk('public');
+
+    return response($disk->get($path), 200, [
+        'Content-Type'                => $disk->mimeType($path) ?: 'application/octet-stream',
+        'Cache-Control'               => 'public, max-age=86400',
+        'Access-Control-Allow-Origin' => '*',
+    ]);
+})->name('media.proxy');
+
 Route::get('/taxonomy-banners', [TaxonomyBannerController::class, 'index']);
 Route::get('/taxonomy-banners/{key}', [TaxonomyBannerController::class, 'byKey']);
 Route::post('/register', [AuthController::class, 'register']);

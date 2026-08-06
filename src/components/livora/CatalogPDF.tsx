@@ -56,6 +56,7 @@ const C = {
 };
 
 import { Font } from "@react-pdf/renderer";
+import { BACKEND_ORIGIN } from "@/lib/adminApi";
 
 Font.register({
   family: "Cormorant Garamond",
@@ -704,6 +705,25 @@ function imageElementToDataURL(url: string): Promise<string> {
   });
 }
 
+/**
+ * Ubah URL storage backend jadi URL lewat /api/media (route proxy yang selalu
+ * mengirim header CORS), supaya gambar scene/item tidak gagal dimuat saat
+ * file statis /storage tidak punya header CORS.
+ */
+function mediaProxyUrl(url: string): string | undefined {
+  if (/^(data:|blob:)/.test(url)) return undefined;
+  try {
+    const abs = new URL(url, window.location.origin);
+    const backend = new URL(BACKEND_ORIGIN, window.location.origin);
+    if (abs.origin !== backend.origin) return undefined;
+    const idx = abs.pathname.indexOf("/storage/");
+    if (idx === -1) return undefined;
+    return `${BACKEND_ORIGIN}/api/media?path=${encodeURIComponent(abs.pathname.slice(idx + "/storage/".length))}`;
+  } catch {
+    return undefined;
+  }
+}
+
 async function proxifyImage(url?: string): Promise<string | undefined> {
   if (!url) return undefined;
 
@@ -738,7 +758,24 @@ async function proxifyImage(url?: string): Promise<string | undefined> {
       imageCache.set(url, dataUrl);
       return dataUrl;
     } catch (e2) {
-      console.warn("[CatalogPDF] image unavailable, skipping:", url, e2);
+      console.warn("[CatalogPDF] direct load failed, trying media proxy:", url, e2);
+      const proxied = mediaProxyUrl(url);
+      if (proxied) {
+        try {
+          const res = await fetch(proxied, { mode: "cors", credentials: "omit" });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const blob = await res.blob();
+          const isWebp = blob.type === "image/webp" || /\.webp(\?|$)/i.test(url);
+          const dataUrl = isWebp
+            ? await convertBlobToPngDataURL(blob)
+            : await blobToDataURL(blob);
+          imageCache.set(url, dataUrl);
+          return dataUrl;
+        } catch (e3) {
+          console.warn("[CatalogPDF] media proxy failed:", proxied, e3);
+        }
+      }
+      console.warn("[CatalogPDF] image unavailable, skipping:", url);
       return undefined; // skip instead of breaking the whole document
     }
   }

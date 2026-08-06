@@ -99,7 +99,7 @@ export default function AdminCollections() {
       </div>
 
       <div className="bg-card border border-border rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="w-full overflow-x-auto"><table className="w-full text-sm">
           <thead className="bg-muted/40 text-xs uppercase tracking-[0.15em]">
             <tr>
               <th className="text-left p-3">Name</th>
@@ -137,7 +137,7 @@ export default function AdminCollections() {
               </tr>
             )}
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       {open && (
