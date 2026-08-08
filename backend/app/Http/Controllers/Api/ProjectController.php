@@ -56,7 +56,7 @@ class ProjectController extends Controller
 
     public function updateHighlights(Request $r)
     {
-        $ids = $r->validate(['ids' => 'array|max:3', 'ids.*' => 'integer|exists:projects,id'])['ids'] ?? [];
+        $ids = $r->validate(['ids' => 'array', 'ids.*' => 'integer|exists:projects,id'])['ids'] ?? [];
         Project::query()->update(['is_highlighted' => false]);
         foreach ($ids as $i => $id) {
             Project::where('id', $id)->update(['is_highlighted' => true, 'sort_order' => $i]);

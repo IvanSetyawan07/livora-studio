@@ -63,7 +63,7 @@ export const mapApiProject = (p: ApiProject): Project => {
 
 // Satu store terpusat agar semua hook sinkron
 let cachedAll: Project[] = staticProjects;
-let cachedHighlights: Project[] = staticProjects.slice(0, 3);
+let cachedHighlights: Project[] = staticProjects;
 const listeners = new Set<() => void>();
 let fetched = false;
 
@@ -96,7 +96,7 @@ const fetchAll = () => {
       const mapped = mapApiProject(p);
       const staticMatch = staticProjects.find((s) => s.slug === p.slug);
       return staticMatch ? { ...mapped, img: staticMatch.img } : mapped;
-    }).slice(0, 3);
+    });
     notify();
   }).catch(() => {});
 };
