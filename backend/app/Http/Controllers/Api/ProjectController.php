@@ -26,7 +26,7 @@ class ProjectController extends Controller
     public function highlights()
     {
         return Project::with('scope')->where('is_highlighted', true)
-            ->orderBy('sort_order')->limit(3)->get();
+            ->orderBy('sort_order')->get();
     }
 
     public function store(Request $r)
