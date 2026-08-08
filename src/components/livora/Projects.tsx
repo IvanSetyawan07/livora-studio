@@ -360,7 +360,7 @@ export const Projects = () => {
       {!reduced && filtered.length > 0 && (
         <div className="container-livora mt-8 flex items-center gap-4">
           <span className="text-[11px] tracking-[0.3em] text-foreground/60 tabular-nums">
-            {pad(Math.min(focusIndex, filtered.length - 1))} / {pad(filtered.length - 1)}
+            {pad(Math.min(focusIndex, filtered.length - 1))} / {String(filtered.length).padStart(2, "0")}
           </span>
           <div className="flex gap-1.5">
             {filtered.map((p, i) => (
