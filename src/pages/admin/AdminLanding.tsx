@@ -17,7 +17,6 @@ export default function AdminLanding() {
   const toggle = (id: number) => {
     setSelected((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
-      if (prev.length >= 3) { alert("Maksimum 3 project untuk landing page."); return prev; }
       return [...prev, id];
     });
   };
@@ -37,8 +36,8 @@ export default function AdminLanding() {
       <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2">Landing</p>
       <h1 className="serif text-4xl mb-2">Selected Works</h1>
       <p className="text-sm text-muted-foreground mb-6">
-        Pilih maksimum <strong>3 project</strong> untuk dipajang di section "Our Project" landing page.
-        Terpilih: {selected.length}/3
+        Pilih project mana saja (bebas jumlahnya) untuk dipajang di section "Our Project" landing page.
+        Terpilih: {selected.length}
       </p>
 
       <button onClick={save} disabled={saving} className="mb-6 px-5 py-2 bg-foreground text-background rounded text-sm uppercase tracking-[0.2em] disabled:opacity-60">
