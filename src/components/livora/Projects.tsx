@@ -34,7 +34,7 @@ export const Projects = () => {
     return all.filter((p) => p.category === filter);
   }, [filter, highlights, all]);
 
-  /* ---------- Intro reveal ---------- */
+  /* ---------- Intro reveal (desktop copy only — see introRef below) ---------- */
   useLayoutEffect(() => {
     if (prefersReducedMotion()) return;
     registerGsap();
@@ -167,6 +167,24 @@ export const Projects = () => {
           );
         }
 
+        // gentle physicality: the whole card drifts + rotates as it crosses the track
+        gsap.fromTo(
+          card,
+          { rotate: 1.2, yPercent: 3 },
+          {
+            rotate: -1.2,
+            yPercent: -3,
+            ease: EASE.scrub,
+            scrollTrigger: {
+              trigger: card,
+              containerAnimation: tween,
+              start: "left right",
+              end: "right left",
+              scrub: true,
+            },
+          },
+        );
+
         // focus tracking for the progress indicator
         ScrollTrigger.create({
           trigger: card,
@@ -230,15 +248,18 @@ export const Projects = () => {
     return () => el.removeEventListener("scroll", onScroll);
   }, [filtered]);
 
-  const pad = (n: number) => String(n + 1).padStart(2, "0");
-
+  /**
+   * Card — full-bleed photo, all copy overlaid at the bottom on a floor
+   * gradient. Name + eyebrow are always visible; description and the "View
+   * Project" tag reveal on hover, matching the reference treatment.
+   */
   const Card = ({ p, i }: { p: (typeof filtered)[number]; i: number }) => (
     <article
       className="project-card shrink-0 w-[80vw] sm:w-[62vw] lg:w-[38vw] xl:w-[34vw] snap-center"
       style={{ marginTop: i % 2 === 1 ? "5rem" : i % 3 === 2 ? "2.5rem" : "0rem" }}
     >
       <Link to={`/projects/${p.slug}`} className="group block focus:outline-none">
-        <div className="relative overflow-hidden aspect-[4/5]">
+        <div className="relative overflow-hidden" style={{ height: "min(78vh, 760px)" }}>
           <img
             src={p.img}
             alt={`${p.name} — ${p.category}${p.location ? `, ${p.location}` : ""}`}
@@ -246,24 +267,37 @@ export const Projects = () => {
             decoding="async"
             className="card-photo w-[116%] h-full object-cover max-w-none transition-transform duration-700 group-hover:scale-[1.04]"
           />
-          <div className="absolute inset-x-0 top-0 p-5 md:p-6">
-            <p className="text-[10px] uppercase tracking-[0.32em] text-white/85 drop-shadow">
+
+          {/* permanent floor gradient — keeps the overlaid copy legible */}
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.28) 42%, transparent 68%)",
+            }}
+          />
+          {/* hover-only darken, so the description reads cleanly on any photo */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-700 group-hover:opacity-100"
+            style={{ background: "rgba(0,0,0,0.22)" }}
+          />
+
+          <div className="absolute inset-x-0 bottom-0 p-6 md:p-8">
+            <p className="text-[10px] uppercase tracking-[0.32em] text-white/75 mb-3">
               {p.category}{p.location ? ` — ${p.location}` : ""}{p.year ? ` · ${p.year}` : ""}
             </p>
+            <h3 className="serif text-3xl md:text-4xl font-light leading-tight text-white">
+              {p.name}
+            </h3>
+            {p.description && (
+              <p className="card-description mt-3 max-w-[42ch] translate-y-3 text-sm font-light text-white/0 line-clamp-2 transition-all duration-700 group-hover:translate-y-0 group-hover:text-white/80">
+                {p.description}
+              </p>
+            )}
+            <span className="mt-5 inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-[#C9A97A]">
+              View Project ↗
+            </span>
           </div>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/25 opacity-70 group-hover:opacity-90 transition-opacity duration-700" />
-        </div>
-
-        <div className="pt-5">
-          <h3 className="serif text-3xl md:text-4xl font-light text-foreground">{p.name}</h3>
-          {p.description && (
-            <p className="card-description mt-2 text-sm text-foreground/60 max-w-[46ch] line-clamp-2">
-              {p.description}
-            </p>
-          )}
-          <span className="mt-4 inline-block text-[11px] uppercase tracking-[0.28em] text-foreground/70 group-hover:text-foreground underline-grow transition-colors duration-700">
-            View Project ↗
-          </span>
         </div>
       </Link>
     </article>
@@ -285,44 +319,51 @@ export const Projects = () => {
 
   const reduced = prefersReducedMotion();
 
+  // Shared intro copy (heading, description, filter tabs) — rendered once,
+  // statically, for mobile/reduced-motion, and once, animated, as the first
+  // column of the desktop pinned track (see introRef below).
+  const IntroCopy = () => (
+    <>
+      <p className="text-[10px] md:text-xs uppercase tracking-[0.45em] text-foreground/60 mb-5">
+        <span className="divider-line" />
+        Our Projects
+      </p>
+      <h2 className="serif text-4xl md:text-6xl lg:text-7xl font-light leading-[1.05] text-balance">
+        Selected works, <em className="italic text-[#C9A97A]">crafted to last.</em>
+      </h2>
+      <p className="mt-5 text-sm text-foreground/60 max-w-[52ch]">
+        Scroll sideways to walk through the studio&rsquo;s most recent rooms.
+      </p>
+      <div className="flex gap-2 mt-8 flex-wrap">
+        {categories.map((c) => (
+          <button
+            key={c}
+            onClick={() => setFilter(c)}
+            aria-pressed={filter === c}
+            className={`text-[10px] uppercase tracking-[0.3em] px-5 py-2.5 border transition-all duration-500 ${
+              filter === c
+                ? "bg-foreground text-background border-foreground"
+                : "border-border text-foreground/70 hover:border-foreground hover:text-foreground"
+            }`}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+    </>
+  );
+
   return (
     <section
       id="projects"
       ref={sectionRef}
       className={reduced ? "py-28 md:py-40" : "lg:h-screen lg:flex lg:flex-col lg:justify-center py-28 md:py-32 overflow-hidden"}
     >
-      {/* Intro */}
-      <div ref={introRef} className="container-livora">
-        <p data-intro-eyebrow className="text-[10px] md:text-xs uppercase tracking-[0.45em] text-foreground/60 mb-5">
-          <span className="divider-line" />
-          Our Projects
-        </p>
-        <h2 ref={headlineRef} className="serif text-4xl md:text-6xl lg:text-7xl font-light leading-[1.05] text-balance">
-          Selected works, <em className="italic text-[#C9A97A]">crafted to last.</em>
-        </h2>
-        <p data-intro-item className="mt-5 text-sm text-foreground/60 max-w-[52ch]">
-          Scroll sideways to walk through the studio&rsquo;s most recent rooms.
-        </p>
-
-        <div data-intro-item className="flex gap-2 mt-8 mb-10 flex-wrap">
-          {categories.map((c) => (
-            <button
-              key={c}
-              onClick={() => setFilter(c)}
-              aria-pressed={filter === c}
-              className={`text-[10px] uppercase tracking-[0.3em] px-5 py-2.5 rounded-full border transition-all duration-500 ${
-                filter === c
-                  ? "bg-foreground text-background border-foreground"
-                  : "border-border text-foreground/70 hover:border-foreground hover:text-foreground"
-              }`}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
+      {/* Mobile/tablet + reduced-motion: intro sits above, full-width (no room to sit beside cards) */}
+      <div className={reduced ? "container-livora mb-12" : "container-livora mb-12 lg:hidden"}>
+        <IntroCopy />
       </div>
 
-      {/* Reduced motion: simple vertical list */}
       {reduced ? (
         <div className="container-livora grid grid-cols-1 md:grid-cols-2 gap-10 animate-fade-in">
           {filtered.map((p, i) => (
@@ -333,9 +374,47 @@ export const Projects = () => {
         </div>
       ) : (
         <>
-          {/* Desktop: pinned horizontal track */}
+          {/* Desktop: intro is the first column of the pinned horizontal track, not a stacked block */}
           <div className="hidden lg:block">
             <div ref={trackRef} className="flex items-start gap-10 xl:gap-14 pl-[max(1.5rem,calc((100vw-1680px)/2+2rem))] pr-[12vw] will-change-transform">
+              <div
+                ref={introRef}
+                className="shrink-0 w-[34vw] xl:w-[30vw] flex flex-col justify-center pr-10"
+                style={{ minHeight: "min(78vh, 760px)" }}
+              >
+                <div data-intro-eyebrow>
+                  <p className="text-[10px] md:text-xs uppercase tracking-[0.45em] text-foreground/60 mb-5">
+                    <span className="divider-line" />
+                    Our Projects
+                  </p>
+                </div>
+                <h2
+                  ref={headlineRef}
+                  className="serif text-4xl md:text-6xl lg:text-7xl font-light leading-[1.05] text-balance"
+                >
+                  Selected works, <em className="italic text-[#C9A97A]">crafted to last.</em>
+                </h2>
+                <p data-intro-item className="mt-5 text-sm text-foreground/60 max-w-[52ch]">
+                  Scroll sideways to walk through the studio&rsquo;s most recent rooms.
+                </p>
+                <div data-intro-item className="flex gap-2 mt-8 flex-wrap">
+                  {categories.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setFilter(c)}
+                      aria-pressed={filter === c}
+                      className={`text-[10px] uppercase tracking-[0.3em] px-5 py-2.5 border transition-all duration-500 ${
+                        filter === c
+                          ? "bg-foreground text-background border-foreground"
+                          : "border-border text-foreground/70 hover:border-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {filtered.map((p, i) => (
                 <Card key={p.slug} p={p} i={i} />
               ))}
@@ -356,21 +435,16 @@ export const Projects = () => {
         </>
       )}
 
-      {/* Progress indicator */}
+      {/* Progress indicator — single thin fill line */}
       {!reduced && filtered.length > 0 && (
-        <div className="container-livora mt-8 flex items-center gap-4">
-          <span className="text-[11px] tracking-[0.3em] text-foreground/60 tabular-nums">
-            {pad(Math.min(focusIndex, filtered.length - 1))} / {String(filtered.length).padStart(2, "0")}
-          </span>
-          <div className="flex gap-1.5">
-            {filtered.map((p, i) => (
-              <span
-                key={p.slug}
-                className={`h-[3px] transition-all duration-500 ${
-                  i === focusIndex ? "w-7 bg-foreground" : "w-3 bg-foreground/25"
-                }`}
-              />
-            ))}
+        <div className="container-livora mt-8">
+          <div className="h-px w-full bg-border relative overflow-hidden">
+            <div
+              className="absolute inset-y-0 left-0 bg-[#C9A97A] transition-all duration-500"
+              style={{
+                width: `${((Math.min(focusIndex, filtered.length - 1) + 1) / filtered.length) * 100}%`,
+              }}
+            />
           </div>
         </div>
       )}
