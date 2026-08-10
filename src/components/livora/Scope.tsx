@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { ArrowUpRight } from "lucide-react";
 import { gsap, ScrollTrigger, registerGsap, prefersReducedMotion } from "@/lib/motionTokens";
@@ -14,36 +14,53 @@ const C = {
 export const Scope = () => {
   const root = useRef<HTMLElement | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (prefersReducedMotion()) return;
     registerGsap();
 
     const ctx = gsap.context(() => {
       gsap.utils.toArray<HTMLElement>(".scope-row").forEach((row) => {
+        const number = row.querySelector(".scope-number");
+        const title = row.querySelector(".scope-title");
+        const divider = row.querySelector(".scope-row-divider");
+        const imageWrap = row.querySelector(".scope-image-wrap");
+        const image = row.querySelector(".scope-image-wrap img");
+        const infoLabel = row.querySelector(".scope-info-label");
+        const description = row.querySelector(".scope-description");
+        const learnMore = row.querySelector(".scope-learnmore");
+        const ctas = row.querySelectorAll(".scope-cta");
+
+        // Set every reveal state before ScrollTrigger is created to prevent
+        // content flashing in its final state on the first browser paint.
+        gsap.set(number, { y: 24, opacity: 0 });
+        gsap.set(title, { y: 30, opacity: 0 });
+        gsap.set(divider, { scaleX: 0, transformOrigin: "left center" });
+        gsap.set(imageWrap, { clipPath: "inset(0 0 100% 0)" });
+        gsap.set(image, { scale: 1.15 });
+        gsap.set(infoLabel, { y: 16, opacity: 0 });
+        gsap.set(description, { y: 20, opacity: 0 });
+        gsap.set(learnMore, { y: 12, opacity: 0 });
+        if (ctas.length) gsap.set(ctas, { y: 16, opacity: 0 });
+
         const tl = gsap.timeline({
-          scrollTrigger: { trigger: row, start: "top 78%", toggleActions: "play none none reverse" },
+          scrollTrigger: { trigger: row, start: "top 80%", toggleActions: "play none none reverse" },
         });
 
-        tl.from(row.querySelector(".scope-number"), { y: 24, opacity: 0, duration: 0.6, ease: "power3.out" })
-          .from(row.querySelector(".scope-title"), { y: 30, opacity: 0, duration: 0.7, ease: "power3.out" }, "-=0.45")
-          .from(
-            row.querySelector(".scope-image-wrap"),
-            { clipPath: "inset(0 0 100% 0)", duration: 1, ease: "power3.inOut" },
-            "-=0.6",
-          )
-          .from(row.querySelector(".scope-image-wrap img"), { scale: 1.15, duration: 1.2, ease: "power3.out" }, "<")
-          .from(row.querySelector(".scope-info-label"), { y: 16, opacity: 0, duration: 0.5, ease: "power3.out" }, "-=0.55")
-          .from(row.querySelector(".scope-description"), { y: 20, opacity: 0, duration: 0.6, ease: "power3.out" }, "-=0.45")
-          .from(row.querySelector(".scope-learnmore"), { y: 12, opacity: 0, duration: 0.5, ease: "power2.out" }, "-=0.3");
+        tl.to(number, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" })
+          .to(title, { y: 0, opacity: 1, duration: 0.7, ease: "power3.out" }, "-=0.4")
+          .to(divider, { scaleX: 1, duration: 0.8, ease: "power2.inOut" }, "-=0.3")
+          .to(imageWrap, { clipPath: "inset(0 0 0% 0)", duration: 1, ease: "power3.inOut" }, "+=0.12")
+          .to(image, { scale: 1, duration: 1.2, ease: "power3.out" }, "<")
+          .to(infoLabel, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, "-=0.35")
+          .to(description, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, "-=0.3")
+          .to(learnMore, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, "-=0.25");
 
-        const ctas = row.querySelectorAll(".scope-cta");
         if (ctas.length) {
-          tl.from(ctas, { y: 16, opacity: 0, duration: 0.5, stagger: 0.1, ease: "power2.out" }, "-=0.3");
+          tl.to(ctas, { y: 0, opacity: 1, duration: 0.5, stagger: 0.16, ease: "power2.out" }, "-=0.2");
         }
 
-        const img = row.querySelector(".scope-image-wrap img");
-        if (img) {
-          gsap.to(img, {
+        if (image) {
+          gsap.to(image, {
             yPercent: 8,
             ease: "none",
             scrollTrigger: { trigger: row, start: "top bottom", end: "bottom top", scrub: true },
@@ -51,7 +68,7 @@ export const Scope = () => {
         }
       });
 
-      gsap.utils.toArray<HTMLElement>(".scope-divider").forEach((d) => {
+      gsap.utils.toArray<HTMLElement>(".scope-header-divider").forEach((d) => {
         gsap.from(d, {
           scaleX: 0,
           transformOrigin: "left center",
@@ -81,7 +98,7 @@ export const Scope = () => {
             Livora Studio
           </p>
         </div>
-        <div className="scope-divider mt-5 h-px w-full" style={{ backgroundColor: C.line }} />
+        <div className="scope-header-divider mt-5 h-px w-full" style={{ backgroundColor: C.line }} />
 
         {scopeItems.map((item) => (
           <div key={item.number} className="scope-row group grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 py-12 md:py-24">
@@ -99,6 +116,7 @@ export const Scope = () => {
                   alt={item.title}
                   loading="lazy"
                   decoding="async"
+                  onLoad={() => ScrollTrigger.refresh()}
                   className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                 />
               </div>
@@ -147,7 +165,7 @@ export const Scope = () => {
               </div>
             </div>
 
-            <div className="md:col-span-12 scope-divider h-px w-full" style={{ backgroundColor: C.line }} />
+            <div className="md:col-span-12 scope-row-divider h-px w-full" style={{ backgroundColor: C.line }} />
           </div>
         ))}
       </div>
