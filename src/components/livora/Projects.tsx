@@ -34,7 +34,7 @@ export const Projects = () => {
     return all.filter((p) => p.category === filter);
   }, [filter, highlights, all]);
 
-  /* ---------- Intro reveal (desktop copy only — see introRef below) ---------- */
+  /* ---------- Intro reveal ---------- */
   useLayoutEffect(() => {
     if (prefersReducedMotion()) return;
     registerGsap();
@@ -96,7 +96,9 @@ export const Projects = () => {
     return () => ctx.revert();
   }, []);
 
-  /* ---------- Horizontal scroll-jacked gallery (desktop only) ---------- */
+  /* ---------- Horizontal scroll-jacked gallery ----------
+     Sekarang aktif di SEMUA lebar layar (dulu cuma >=1024px lewat matchMedia).
+     Tidak ada lagi fallback native-scroll di mobile/tablet. */
   useLayoutEffect(() => {
     if (prefersReducedMotion()) return;
     if (typeof window === "undefined") return;
@@ -106,9 +108,7 @@ export const Projects = () => {
     const track = trackRef.current;
     if (!section || !track) return;
 
-    const mm = gsap.matchMedia();
-
-    mm.add("(min-width: 1024px)", () => {
+    const ctx = gsap.context(() => {
       const distance = () => Math.max(0, track.scrollWidth - window.innerWidth);
 
       const tween = gsap.to(track, {
@@ -130,7 +130,6 @@ export const Projects = () => {
       const cards = gsap.utils.toArray<HTMLElement>(".project-card", track);
 
       cards.forEach((card, i) => {
-        // contextual description reveal, synced to horizontal position
         const desc = card.querySelector<HTMLElement>(".card-description");
         if (desc) {
           gsap.from(desc, {
@@ -147,7 +146,6 @@ export const Projects = () => {
           });
         }
 
-        // subtle parallax: photo moves slower than the card
         const img = card.querySelector<HTMLElement>(".card-photo");
         if (img) {
           gsap.fromTo(
@@ -167,7 +165,6 @@ export const Projects = () => {
           );
         }
 
-        // gentle physicality: the whole card drifts + rotates as it crosses the track
         gsap.fromTo(
           card,
           { rotate: 1.2, yPercent: 3 },
@@ -185,7 +182,6 @@ export const Projects = () => {
           },
         );
 
-        // focus tracking for the progress indicator
         ScrollTrigger.create({
           trigger: card,
           containerAnimation: tween,
@@ -195,17 +191,18 @@ export const Projects = () => {
         });
       });
 
+      ScrollTrigger.refresh();
+
       return () => {
         st.kill();
         tween.kill();
       };
-    });
+    }, section);
 
-    ScrollTrigger.refresh();
-    return () => mm.revert();
+    return () => ctx.revert();
   }, [filtered]);
 
-  /* ---------- Crossfade on filter change + recompute track ---------- */
+  /* ---------- Crossfade on filter change ---------- */
   useEffect(() => {
     if (prefersReducedMotion()) return;
     const track = trackRef.current;
@@ -227,32 +224,6 @@ export const Projects = () => {
     return () => clearTimeout(t);
   }, [filter]);
 
-  /* ---------- Mobile focus tracking (native scroll-snap) ---------- */
-  const mobileScrollerRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const el = mobileScrollerRef.current;
-    if (!el) return;
-    const onScroll = () => {
-      const cards = Array.from(el.querySelectorAll<HTMLElement>(".project-card"));
-      if (!cards.length) return;
-      const center = el.scrollLeft + el.clientWidth / 2;
-      let best = 0;
-      let bestDist = Infinity;
-      cards.forEach((c, i) => {
-        const d = Math.abs(c.offsetLeft + c.offsetWidth / 2 - center);
-        if (d < bestDist) { bestDist = d; best = i; }
-      });
-      setFocusIndex(best);
-    };
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
-  }, [filtered]);
-
-  /**
-   * Card — full-bleed photo, all copy overlaid at the bottom on a floor
-   * gradient. Name + eyebrow are always visible; description and the "View
-   * Project" tag reveal on hover, matching the reference treatment.
-   */
   const Card = ({ p, i }: { p: (typeof filtered)[number]; i: number }) => (
     <article
       className="project-card shrink-0 w-[80vw] sm:w-[62vw] lg:w-[38vw] xl:w-[34vw] snap-center"
@@ -267,8 +238,6 @@ export const Projects = () => {
             decoding="async"
             className="card-photo w-[116%] h-full object-cover max-w-none transition-transform duration-700 group-hover:scale-[1.04]"
           />
-
-          {/* permanent floor gradient — keeps the overlaid copy legible */}
           <div
             className="pointer-events-none absolute inset-0"
             style={{
@@ -276,12 +245,10 @@ export const Projects = () => {
                 "linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.28) 42%, transparent 68%)",
             }}
           />
-          {/* hover-only darken, so the description reads cleanly on any photo */}
           <div
             className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-700 group-hover:opacity-100"
             style={{ background: "rgba(0,0,0,0.22)" }}
           />
-
           <div className="absolute inset-x-0 bottom-0 p-6 md:p-8">
             <p className="text-[10px] uppercase tracking-[0.32em] text-white/75 mb-3">
               {p.category}{p.location ? ` — ${p.location}` : ""}{p.year ? ` · ${p.year}` : ""}
@@ -319,125 +286,106 @@ export const Projects = () => {
 
   const reduced = prefersReducedMotion();
 
-  // Shared intro copy (heading, description, filter tabs) — rendered once,
-  // statically, for mobile/reduced-motion, and once, animated, as the first
-  // column of the desktop pinned track (see introRef below).
-  const IntroCopy = () => (
-    <>
-      <p className="text-[10px] md:text-xs uppercase tracking-[0.45em] text-foreground/60 mb-5">
-        <span className="divider-line" />
-        Our Projects
-      </p>
-      <h2 className="serif text-4xl md:text-6xl lg:text-7xl font-light leading-[1.05] text-balance">
-        Selected works, <em className="italic text-[#C9A97A]">crafted to last.</em>
-      </h2>
-      <p className="mt-5 text-sm text-foreground/60 max-w-[52ch]">
-        Scroll sideways to walk through the studio&rsquo;s most recent rooms.
-      </p>
-      <div className="flex gap-2 mt-8 flex-wrap">
-        {categories.map((c) => (
-          <button
-            key={c}
-            onClick={() => setFilter(c)}
-            aria-pressed={filter === c}
-            className={`text-[10px] uppercase tracking-[0.3em] px-5 py-2.5 border transition-all duration-500 ${
-              filter === c
-                ? "bg-foreground text-background border-foreground"
-                : "border-border text-foreground/70 hover:border-foreground hover:text-foreground"
-            }`}
-          >
-            {c}
-          </button>
-        ))}
-      </div>
-    </>
-  );
-
   return (
     <section
       id="projects"
       ref={sectionRef}
-      className={reduced ? "py-28 md:py-40" : "lg:h-screen lg:flex lg:flex-col lg:justify-center py-28 md:py-32 overflow-hidden"}
+      className={
+        reduced
+          ? "py-28 md:py-40"
+          : "h-screen flex flex-col justify-center py-16 md:py-24 overflow-hidden"
+      }
     >
-      {/* Mobile/tablet + reduced-motion: intro sits above, full-width (no room to sit beside cards) */}
-      <div className={reduced ? "container-livora mb-12" : "container-livora mb-12 lg:hidden"}>
-        <IntroCopy />
-      </div>
-
       {reduced ? (
-        <div className="container-livora grid grid-cols-1 md:grid-cols-2 gap-10 animate-fade-in">
-          {filtered.map((p, i) => (
-            <div key={p.slug} className="w-full">
-              <Card p={p} i={0} />
-            </div>
-          ))}
-        </div>
-      ) : (
         <>
-          {/* Desktop: intro is the first column of the pinned horizontal track, not a stacked block */}
-          <div className="hidden lg:block">
-            <div ref={trackRef} className="flex items-start gap-10 xl:gap-14 pl-[max(1.5rem,calc((100vw-1680px)/2+2rem))] pr-[12vw] will-change-transform">
-              <div
-                ref={introRef}
-                className="shrink-0 w-[34vw] xl:w-[30vw] flex flex-col justify-center pr-10"
-                style={{ minHeight: "min(78vh, 760px)" }}
-              >
-                <div data-intro-eyebrow>
-                  <p className="text-[10px] md:text-xs uppercase tracking-[0.45em] text-foreground/60 mb-5">
-                    <span className="divider-line" />
-                    Our Projects
-                  </p>
-                </div>
-                <h2
-                  ref={headlineRef}
-                  className="serif text-4xl md:text-6xl lg:text-7xl font-light leading-[1.05] text-balance"
+          <div className="container-livora mb-12">
+            <p className="text-[10px] md:text-xs uppercase tracking-[0.45em] text-foreground/60 mb-5">
+              <span className="divider-line" />
+              Our Projects
+            </p>
+            <h2 className="serif text-4xl md:text-6xl lg:text-7xl font-light leading-[1.05] text-balance">
+              Selected works, <em className="italic text-[#C9A97A]">crafted to last.</em>
+            </h2>
+            <p className="mt-5 text-sm text-foreground/60 max-w-[52ch]">
+              Scroll sideways to walk through the studio&rsquo;s most recent rooms.
+            </p>
+            <div className="flex gap-2 mt-8 flex-wrap">
+              {categories.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setFilter(c)}
+                  aria-pressed={filter === c}
+                  className={`text-[10px] uppercase tracking-[0.3em] px-5 py-2.5 border transition-all duration-500 ${
+                    filter === c
+                      ? "bg-foreground text-background border-foreground"
+                      : "border-border text-foreground/70 hover:border-foreground hover:text-foreground"
+                  }`}
                 >
-                  Selected works, <em className="italic text-[#C9A97A]">crafted to last.</em>
-                </h2>
-                <p data-intro-item className="mt-5 text-sm text-foreground/60 max-w-[52ch]">
-                  Scroll sideways to walk through the studio&rsquo;s most recent rooms.
-                </p>
-                <div data-intro-item className="flex gap-2 mt-8 flex-wrap">
-                  {categories.map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => setFilter(c)}
-                      aria-pressed={filter === c}
-                      className={`text-[10px] uppercase tracking-[0.3em] px-5 py-2.5 border transition-all duration-500 ${
-                        filter === c
-                          ? "bg-foreground text-background border-foreground"
-                          : "border-border text-foreground/70 hover:border-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {c}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {filtered.map((p, i) => (
-                <Card key={p.slug} p={p} i={i} />
+                  {c}
+                </button>
               ))}
-              <ClosingPanel />
             </div>
           </div>
-
-          {/* Mobile / tablet: native horizontal scroll-snap */}
-          <div
-            ref={mobileScrollerRef}
-            className="lg:hidden flex gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth px-6 pb-4 [-webkit-overflow-scrolling:touch]"
-          >
-            {filtered.map((p, i) => (
-              <Card key={p.slug} p={p} i={0} />
+          <div className="container-livora grid grid-cols-1 md:grid-cols-2 gap-10 animate-fade-in">
+            {filtered.map((p) => (
+              <div key={p.slug} className="w-full">
+                <Card p={p} i={0} />
+              </div>
             ))}
-            <ClosingPanel />
           </div>
         </>
+      ) : (
+        <div
+          ref={trackRef}
+          className="flex items-start gap-6 sm:gap-8 lg:gap-10 xl:gap-14 pl-6 sm:pl-10 lg:pl-[max(1.5rem,calc((100vw-1680px)/2+2rem))] pr-[12vw] will-change-transform"
+        >
+          <div
+            ref={introRef}
+            className="shrink-0 w-[80vw] sm:w-[60vw] lg:w-[34vw] xl:w-[30vw] flex flex-col justify-center pr-6 lg:pr-10"
+            style={{ minHeight: "min(78vh, 760px)" }}
+          >
+            <div data-intro-eyebrow>
+              <p className="text-[10px] md:text-xs uppercase tracking-[0.45em] text-foreground/60 mb-5">
+                <span className="divider-line" />
+                Our Projects
+              </p>
+            </div>
+            <h2
+              ref={headlineRef}
+              className="serif text-4xl md:text-6xl lg:text-7xl font-light leading-[1.05] text-balance"
+            >
+              Selected works, <em className="italic text-[#C9A97A]">crafted to last.</em>
+            </h2>
+            <p data-intro-item className="mt-5 text-sm text-foreground/60 max-w-[52ch]">
+              Scroll sideways to walk through the studio&rsquo;s most recent rooms.
+            </p>
+            <div data-intro-item className="flex gap-2 mt-8 flex-wrap">
+              {categories.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setFilter(c)}
+                  aria-pressed={filter === c}
+                  className={`text-[10px] uppercase tracking-[0.3em] px-5 py-2.5 border transition-all duration-500 ${
+                    filter === c
+                      ? "bg-foreground text-background border-foreground"
+                      : "border-border text-foreground/70 hover:border-foreground hover:text-foreground"
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filtered.map((p, i) => (
+            <Card key={p.slug} p={p} i={i} />
+          ))}
+          <ClosingPanel />
+        </div>
       )}
 
-      {/* Progress indicator — single thin fill line */}
       {!reduced && filtered.length > 0 && (
-        <div className="container-livora mt-8">
+        <div className="container-livora mt-6 md:mt-8">
           <div className="h-px w-full bg-border relative overflow-hidden">
             <div
               className="absolute inset-y-0 left-0 bg-[#C9A97A] transition-all duration-500"
