@@ -9,6 +9,7 @@ import { useProjectBySlug } from "@/lib/projectsApi";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
 import { slugifyItem } from "@/data/items";
 import { trackClick, trackView } from "@/lib/adminApi";
+import ProjectSpaces from "@/components/livora/ProjectSpaces";
 
 const TAGLINES: Record<string, string> = {
   "harmoni-one": "BATAM.",
@@ -174,7 +175,11 @@ const ProjectDetail = () => {
             src={project.img}
             alt={`${project.name} — hero`}
             className="absolute inset-0 w-full h-full object-cover"
-            style={{ objectPosition: "center 40%" }}
+            style={{
+              objectPosition: `${project.heroFocusX ?? 50}% ${project.heroFocusY ?? 40}%`,
+              transform: `scale(${(project.heroZoom ?? 100) / 100})`,
+              transformOrigin: `${project.heroFocusX ?? 50}% ${project.heroFocusY ?? 40}%`,
+            }}
           />
           <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.45)" }} />
           <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-6">
@@ -404,68 +409,8 @@ const ProjectDetail = () => {
           </div>
         </section>
 
-        {/* SECTION 3 — ITEMS IN THIS SPACE */}
-        <section
-          className="reveal px-6 py-10 md:px-[60px] md:py-[60px]"
-          style={{
-            background: "#FFFFFF",
-            transitionDelay: "0.15s",
-          }}
-        >
-          <h2
-            className="serif font-light"
-            style={{
-              color: "#1A1A1A",
-              fontSize: "24px",
-              marginBottom: "28px",
-            }}
-          >
-            Items in This Space
-          </h2>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-5">
-            {displayItems.map((name) => (
-              <Link
-                key={name}
-                to={`/items/${slugifyItem(name)}${project.slug ? `?from=${project.slug}` : ""}`}
-                className="item-card"
-                style={{
-                  background: "#FAFAF8",
-                  border: "1px solid #E8E4DF",
-                  borderRadius: "10px",
-                  padding: "28px 16px 20px",
-                  textAlign: "center",
-                  boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
-                  transition: "all 0.3s ease",
-                  textDecoration: "none",
-                  display: "block",
-                  cursor: "pointer",
-                }}
-              >
-                <div
-                  style={{
-                    height: "100px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <ItemIllustration name={name} />
-                </div>
-                <p
-                  style={{
-                    fontSize: "13px",
-                    color: "#1A1A1A",
-                    letterSpacing: "0.05em",
-                    marginTop: "16px",
-                  }}
-                >
-                  {name}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </section>
+        {/* SECTION 3 — FLOOR PLANS & ROOMS */}
+        <ProjectSpaces projectId={project.apiId} />
 
         <BookConsultation />
       </main>
