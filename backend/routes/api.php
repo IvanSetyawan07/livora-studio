@@ -66,6 +66,7 @@ Route::post('/support/sessions/{session}/resume-bot', [\App\Http\Controllers\Api
 
 Route::get('/projects', [ProjectController::class, 'index']);
 Route::get('/projects/{slug}', [ProjectController::class, 'show']);
+Route::get('/projects/{project}/layouts', [\App\Http\Controllers\Api\ProjectSpaceController::class, 'index']);
 Route::get('/landing/highlights', [ProjectController::class, 'highlights']);
 Route::get('/items', [ItemController::class, 'index']);
 Route::get('/items/{slug}', [ItemController::class, 'show']);
@@ -138,6 +139,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/projects/{project}/photos', [ProjectPhotoController::class, 'index']);
         Route::post('/projects/{project}/photos', [ProjectPhotoController::class, 'store']);
         Route::post('/photos/{photo}', [ProjectPhotoController::class, 'update']);
+
+        // Project Spaces (layouts → rooms → hotspots)
+        Route::get('/projects/{project}/layouts', [\App\Http\Controllers\Api\ProjectSpaceController::class, 'index']);
+        Route::post('/projects/{project}/layouts', [\App\Http\Controllers\Api\ProjectSpaceController::class, 'storeLayout']);
+        Route::post('/layouts/{layout}', [\App\Http\Controllers\Api\ProjectSpaceController::class, 'updateLayout']);
+        Route::delete('/layouts/{layout}', [\App\Http\Controllers\Api\ProjectSpaceController::class, 'destroyLayout']);
+        Route::post('/layouts/{layout}/rooms', [\App\Http\Controllers\Api\ProjectSpaceController::class, 'storeRoom']);
+        Route::post('/rooms/{room}', [\App\Http\Controllers\Api\ProjectSpaceController::class, 'updateRoom']);
+        Route::delete('/rooms/{room}', [\App\Http\Controllers\Api\ProjectSpaceController::class, 'destroyRoom']);
+        Route::post('/rooms/{room}/hotspots', [\App\Http\Controllers\Api\ProjectSpaceController::class, 'saveHotspots']);
         Route::delete('/photos/{photo}', [ProjectPhotoController::class, 'destroy']);
 
         // Items

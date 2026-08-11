@@ -32,6 +32,9 @@ export interface Project {
   description: string;
   slides: ProjectSlide[];
   apiId?: number; // backend id for analytics tracking
+  heroFocusX?: number;
+  heroFocusY?: number;
+  heroZoom?: number;
 }
 
 export const projects: Project[] = [
