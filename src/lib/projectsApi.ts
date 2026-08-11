@@ -20,6 +20,9 @@ interface ApiProject {
   year?: string | null;
   hero_image?: string | null;
   is_highlighted?: boolean;
+  hero_focus_x?: number;
+  hero_focus_y?: number;
+  hero_zoom?: number;
   sort_order?: number;
   scope?: { id: number; name: string; slug: string } | null;
   photos?: ApiPhoto[];
@@ -58,6 +61,9 @@ export const mapApiProject = (p: ApiProject): Project => {
     description: p.description ?? staticMatch?.description ?? "",
     slides,
     apiId: p.id,
+    heroFocusX: p.hero_focus_x ?? 50,
+    heroFocusY: p.hero_focus_y ?? 40,
+    heroZoom: p.hero_zoom ?? 100,
   };
 };
 
