@@ -10,6 +10,7 @@ import { Furniture } from "@/components/livora/Furniture";
 import { Contact } from "@/components/livora/Contact";
 import { Footer } from "@/components/livora/Footer";
 import { useReveal } from "@/hooks/useReveal";
+// import { CatalogPreview } from "@/components/livora/CatalogPreview";
 import wallpaper from "@/assets/add.png";
 
 const Index = () => {
@@ -81,7 +82,7 @@ const Index = () => {
                 <StyleGlassmorphism />
                 <Scope />
                 <Projects />
-
+                {/* <CatalogPreview /> */}
                 {/* Furniture - trigger point */}
                 <Furniture />
                 <div ref={furnitureRef} />
