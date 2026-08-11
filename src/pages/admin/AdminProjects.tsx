@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
-import { Pencil, Trash2, Plus, Image as ImageIcon } from "lucide-react";
+import { useRef } from "react";
+import { Pencil, Trash2, Plus, Image as ImageIcon, LayoutGrid } from "lucide-react";
 import AdminProjectPhotos from "./AdminProjectPhotos";
+import AdminProjectSpaces from "./AdminProjectSpaces";
 
 type Project = any;
 
@@ -12,6 +14,7 @@ export default function AdminProjects() {
   const [editing, setEditing] = useState<Project | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [managingPhotos, setManagingPhotos] = useState<Project | null>(null);
+  const [managingSpaces, setManagingSpaces] = useState<Project | null>(null);
 
   const load = () => api.get("/projects").then((r) => setProjects(r.data));
   useEffect(() => {
@@ -63,6 +66,9 @@ export default function AdminProjects() {
                 <button onClick={() => setManagingPhotos(p)} className="flex items-center gap-1 px-3 py-1.5 border border-border rounded hover:bg-muted">
                   <ImageIcon className="w-3 h-3" /> Photos ({p.photos?.length || 0})
                 </button>
+                <button onClick={() => setManagingSpaces(p)} className="flex items-center gap-1 px-3 py-1.5 border border-border rounded hover:bg-muted">
+                  <LayoutGrid className="w-3 h-3" /> Spaces
+                </button>
                 <button onClick={() => del(p)} className="flex items-center gap-1 px-3 py-1.5 border border-border rounded hover:bg-destructive hover:text-destructive-foreground ml-auto">
                   <Trash2 className="w-3 h-3" />
                 </button>
@@ -83,6 +89,9 @@ export default function AdminProjects() {
           onSaved={() => { setShowForm(false); load(); }}
         />
       )}
+      {managingSpaces && (
+        <AdminProjectSpaces project={managingSpaces} onClose={() => { setManagingSpaces(null); load(); }} />
+      )}
       {managingPhotos && (
         <AdminProjectPhotos
           project={managingPhotos}
@@ -101,7 +110,28 @@ function ProjectForm({ project, scopes, onClose, onSaved }: any) {
   const [year, setYear] = useState(project?.year || "");
   const [scopeId, setScopeId] = useState<string>(project?.scope_id?.toString() || "");
   const [file, setFile] = useState<File | null>(null);
+  const [focusX, setFocusX] = useState<number>(project?.hero_focus_x ?? 50);
+  const [focusY, setFocusY] = useState<number>(project?.hero_focus_y ?? 40);
+  const [zoom, setZoom] = useState<number>(project?.hero_zoom ?? 100);
+  const [preview, setPreview] = useState<string>("");
+  const previewBox = useRef<HTMLDivElement>(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!file) { setPreview(""); return; }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  const heroSrc = preview || (project?.hero_image ? imgUrl(project.hero_image) : "");
+
+  const pickFocus = (e: React.MouseEvent) => {
+    if (!previewBox.current) return;
+    const r = previewBox.current.getBoundingClientRect();
+    setFocusX(+(((e.clientX - r.left) / r.width) * 100).toFixed(1));
+    setFocusY(+(((e.clientY - r.top) / r.height) * 100).toFixed(1));
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,6 +145,9 @@ function ProjectForm({ project, scopes, onClose, onSaved }: any) {
       fd.append("year", year);
       if (scopeId) fd.append("scope_id", scopeId);
       if (file) fd.append("hero_image", file);
+      fd.append("hero_focus_x", String(focusX));
+      fd.append("hero_focus_y", String(focusY));
+      fd.append("hero_zoom", String(zoom));
       const url = project ? `/admin/projects/${project.id}` : "/admin/projects";
       await api.post(url, fd, { headers: { "Content-Type": "multipart/form-data" } });
       onSaved();
@@ -154,8 +187,51 @@ function ProjectForm({ project, scopes, onClose, onSaved }: any) {
         </div>
         <Field label="Hero Image">
           <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-          {project?.hero_image && !file && <img src={imgUrl(project.hero_image)} className="mt-2 w-32 rounded" alt="" />}
         </Field>
+
+        {heroSrc && (
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Hero Framing — klik pada preview untuk menentukan titik fokus (persis seperti tampilan di halaman project)
+            </p>
+            <div
+              ref={previewBox}
+              onClick={pickFocus}
+              className="relative w-full overflow-hidden rounded cursor-crosshair bg-muted"
+              style={{ aspectRatio: "16 / 9" }}
+            >
+              <img
+                src={heroSrc}
+                alt="Hero preview"
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{
+                  objectPosition: `${focusX}% ${focusY}%`,
+                  transform: `scale(${zoom / 100})`,
+                  transformOrigin: `${focusX}% ${focusY}%`,
+                }}
+              />
+              <div className="absolute inset-0 bg-black/40 pointer-events-none" />
+              <div
+                className="absolute w-5 h-5 rounded-full border-2 border-white pointer-events-none"
+                style={{ left: `${focusX}%`, top: `${focusY}%`, transform: "translate(-50%,-50%)" }}
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-3 text-xs">
+              <label className="block">
+                <span className="text-muted-foreground">Focus X {focusX}%</span>
+                <input type="range" min={0} max={100} step={0.5} value={focusX} onChange={(e) => setFocusX(Number(e.target.value))} className="w-full" />
+              </label>
+              <label className="block">
+                <span className="text-muted-foreground">Focus Y {focusY}%</span>
+                <input type="range" min={0} max={100} step={0.5} value={focusY} onChange={(e) => setFocusY(Number(e.target.value))} className="w-full" />
+              </label>
+              <label className="block">
+                <span className="text-muted-foreground">Zoom {zoom}%</span>
+                <input type="range" min={100} max={250} step={1} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} className="w-full" />
+              </label>
+            </div>
+          </div>
+        )}
         <div className="flex gap-2 pt-2">
           <button type="button" onClick={onClose} className="px-4 py-2 border border-border rounded text-sm">Cancel</button>
           <button disabled={saving} className="ml-auto px-5 py-2 bg-foreground text-background rounded text-sm uppercase tracking-[0.2em] disabled:opacity-60">
