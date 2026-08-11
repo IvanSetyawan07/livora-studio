@@ -6,8 +6,6 @@ import { PageBreadcrumb } from "@/components/livora/Breadcrumb";
 import { Footer } from "@/components/livora/Footer";
 import { BookConsultation } from "@/components/livora/BookConsultation";
 import { useProjectBySlug } from "@/lib/projectsApi";
-import { ItemIllustration } from "@/components/livora/ItemIllustration";
-import { slugifyItem } from "@/data/items";
 import { trackClick, trackView } from "@/lib/adminApi";
 import ProjectSpaces from "@/components/livora/ProjectSpaces";
 
@@ -160,7 +158,6 @@ const ProjectDetail = () => {
   const currentSlide = hasSlides ? slides[slideIndex % slides.length] : null;
   const displayTitle = currentSlide?.title ?? project.name;
   const displayImage = currentSlide?.image ?? project.img;
-  const displayItems = currentSlide?.items ?? [];
 
   const goPrev = () => setSlideIndex((i) => (i - 1 + slides.length) % slides.length);
   const goNext = () => setSlideIndex((i) => (i + 1) % slides.length);
