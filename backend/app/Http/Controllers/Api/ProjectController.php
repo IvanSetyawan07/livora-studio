@@ -11,7 +11,7 @@ class ProjectController extends Controller
 {
     public function index(Request $r)
     {
-        $q = Project::with(['scope','photos.items.type']);
+        $q = Project::with(['scope','photos.items.type','layouts.rooms.hotspots']);
         if ($scope = $r->query('scope')) {
             $q->whereHas('scope', fn($s) => $s->where('slug', $scope));
         }
@@ -20,7 +20,7 @@ class ProjectController extends Controller
 
     public function show($slug)
     {
-        return Project::with(['scope','photos.items.type'])->where('slug', $slug)->firstOrFail();
+        return Project::with(['scope','photos.items.type','layouts.rooms.hotspots'])->where('slug', $slug)->firstOrFail();
     }
 
     public function highlights()
@@ -74,6 +74,9 @@ class ProjectController extends Controller
             'year' => 'nullable|string|max:20',
             'scope_id' => 'nullable|exists:scopes,id',
             'sort_order' => 'nullable|integer',
+            'hero_focus_x' => 'nullable|numeric|min:0|max:100',
+            'hero_focus_y' => 'nullable|numeric|min:0|max:100',
+            'hero_zoom' => 'nullable|numeric|min:100|max:250',
         ]);
     }
 
