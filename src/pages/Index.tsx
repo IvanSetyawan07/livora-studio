@@ -2,8 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { Loader } from "@/components/livora/Loader";
 import { Navbar } from "@/components/livora/Navbar";
-import { Hero } from "@/components/livora/Hero";
-import { StyleGlassmorphism } from "@/components/livora/Style";
+import { SkyScene } from "@/components/livora/SkyScene";
+import { OurStyle } from "@/components/livora/OurStyle";
 import { Scope } from "@/components/livora/Scope";
 import { Projects } from "@/components/livora/Projects";
 import { Furniture } from "@/components/livora/Furniture";
@@ -67,7 +67,7 @@ const Index = () => {
         <>
           <Navbar />
           <main>
-            <Hero />
+            <SkyScene ready={ready} />
 
             {/* Wallpaper Container — background stays fixed while scrolling through this block */}
             <div className="relative">
@@ -79,7 +79,7 @@ const Index = () => {
               </div>
 
               <div className="relative z-10">
-                <StyleGlassmorphism />
+                <OurStyle />
                 <Scope />
                 <Projects />
                 {/* <CatalogPreview /> */}
