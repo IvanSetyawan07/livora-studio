@@ -7,7 +7,11 @@ import { Footer } from "@/components/livora/Footer";
 import { BookConsultation } from "@/components/livora/BookConsultation";
 import { useProjectBySlug } from "@/lib/projectsApi";
 import { trackClick, trackView } from "@/lib/adminApi";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import ProjectSpaces from "@/components/livora/ProjectSpaces";
+
+gsap.registerPlugin(ScrollTrigger);
 
 const TAGLINES: Record<string, string> = {
   "harmoni-one": "BATAM.",
@@ -19,7 +23,10 @@ const ProjectDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { project, loading } = useProjectBySlug(slug);
-
+  const heroSectionRef = useRef<HTMLElement>(null);
+  const heroImgRef = useRef<HTMLImageElement>(null);
+  const heroTitleRef = useRef<HTMLHeadingElement>(null);
+  const heroSubtitleRef = useRef<HTMLParagraphElement>(null);
   const [slideIndex, setSlideIndex] = useState(0);
   const [showScrollHint, setShowScrollHint] = useState(false);
 
@@ -31,6 +38,61 @@ const ProjectDetail = () => {
   useEffect(() => {
     setSlideIndex(0);
   }, [slug]);
+
+  // HERO ANIMATION — satu-satunya effect yang mengontrol title, subtitle, dan zoom gambar hero.
+  // Urutan: (1) entrance slide-in per kata → (2) baru setelah entrance selesai total,
+  // ScrollTrigger dibuat untuk animasi exit (naik + fade + zoom gambar) yang scrub & reversible.
+  useEffect(() => {
+    if (!project) return;
+
+    const baseScale = (project.heroZoom ?? 100) / 100;
+    const focusX = project.heroFocusX ?? 50;
+    const focusY = project.heroFocusY ?? 40;
+
+    const ctx = gsap.context(() => {
+      // Base framing gambar — sepenuhnya dikelola GSAP, React tidak lagi menulis transform ke img ini
+      gsap.set(heroImgRef.current, {
+        scale: baseScale,
+        transformOrigin: `${focusX}% ${focusY}%`,
+      });
+
+      const words = heroTitleRef.current?.querySelectorAll(".hero-word");
+
+      // Set state awal secara eksplisit sebelum animasi apapun jalan
+      gsap.set(words, { x: 90, opacity: 0 });
+      gsap.set(heroSubtitleRef.current, { x: 70, opacity: 0 });
+
+      // 1. Entrance — slide dari kanan, per kata (stagger)
+      const entranceTl = gsap.timeline({
+        defaults: { ease: "power3.out" },
+        onComplete: () => {
+          // 2. ScrollTrigger baru dibuat SETELAH entrance selesai total,
+          //    supaya dia motret state akhir yang sudah bersih (x:0, opacity:1)
+          //    dan tidak rebutan properti dengan entrance timeline.
+          gsap.timeline({
+            scrollTrigger: {
+              trigger: heroSectionRef.current,
+              start: "top top",
+              end: "+=90%",
+              pin: true,
+              pinSpacing: true,
+              scrub: 0.8, // sedikit "catch-up" delay → berasa halus, bukan kaku
+              invalidateOnRefresh: true,
+            },
+          })
+            .to(words, { y: -70, opacity: 0, stagger: 0.03, ease: "power2.inOut" }, 0)
+            .to(heroSubtitleRef.current, { y: -50, opacity: 0, ease: "power2.inOut" }, 0)
+            .to(heroImgRef.current, { scale: baseScale * 1.2, ease: "power2.inOut" }, 0);
+        },
+      });
+
+      entranceTl
+        .to(words, { x: 0, opacity: 1, duration: 1, stagger: 0.08 })
+        .to(heroSubtitleRef.current, { x: 0, opacity: 1, duration: 0.9 }, "-=0.5");
+    }, heroSectionRef);
+
+    return () => ctx.revert();
+  }, [project?.slug]);
 
   // Analytics: track click on mount, view duration on unmount
   const startRef = useRef<number>(Date.now());
@@ -167,44 +229,37 @@ const ProjectDetail = () => {
       <Navbar />
       <main style={{ background: "#FAFAF8" }}>
         {/* HERO — full screen */}
-        <section className="relative w-full overflow-hidden" style={{ height: "100vh" }}>
+        <section ref={heroSectionRef} className="relative w-full overflow-hidden" style={{ height: "100vh" }}>
           <img
+            ref={heroImgRef}
             src={project.img}
             alt={`${project.name} — hero`}
             className="absolute inset-0 w-full h-full object-cover"
             style={{
               objectPosition: `${project.heroFocusX ?? 50}% ${project.heroFocusY ?? 40}%`,
-              transform: `scale(${(project.heroZoom ?? 100) / 100})`,
-              transformOrigin: `${project.heroFocusX ?? 50}% ${project.heroFocusY ?? 40}%`,
             }}
+            onLoad={() => ScrollTrigger.refresh()}
           />
           <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.45)" }} />
           <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-6">
             <h1
+              ref={heroTitleRef}
               className="serif font-light text-white leading-[1.05] text-balance"
               style={{ fontSize: "clamp(36px, 8vw, 112px)" }}
             >
               {project.name.split(" ").map((word, i) => (
-                <span
-                  key={i}
-                  className="rise-word"
-                  style={{
-                    animationDelay: `${i * 0.13}s`,
-                    marginRight: "0.25em",
-                  }}
-                >
+                <span key={i} className="hero-word inline-block" style={{ marginRight: "0.25em" }}>
                   {word}
                 </span>
               ))}
             </h1>
             <p
-              className="text-white/85 mt-6 rise-word text-center"
+              ref={heroSubtitleRef}
+              className="text-white/85 mt-6 text-center"
               style={{
                 fontSize: "14px",
                 letterSpacing: "0.18em",
                 textTransform: "uppercase",
-                animationDelay: `${project.name.split(" ").length * 0.13 + 0.25}s`,
-                animationDuration: "0.9s",
               }}
             >
               {TAGLINES[project.slug] ?? project.subtitle ?? ""}
