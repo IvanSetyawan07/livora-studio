@@ -1,6 +1,10 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import Lenis from "lenis";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger);
 
 const SmoothScroll = () => {
   const { pathname } = useLocation();
@@ -13,6 +17,8 @@ const SmoothScroll = () => {
       easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
     });
+
+    lenis.on("scroll", ScrollTrigger.update);
 
     let rafId: number;
     const raf = (time: number) => {
