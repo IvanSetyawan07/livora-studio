@@ -185,7 +185,46 @@ export const Projects = () => {
           },
         );
 
-        // focus tracking for the progress indicator
+        // breathing scale: card grows as it reaches the centre of the viewport
+        const media = card.querySelector<HTMLElement>(".card-media");
+        if (media) {
+          gsap.fromTo(
+            media,
+            { scale: 0.88, filter: "brightness(0.82)" },
+            {
+              scale: 1,
+              filter: "brightness(1)",
+              ease: "none",
+              immediateRender: false,
+              scrollTrigger: {
+                trigger: card,
+                containerAnimation: tween,
+                start: "left right",
+                end: "center center",
+                scrub: true,
+              },
+            },
+          );
+          gsap.fromTo(
+            media,
+            { scale: 1, filter: "brightness(1)" },
+            {
+              scale: 0.88,
+              filter: "brightness(0.82)",
+              ease: "none",
+              immediateRender: false,
+              scrollTrigger: {
+                trigger: card,
+                containerAnimation: tween,
+                start: "center center",
+                end: "right left",
+                scrub: true,
+              },
+            },
+          );
+        }
+
+        // focus tracking
         ScrollTrigger.create({
           trigger: card,
           containerAnimation: tween,
