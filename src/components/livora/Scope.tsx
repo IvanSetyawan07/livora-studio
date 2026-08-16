@@ -20,8 +20,8 @@ export const Scope = () => {
 
     const ctx = gsap.context(() => {
       gsap.utils.toArray<HTMLElement>(".scope-row").forEach((row) => {
-        const number = row.querySelector(".scope-number");
-        const title = row.querySelector(".scope-title");
+        const number = Array.from(row.querySelectorAll(".scope-number"));
+        const title = Array.from(row.querySelectorAll(".scope-title"));
         const imageWrap = row.querySelector(".scope-image-wrap");
         const image = row.querySelector(".scope-image-wrap img");
         const infoLabel = row.querySelector(".scope-info-label");
