@@ -93,7 +93,7 @@ export const Scope = () => {
         {scopeItems.map((item, index) => (
           <div
             key={item.number}
-            className="scope-row group sticky top-0 flex items-center min-h-[100svh] py-12 md:py-20"
+            className="scope-row group relative md:sticky md:top-0 flex items-center md:min-h-[100svh] py-14 md:py-20"
             style={{
               backgroundColor: C.bg,
               zIndex: index + 1,
