@@ -116,7 +116,7 @@ export const Scope = () => {
                   {item.number}
                 </div>
                 <div
-                  className="scope-image-wrap relative overflow-hidden mt-6 md:mt-10 rounded-sm"
+                  className="scope-image-wrap relative overflow-hidden mt-2 md:mt-10 rounded-sm"
                   style={{ aspectRatio: "4 / 5" }}
                 >
                   <img
