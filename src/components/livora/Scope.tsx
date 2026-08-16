@@ -132,11 +132,11 @@ export const Scope = () => {
 
               {/* Right column */}
               <div className="md:col-span-7 lg:col-span-8">
-                <h3 className="scope-title text-3xl md:text-5xl lg:text-6xl font-medium tracking-tight leading-[1.05]">
+                <h3 className="scope-title hidden md:block text-3xl md:text-5xl lg:text-6xl font-medium tracking-tight leading-[1.05]">
                   {item.title}
                 </h3>
 
-                <div className="mt-8 md:mt-14 grid grid-cols-1 md:grid-cols-[140px_1fr] gap-4 md:gap-8">
+                <div className="mt-2 md:mt-14 grid grid-cols-1 md:grid-cols-[140px_1fr] gap-3 md:gap-8">
                   <p className="scope-info-label text-xs uppercase tracking-widest" style={{ color: C.muted }}>
                     Info
                   </p>
