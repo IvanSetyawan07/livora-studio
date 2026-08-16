@@ -108,7 +108,7 @@ export const Projects = () => {
 
     const mm = gsap.matchMedia();
 
-    mm.add("(min-width: 1024px)", () => {
+    mm.add("(min-width: 1px)", () => {
       const distance = () => Math.max(0, track.scrollWidth - window.innerWidth);
 
       const tween = gsap.to(track, {
