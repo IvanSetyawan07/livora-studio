@@ -395,30 +395,38 @@ export const Projects = () => {
     </>
   );
 
-  return (
-    <section
-      id="projects"
-      ref={sectionRef}
-      className={reduced ? "py-28 md:py-40" : "lg:h-screen lg:flex lg:flex-col lg:justify-center py-28 md:py-32 overflow-hidden"}
-    >
-      {/* Mobile/tablet + reduced-motion: intro sits above, full-width (no room to sit beside cards) */}
-      <div className={reduced ? "container-livora mb-12" : "container-livora mb-12 lg:hidden"}>
-        <IntroCopy />
-      </div>
-
-      {reduced ? (
+  if (reduced) {
+    return (
+      <section id="projects" className="py-28 md:py-40">
+        <div className="container-livora mb-12">
+          <IntroCopy />
+        </div>
         <div className="container-livora grid grid-cols-1 md:grid-cols-2 gap-10 animate-fade-in">
-          {filtered.map((p, i) => (
+          {filtered.map((p) => (
             <div key={p.slug} className="w-full">
               <Card p={p} i={0} />
             </div>
           ))}
         </div>
-      ) : (
-        <>
-          {/* Desktop: intro is the first column of the pinned horizontal track, not a stacked block */}
-          <div className="hidden lg:block">
-            <div ref={trackRef} className="flex items-start gap-10 xl:gap-14 pl-[max(1.5rem,calc((100vw-1680px)/2+2rem))] pr-[12vw] will-change-transform">
+      </section>
+    );
+  }
+
+  return (
+    <>
+      {/* Mobile/tablet: intro sits above the pinned gallery */}
+      <div className="container-livora pt-24 pb-10 lg:hidden">
+        <IntroCopy />
+      </div>
+
+      <section
+        id="projects"
+        ref={sectionRef}
+        className="h-screen flex flex-col justify-center overflow-hidden py-10 lg:py-32"
+      >
+        <div>
+          <div ref={trackRef} className="flex items-center lg:items-start gap-6 lg:gap-10 xl:gap-14 pl-6 lg:pl-[max(1.5rem,calc((100vw-1680px)/2+2rem))] pr-[18vw] lg:pr-[12vw] will-change-transform">
+            <div className="hidden lg:contents">
               <div
                 ref={introRef}
                 className="shrink-0 w-[34vw] xl:w-[30vw] flex flex-col justify-center pr-10"
