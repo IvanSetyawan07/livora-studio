@@ -243,11 +243,11 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
         )
         .to(".hero-scroll", { opacity: 0, y: -30, ease: "power2.in" }, 0)
 
-        // Sky to house pan
+        // Sky to house pan (transform based so it works on every screen ratio)
         .fromTo(
           ".scene-img",
-          { backgroundPosition: "50% 0%" },
-          { backgroundPosition: "50% 100%", ease: "none", duration: 1.6 },
+          { yPercent: 0 },
+          { yPercent: -50, ease: "none", duration: 1.6 },
           0
         )
 
