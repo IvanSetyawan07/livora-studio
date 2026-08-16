@@ -467,36 +467,10 @@ export const Projects = () => {
               {filtered.map((p, i) => (
                 <Card key={p.slug} p={p} i={i} />
               ))}
-              <ClosingPanel />
-            </div>
-          </div>
-
-          {/* Mobile / tablet: native horizontal scroll-snap */}
-          <div
-            ref={mobileScrollerRef}
-            className="lg:hidden flex gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth px-6 pb-4 [-webkit-overflow-scrolling:touch]"
-          >
-            {filtered.map((p, i) => (
-              <Card key={p.slug} p={p} i={0} />
-            ))}
             <ClosingPanel />
           </div>
-        </>
-      )}
-
-      {/* Progress indicator — single thin fill line */}
-      {!reduced && filtered.length > 0 && (
-        <div className="container-livora mt-8">
-          <div className="h-px w-full bg-border relative overflow-hidden">
-            <div
-              className="absolute inset-y-0 left-0 bg-[#C9A97A] transition-all duration-500"
-              style={{
-                width: `${((Math.min(focusIndex, filtered.length - 1) + 1) / filtered.length) * 100}%`,
-              }}
-            />
-          </div>
         </div>
-      )}
-    </section>
+      </section>
+    </>
   );
 };
