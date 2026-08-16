@@ -152,7 +152,7 @@ export const Scope = () => {
                     </Link>
 
                     {item.featured && (
-                      <div className="mt-20 md:mt-32 flex flex-wrap items-center gap-4 md:gap-6">
+                      <div className="mt-10 md:mt-32 flex flex-wrap items-center gap-4 md:gap-6">
                         <Link
                           to="/projects"
                           className="scope-cta text-sm md:text-base font-medium underline underline-offset-4 transition-colors duration-300 hover:text-white/70"
