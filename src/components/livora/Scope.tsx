@@ -20,8 +20,8 @@ export const Scope = () => {
 
     const ctx = gsap.context(() => {
       gsap.utils.toArray<HTMLElement>(".scope-row").forEach((row) => {
-        const number = row.querySelector(".scope-number");
-        const title = row.querySelector(".scope-title");
+        const number = Array.from(row.querySelectorAll(".scope-number"));
+        const title = Array.from(row.querySelectorAll(".scope-title"));
         const imageWrap = row.querySelector(".scope-image-wrap");
         const image = row.querySelector(".scope-image-wrap img");
         const infoLabel = row.querySelector(".scope-info-label");
@@ -93,7 +93,7 @@ export const Scope = () => {
         {scopeItems.map((item, index) => (
           <div
             key={item.number}
-            className="scope-row group sticky top-0 flex items-center min-h-[100svh] py-12 md:py-20"
+            className="scope-row group relative md:sticky md:top-0 flex items-center md:min-h-[100svh] py-14 md:py-20"
             style={{
               backgroundColor: C.bg,
               zIndex: index + 1,
@@ -102,13 +102,21 @@ export const Scope = () => {
             }}
           >
             <div className="container-livora grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 w-full">
+              {/* Mobile header — number + title on the same line */}
+              <div className="md:hidden flex items-baseline gap-4">
+                <span className="scope-number text-3xl font-normal tracking-tight">{item.number}</span>
+                <h3 className="scope-title text-2xl font-medium tracking-tight leading-[1.1]">
+                  {item.title}
+                </h3>
+              </div>
+
               {/* Left column */}
               <div className="md:col-span-5 lg:col-span-4">
-                <div className="scope-number text-4xl md:text-6xl lg:text-7xl font-normal tracking-tight">
+                <div className="scope-number hidden md:block text-4xl md:text-6xl lg:text-7xl font-normal tracking-tight">
                   {item.number}
                 </div>
                 <div
-                  className="scope-image-wrap relative overflow-hidden mt-6 md:mt-10 rounded-sm"
+                  className="scope-image-wrap relative overflow-hidden mt-2 md:mt-10 rounded-sm"
                   style={{ aspectRatio: "4 / 5" }}
                 >
                   <img
@@ -124,11 +132,11 @@ export const Scope = () => {
 
               {/* Right column */}
               <div className="md:col-span-7 lg:col-span-8">
-                <h3 className="scope-title text-3xl md:text-5xl lg:text-6xl font-medium tracking-tight leading-[1.05]">
+                <h3 className="scope-title hidden md:block text-3xl md:text-5xl lg:text-6xl font-medium tracking-tight leading-[1.05]">
                   {item.title}
                 </h3>
 
-                <div className="mt-8 md:mt-14 grid grid-cols-1 md:grid-cols-[140px_1fr] gap-4 md:gap-8">
+                <div className="mt-2 md:mt-14 grid grid-cols-1 md:grid-cols-[140px_1fr] gap-3 md:gap-8">
                   <p className="scope-info-label text-xs uppercase tracking-widest" style={{ color: C.muted }}>
                     Info
                   </p>
@@ -144,7 +152,7 @@ export const Scope = () => {
                     </Link>
 
                     {item.featured && (
-                      <div className="mt-20 md:mt-32 flex flex-wrap items-center gap-4 md:gap-6">
+                      <div className="mt-10 md:mt-32 flex flex-wrap items-center gap-4 md:gap-6">
                         <Link
                           to="/projects"
                           className="scope-cta text-sm md:text-base font-medium underline underline-offset-4 transition-colors duration-300 hover:text-white/70"

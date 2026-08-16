@@ -108,7 +108,7 @@ export const Projects = () => {
 
     const mm = gsap.matchMedia();
 
-    mm.add("(min-width: 1024px)", () => {
+    mm.add("(min-width: 1px)", () => {
       const distance = () => Math.max(0, track.scrollWidth - window.innerWidth);
 
       const tween = gsap.to(track, {
@@ -185,7 +185,46 @@ export const Projects = () => {
           },
         );
 
-        // focus tracking for the progress indicator
+        // breathing scale: card grows as it reaches the centre of the viewport
+        const media = card.querySelector<HTMLElement>(".card-media");
+        if (media) {
+          gsap.fromTo(
+            media,
+            { scale: 0.88, filter: "brightness(0.82)" },
+            {
+              scale: 1,
+              filter: "brightness(1)",
+              ease: "none",
+              immediateRender: false,
+              scrollTrigger: {
+                trigger: card,
+                containerAnimation: tween,
+                start: "left right",
+                end: "center center",
+                scrub: true,
+              },
+            },
+          );
+          gsap.fromTo(
+            media,
+            { scale: 1, filter: "brightness(1)" },
+            {
+              scale: 0.88,
+              filter: "brightness(0.82)",
+              ease: "none",
+              immediateRender: false,
+              scrollTrigger: {
+                trigger: card,
+                containerAnimation: tween,
+                start: "center center",
+                end: "right left",
+                scrub: true,
+              },
+            },
+          );
+        }
+
+        // focus tracking
         ScrollTrigger.create({
           trigger: card,
           containerAnimation: tween,
@@ -255,11 +294,14 @@ export const Projects = () => {
    */
   const Card = ({ p, i }: { p: (typeof filtered)[number]; i: number }) => (
     <article
-      className="project-card shrink-0 w-[80vw] sm:w-[62vw] lg:w-[38vw] xl:w-[34vw] snap-center"
-      style={{ marginTop: i % 2 === 1 ? "5rem" : i % 3 === 2 ? "2.5rem" : "0rem" }}
+      className="project-card shrink-0 w-[82vw] sm:w-[62vw] lg:w-[38vw] xl:w-[34vw] mt-0 lg:mt-[var(--card-offset)]"
+      style={{ ["--card-offset" as string]: i % 2 === 1 ? "5rem" : i % 3 === 2 ? "2.5rem" : "0rem" }}
     >
       <Link to={`/projects/${p.slug}`} className="group block focus:outline-none">
-        <div className="relative overflow-hidden" style={{ height: "min(78vh, 760px)" }}>
+        <div
+          className="card-media relative overflow-hidden will-change-transform"
+          style={{ height: "min(72vh, 760px)" }}
+        >
           <img
             src={p.img}
             alt={`${p.name} — ${p.category}${p.location ? `, ${p.location}` : ""}`}
@@ -290,7 +332,7 @@ export const Projects = () => {
               {p.name}
             </h3>
             {p.description && (
-              <p className="card-description mt-3 max-w-[42ch] translate-y-3 text-sm font-light text-white/0 line-clamp-2 transition-all duration-700 group-hover:translate-y-0 group-hover:text-white/80">
+              <p className="card-description mt-3 max-w-[42ch] text-sm font-light text-white/80 line-clamp-2 transition-all duration-700 lg:translate-y-3 lg:text-white/0 lg:group-hover:translate-y-0 lg:group-hover:text-white/80">
                 {p.description}
               </p>
             )}
@@ -353,33 +395,40 @@ export const Projects = () => {
     </>
   );
 
-  return (
-    <section
-      id="projects"
-      ref={sectionRef}
-      className={reduced ? "py-28 md:py-40" : "lg:h-screen lg:flex lg:flex-col lg:justify-center py-28 md:py-32 overflow-hidden"}
-    >
-      {/* Mobile/tablet + reduced-motion: intro sits above, full-width (no room to sit beside cards) */}
-      <div className={reduced ? "container-livora mb-12" : "container-livora mb-12 lg:hidden"}>
-        <IntroCopy />
-      </div>
-
-      {reduced ? (
+  if (reduced) {
+    return (
+      <section id="projects" className="py-28 md:py-40">
+        <div className="container-livora mb-12">
+          <IntroCopy />
+        </div>
         <div className="container-livora grid grid-cols-1 md:grid-cols-2 gap-10 animate-fade-in">
-          {filtered.map((p, i) => (
+          {filtered.map((p) => (
             <div key={p.slug} className="w-full">
               <Card p={p} i={0} />
             </div>
           ))}
         </div>
-      ) : (
-        <>
-          {/* Desktop: intro is the first column of the pinned horizontal track, not a stacked block */}
-          <div className="hidden lg:block">
-            <div ref={trackRef} className="flex items-start gap-10 xl:gap-14 pl-[max(1.5rem,calc((100vw-1680px)/2+2rem))] pr-[12vw] will-change-transform">
+      </section>
+    );
+  }
+
+  return (
+    <>
+      {/* Mobile/tablet: intro sits above the pinned gallery */}
+      <div className="container-livora pt-24 pb-10 lg:hidden">
+        <IntroCopy />
+      </div>
+
+      <section
+        id="projects"
+        ref={sectionRef}
+        className="h-screen flex flex-col justify-center overflow-hidden py-10 lg:py-32"
+      >
+        <div>
+          <div ref={trackRef} className="flex items-center lg:items-start gap-6 lg:gap-10 xl:gap-14 pl-6 lg:pl-[max(1.5rem,calc((100vw-1680px)/2+2rem))] pr-[18vw] lg:pr-[12vw] will-change-transform">
               <div
                 ref={introRef}
-                className="shrink-0 w-[34vw] xl:w-[30vw] flex flex-col justify-center pr-10"
+                className="hidden lg:flex shrink-0 w-[34vw] xl:w-[30vw] flex-col justify-center pr-10"
                 style={{ minHeight: "min(78vh, 760px)" }}
               >
                 <div data-intro-eyebrow>
@@ -418,36 +467,10 @@ export const Projects = () => {
               {filtered.map((p, i) => (
                 <Card key={p.slug} p={p} i={i} />
               ))}
-              <ClosingPanel />
-            </div>
-          </div>
-
-          {/* Mobile / tablet: native horizontal scroll-snap */}
-          <div
-            ref={mobileScrollerRef}
-            className="lg:hidden flex gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth px-6 pb-4 [-webkit-overflow-scrolling:touch]"
-          >
-            {filtered.map((p, i) => (
-              <Card key={p.slug} p={p} i={0} />
-            ))}
             <ClosingPanel />
           </div>
-        </>
-      )}
-
-      {/* Progress indicator — single thin fill line */}
-      {!reduced && filtered.length > 0 && (
-        <div className="container-livora mt-8">
-          <div className="h-px w-full bg-border relative overflow-hidden">
-            <div
-              className="absolute inset-y-0 left-0 bg-[#C9A97A] transition-all duration-500"
-              style={{
-                width: `${((Math.min(focusIndex, filtered.length - 1) + 1) / filtered.length) * 100}%`,
-              }}
-            />
-          </div>
         </div>
-      )}
-    </section>
+      </section>
+    </>
   );
 };

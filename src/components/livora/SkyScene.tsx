@@ -243,11 +243,11 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
         )
         .to(".hero-scroll", { opacity: 0, y: -30, ease: "power2.in" }, 0)
 
-        // Sky to house pan
+        // Sky to house pan (transform based so it works on every screen ratio)
         .fromTo(
           ".scene-img",
-          { backgroundPosition: "50% 0%" },
-          { backgroundPosition: "50% 100%", ease: "none", duration: 1.6 },
+          { yPercent: 0 },
+          { yPercent: -50, ease: "none", duration: 1.6 },
           0
         )
 
@@ -285,16 +285,16 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
     <section id="top" ref={root} className="relative h-[380vh]">
       <div className="sticky top-0 h-screen overflow-hidden bg-[#8CC0E8]">
         {/* Continuous sky -> house image */}
-        <div className="absolute inset-0 will-change-transform">
-          <div
-            className="scene-img absolute inset-0"
-            style={{
-              backgroundImage: `url(${skyToHouse})`,
-              backgroundSize: "cover",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "50% 0%",
-            }}
-          />
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="scene-img absolute left-0 top-0 h-[200%] w-full will-change-transform">
+            <img
+              src={skyToHouse}
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="h-full w-full select-none object-cover"
+            />
+          </div>
         </div>
 
         {/* Clouds */}
