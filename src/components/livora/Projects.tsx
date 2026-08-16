@@ -426,10 +426,9 @@ export const Projects = () => {
       >
         <div>
           <div ref={trackRef} className="flex items-center lg:items-start gap-6 lg:gap-10 xl:gap-14 pl-6 lg:pl-[max(1.5rem,calc((100vw-1680px)/2+2rem))] pr-[18vw] lg:pr-[12vw] will-change-transform">
-            <div className="hidden lg:contents">
               <div
                 ref={introRef}
-                className="shrink-0 w-[34vw] xl:w-[30vw] flex flex-col justify-center pr-10"
+                className="hidden lg:flex shrink-0 w-[34vw] xl:w-[30vw] flex-col justify-center pr-10"
                 style={{ minHeight: "min(78vh, 760px)" }}
               >
                 <div data-intro-eyebrow>
