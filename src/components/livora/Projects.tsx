@@ -294,11 +294,14 @@ export const Projects = () => {
    */
   const Card = ({ p, i }: { p: (typeof filtered)[number]; i: number }) => (
     <article
-      className="project-card shrink-0 w-[80vw] sm:w-[62vw] lg:w-[38vw] xl:w-[34vw] snap-center"
-      style={{ marginTop: i % 2 === 1 ? "5rem" : i % 3 === 2 ? "2.5rem" : "0rem" }}
+      className="project-card shrink-0 w-[82vw] sm:w-[62vw] lg:w-[38vw] xl:w-[34vw] mt-0 lg:mt-[var(--card-offset)]"
+      style={{ ["--card-offset" as string]: i % 2 === 1 ? "5rem" : i % 3 === 2 ? "2.5rem" : "0rem" }}
     >
       <Link to={`/projects/${p.slug}`} className="group block focus:outline-none">
-        <div className="relative overflow-hidden" style={{ height: "min(78vh, 760px)" }}>
+        <div
+          className="card-media relative overflow-hidden will-change-transform"
+          style={{ height: "min(72vh, 760px)" }}
+        >
           <img
             src={p.img}
             alt={`${p.name} — ${p.category}${p.location ? `, ${p.location}` : ""}`}
