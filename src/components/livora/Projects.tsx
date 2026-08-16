@@ -332,7 +332,7 @@ export const Projects = () => {
               {p.name}
             </h3>
             {p.description && (
-              <p className="card-description mt-3 max-w-[42ch] translate-y-3 text-sm font-light text-white/0 line-clamp-2 transition-all duration-700 group-hover:translate-y-0 group-hover:text-white/80">
+              <p className="card-description mt-3 max-w-[42ch] text-sm font-light text-white/80 line-clamp-2 transition-all duration-700 lg:translate-y-3 lg:text-white/0 lg:group-hover:translate-y-0 lg:group-hover:text-white/80">
                 {p.description}
               </p>
             )}
