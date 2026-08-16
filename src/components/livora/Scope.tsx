@@ -102,9 +102,17 @@ export const Scope = () => {
             }}
           >
             <div className="container-livora grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 w-full">
+              {/* Mobile header — number + title on the same line */}
+              <div className="md:hidden flex items-baseline gap-4">
+                <span className="scope-number text-3xl font-normal tracking-tight">{item.number}</span>
+                <h3 className="scope-title text-2xl font-medium tracking-tight leading-[1.1]">
+                  {item.title}
+                </h3>
+              </div>
+
               {/* Left column */}
               <div className="md:col-span-5 lg:col-span-4">
-                <div className="scope-number text-4xl md:text-6xl lg:text-7xl font-normal tracking-tight">
+                <div className="scope-number hidden md:block text-4xl md:text-6xl lg:text-7xl font-normal tracking-tight">
                   {item.number}
                 </div>
                 <div
