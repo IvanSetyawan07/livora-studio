@@ -32,9 +32,18 @@
     "mission_title": "Tiga prinsip,",
     "mission_title_em": "satu filosofi.",
     "missions": [
-      { "t": "Integrasikan", "d": "perjalanan kompleks desain interior." },
-      { "t": "Bangun", "d": "kualitas terbaik dengan desain adaptif, furnitur, dan instalasi." },
-      { "t": "Ciptakan", "d": "dampak yang bermakna dan bertahan lama di setiap ruang." }
+      {
+        "t": "Integrasikan",
+        "d": "perjalanan kompleks desain interior."
+      },
+      {
+        "t": "Bangun",
+        "d": "kualitas terbaik dengan desain adaptif, furnitur, dan instalasi."
+      },
+      {
+        "t": "Ciptakan",
+        "d": "dampak yang bermakna dan bertahan lama di setiap ruang."
+      }
     ]
   },
   "style": {
@@ -169,7 +178,28 @@
     "email": "Email:",
     "role": "Peran:",
     "logout": "Keluar",
-    "manage": "Kelola"
+    "manage": "Kelola",
+    "nav": {
+      "overview": "Ringkasan",
+      "projects": "Proyek",
+      "items": "Item / Furnitur",
+      "scan": "Pemindai QR",
+      "collections": "Koleksi",
+      "catalogs": "Katalog",
+      "taxonomies": "Taksonomi",
+      "landing": "Sorotan Beranda",
+      "banners": "Banner Tema",
+      "users": "Pengguna",
+      "consultations": "Konsultasi",
+      "wishlists": "Tersimpan (Wishlist)",
+      "support": "Dukungan Chat",
+      "analytics": "Analitik",
+      "marketing": "Kampanye Email"
+    },
+    "menu": "Menu",
+    "back_to_site": "Kembali ke Halaman Utama",
+    "language": "Bahasa",
+    "access_denied": "Akses ditolak. Khusus admin."
   },
   "common": {
     "back_home": "← Kembali ke beranda",
