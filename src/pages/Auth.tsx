@@ -5,6 +5,7 @@ import { Eye, EyeOff, ArrowRight, Check, Mail, User } from "lucide-react";
 import { toast } from "sonner";
 
 import { api, authStorage } from "@/lib/api";
+import { homeForRole, takeIntendedPath } from "@/lib/authGuard";
 import loginBg from "@/assets/create-login1.png";
 import logoLivora from "@/assets/logo-livora.png";
 
@@ -727,7 +728,8 @@ export default function Auth() {
       const { data } = await api.post("/login", { email, password });
       authStorage.setToken(data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
-      navigate(data.user?.role === "admin" ? "/admin" : "/");
+      const intended = takeIntendedPath();
+      navigate(intended ?? homeForRole(data.user?.role));
     } catch {
       toast.error("Email atau password salah");
     } finally {
@@ -794,7 +796,8 @@ export default function Auth() {
       });
       authStorage.setToken(data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
-      navigate(data.user?.role === "admin" ? "/admin" : "/");
+      const intended = takeIntendedPath();
+      navigate(intended ?? homeForRole(data.user?.role));
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Google login gagal");
     } finally {

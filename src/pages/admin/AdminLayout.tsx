@@ -3,6 +3,8 @@ import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, authStorage } from "@/lib/api";
+import { toast } from "sonner";
+import { clearSession, rememberIntendedPath } from "@/lib/authGuard";
 import LanguageSwitcher from "@/components/livora/LanguageSwitcher";
 import {
   LayoutDashboard,
@@ -53,13 +55,15 @@ export default function AdminLayout() {
       try {
         const { data } = await api.get("/me");
         if (data?.role !== "admin") {
-          alert(t("admin.access_denied"));
-          navigate("/");
+          toast.error(t("admin.access_denied"));
+          navigate("/", { replace: true });
           return;
         }
         setUser(data);
       } catch {
-        navigate("/login");
+        rememberIntendedPath();
+        toast.error("Silakan masuk terlebih dahulu");
+        navigate("/login", { replace: true });
       }
     })();
     const h = setInterval(() => api.post("/heartbeat").catch(() => {}), 30000);
@@ -73,8 +77,7 @@ export default function AdminLayout() {
 
   const logout = async () => {
     try { await api.post("/logout"); } catch {}
-    authStorage.clear();
-    localStorage.removeItem("user");
+    clearSession();
     navigate("/login");
   };
 
