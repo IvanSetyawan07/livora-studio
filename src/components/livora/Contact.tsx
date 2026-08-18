@@ -43,7 +43,7 @@ export const Contact = () => {
 
           <ul className="space-y-5">
             <li>
-              <a href="tel:+6282120433307" className="group flex items-center gap-4 text-foreground/80 hover:text-foreground transition-colors">
+              <a href="tel:+628212043307" className="group flex items-center gap-4 text-foreground/80 hover:text-foreground transition-colors">
                 <Phone size={18} className="shrink-0" />
                 <span className="text-[10px] uppercase tracking-[0.4em] text-foreground/50 w-14">Call</span>
                 <span className="text-base md:text-lg font-light underline-grow">+62 821 2043 3307</span>
