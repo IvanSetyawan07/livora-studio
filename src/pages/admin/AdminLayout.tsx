@@ -2,7 +2,7 @@ import { QrCode as QrCodeIcon } from "lucide-react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { api, authStorage } from "@/lib/api";
+import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { clearSession, rememberIntendedPath } from "@/lib/authGuard";
 import LanguageSwitcher from "@/components/livora/LanguageSwitcher";
