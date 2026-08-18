@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, authStorage } from "@/lib/api";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
+import { clearSession, rememberIntendedPath } from "@/lib/authGuard";
 import { getMyConsultations, type Consultation } from "@/lib/consultations";
 import { Check, Calendar, MapPin, Video } from "lucide-react";
 
@@ -30,8 +32,9 @@ export default function Dashboard() {
         const { data } = await api.get("/me");
         setUser(data);
       } catch {
-        alert("Anda harus login terlebih dahulu");
-        navigate("/login");
+        rememberIntendedPath("/dashboard");
+        toast.error("Silakan masuk terlebih dahulu");
+        navigate("/login", { replace: true });
       }
     })();
   }, [navigate]);
@@ -49,7 +52,7 @@ export default function Dashboard() {
     } catch {
       /* ignore */
     }
-    authStorage.clear();
+    clearSession();
     navigate("/login");
   };
 

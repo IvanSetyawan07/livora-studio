@@ -32,9 +32,18 @@
     "mission_title": "Three principles,",
     "mission_title_em": "one philosophy.",
     "missions": [
-      { "t": "Integrate", "d": "the complex journey of interior designing." },
-      { "t": "Construct", "d": "top-class quality and adaptive design, furniture and installation." },
-      { "t": "Create", "d": "long-lasting and meaningful impact in every space." }
+      {
+        "t": "Integrate",
+        "d": "the complex journey of interior designing."
+      },
+      {
+        "t": "Construct",
+        "d": "top-class quality and adaptive design, furniture and installation."
+      },
+      {
+        "t": "Create",
+        "d": "long-lasting and meaningful impact in every space."
+      }
     ]
   },
   "style": {
@@ -165,11 +174,32 @@
   "admin": {
     "panel": "Admin Panel",
     "title": "Dashboard Admin",
-    "welcome": "Selamat datang,",
+    "welcome": "Welcome,",
     "email": "Email:",
     "role": "Role:",
     "logout": "Logout",
-    "manage": "Manage"
+    "manage": "Manage",
+    "nav": {
+      "overview": "Overview",
+      "projects": "Projects",
+      "items": "Items / Furniture",
+      "scan": "QR Scanner",
+      "collections": "Collections",
+      "catalogs": "Catalogs",
+      "taxonomies": "Taxonomies",
+      "landing": "Landing Highlights",
+      "banners": "Theme Banners",
+      "users": "Users",
+      "consultations": "Consultations",
+      "wishlists": "Saved (Wishlist)",
+      "support": "Chat Support",
+      "analytics": "Analytics",
+      "marketing": "Email Campaigns"
+    },
+    "menu": "Menu",
+    "back_to_site": "Back to Landing Page",
+    "language": "Language",
+    "access_denied": "Access denied. Admins only."
   },
   "common": {
     "back_home": "← Back to home",

@@ -74,12 +74,6 @@ Route::get('/taxonomies/{type}', [TaxonomyController::class, 'index']);
 Route::get('/collections', [CollectionController::class, 'index']);
 Route::get('/collections/{slug}', [CollectionController::class, 'show']);
 
-Route::prefix('admin/items/{itemId}/variants')->group(function () {
-    Route::get('/', [VariantController::class, 'index']);
-    Route::post('/', [VariantController::class, 'store']);
-    Route::put('/{variantId}', [VariantController::class, 'update']);
-    Route::delete('/{variantId}', [VariantController::class, 'destroy']);
-});
 // Catalog - Public Read
 Route::get('/catalogs', [CatalogController::class, 'index']);
 Route::get('/catalogs/{slug}', [CatalogController::class, 'show']);
@@ -120,6 +114,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/items/lookup/{slug}', [ItemController::class, 'adminShow']);
 });
     Route::middleware('admin')->prefix('admin')->group(function () {
+        // Variants (sebelumnya publik — kini wajib admin)
+        Route::prefix('items/{itemId}/variants')->group(function () {
+            Route::get('/', [VariantController::class, 'index']);
+            Route::post('/', [VariantController::class, 'store']);
+            Route::put('/{variantId}', [VariantController::class, 'update']);
+            Route::delete('/{variantId}', [VariantController::class, 'destroy']);
+        });
+
         // Support chat
         Route::get('/support/sessions', [\App\Http\Controllers\Api\Admin\SupportChatController::class, 'index']);
         Route::get('/support/sessions/{session}/messages', [\App\Http\Controllers\Api\Admin\SupportChatController::class, 'messages']);
