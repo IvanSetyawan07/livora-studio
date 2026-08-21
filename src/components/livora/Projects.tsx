@@ -168,60 +168,58 @@ export const Projects = () => {
         }
 
         // gentle physicality: the whole card drifts + rotates as it crosses the track
-        gsap.fromTo(
-          card,
-          { rotate: 1.2, yPercent: 3 },
-          {
-            rotate: -1.2,
-            yPercent: -3,
-            ease: EASE.scrub,
-            scrollTrigger: {
-              trigger: card,
-              containerAnimation: tween,
-              start: "left right",
-              end: "right left",
-              scrub: true,
-            },
-          },
-        );
+          ScrollTrigger.create({
+    trigger: card,
+    containerAnimation: tween,
+    start: "left right",
+    end: "right left",
+    scrub: true,
+    onUpdate: (self) => {
+      const arc = 1 - Math.abs(self.progress - 0.5) * 2;
+      gsap.set(card, {
+        yPercent: 5 - arc * 8,
+        rotate: 1.5 - arc * 3,
+      });
+    },
+  });
 
         // breathing scale: card grows as it reaches the centre of the viewport
         const media = card.querySelector<HTMLElement>(".card-media");
         if (media) {
           gsap.fromTo(
-            media,
-            { scale: 0.88, filter: "brightness(0.82)" },
-            {
-              scale: 1,
-              filter: "brightness(1)",
-              ease: "none",
-              immediateRender: false,
-              scrollTrigger: {
-                trigger: card,
-                containerAnimation: tween,
-                start: "left right",
-                end: "center center",
-                scrub: true,
-              },
-            },
-          );
-          gsap.fromTo(
-            media,
-            { scale: 1, filter: "brightness(1)" },
-            {
-              scale: 0.88,
-              filter: "brightness(0.82)",
-              ease: "none",
-              immediateRender: false,
-              scrollTrigger: {
-                trigger: card,
-                containerAnimation: tween,
-                start: "center center",
-                end: "right left",
-                scrub: true,
-              },
-            },
-          );
+  card,
+  { yPercent: 5, rotate: 1.5 },
+  {
+    yPercent: -3,
+    rotate: 0,
+    ease: "none",
+    immediateRender: false,
+    scrollTrigger: {
+      trigger: card,
+      containerAnimation: tween,
+      start: "left right",
+      end: "center center",
+      scrub: true,
+    },
+  },
+);
+gsap.fromTo(
+  card,
+  { yPercent: -3, rotate: 0 },
+  {
+    yPercent: 5,
+    rotate: -1.5,
+    ease: "none",
+    immediateRender: false,
+    scrollTrigger: {
+      trigger: card,
+      containerAnimation: tween,
+      start: "center center",
+      end: "right left",
+      scrub: true,
+    },
+  },
+);
         }
 
         // focus tracking
@@ -325,20 +323,20 @@ export const Projects = () => {
           />
 
           <div className="absolute inset-x-0 bottom-0 p-6 md:p-8">
-            <p className="text-[10px] uppercase tracking-[0.32em] text-white/75 mb-3">
-              {p.category}{p.location ? ` — ${p.location}` : ""}{p.year ? ` · ${p.year}` : ""}
-            </p>
-            <h3 className="serif text-3xl md:text-4xl font-light leading-tight text-white">
-              {p.name}
-            </h3>
-            {p.description && (
-              <p className="card-description mt-3 max-w-[42ch] text-sm font-light text-white/80 line-clamp-2 transition-all duration-700 lg:translate-y-3 lg:text-white/0 lg:group-hover:translate-y-0 lg:group-hover:text-white/80">
-                {p.description}
-              </p>
-            )}
-            <span className="mt-5 inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-[#C9A97A]">
-              View Project ↗
-            </span>
+           <p className="text-[10px] uppercase tracking-[0.32em] text-white/75 mb-3 transition-all duration-500 lg:opacity-0 lg:-translate-y-2 lg:group-hover:opacity-100 lg:group-hover:translate-y-0">
+  {p.category}{p.location ? ` — ${p.location}` : ""}{p.year ? ` · ${p.year}` : ""}
+</p>
+<h3 className="serif text-3xl md:text-4xl font-light leading-tight text-white">
+  {p.name}
+</h3>
+{p.description && (
+  <p className="card-description mt-3 max-w-[42ch] text-sm font-light text-white/80 line-clamp-2 transition-all duration-700 delay-75 lg:translate-y-3 lg:text-white/0 lg:group-hover:translate-y-0 lg:group-hover:text-white/80">
+    {p.description}
+  </p>
+)}
+<span className="mt-5 inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-[#C9A97A] transition-all duration-700 delay-150 lg:opacity-0 lg:translate-y-2 lg:group-hover:opacity-100 lg:group-hover:translate-y-0">
+  View Project ↗
+</span>
           </div>
         </div>
       </Link>
