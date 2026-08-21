@@ -8,7 +8,7 @@ use App\Models\Item;
 use App\Models\Project;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;  
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Livora Concierge — AI assistant.
@@ -24,6 +24,15 @@ use Illuminate\Support\Facades\Cache;
  * PENTING: model (Gemini) HANYA memilih `type` + `slug` dari data yang sudah
  * disediakan di context. Gambar dan URL asli SELALU di-resolve ulang di sini
  * dari database — supaya tidak ada link/gambar hasil karangan model.
+ *
+ * PROTEKSI YANG AKTIF DI FILE INI (lihat method reply()):
+ * 1) emergencyLimitReached() — jaring pengaman darurat GLOBAL, angka sangat
+ *    tinggi, cuma untuk kondisi ekstrem (bug/insiden), TIDAK untuk operasional
+ *    harian normal. Tidak akan mematikan AI karena traffic customer wajar.
+ * 2) checkSpam() — rate-limit PER USER/SESI (bukan global), jadi kalau satu
+ *    orang spam, customer lain tetap bisa chat normal. Baru memblokir kalau
+ *    volume tinggi DAN pesannya berulang/identik (ciri bot), bukan cuma
+ *    karena user chat cepat.
  */
 class LivoraAssistant
 {
@@ -39,29 +48,49 @@ class LivoraAssistant
     ];
 
     /** Halaman untuk booking konsultasi. Sesuaikan kalau path-nya beda. */
-private const CONSULTATION_PATH = '/appointment';
-/**
- * Sinonim EN<->ID untuk keyword furniture, supaya query "meja" tetap match
- * title bahasa Inggris ("table") dan sebaliknya. Ini cuma MEMPERLUAS kata
- * kunci pencarian, bukan mengganti kata kunci asli user.
- */
-private const KEYWORD_SYNONYMS = [
-    'meja'    => ['table'],
-    'kursi'   => ['chair'],
-    'sofa'    => ['couch'],
-    'lemari'  => ['cabinet', 'wardrobe', 'closet'],
-    'rak'     => ['shelf', 'shelving', 'rack'],
-    'tidur'   => ['bed'],
-    'kasur'   => ['mattress', 'bed'],
-    'lampu'   => ['lamp', 'light', 'lighting'],
-    'karpet'  => ['rug', 'carpet'],
-    'cermin'  => ['mirror'],
-    'bantal'  => ['pillow', 'cushion'],
-    'gorden'  => ['curtain'],
-    'partisi' => ['partition', 'divider'],
-];
-private const DAILY_QUOTA_LIMIT = 1500;
-private const DAILY_QUOTA_BUFFER = 5;
+    private const CONSULTATION_PATH = '/appointment';
+
+    /**
+     * Sinonim EN<->ID untuk keyword furniture, supaya query "meja" tetap match
+     * title bahasa Inggris ("table") dan sebaliknya. Ini cuma MEMPERLUAS kata
+     * kunci pencarian, bukan mengganti kata kunci asli user.
+     */
+    private const KEYWORD_SYNONYMS = [
+        'meja'    => ['table'],
+        'kursi'   => ['chair'],
+        'sofa'    => ['couch'],
+        'lemari'  => ['cabinet', 'wardrobe', 'closet'],
+        'rak'     => ['shelf', 'shelving', 'rack'],
+        'tidur'   => ['bed'],
+        'kasur'   => ['mattress', 'bed'],
+        'lampu'   => ['lamp', 'light', 'lighting'],
+        'karpet'  => ['rug', 'carpet'],
+        'cermin'  => ['mirror'],
+        'bantal'  => ['pillow', 'cushion'],
+        'gorden'  => ['curtain'],
+        'partisi' => ['partition', 'divider'],
+    ];
+
+    /**
+     * Jaring pengaman darurat (BUKAN kuota operasional harian) — proteksi
+     * biaya API kalau ada bug/insiden aneh (mis. infinite loop, bot masif).
+     * Angkanya sengaja sangat tinggi supaya nyaris tidak pernah tersentuh
+     * oleh traffic customer normal, jadi AI tidak akan tiba-tiba "mati"
+     * di tengah hari karena ramai chat wajar.
+     */
+    private const EMERGENCY_DAILY_LIMIT = 50000;
+
+    /**
+     * Anti-spam PER USER/SESI (bukan global) — user lain tidak terpengaruh
+     * walau satu user kena block. Threshold longgar supaya customer yang
+     * lagi semangat nanya beruntun tidak ke-block; yang ditangkap cuma pola
+     * bot (pesan sangat cepat DAN berulang/identik).
+     */
+    private const SPAM_WINDOW_SECONDS      = 60; // jendela waktu yang dipantau
+    private const SPAM_MAX_MESSAGES        = 12; // maks pesan dalam jendela sebelum dicurigai
+    private const SPAM_COOLDOWN_SECONDS    = 20; // masa tunggu setelah kena flag (sengaja pendek)
+    private const SPAM_DUPLICATE_THRESHOLD = 3;  // berapa kali pesan identik berturut-turut baru dianggap bot
+
     /**
      * Brand/company knowledge — dipakai untuk pertanyaan profil perusahaan.
      * Sumber: Company Profile Livora 2026 (PT. Langgeng Cipta Ruang).
@@ -173,138 +202,235 @@ Posisi kamu (Livora Concierge) dalam alur ini:
   tim CS/admin.
 TXT;
 
+    /**
+     * Entry point utama. Urutan proteksi:
+     * 1. Jaring pengaman darurat global (nyaris tidak pernah kena di operasional normal).
+     * 2. Anti-spam per user/sesi (tidak mempengaruhi user lain).
+     * 3. Baru lanjut ke retrieval + panggil Gemini seperti biasa.
+     */
     public function reply(string $message, array $history = [], array $options = []): array
-{
-    $quotaKey = 'gemini_quota_' . now('UTC')->format('Y-m-d');
-    $requestId = (string) \Illuminate\Support\Str::uuid();
-    $startedAt = microtime(true);
+    {
+        $requestId = (string) \Illuminate\Support\Str::uuid();
+        $startedAt = microtime(true);
 
-    // Atomic: Cache::increment tidak punya race condition seperti get() + put()
-    $used = Cache::increment($quotaKey);
-    if ($used === 1) {
-        Cache::put($quotaKey, 1, now('UTC')->endOfDay());
-    }
-
-    if ($used > self::DAILY_QUOTA_LIMIT - self::DAILY_QUOTA_BUFFER) {
-        return [
-            'reply' => 'Concierge AI kami sedang ramai dipakai hari ini 🙏 Coba lagi beberapa saat lagi, atau saya hubungkan langsung ke customer service kami sekarang?',
-            'needs_escalation' => true,
-            'recommendations' => [],
-            'show_consultation' => false,
-        ];
-    }
-
-    $context = $this->buildContext($message, $options);
-    $systemPrompt = $this->systemPrompt($context);
-
-    $contents = [];
-    foreach ($history as $h) {
-        $role = ($h['role'] ?? 'user') === 'user' ? 'user' : 'model';
-        $text = trim((string) ($h['text'] ?? ''));
-        if ($text === '') {
-            continue;
-        }
-        $contents[] = ['role' => $role, 'parts' => [['text' => $text]]];
-    }
-    $contents[] = ['role' => 'user', 'parts' => [['text' => $message]]];
-
-    $apiKey = config('services.gemini.api_key');
-    if (!$apiKey) {
-        return [
-            'reply' => 'Maaf, asisten AI kami sedang tidak aktif. Mau saya hubungkan ke customer service Livora?',
-            'needs_escalation' => true,
-            'recommendations' => [],
-            'show_consultation' => false,
-        ];
-    }
-
-    $model = config('services.gemini.model');
-    if (!$model) {
-        Log::critical('LivoraAssistant: GEMINI_MODEL tidak diset di .env/config');
-        return [
-            'reply' => 'Maaf, asisten AI kami sedang tidak aktif. Mau saya hubungkan ke customer service Livora?',
-            'needs_escalation' => true,
-            'recommendations' => [],
-            'show_consultation' => false,
-        ];
-    }
-
-    try {
-        $response = Http::timeout(45)->withHeaders([
-            'x-goog-api-key' => $apiKey,
-            'content-type'   => 'application/json',
-        ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
-            'system_instruction' => ['parts' => [['text' => $systemPrompt]]],
-            'contents'           => $contents,
-            'generationConfig'   => [
-                'responseMimeType' => 'application/json',
-                'maxOutputTokens'  => 1536,
-                'thinkingConfig'   => ['thinkingLevel' => 'low'],
-            ],
-        ]);
-
-        if (!$response->successful()) {
-            Log::error('Gemini API error', [
+        if ($this->emergencyLimitReached()) {
+            Log::critical('LivoraAssistant: emergency daily limit tercapai', [
                 'request_id' => $requestId,
-                'status' => $response->status(),
-                'body' => $response->body(),
             ]);
-            if ($response->status() === 429) {
-                Cache::put($quotaKey, self::DAILY_QUOTA_LIMIT, now('UTC')->endOfDay());
-            }
-            throw new \RuntimeException('Gemini API request failed');
-        }
-
-        // Ambil semua part teks, skip part "thought" (reasoning internal model)
-        // supaya tidak pernah bocor ke user.
-        $parts = $response->json('candidates.0.content.parts', []);
-        $rawText = '';
-        foreach ($parts as $part) {
-            if (!empty($part['thought'])) {
-                continue;
-            }
-            $rawText .= $part['text'] ?? '';
-        }
-
-        $cleaned = trim(preg_replace('/```json|```/', '', $rawText));
-        $parsed  = json_decode($cleaned, true);
-
-        if (!is_array($parsed) || !isset($parsed['reply'])) {
-            Log::warning('LivoraAssistant: gagal parse JSON dari model', ['raw' => $rawText]);
             return [
-                'reply' => $rawText !== '' ? $rawText : 'Maaf, saya belum bisa menjawab itu. Mau saya hubungkan ke customer service kami?',
-                'needs_escalation' => $rawText === '',
+                'reply' => 'Maaf, sistem kami sedang mengalami gangguan sementara 🙏 Saya hubungkan langsung ke customer service kami ya.',
+                'needs_escalation' => true,
                 'recommendations' => [],
                 'show_consultation' => false,
             ];
         }
 
-        $recommendations = $this->resolveRecommendations($parsed['recommendations'] ?? []);
+        if ($this->checkSpam($message, $options)) {
+            Log::info('LivoraAssistant: pola spam/bot terdeteksi', [
+                'request_id' => $requestId,
+            ]);
+            return [
+                'reply' => 'Sepertinya ada beberapa pesan yang sama terkirim berturut-turut dalam waktu singkat 🙏 Boleh tunggu sebentar ya sebelum lanjut chat lagi — kalau butuh bantuan segera, saya hubungkan langsung ke customer service kami sekarang.',
+                'needs_escalation' => true,
+                'recommendations' => [],
+                'show_consultation' => false,
+            ];
+        }
 
-        Log::info('LivoraAssistant reply', [
-            'request_id' => $requestId,
-            'duration_ms' => round((microtime(true) - $startedAt) * 1000),
-            'needs_escalation' => (bool) ($parsed['needs_escalation'] ?? false),
-            'recommendation_count' => count($recommendations),
-        ]);
+        $context = $this->buildContext($message, $options);
+        $systemPrompt = $this->systemPrompt($context);
 
-        return [
-            'reply' => (string) $parsed['reply'],
-            'needs_escalation' => (bool) ($parsed['needs_escalation'] ?? false),
-            'recommendations' => $recommendations,
-            'show_consultation' => (bool) ($parsed['show_consultation'] ?? false),
-        ];
-    } catch (\Throwable $e) {
-        Log::error('LivoraAssistant error: ' . $e->getMessage());
-        return [
-            'reply' => 'Maaf, saya sedang tidak bisa memproses pertanyaan itu. Mau saya hubungkan ke customer service kami?',
-            'needs_escalation' => true,
-            'recommendations' => [],
-            'show_consultation' => false,
-        ];
+        $contents = [];
+        foreach ($history as $h) {
+            $role = ($h['role'] ?? 'user') === 'user' ? 'user' : 'model';
+            $text = trim((string) ($h['text'] ?? ''));
+            if ($text === '') {
+                continue;
+            }
+            $contents[] = ['role' => $role, 'parts' => [['text' => $text]]];
+        }
+        $contents[] = ['role' => 'user', 'parts' => [['text' => $message]]];
+
+        $apiKey = config('services.gemini.api_key');
+        if (!$apiKey) {
+            return [
+                'reply' => 'Maaf, asisten AI kami sedang tidak aktif. Mau saya hubungkan ke customer service Livora?',
+                'needs_escalation' => true,
+                'recommendations' => [],
+                'show_consultation' => false,
+            ];
+        }
+
+        $model = config('services.gemini.model');
+        if (!$model) {
+            Log::critical('LivoraAssistant: GEMINI_MODEL tidak diset di .env/config');
+            return [
+                'reply' => 'Maaf, asisten AI kami sedang tidak aktif. Mau saya hubungkan ke customer service Livora?',
+                'needs_escalation' => true,
+                'recommendations' => [],
+                'show_consultation' => false,
+            ];
+        }
+
+        try {
+            $response = Http::timeout(45)->withHeaders([
+                'x-goog-api-key' => $apiKey,
+                'content-type'   => 'application/json',
+            ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
+                'system_instruction' => ['parts' => [['text' => $systemPrompt]]],
+                'contents'           => $contents,
+                'generationConfig'   => [
+                    'responseMimeType' => 'application/json',
+                    'maxOutputTokens'  => 1536,
+                    'thinkingConfig'   => ['thinkingLevel' => 'low'],
+                ],
+            ]);
+
+            if (!$response->successful()) {
+                Log::error('Gemini API error', [
+                    'request_id' => $requestId,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                throw new \RuntimeException('Gemini API request failed');
+            }
+
+            // Ambil semua part teks, skip part "thought" (reasoning internal model)
+            // supaya tidak pernah bocor ke user.
+            $parts = $response->json('candidates.0.content.parts', []);
+            $rawText = '';
+            foreach ($parts as $part) {
+                if (!empty($part['thought'])) {
+                    continue;
+                }
+                $rawText .= $part['text'] ?? '';
+            }
+
+            $cleaned = trim(preg_replace('/```json|```/', '', $rawText));
+            $parsed  = json_decode($cleaned, true);
+
+            if (!is_array($parsed) || !isset($parsed['reply'])) {
+                Log::warning('LivoraAssistant: gagal parse JSON dari model', ['raw' => $rawText]);
+                return [
+                    'reply' => $rawText !== '' ? $rawText : 'Maaf, saya belum bisa menjawab itu. Mau saya hubungkan ke customer service kami?',
+                    'needs_escalation' => $rawText === '',
+                    'recommendations' => [],
+                    'show_consultation' => false,
+                ];
+            }
+
+            $recommendations = $this->resolveRecommendations($parsed['recommendations'] ?? []);
+
+            Log::info('LivoraAssistant reply', [
+                'request_id' => $requestId,
+                'duration_ms' => round((microtime(true) - $startedAt) * 1000),
+                'needs_escalation' => (bool) ($parsed['needs_escalation'] ?? false),
+                'recommendation_count' => count($recommendations),
+            ]);
+
+            return [
+                'reply' => (string) $parsed['reply'],
+                'needs_escalation' => (bool) ($parsed['needs_escalation'] ?? false),
+                'recommendations' => $recommendations,
+                'show_consultation' => (bool) ($parsed['show_consultation'] ?? false),
+            ];
+        } catch (\Throwable $e) {
+            Log::error('LivoraAssistant error: ' . $e->getMessage());
+            return [
+                'reply' => 'Maaf, saya sedang tidak bisa memproses pertanyaan itu. Mau saya hubungkan ke customer service kami?',
+                'needs_escalation' => true,
+                'recommendations' => [],
+                'show_consultation' => false,
+            ];
+        }
     }
-}
- private function systemPrompt(string $context): string
+
+    /**
+     * Jaring pengaman darurat GLOBAL. Angkanya sangat tinggi (lihat
+     * EMERGENCY_DAILY_LIMIT) — tujuannya cuma menahan kalau ada insiden
+     * ekstrem (bug infinite loop, bot masif), BUKAN pembatas operasional
+     * harian. Traffic customer normal, sebanyak apapun, tidak akan
+     * menyentuh angka ini.
+     */
+    private function emergencyLimitReached(): bool
+    {
+        $key = 'gemini_emergency_' . now('UTC')->format('Y-m-d');
+        $used = Cache::increment($key);
+        if ($used === 1) {
+            Cache::put($key, 1, now('UTC')->endOfDay());
+        }
+        return $used > self::EMERGENCY_DAILY_LIMIT;
+    }
+
+    /**
+     * Rate-limit + deteksi pola bot PER USER/SESI. TIDAK pernah mempengaruhi
+     * user lain. Dua syarat harus dua-duanya terpenuhi sebelum benar-benar
+     * di-cooldown:
+     *  1) volume pesan melewati SPAM_MAX_MESSAGES dalam SPAM_WINDOW_SECONDS
+     *  2) sebagian besar pesan itu identik/duplikat (ciri bot, bukan manusia
+     *     yang ngetik cepat tapi isinya beda-beda)
+     * Kalau cuma syarat (1) terpenuhi tanpa (2), dianggap "rame tapi wajar"
+     * dan tetap dijawab normal — cuma dicatat ke log untuk dipantau.
+     *
+     * Identitas diambil dari $options['session_id'] atau $options['user_id']
+     * kalau dikirim dari controller; fallback ke IP kalau tidak ada.
+     * Sebaiknya controller selalu kirim session_id/user_id supaya akurat,
+     * karena banyak user bisa berbagi IP yang sama (mis. WiFi kantor).
+     */
+    private function checkSpam(string $message, array $options): bool
+    {
+        $identity = $options['session_id']
+            ?? $options['user_id']
+            ?? request()->ip()
+            ?? 'unknown';
+        $hash = md5((string) $identity);
+
+        $cooldownKey = 'gemini_spam_cooldown_' . $hash;
+        if (Cache::has($cooldownKey)) {
+            return true;
+        }
+
+        // Hitung volume pesan dalam window berjalan.
+        $windowKey = 'gemini_spam_window_' . $hash;
+        $count = Cache::increment($windowKey);
+        if ($count === 1) {
+            Cache::put($windowKey, 1, now()->addSeconds(self::SPAM_WINDOW_SECONDS));
+        }
+
+        // Lacak pesan identik berturut-turut (ciri khas bot/script).
+        $lastMsgKey = 'gemini_spam_lastmsg_' . $hash;
+        $dupCountKey = 'gemini_spam_dupcount_' . $hash;
+        $normalized = mb_strtolower(trim($message));
+        $lastMsg = Cache::get($lastMsgKey);
+
+        if ($lastMsg !== null && $lastMsg === $normalized) {
+            $dupCount = Cache::increment($dupCountKey);
+        } else {
+            $dupCount = 1;
+            Cache::put($dupCountKey, 1, now()->addSeconds(self::SPAM_WINDOW_SECONDS));
+        }
+        Cache::put($lastMsgKey, $normalized, now()->addSeconds(self::SPAM_WINDOW_SECONDS));
+
+        $volumeExceeded = $count > self::SPAM_MAX_MESSAGES;
+        $looksLikeBot   = $dupCount >= self::SPAM_DUPLICATE_THRESHOLD;
+
+        if ($volumeExceeded && $looksLikeBot) {
+            Cache::put($cooldownKey, true, now()->addSeconds(self::SPAM_COOLDOWN_SECONDS));
+            return true;
+        }
+
+        if ($volumeExceeded) {
+            // Rame tapi kelihatannya manusia asli — jangan diblokir, cukup dicatat.
+            Log::info('LivoraAssistant: volume tinggi tapi bukan pola bot', [
+                'identity_hash' => $hash,
+                'count' => $count,
+            ]);
+        }
+
+        return false;
+    }
+
+    private function systemPrompt(string $context): string
     {
         $brand = self::BRAND_PROFILE;
         $siteGuide = self::SITE_GUIDE;
@@ -525,188 +651,187 @@ PROMPT;
      * dipakai di project ini: base URL storage = APP_URL tanpa "/api".
      */
     private function absoluteUrl(?string $path): ?string
-{
-    if (!$path) {
-        return null;
-    }
-    if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-        return $path;
-    }
-
-    // Kembalikan path relatif "/storage/..." saja — frontend (imgUrl) yang
-    // menempelkan origin backend, supaya tidak bergantung APP_URL yang bisa salah.
-    $path = '/' . ltrim($path, '/');
-    return str_starts_with($path, '/storage/') ? $path : '/storage' . $path;
-}
-
-    /** Retrieval dari database + item yang sedang dilihat user (kalau ada). */
-    /** Retrieval dari database + item yang sedang dilihat user (kalau ada). */
-public function buildContext(string $message, array $options = []): string
-{
-    $chunks = [];
-
-    $focusSlug = $options['item_slug'] ?? null;
-    if ($focusSlug) {
-        $item = Item::query()->where('slug', $focusSlug)->first();
-        if ($item) {
-            $chunks[] = '[Item yang sedang dilihat user] ' . $this->describeItem($item);
+    {
+        if (!$path) {
+            return null;
         }
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        // Kembalikan path relatif "/storage/..." saja — frontend (imgUrl) yang
+        // menempelkan origin backend, supaya tidak bergantung APP_URL yang bisa salah.
+        $path = '/' . ltrim($path, '/');
+        return str_starts_with($path, '/storage/') ? $path : '/storage' . $path;
     }
 
-    $keywords = $this->extractKeywords($message);
-    $intent = (new \App\Services\IntentClassifier())->classify($message);
+    /** Retrieval dari database + item yang sedang dilihat user (kalau ada). */
+    public function buildContext(string $message, array $options = []): string
+    {
+        $chunks = [];
 
-    if (!empty($keywords)) {
-        // product_search / general → boleh query Item (style_mood skip,
-        // karena user tanya suasana/gaya, bukan barang spesifik)
-        if (in_array($intent, [
-            \App\Services\IntentClassifier::PRODUCT_SEARCH,
-            \App\Services\IntentClassifier::GENERAL,
-        ], true)) {
-            // Kalau user minta beberapa jenis barang sekaligus ("sofa dan meja"),
-            // jalankan query TERPISAH untuk tiap jenis supaya semua permintaan
-            // terwakili — bukan cuma jenis pertama yang kebetulan match duluan.
-            $groups = $this->keywordGroups($keywords);
-            $seen = [];
+        $focusSlug = $options['item_slug'] ?? null;
+        if ($focusSlug) {
+            $item = Item::query()->where('slug', $focusSlug)->first();
+            if ($item) {
+                $chunks[] = '[Item yang sedang dilihat user] ' . $this->describeItem($item);
+            }
+        }
 
-            foreach ($groups as $group) {
-                $items = Item::query()
-                    ->when($focusSlug, fn ($q) => $q->where('slug', '!=', $focusSlug))
-                    ->when($seen, fn ($q) => $q->whereNotIn('slug', $seen))
-                    ->where(function ($q) use ($group) {
-                        foreach ($group as $kw) {
+        $keywords = $this->extractKeywords($message);
+        $intent = (new \App\Services\IntentClassifier())->classify($message);
+
+        if (!empty($keywords)) {
+            // product_search / general → boleh query Item (style_mood skip,
+            // karena user tanya suasana/gaya, bukan barang spesifik)
+            if (in_array($intent, [
+                \App\Services\IntentClassifier::PRODUCT_SEARCH,
+                \App\Services\IntentClassifier::GENERAL,
+            ], true)) {
+                // Kalau user minta beberapa jenis barang sekaligus ("sofa dan meja"),
+                // jalankan query TERPISAH untuk tiap jenis supaya semua permintaan
+                // terwakili — bukan cuma jenis pertama yang kebetulan match duluan.
+                $groups = $this->keywordGroups($keywords);
+                $seen = [];
+
+                foreach ($groups as $group) {
+                    $items = Item::query()
+                        ->when($focusSlug, fn ($q) => $q->where('slug', '!=', $focusSlug))
+                        ->when($seen, fn ($q) => $q->whereNotIn('slug', $seen))
+                        ->where(function ($q) use ($group) {
+                            foreach ($group as $kw) {
+                                $q->orWhere('title', 'like', "%{$kw}%")
+                                  ->orWhere('description', 'like', "%{$kw}%")
+                                  ->orWhere('texture', 'like', "%{$kw}%")
+                                  ->orWhere('finish', 'like', "%{$kw}%");
+                            }
+                        })
+                        ->with(['type', 'collection'])
+                        ->limit(4)
+                        ->get();
+
+                    if ($items->isEmpty()) {
+                        continue;
+                    }
+
+                    $label = $group[0];
+                    foreach ($items as $item) {
+                        $seen[] = $item->slug;
+                        $chunks[] = "[Item · permintaan \"{$label}\"] " . $this->describeItem($item);
+                    }
+                }
+            }
+
+            // portfolio / general → boleh query Project
+            if (in_array($intent, [
+                \App\Services\IntentClassifier::PORTFOLIO,
+                \App\Services\IntentClassifier::GENERAL,
+            ], true)) {
+                $projects = Project::query()
+                    ->where(function ($q) use ($keywords) {
+                        foreach ($keywords as $kw) {
                             $q->orWhere('title', 'like', "%{$kw}%")
+                              ->orWhere('subtitle', 'like', "%{$kw}%")
                               ->orWhere('description', 'like', "%{$kw}%")
-                              ->orWhere('texture', 'like', "%{$kw}%")
-                              ->orWhere('finish', 'like', "%{$kw}%");
+                              ->orWhere('location', 'like', "%{$kw}%");
                         }
                     })
-                    ->with(['type', 'collection'])
-                    ->limit(4)
-                    ->get();
+                    ->limit(3)
+                    ->get(['id', 'title', 'subtitle', 'description', 'location', 'year', 'slug']);
 
-                if ($items->isEmpty()) {
-                    continue;
-                }
-
-                $label = $group[0];
-                foreach ($items as $item) {
-                    $seen[] = $item->slug;
-                    $chunks[] = "[Item · permintaan \"{$label}\"] " . $this->describeItem($item);
+                foreach ($projects as $p) {
+                    $chunks[] = "[Project] {$p->title} ({$p->location}, {$p->year}) — {$p->description} | Slug: {$p->slug}";
                 }
             }
 
-        }
+            // product_search / style_mood / general → boleh query Collection
+            if (in_array($intent, [
+                \App\Services\IntentClassifier::PRODUCT_SEARCH,
+                \App\Services\IntentClassifier::STYLE_MOOD,
+                \App\Services\IntentClassifier::GENERAL,
+            ], true)) {
+                $collections = Collection::query()
+                    ->where(function ($q) use ($keywords) {
+                        foreach ($keywords as $kw) {
+                            $q->orWhere('name', 'like', "%{$kw}%")
+                              ->orWhere('description', 'like', "%{$kw}%");
+                        }
+                    })
+                    ->limit(3)
+                    ->get(['id', 'name', 'description', 'slug']);
 
-        // portfolio / general → boleh query Project
-        if (in_array($intent, [
-            \App\Services\IntentClassifier::PORTFOLIO,
-            \App\Services\IntentClassifier::GENERAL,
-        ], true)) {
-            $projects = Project::query()
-                ->where(function ($q) use ($keywords) {
-                    foreach ($keywords as $kw) {
-                        $q->orWhere('title', 'like', "%{$kw}%")
-                          ->orWhere('subtitle', 'like', "%{$kw}%")
-                          ->orWhere('description', 'like', "%{$kw}%")
-                          ->orWhere('location', 'like', "%{$kw}%");
-                    }
-                })
-                ->limit(3)
-                ->get(['id', 'title', 'subtitle', 'description', 'location', 'year', 'slug']);
+                foreach ($collections as $c) {
+                    $chunks[] = "[Collection] {$c->name} — {$c->description} | Slug: {$c->slug}";
+                }
+            }
 
-            foreach ($projects as $p) {
-                $chunks[] = "[Project] {$p->title} ({$p->location}, {$p->year}) — {$p->description} | Slug: {$p->slug}";
+            // style_mood / general → boleh query Catalog
+            if (in_array($intent, [
+                \App\Services\IntentClassifier::STYLE_MOOD,
+                \App\Services\IntentClassifier::GENERAL,
+            ], true)) {
+                $catalogs = Catalog::query()
+                    ->where(function ($q) use ($keywords) {
+                        foreach ($keywords as $kw) {
+                            $q->orWhere('title', 'like', "%{$kw}%")
+                              ->orWhere('description', 'like', "%{$kw}%")
+                              ->orWhere('category', 'like', "%{$kw}%")
+                              ->orWhere('taxonomy', 'like', "%{$kw}%");
+                        }
+                    })
+                    ->limit(3)
+                    ->get(['id', 'title', 'description', 'category', 'taxonomy', 'slug']);
+
+                foreach ($catalogs as $cat) {
+                    $chunks[] = "[Catalog] {$cat->title} (Kategori: {$cat->category}, Gaya: {$cat->taxonomy}) — {$cat->description} | Slug: {$cat->slug}";
+                }
             }
         }
 
-        // product_search / style_mood / general → boleh query Collection
-        if (in_array($intent, [
-            \App\Services\IntentClassifier::PRODUCT_SEARCH,
-            \App\Services\IntentClassifier::STYLE_MOOD,
-            \App\Services\IntentClassifier::GENERAL,
-        ], true)) {
-            $collections = Collection::query()
-                ->where(function ($q) use ($keywords) {
-                    foreach ($keywords as $kw) {
-                        $q->orWhere('name', 'like', "%{$kw}%")
-                          ->orWhere('description', 'like', "%{$kw}%");
-                    }
-                })
-                ->limit(3)
-                ->get(['id', 'name', 'description', 'slug']);
+        // company_info: sengaja tidak query apapun di atas — brand profile
+        // di systemPrompt() sudah cukup untuk jawab pertanyaan jenis ini.
 
-            foreach ($collections as $c) {
-                $chunks[] = "[Collection] {$c->name} — {$c->description} | Slug: {$c->slug}";
-            }
+        if (empty($chunks)) {
+            $chunks = $this->generalPicks();
         }
 
-        // style_mood / general → boleh query Catalog
-        if (in_array($intent, [
-            \App\Services\IntentClassifier::STYLE_MOOD,
-            \App\Services\IntentClassifier::GENERAL,
-        ], true)) {
-            $catalogs = Catalog::query()
-                ->where(function ($q) use ($keywords) {
-                    foreach ($keywords as $kw) {
-                        $q->orWhere('title', 'like', "%{$kw}%")
-                          ->orWhere('description', 'like', "%{$kw}%")
-                          ->orWhere('category', 'like', "%{$kw}%")
-                          ->orWhere('taxonomy', 'like', "%{$kw}%");
-                    }
-                })
-                ->limit(3)
-                ->get(['id', 'title', 'description', 'category', 'taxonomy', 'slug']);
-
-            foreach ($catalogs as $cat) {
-                $chunks[] = "[Catalog] {$cat->title} (Kategori: {$cat->category}, Gaya: {$cat->taxonomy}) — {$cat->description} | Slug: {$cat->slug}";
-            }
-        }
+        return implode("\n", $chunks);
     }
 
-    // company_info: sengaja tidak query apapun di atas — brand profile
-    // di systemPrompt() sudah cukup untuk jawab pertanyaan jenis ini.
-
-    if (empty($chunks)) {
-        $chunks = $this->generalPicks();
-    }
-
-    return implode("\n", $chunks);
-}
     private function generalPicks(): array
-{
-    $chunks = [];
+    {
+        $chunks = [];
 
-    $items = Item::query()->with(['type', 'collection'])
-        ->inRandomOrder()->limit(4)->get();
-    foreach ($items as $item) {
-        $chunks[] = '[Item] ' . $this->describeItem($item);
+        $items = Item::query()->with(['type', 'collection'])
+            ->inRandomOrder()->limit(4)->get();
+        foreach ($items as $item) {
+            $chunks[] = '[Item] ' . $this->describeItem($item);
+        }
+
+        $collections = Collection::query()->orderBy('display_order')
+            ->limit(3)->get(['id', 'name', 'description', 'slug']);
+        foreach ($collections as $c) {
+            $chunks[] = "[Collection] {$c->name} — {$c->description} | Slug: {$c->slug}";
+        }
+
+        $catalogs = Catalog::query()->limit(2)
+            ->get(['id', 'title', 'description', 'category', 'taxonomy', 'slug']);
+        foreach ($catalogs as $cat) {
+            $chunks[] = "[Catalog] {$cat->title} (Kategori: {$cat->category}, Gaya: {$cat->taxonomy}) — {$cat->description} | Slug: {$cat->slug}";
+        }
+
+        $projects = Project::query()->limit(2)
+            ->get(['id', 'title', 'subtitle', 'description', 'location', 'year', 'slug']);
+        foreach ($projects as $p) {
+            $chunks[] = "[Project] {$p->title} ({$p->location}, {$p->year}) — {$p->description} | Slug: {$p->slug}";
+        }
+
+        if (empty($chunks)) {
+            $chunks[] = $this->generalSummary();
+        }
+
+        return $chunks;
     }
-
-    $collections = Collection::query()->orderBy('display_order')
-        ->limit(3)->get(['id', 'name', 'description', 'slug']);
-    foreach ($collections as $c) {
-        $chunks[] = "[Collection] {$c->name} — {$c->description} | Slug: {$c->slug}";
-    }
-
-    $catalogs = Catalog::query()->limit(2)
-        ->get(['id', 'title', 'description', 'category', 'taxonomy', 'slug']);
-    foreach ($catalogs as $cat) {
-        $chunks[] = "[Catalog] {$cat->title} (Kategori: {$cat->category}, Gaya: {$cat->taxonomy}) — {$cat->description} | Slug: {$cat->slug}";
-    }
-
-    $projects = Project::query()->limit(2)
-        ->get(['id', 'title', 'subtitle', 'description', 'location', 'year', 'slug']);
-    foreach ($projects as $p) {
-        $chunks[] = "[Project] {$p->title} ({$p->location}, {$p->year}) — {$p->description} | Slug: {$p->slug}";
-    }
-
-    if (empty($chunks)) {
-        $chunks[] = $this->generalSummary();
-    }
-
-    return $chunks;
-}
 
     private function generalSummary(): string
     {
@@ -760,30 +885,30 @@ public function buildContext(string $message, array $options = []): string
     }
 
     private function extractKeywords(string $message): array
-{
-    $stopwords = ['yang', 'dan', 'atau', 'saya', 'kamu', 'ada', 'ini', 'itu', 'untuk', 'dengan',
-        'apakah', 'apa', 'bagaimana', 'mau', 'bisa', 'tentang', 'produk', 'the', 'and', 'is',
-        'are', 'for', 'about', 'this', 'that', 'you'];
+    {
+        $stopwords = ['yang', 'dan', 'atau', 'saya', 'kamu', 'ada', 'ini', 'itu', 'untuk', 'dengan',
+            'apakah', 'apa', 'bagaimana', 'mau', 'bisa', 'tentang', 'produk', 'the', 'and', 'is',
+            'are', 'for', 'about', 'this', 'that', 'you'];
 
-    $words = preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower(trim($message)));
-    $words = array_filter($words ?: [], fn ($w) => mb_strlen($w) > 2 && !in_array($w, $stopwords, true));
-    $words = array_values(array_unique($words));
+        $words = preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower(trim($message)));
+        $words = array_filter($words ?: [], fn ($w) => mb_strlen($w) > 2 && !in_array($w, $stopwords, true));
+        $words = array_values(array_unique($words));
 
-    // Perluas kata kunci Indonesia dengan padanan Inggris (dan sebaliknya)
-    // supaya tetap match kalau title/description produk ditulis dalam
-    // bahasa Inggris di database. Kata kunci asli tetap dipertahankan,
-    // sinonim cuma ditambahkan di belakang.
-    $expanded = $words;
-    foreach ($words as $w) {
-        if (isset(self::KEYWORD_SYNONYMS[$w])) {
-            foreach (self::KEYWORD_SYNONYMS[$w] as $syn) {
-                $expanded[] = $syn;
+        // Perluas kata kunci Indonesia dengan padanan Inggris (dan sebaliknya)
+        // supaya tetap match kalau title/description produk ditulis dalam
+        // bahasa Inggris di database. Kata kunci asli tetap dipertahankan,
+        // sinonim cuma ditambahkan di belakang.
+        $expanded = $words;
+        foreach ($words as $w) {
+            if (isset(self::KEYWORD_SYNONYMS[$w])) {
+                foreach (self::KEYWORD_SYNONYMS[$w] as $syn) {
+                    $expanded[] = $syn;
+                }
             }
         }
-    }
 
-    return array_slice(array_values(array_unique($expanded)), 0, 12);
-}
+        return array_slice(array_values(array_unique($expanded)), 0, 12);
+    }
 
     /**
      * Kelompokkan keyword jadi "permintaan" terpisah. Kata yang punya padanan
