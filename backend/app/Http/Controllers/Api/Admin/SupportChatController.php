@@ -126,6 +126,37 @@ class SupportChatController extends Controller
 
         return response()->json($this->sessionData($session->fresh()));
     }
+    /** POST /api/admin/support/sessions/{session}/reject */
+public function reject(Request $request, SupportSession $session)
+{
+    if ($session->status !== SupportSession::STATUS_PENDING_CS) {
+        return response()->json($this->sessionData($session));
+    }
+
+    $session->update([
+        'status'         => SupportSession::STATUS_BOT,
+        'admin_id'       => null,
+        'request_reason' => null,
+        'unread_user'    => $session->unread_user + 1,
+    ]);
+
+    $session->messages()->create([
+        'sender' => 'system',
+        'text'   => 'Permintaan untuk terhubung dengan customer service belum bisa kami proses saat ini. Kamu kembali dilayani oleh Livora Concierge (AI) — ketik "customer service" kapan saja untuk mencoba lagi.',
+    ]);
+    $session->update(['last_message_at' => now()]);
+
+    return response()->json($this->sessionData($session->fresh()));
+}
+
+/** DELETE /api/admin/support/sessions/{session} */
+public function destroy(SupportSession $session)
+{
+    $session->messages()->delete();
+    $session->delete();
+
+    return response()->json(['deleted' => true]);
+}
 
     private function sessionData(SupportSession $session): array
     {

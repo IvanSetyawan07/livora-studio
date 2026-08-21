@@ -116,6 +116,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('admin')->prefix('admin')->group(function () {
         // Variants (sebelumnya publik — kini wajib admin)
         Route::prefix('items/{itemId}/variants')->group(function () {
+            Route::post('/admin/support/sessions/{session}/reject', [\App\Http\Controllers\Api\Admin\SupportChatController::class, 'reject']);
+            Route::delete('/admin/support/sessions/{session}', [\App\Http\Controllers\Api\Admin\SupportChatController::class, 'destroy']);
             Route::get('/', [VariantController::class, 'index']);
             Route::post('/', [VariantController::class, 'store']);
             Route::put('/{variantId}', [VariantController::class, 'update']);

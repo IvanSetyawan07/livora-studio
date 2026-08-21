@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Send, Check, X, Headset } from "lucide-react";
+import { Loader2, Send, Check, X, Headset, Trash2 } from "lucide-react";
 import {
   getSupportSessions,
   getSupportMessages,
   acceptSupportSession,
   replySupportSession,
   closeSupportSession,
+  deleteSupportSession,
+  rejectSupportSession,
   type AdminSupportSession,
 } from "@/lib/adminSupportChat";
 import type { SupportMessage } from "@/lib/supportChat";
@@ -111,6 +113,36 @@ export default function AdminSupportChat() {
     }
   };
 
+  const reject = async () => {
+  if (!activeId) return;
+  try {
+    await rejectSupportSession(activeId);
+    toast.success("Permintaan CS ditolak — sesi kembali ke AI");
+    loadSessions();
+    const d = await getSupportMessages(activeId, lastId);
+    if (d.messages.length) setMessages((prev) => [...prev, ...d.messages]);
+  } catch {
+    toast.error("Gagal menolak sesi");
+  }
+};
+
+const remove = async (sessionId: number) => {
+  if (!window.confirm("Hapus percakapan ini secara permanen? Tindakan ini tidak bisa dibatalkan.")) return;
+  try {
+    await deleteSupportSession(sessionId);
+    toast.success("Percakapan dihapus");
+    if (activeId === sessionId) {
+      setActiveId(null);
+      setMessages([]);
+    }
+    loadSessions();
+  } catch {
+    toast.error("Gagal menghapus percakapan");
+  }
+};
+
+  
+
   const close = async () => {
     if (!activeId) return;
     try {
@@ -176,35 +208,47 @@ export default function AdminSupportChat() {
             <p className="p-6 text-sm text-muted-foreground">Belum ada percakapan.</p>
           ) : (
             sessions.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => setActiveId(s.id)}
-                className={`w-full text-left p-4 hover:bg-secondary/60 transition-colors ${
-                  activeId === s.id ? "bg-secondary" : ""
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className="text-sm">{s.display_name}</span>
-                  <span
-                    className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                      s.status === "pending_cs"
-                        ? "bg-amber-100 text-amber-700"
-                        : s.status === "active"
-                        ? "bg-green-50 text-green-700"
-                        : "bg-secondary text-muted-foreground"
-                    }`}
-                  >
-                    {STATUS_LABEL[s.status] ?? s.status}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground line-clamp-1">{s.last_message}</p>
-                {s.unread_admin > 0 && (
-                  <span className="mt-1 inline-block text-[10px] text-[#B08D57]">
-                    {s.unread_admin} pesan baru
-                  </span>
-                )}
-              </button>
-            ))
+  <div
+    key={s.id}
+    className={`relative group w-full ${activeId === s.id ? "bg-secondary" : ""}`}
+  >
+    <button
+      onClick={() => setActiveId(s.id)}
+      className="w-full text-left p-4 hover:bg-secondary/60 transition-colors pr-9"
+    >
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <span className="text-sm">{s.display_name}</span>
+        <span
+          className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full ${
+            s.status === "pending_cs"
+              ? "bg-amber-100 text-amber-700"
+              : s.status === "active"
+              ? "bg-green-50 text-green-700"
+              : "bg-secondary text-muted-foreground"
+          }`}
+        >
+          {STATUS_LABEL[s.status] ?? s.status}
+        </span>
+      </div>
+      <p className="text-xs text-muted-foreground line-clamp-1">{s.last_message}</p>
+      {s.unread_admin > 0 && (
+        <span className="mt-1 inline-block text-[10px] text-[#B08D57]">
+          {s.unread_admin} pesan baru
+        </span>
+      )}
+    </button>
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        remove(s.id);
+      }}
+      className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-600"
+      title="Hapus percakapan"
+    >
+      <Trash2 size={14} />
+    </button>
+  </div>
+))
           )}
         </div>
 
@@ -225,24 +269,33 @@ export default function AdminSupportChat() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  {active.status === "pending_cs" && (
-                    <button
-                      onClick={accept}
-                      className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] bg-foreground text-background px-3 py-2"
-                    >
-                      <Check size={13} /> Terima
-                    </button>
-                  )}
-                  {active.status === "active" && (
-                    <button
-                      onClick={close}
-                      className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] border border-border px-3 py-2"
-                    >
-                      <X size={13} /> Tutup
-                    </button>
-                  )}
-                </div>
+  {active.status === "pending_cs" && (
+    <>
+      <button
+        onClick={accept}
+        className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] bg-foreground text-background px-3 py-2"
+      >
+        <Check size={13} /> Terima
+      </button>
+      <button
+        onClick={reject}
+        className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] border border-border px-3 py-2 text-red-600"
+      >
+        <X size={13} /> Tolak
+      </button>
+    </>
+  )}
+  {active.status === "active" && (
+    <button
+      onClick={close}
+      className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] border border-border px-3 py-2"
+    >
+      <X size={13} /> Tutup
+    </button>
+  )}
+</div>
               </div>
+              
 
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#fafafa]">
                 {messages.map((m) =>

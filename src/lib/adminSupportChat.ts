@@ -16,7 +16,15 @@ export interface AdminSupportSession {
   last_message_at: string | null;
   unread_admin: number;
 }
+export async function rejectSupportSession(sessionId: number) {
+  const {data} = await api.post(`/admin/support/sessions/${sessionId}/reject`);
+  return data;
+}
 
+export async function deleteSupportSession(sessionId: number) {
+  const {data} = await api.delete(`/admin/support/sessions/${sessionId}`);
+  return data;
+}
 export async function getSupportSessions(status = "all") {
   const { data } = await api.get("/admin/support/sessions", { params: { status } });
   return data as { sessions: AdminSupportSession[]; pending: number };
