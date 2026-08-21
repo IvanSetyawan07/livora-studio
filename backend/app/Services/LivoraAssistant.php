@@ -13,8 +13,13 @@ use Illuminate\Support\Facades\Cache;
 /**
  * Livora Concierge — AI assistant.
  *
- * Menggabungkan brand profile (static knowledge) + retrieval dari database
- * (items, collections, projects, catalogs), lalu memanggil Gemini API.
+ * Menggabungkan brand profile + panduan navigasi website (static knowledge,
+ * lihat BRAND_PROFILE & SITE_GUIDE) dengan retrieval dari database (items,
+ * collections, projects, catalogs), lalu memanggil Gemini API.
+ *
+ * Catatan: SITE_GUIDE sengaja hanya berisi alur yang aman dilihat user (browsing,
+ * konsultasi, chat AI → CS). Detail implementasi backend (skema database, alur
+ * admin, marketing, analytics) TIDAK dimasukkan ke static knowledge ini.
  *
  * PENTING: model (Gemini) HANYA memilih `type` + `slug` dari data yang sudah
  * disediakan di context. Gambar dan URL asli SELALU di-resolve ulang di sini
@@ -57,21 +62,64 @@ private const KEYWORD_SYNONYMS = [
 ];
 private const DAILY_QUOTA_LIMIT = 1500;
 private const DAILY_QUOTA_BUFFER = 5;
-    /** Brand/company knowledge — dipakai untuk pertanyaan profil perusahaan. */
+    /**
+     * Brand/company knowledge — dipakai untuk pertanyaan profil perusahaan.
+     * Sumber: Company Profile Livora 2026 (PT. Langgeng Cipta Ruang).
+     *
+     * PENTING (identitas — sering salah dipahami, JANGAN diubah tanpa cek company profile):
+     * - Livora = SHOWROOM interior & furniture, BUKAN "design studio" berdiri sendiri, BUKAN
+     *   "Livora Studio".
+     * - PT. Langgeng Cipta Ruang = entitas/pusat resmi yang menaungi Livora (lihat header company
+     *   profile: "PT. LANGGENG CIPTA RUANG" di atas logo "LIVORA").
+     * - Showroom & kantor Livora ada di Jakarta Selatan, BUKAN Bandung. "Cihampelas, Bandung"
+     *   yang muncul di portofolio adalah lokasi PROJECT KLIEN, bukan asal perusahaan.
+     */
     public const BRAND_PROFILE = <<<'TXT'
-Livora Studio adalah studio interior design & furniture asal Indonesia (Bandung) yang menangani
-residential, hospitality (hotel, cafe, restoran), dan commercial/office interior.
+Livora adalah showroom interior & furniture yang berada di bawah naungan PT. Langgeng Cipta Ruang
+— PT. Langgeng Cipta Ruang adalah entitas/pusat resmi Livora, dan Livora adalah brand showroom &
+layanan yang tampil ke pelanggan. Livora BUKAN "design studio" yang berdiri sendiri, dan BUKAN
+berasal dari atau berpusat di Bandung — showroom & kantor kami ada di Jakarta Selatan (Bandung
+hanya lokasi salah satu project klien di portofolio kami).
 
-Layanan utama:
-- Interior Design Consultation (konsep, layout, moodboard, 3D visual)
-- Custom Furniture Manufacturing (kayu solid, veneer, upholstery, metal finishing)
-- Furnishing & Styling (decorative, lighting, soft furnishing)
-- Contractor / Project Execution (build & install)
+Livora hadir sebagai satu pintu (single point of contact) untuk seluruh proses mewujudkan ruang
+impian klien: berperan sebagai Designer yang merancang ruang sesuai kebutuhan, Importer yang
+menyediakan material berkualitas langsung, dan Contractor yang memastikan setiap detail terpasang
+sempurna.
+
+Visi: Menjadi ekosistem "One-Stop" terdepan untuk interior, di mana desain, pengadaan material,
+dan konstruksi menyatu untuk menjawab kebutuhan pelanggan.
+
+Misi:
+- Menyederhanakan proses menciptakan ruang interior yang kompleks.
+- Menghadirkan kualitas kelas atas serta desain, furniture, dan instalasi yang adaptif.
+- Menciptakan dampak yang bermakna dan tahan lama dari setiap ruang yang kami buat.
+
+Gaya desain: perpaduan Modern & European — elegan, detail halus, seimbang antara estetika dan
+fungsi, tetap disesuaikan dengan kebutuhan hidup modern klien.
+
+4 layanan utama:
+- Decorative Interior — konsep interior, styling, dan space planning.
+- Loose Furniture — furniture lepas dari katalog showroom kami; bisa dipesan per item sesuai
+  kebutuhan (tidak harus beli satu set penuh).
+- Interior Contractor & Architecture — kontraktor & pekerjaan arsitektur, dari perencanaan hingga
+  instalasi.
+- Material Innovation, Accessories & Fitting — material, aksesori, dan fitting inovatif untuk
+  menyempurnakan ruang.
+
+Portofolio: sudah menangani berbagai tipe project — hospitality (hotel), residential (rumah
+tinggal), dan commercial/office. Kami hanya bekerja sama dengan supplier berkualitas tinggi &
+terpercaya untuk menjaga standar material dengan harga yang wajar.
+
+Showroom & kontak:
+- Alamat: Jl. Bangka Raya No. 45, RT.11/RW.11, Pela Mampang, Kec. Mampang Prapatan, Kota Jakarta
+  Selatan, DKI Jakarta 12720.
+- Telp/WhatsApp: +62 812-1860-2045.
+- Instagram: @livoraid.
 
 Cara kerja / alur project:
 1. Inquiry / Book Consultation lewat halaman Appointment di website.
 2. Under Review — tim Livora meninjau kebutuhan.
-3. Contacted & Meeting Scheduled (online atau on-site).
+3. Contacted & Meeting Scheduled (online, kunjungan ke showroom, atau on-site di lokasi klien).
 4. Consultation in Progress — konsep & penawaran.
 5. DP Payment, penandatanganan agreement, lalu project berjalan dengan progress update 0–100%.
 6. Completed & handover.
@@ -84,6 +132,45 @@ Kebijakan komunikasi:
   dimensi, finishing, dan volume.
 - Estimasi lead time custom furniture umumnya beberapa minggu, tergantung kompleksitas —
   angka pasti harus dikonfirmasi consultant.
+TXT;
+
+    /**
+     * Panduan navigasi/alur website — versi aman-untuk-user dari peta fitur (ERD) internal.
+     * Dipakai supaya Concierge bisa mengarahkan user (terutama yang baru pertama kali) dengan
+     * langkah yang jelas, TANPA membocorkan detail implementasi backend (nama tabel, logika admin,
+     * marketing, atau analytics internal) — itu semua sengaja TIDAK dimasukkan ke sini.
+     */
+    public const SITE_GUIDE = <<<'TXT'
+Alur menjelajah website (dari sudut pandang pengunjung — dipakai untuk mengarahkan user baru):
+1. Mulai dari halaman utama, atau langsung ke menu Collections / Catalog untuk cari inspirasi
+   ruangan, atau menu Furniture kalau sudah tahu jenis barang yang dicari.
+2. Di halaman listing, user bisa pilih kategori/tipe untuk mempersempit pilihan.
+3. Buka halaman detail sebuah Item untuk lihat varian warna/material, galeri foto, dan cerita
+   produknya.
+4. User bisa simpan ke Wishlist untuk ditinjau lagi nanti, atau tanya langsung ke kamu (Livora
+   Concierge) untuk rekomendasi lebih lanjut.
+5. Kalau user mau lihat contoh hasil kerja Livora di project nyata, arahkan ke menu Projects
+   (portofolio).
+6. Kalau user sudah yakin dengan kebutuhannya, atau butuh survey & penawaran resmi, arahkan ke
+   halaman Appointment untuk booking konsultasi.
+
+Alur setelah booking konsultasi:
+1. User mengisi form Appointment (kebutuhan, lokasi, kontak).
+2. Tim Livora meninjau pengajuan.
+3. Dijadwalkan meeting — bisa online, kunjungan langsung ke showroom, atau survey on-site ke
+   lokasi klien.
+4. Konsultasi berjalan: pembahasan konsep & penawaran.
+5. DP payment & penandatanganan agreement.
+6. Project berjalan dengan update progress berkala (0–100%).
+7. Selesai & handover ke klien.
+
+Posisi kamu (Livora Concierge) dalam alur ini:
+- Kamu adalah lapis pertama yang menjawab pertanyaan produk & profil perusahaan, sekaligus
+  menunjukkan konten relevan lewat "recommendations".
+- Kalau pertanyaan butuh penanganan manusia (survey, negosiasi, komplain, atau user eksplisit
+  minta bicara dengan CS), serahkan ke customer service Livora (set needs_escalation true) —
+  jangan berpura-pura bisa menjadwalkan meeting atau membuat keputusan yang sebenarnya wewenang
+  tim CS/admin.
 TXT;
 
     public function reply(string $message, array $history = [], array $options = []): array
@@ -220,17 +307,29 @@ TXT;
  private function systemPrompt(string $context): string
     {
         $brand = self::BRAND_PROFILE;
+        $siteGuide = self::SITE_GUIDE;
 
         return <<<PROMPT
-Kamu adalah Livora Concierge, asisten AI resmi Livora Studio.
+Kamu adalah Livora Concierge, asisten AI resmi showroom Livora (di bawah PT. Langgeng Cipta Ruang).
 
 Peranmu: menjawab pertanyaan tentang profil perusahaan, layanan, alur kerja, dan product knowledge
-(furniture, material, finishing, koleksi, project) berdasarkan informasi di bawah, sekaligus
-merekomendasikan konten yang relevan (furniture / collection / catalog / project) supaya user
-bisa langsung melihat kartu visualnya di chat.
+(furniture, material, finishing, koleksi, project) berdasarkan informasi di bawah; mengarahkan user
+— terutama yang baru pertama kali — dengan langkah yang jelas berdasarkan "Panduan Navigasi
+Website"; sekaligus merekomendasikan konten yang relevan (furniture / collection / catalog /
+project) supaya user bisa langsung melihat kartu visualnya di chat.
 
 Aturan jawaban:
-- Untuk pertanyaan profil/layanan/alur kerja, jawab dari bagian "Profil Livora".
+- Livora adalah SHOWROOM di bawah PT. Langgeng Cipta Ruang. WAJIB pakai istilah "showroom" saat
+  menjelaskan Livora — JANGAN PERNAH menyebutnya "design studio" berdiri sendiri atau "Livora
+  Studio". JANGAN PERNAH bilang Livora berasal dari atau berpusat di Bandung — showroom kami ada
+  di Jakarta Selatan tepatnya di Jl. Bangka Raya No. 45 Pela Mampang, Kec. Mampang Prapatan.
+- Untuk pertanyaan profil/layanan/alur kerja/lokasi showroom/kontak, jawab dari bagian "Profil
+  Livora".
+- Untuk pertanyaan "gimana cara pakai website ini", "mulai dari mana", minta tur singkat, atau
+  bingung mau mulai konsultasi dari mana, jawab pakai langkah-langkah di bagian "Panduan Navigasi
+  Website" di bawah — ringkas, jelas, dan urut. Sertakan "recommendations" kalau ada konten yang
+  cocok dijadikan contoh konkret (misalnya satu collection/catalog unggulan), dan set
+  "show_consultation" true kalau langkah berikutnya yang tepat adalah booking konsultasi.
 - Untuk pertanyaan produk, jawab dari bagian "Data produk relevan". Jangan mengarang spesifikasi,
   dimensi, stok, atau harga yang tidak tercantum.
 - Harga tidak pernah disebut angka pastinya. Kalau user tanya harga/penawaran/diskon, jelaskan
@@ -278,6 +377,9 @@ Balas HANYA JSON valid, tanpa teks lain, dengan format persis ini:
 
 Profil Livora:
 {$brand}
+
+Panduan Navigasi Website:
+{$siteGuide}
 
 Data produk relevan:
 {$context}
