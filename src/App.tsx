@@ -53,6 +53,17 @@ import AdminItemDetail from "./pages/admin/AdminItemDetail.tsx";
 import SalesScan from "./pages/sales/SalesScan.tsx";
 import SalesItemDetail from "./pages/sales/SalesItemDetail.tsx";
 import RequireRole from "./components/RequireRole.tsx";
+import AiMarketingShell from "./pages/admin/ai-marketing/AiMarketingShell";
+import AiMarketingOverview from "./pages/admin/ai-marketing/AiMarketingOverview";
+import AiMarketingInsights from "./pages/admin/ai-marketing/AiMarketingInsights";
+import AiMarketingSeo from "./pages/admin/ai-marketing/AiMarketingSeo";
+import AiMarketingContent from "./pages/admin/ai-marketing/AiMarketingContent";
+import AiMarketingAds from "./pages/admin/ai-marketing/AiMarketingAds";
+import AiMarketingLeads from "./pages/admin/ai-marketing/AiMarketingLeads";
+import AiMarketingCro from "./pages/admin/ai-marketing/AiMarketingCro";
+import AiMarketingApprovals from "./pages/admin/ai-marketing/AiMarketingApprovals";
+import AiMarketingActivity from "./pages/admin/ai-marketing/AiMarketingActivity";
+import AiMarketingSettings from "./pages/admin/ai-marketing/AiMarketingSettings";
 
 const queryClient = new QueryClient();
 
@@ -91,6 +102,21 @@ function App() {
                 <Route path="/sales/items/:slug" element={<SalesItemDetail />} />
               </Route>
               <Route path="/dashboard" element={<Dashboard />} />
+
+              {/* Standalone AI Marketing section — own shell/theme, NOT nested inside AdminLayout */}
+              <Route path="/admin/ai-marketing" element={<AiMarketingShell />}>
+                <Route index element={<AiMarketingOverview />} />
+                <Route path="insights" element={<AiMarketingInsights />} />
+                <Route path="seo" element={<AiMarketingSeo />} />
+                <Route path="content" element={<AiMarketingContent />} />
+                <Route path="ads" element={<AiMarketingAds />} />
+                <Route path="leads" element={<AiMarketingLeads />} />
+                <Route path="cro" element={<AiMarketingCro />} />
+                <Route path="approvals" element={<AiMarketingApprovals />} />
+                <Route path="activity" element={<AiMarketingActivity />} />
+                <Route path="settings" element={<AiMarketingSettings />} />
+              </Route>
+
               <Route path="/admin" element={<AdminLayout />}>
                <Route path="consultations" element={<AdminConsultations />} />
                <Route path="consultations/:id" element={<AdminConsultationDetail />} />

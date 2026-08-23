@@ -1,0 +1,162 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+
+/*
+ * Scoped theme for the standalone "AI Marketing" section.
+ * Wrap the whole section in <div className="dark ai-marketing-scope">.
+ * `dark` flips Livora's existing shadcn tokens (background, foreground,
+ * card, border, muted, secondary, accent...) to the palette already
+ * defined in index.css .dark { ... }. This file adds the tokens the
+ * dashboards need on top of that (brass accent, chart palette, status
+ * colours, darker sidebar) plus the matching utility classes, so the
+ * section renders identically without touching tailwind.config.
+ */
+
+.ai-marketing-scope {
+  --brass: 38 55% 68%;
+  --border-strong: 0 0% 100% / 0.16;
+
+  /* Status colours */
+  --success: 152 55% 48%;
+  --warning: 40 90% 58%;
+  --info: 210 85% 62%;
+
+  /* Surfaces */
+  --surface: 30 9% 11%;
+  --surface-raised: 30 8% 14%;
+
+  /* Chart palette — Instagram pink, Facebook blue, TikTok teal,
+     YouTube red, brass. */
+  --chart-1: 330 78% 62%;
+  --chart-2: 217 88% 60%;
+  --chart-3: 172 68% 48%;
+  --chart-4: 0 78% 57%;
+  --chart-5: 38 85% 62%;
+
+  --sidebar-background: 30 10% 5%;
+  --sidebar-foreground: 36 20% 88%;
+  --sidebar-accent: 30 8% 14%;
+  --sidebar-accent-foreground: 36 20% 96%;
+  --sidebar-border: 0 0% 100% / 0.08;
+
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* --- colour utilities (independent from tailwind.config) ---------- */
+.ai-marketing-scope .text-brass { color: hsl(var(--brass)); }
+.ai-marketing-scope .text-brass\/80 { color: hsl(var(--brass) / 0.8); }
+.ai-marketing-scope .bg-brass { background-color: hsl(var(--brass)); }
+.ai-marketing-scope .bg-brass\/10 { background-color: hsl(var(--brass) / 0.1); }
+.ai-marketing-scope .bg-brass\/12 { background-color: hsl(var(--brass) / 0.12); }
+.ai-marketing-scope .bg-brass\/40 { background-color: hsl(var(--brass) / 0.4); }
+.ai-marketing-scope .border-brass { border-color: hsl(var(--brass)); }
+.ai-marketing-scope .border-brass\/25 { border-color: hsl(var(--brass) / 0.25); }
+.ai-marketing-scope .border-brass\/40 { border-color: hsl(var(--brass) / 0.4); }
+.ai-marketing-scope .border-brass\/50 { border-color: hsl(var(--brass) / 0.5); }
+.ai-marketing-scope .ring-brass\/15 { --tw-ring-color: hsl(var(--brass) / 0.15); }
+
+.ai-marketing-scope .border-border-strong { border-color: hsl(var(--border-strong)); }
+.ai-marketing-scope .bg-border-strong { background-color: hsl(var(--border-strong)); }
+
+.ai-marketing-scope .text-success { color: hsl(var(--success)); }
+.ai-marketing-scope .bg-success { background-color: hsl(var(--success)); }
+.ai-marketing-scope .bg-success\/12 { background-color: hsl(var(--success) / 0.12); }
+.ai-marketing-scope .text-warning { color: hsl(var(--warning)); }
+.ai-marketing-scope .bg-warning\/12 { background-color: hsl(var(--warning) / 0.12); }
+.ai-marketing-scope .text-info { color: hsl(var(--info)); }
+.ai-marketing-scope .bg-info\/12 { background-color: hsl(var(--info) / 0.12); }
+.ai-marketing-scope .bg-destructive\/14 { background-color: hsl(var(--destructive) / 0.14); }
+.ai-marketing-scope .bg-muted-foreground\/12 { background-color: hsl(var(--muted-foreground) / 0.12); }
+
+.ai-marketing-scope .bg-surface { background-color: hsl(var(--surface)); }
+.ai-marketing-scope .bg-surface\/40 { background-color: hsl(var(--surface) / 0.4); }
+.ai-marketing-scope .bg-surface-raised { background-color: hsl(var(--surface-raised)); }
+
+.ai-marketing-scope .text-chart-1 { color: hsl(var(--chart-1)); }
+.ai-marketing-scope .text-chart-2 { color: hsl(var(--chart-2)); }
+.ai-marketing-scope .text-chart-3 { color: hsl(var(--chart-3)); }
+.ai-marketing-scope .text-chart-4 { color: hsl(var(--chart-4)); }
+.ai-marketing-scope .bg-chart-1 { background-color: hsl(var(--chart-1)); }
+.ai-marketing-scope .bg-chart-2 { background-color: hsl(var(--chart-2)); }
+.ai-marketing-scope .bg-chart-3 { background-color: hsl(var(--chart-3)); }
+.ai-marketing-scope .bg-chart-4 { background-color: hsl(var(--chart-4)); }
+
+.ai-marketing-scope .text-display {
+  font-family: 'Cormorant Garamond', 'Times New Roman', serif;
+  font-weight: 300;
+  letter-spacing: -0.01em;
+}
+
+.ai-marketing-scope .label-eyebrow {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+
+.ai-marketing-scope .panel {
+  background-image: linear-gradient(160deg, hsl(var(--card)) 0%, hsl(var(--background)) 100%);
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 1px 0 0 hsl(0 0% 100% / 5%) inset, 0 18px 40px -24px hsl(0 0% 0% / 80%);
+  border-radius: calc(var(--radius) + 2px);
+}
+
+.ai-marketing-scope .panel-hover {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s ease, box-shadow 0.35s ease;
+}
+.ai-marketing-scope .panel-hover:hover {
+  transform: translateY(-3px);
+  border-color: hsl(var(--border-strong));
+  box-shadow: 0 24px 60px -32px hsl(0 0% 0% / 90%);
+}
+
+.ai-marketing-scope .rule-accent {
+  position: relative;
+  padding-left: 0.75rem;
+}
+.ai-marketing-scope .rule-accent::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.15em;
+  bottom: 0.15em;
+  width: 2px;
+  background: hsl(var(--brass));
+}
+
+.ai-marketing-scope .num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.ai-marketing-scope .scroll-rail {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border-strong)) transparent;
+}
+.ai-marketing-scope .scroll-rail::-webkit-scrollbar { height: 6px; }
+.ai-marketing-scope .scroll-rail::-webkit-scrollbar-thumb {
+  background: hsl(var(--border-strong));
+  border-radius: 999px;
+}
+
+/* --- animations --------------------------------------------------- */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+  50% { opacity: 0.65; box-shadow: 0 0 0 4px transparent; }
+}
+@keyframes ai-pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+  50% { opacity: 0.65; box-shadow: 0 0 0 4px transparent; }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.ai-marketing-scope .animate-pulse-dot {
+  animation: ai-pulse-dot 2.4s ease-in-out infinite;
+}
+
+/* Recharts legend/axis text should follow the section palette */
+.ai-marketing-scope .recharts-legend-item-text { color: hsl(var(--muted-foreground)) !important; }
+.ai-marketing-scope .recharts-surface { overflow: visible; }

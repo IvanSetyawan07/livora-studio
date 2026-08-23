@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Menu, X, User, ChevronDown, ChevronRight, Plus, Search, ArrowLeft, Package, LogOut, Bookmark, ClipboardList, Shield, Camera } from "lucide-react";
+import { Menu, X, User, ChevronDown, ChevronRight, Plus, Search, ArrowLeft, Package, LogOut, Bookmark, ClipboardList, Shield, Camera, Sparkles } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/livora/LanguageSwitcher";
@@ -491,6 +491,24 @@ export const Navbar = () => {
                           <Shield size={16} /> Admin Panel
                         </Link>
                       )}
+                      {authUser.role === "admin" && (
+  <Link
+    to="/admin/ai-marketing"
+    onClick={() => setProfileOpen(false)}
+    className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60 border-t border-border"
+  >
+    <Sparkles size={16} /> AI Marketing
+  </Link>
+)}
+{authUser.role === "admin" && (
+  <Link
+    to="/admin"
+    onClick={() => setProfileOpen(false)}
+    className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60"
+  >
+    <Shield size={16} /> Admin Panel
+  </Link>
+)}
                       <button
                         onClick={handleLogout}
                         className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60 border-t border-border text-red-600"

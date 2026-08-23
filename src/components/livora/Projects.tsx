@@ -166,22 +166,24 @@ export const Projects = () => {
             },
           );
         }
-
-        // gentle physicality: the whole card drifts + rotates as it crosses the track
-          ScrollTrigger.create({
-    trigger: card,
-    containerAnimation: tween,
-    start: "left right",
-    end: "right left",
-    scrub: true,
-    onUpdate: (self) => {
-      const arc = 1 - Math.abs(self.progress - 0.5) * 2;
-      gsap.set(card, {
-        yPercent: 5 - arc * 8,
-        rotate: 1.5 - arc * 3,
-      });
-    },
-  });
+const setScaleX = gsap.quickTo(card, "scaleX", { duration: 0.4, ease: "power2.out" });
+const setScaleY = gsap.quickTo(card, "scaleY", { duration: 0.4, ease: "power2.out" });
+const setRotate = gsap.quickTo(card, "rotation", { duration: 0.4, ease: "power2.out" });        // gentle physicality: the whole card drifts + rotates as it crosses the track
+        ScrollTrigger.create({
+  trigger: card,
+  containerAnimation: tween,
+  start: "left right",
+  end: "right left",
+  scrub: true,
+  onUpdate: (self) => {
+    const p = self.progress;              // 0 = masuk dari kanan, 1 = keluar ke kiri
+    const arc = 1 - Math.abs(p - 0.5) * 2; // 0 di tepi, 1 tepat di tengah
+    const eased = gsap.parseEase("power2.inOut")(arc);
+    setScaleX(0.94 + eased * 0.06);
+setScaleY(0.94 + eased * 0.06);
+setRotate(4 * (1 - eased * 0.6));        // sedikit membesar di tengah
+  },
+});
 
         // breathing scale: card grows as it reaches the centre of the viewport
         const media = card.querySelector<HTMLElement>(".card-media");
