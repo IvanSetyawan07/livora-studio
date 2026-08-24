@@ -62,9 +62,9 @@ export const socialStats = [
 /* ---------------------------------------------------------------- */
 
 export const adsKpis = [
-  { label: "Total ad spend (30d)", value: "Rp. 4,798", delta: "within budget", direction: "up" as const },
+  { label: "Total ad spend (30d)", value: "$4798", delta: "within budget", direction: "up" as const },
   { label: "Leads generated", value: "163", delta: "31% vs last month", direction: "up" as const },
-  { label: "Cost per lead", value: "Rp. 29", delta: "12% vs last month", direction: "down" as const },
+  { label: "Cost per lead", value: "$29", delta: "12% vs last month", direction: "down" as const },
   { label: "Return on ad spend", value: "4.2x", delta: "0.6x vs last month", direction: "up" as const },
 ];
 

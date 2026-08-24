@@ -111,17 +111,15 @@ export function Panel({
   );
 }
 
-export type Tone = "neutral" | "success" | "warning" | "danger" | "info" | "brass" | "ai" | "insight";
+type Tone = "neutral" | "success" | "warning" | "danger" | "info" | "brass";
 
-export const toneText: Record<Tone, string> = {
+const toneText: Record<Tone, string> = {
   neutral: "text-muted-foreground",
   success: "text-success",
   warning: "text-warning",
   danger: "text-destructive",
   info: "text-info",
   brass: "text-brass",
-  ai: "text-ai",
-  insight: "text-insight",
 };
 
 const toneBg: Record<Tone, string> = {
@@ -131,48 +129,7 @@ const toneBg: Record<Tone, string> = {
   danger: "bg-destructive/14 text-destructive",
   info: "bg-info/12 text-info",
   brass: "bg-brass/12 text-brass",
-  ai: "bg-ai/12 text-ai",
-  insight: "bg-insight/12 text-insight",
 };
-
-/** Shared risk vocabulary for the AI Action Center. Distinct from the
- * narrower `AIRisk` recommendation type in lib/ai/types — this one adds
- * "critical" for actions that must never auto-execute. */
-export type ExecutionRisk = "low" | "medium" | "high" | "critical";
-
-export const riskTone: Record<ExecutionRisk, Tone> = {
-  low: "success",
-  medium: "warning",
-  high: "danger",
-  critical: "danger",
-};
-
-export function RiskPill({ risk, className }: { risk: ExecutionRisk; className?: string }) {
-  return (
-    <Pill tone={riskTone[risk]} className={className}>
-      <StatusDot tone={riskTone[risk]} pulse={risk === "critical"} />
-      {risk} risk
-    </Pill>
-  );
-}
-
-/** Priority vocabulary for Today's Priorities / AI Recommendations. */
-export type Priority = "low" | "medium" | "high";
-
-export const priorityTone: Record<Priority, Tone> = {
-  low: "success",
-  medium: "warning",
-  high: "danger",
-};
-
-export function PriorityPill({ priority, className }: { priority: Priority; className?: string }) {
-  return (
-    <Pill tone={priorityTone[priority]} className={cn("font-semibold", className)}>
-      <StatusDot tone={priorityTone[priority]} pulse={priority === "high"} />
-      {priority}
-    </Pill>
-  );
-}
 
 export function StatusDot({
   tone = "neutral",
@@ -274,17 +231,6 @@ export function CountUp({
   );
 }
 
-const sparklineToneClass: Record<string, string> = {
-  brass: "text-brass/80",
-  ai: "text-ai/80",
-  insight: "text-insight/80",
-  success: "text-success/80",
-  warning: "text-warning/80",
-  danger: "text-destructive/80",
-  info: "text-info/80",
-  muted: "text-muted-foreground/50",
-};
-
 export function Sparkline({
   points,
   className,
@@ -292,7 +238,7 @@ export function Sparkline({
 }: {
   points: number[];
   className?: string;
-  tone?: "brass" | "ai" | "insight" | "success" | "warning" | "danger" | "info" | "muted";
+  tone?: "brass" | "muted";
 }) {
   const { ref, inView } = useInView<HTMLDivElement>();
   const max = Math.max(...points, 1);
@@ -315,7 +261,7 @@ export function Sparkline({
           stroke="currentColor"
           strokeWidth="1.25"
           vectorEffect="non-scaling-stroke"
-          className={sparklineToneClass[tone] ?? sparklineToneClass.muted}
+          className={tone === "brass" ? "text-brass/80" : "text-muted-foreground/50"}
           style={{
             strokeDasharray: 200,
             strokeDashoffset: inView ? 0 : 200,
@@ -340,126 +286,6 @@ export function ConfidenceBar({ value, className }: { value: number; className?:
           className="h-full rounded-full bg-brass transition-[width] duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)]"
           style={{ width: inView ? `${value}%` : "0%" }}
         />
-      </div>
-    </div>
-  );
-}
-
-/** Generic labelled, animated progress bar — used for AI confidence,
- * routing quality/speed/cost, and anywhere else a percentage needs to
- * feel alive instead of static. */
-export function AnimatedBar({
-  label,
-  value,
-  valueLabel,
-  tone = "ai",
-  className,
-}: {
-  label: string;
-  value: number;
-  valueLabel?: string;
-  tone?: Tone;
-  className?: string;
-}) {
-  const { ref, inView } = useInView<HTMLDivElement>();
-  const fillClass =
-    tone === "ai"
-      ? "bg-ai"
-      : tone === "insight"
-        ? "bg-insight"
-        : tone === "success"
-          ? "bg-success"
-          : tone === "warning"
-            ? "bg-warning"
-            : tone === "danger"
-              ? "bg-destructive"
-              : tone === "info"
-                ? "bg-info"
-                : "bg-brass";
-  return (
-    <div ref={ref} className={cn("space-y-1.5", className)}>
-      <div className="flex items-center justify-between">
-        <span className="label-eyebrow">{label}</span>
-        <span className={cn("num text-xs", toneText[tone])}>{valueLabel ?? `${Math.round(value)}%`}</span>
-      </div>
-      <div className="h-[3px] w-full overflow-hidden rounded-full bg-border">
-        <div
-          className={cn("h-full rounded-full transition-[width] duration-[1100ms] ease-[cubic-bezier(0.16,1,0.3,1)]", fillClass)}
-          style={{ width: inView ? `${Math.max(0, Math.min(100, value))}%` : "0%" }}
-        />
-      </div>
-    </div>
-  );
-}
-
-/**
- * Animated circular percentage gauge — the signature "alive number" for
- * Business Health and any other headline score. Sweeps in on view instead
- * of appearing static, so the dashboard never feels flat or sleep-inducing.
- */
-export function RadialGauge({
-  value,
-  size = 128,
-  strokeWidth = 10,
-  tone = "ai",
-  suffix = "",
-  label,
-  className,
-}: {
-  value: number;
-  size?: number;
-  strokeWidth?: number;
-  tone?: "ai" | "success" | "warning" | "danger" | "insight";
-  suffix?: string;
-  label?: string;
-  className?: string;
-}) {
-  const { ref, inView } = useInView<HTMLDivElement>();
-  const clamped = Math.max(0, Math.min(100, value));
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference * (1 - clamped / 100);
-  const strokeColor =
-    tone === "success"
-      ? "hsl(var(--success))"
-      : tone === "warning"
-        ? "hsl(var(--warning))"
-        : tone === "danger"
-          ? "hsl(var(--destructive))"
-          : tone === "insight"
-            ? "hsl(var(--insight))"
-            : "hsl(var(--ai))";
-
-  return (
-    <div ref={ref} className={cn("relative inline-flex shrink-0 items-center justify-center", className)}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="hsl(var(--border))"
-          strokeWidth={strokeWidth}
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={strokeColor}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={inView ? offset : circumference}
-          style={{
-            transition: "stroke-dashoffset 1.3s cubic-bezier(0.16, 1, 0.3, 1)",
-            filter: `drop-shadow(0 0 6px ${strokeColor.replace(")", " / 0.35)")})`,
-          }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center rotate-0">
-        <CountUp value={value} duration={1300} className="text-display text-3xl leading-none" suffix={suffix} />
-        {label ? <span className="label-eyebrow mt-1">{label}</span> : null}
       </div>
     </div>
   );

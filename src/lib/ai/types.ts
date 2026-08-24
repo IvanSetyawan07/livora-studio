@@ -68,6 +68,8 @@ export interface AIInsight {
   createdAt: string;
 }
 
+export type AIPriority = "low" | "medium" | "high";
+
 export interface AIRecommendation {
   id: string;
   insightId: string;
@@ -80,6 +82,14 @@ export interface AIRecommendation {
   confidence: number;
   agent: AIAgentId;
   createdAt: string;
+  /** Priority used for Overview surfacing — distinct from execution risk. */
+  priority?: AIPriority;
+  /** Why the AI is suggesting this — the reasoning, not just the finding. */
+  why?: string;
+  /** The concrete lever the AI would pull if approved, e.g. "$100/day → $85/day". */
+  suggestedAction?: string;
+  /** Current live value → proposed value, when the action is a numeric change. */
+  change?: { from: string; to: string };
 }
 
 export interface AIAgent {
@@ -136,6 +146,9 @@ export interface AIActivity {
   agent?: AIAgentId;
   message: string;
   kind: "analysis" | "insight" | "recommendation" | "approval" | "execution" | "system";
+  /** Optional audit-trail detail, shown on the Governance › Activity timeline. */
+  recommendationId?: string;
+  nextReviewAt?: string;
 }
 
 export interface AIKpi {
@@ -143,6 +156,7 @@ export interface AIKpi {
   label: string;
   value: number;
   suffix?: string;
+  decimals?: number;
   deltaLabel?: string;
   deltaDirection?: "up" | "down" | "flat";
   footnote: string;
@@ -166,6 +180,174 @@ export interface TimeseriesPoint {
   leads: number;
   engagement: number;
   conversions: number;
+}
+
+/* ------------------------------------------------------------------ */
+/* Overview — Business Health & Today's Priorities                     */
+/* ------------------------------------------------------------------ */
+
+export interface BusinessHealth {
+  /** 0–100 composite score. */
+  score: number;
+  status: "Healthy" | "Needs Attention" | "At Risk";
+  deltaLabel: string;
+  deltaDirection: "up" | "down" | "flat";
+  /** One or two short sentences — never a wall of text. */
+  summary: string;
+  areasNeedingAttention: number;
+}
+
+export interface PriorityItem {
+  id: string;
+  priority: AIPriority;
+  title: string;
+  explanation: string;
+  agent: AIAgentId;
+  expectedImpact?: string;
+  /** Deep link the "Review" CTA opens — a recommendation, agent or action. */
+  href: string;
+  recommendationId?: string;
+}
+
+/* ------------------------------------------------------------------ */
+/* Workspace — Campaigns                                               */
+/* ------------------------------------------------------------------ */
+
+export type CampaignHealth = "Good" | "Fair" | "Needs Attention";
+export type CampaignPlanStepState = "done" | "active" | "upcoming";
+
+export interface CampaignPlanStep {
+  id: string;
+  label: string;
+  state: CampaignPlanStepState;
+  recommendationId?: string;
+}
+
+export interface CampaignGoal {
+  label: string;
+  target: string;
+  current: string;
+  onTrack: boolean;
+}
+
+export interface Campaign {
+  id: string;
+  name: string;
+  channel: string;
+  health: CampaignHealth;
+  status: "Active" | "Paused" | "Draft" | "Ended";
+  summary: string;
+  budgetDaily?: string;
+  goals: CampaignGoal[];
+  plan: CampaignPlanStep[];
+  activeExperiments: { id: string; name: string; hypothesis: string; status: "Running" | "Queued" | "Done" }[];
+  relatedRecommendationIds: string[];
+  spark: number[];
+  metric: { label: string; value: string; deltaLabel: string; deltaDirection: "up" | "down" | "flat" };
+}
+
+/* ------------------------------------------------------------------ */
+/* Workspace — Impact tracking                                         */
+/* ------------------------------------------------------------------ */
+
+export type ImpactPeriod = 7 | 14 | 30;
+export type ImpactResult = "positive" | "negative" | "neutral" | "monitoring";
+
+export interface ImpactRecord {
+  id: string;
+  recommendationId: string;
+  title: string;
+  agent: AIAgentId;
+  approvedAt: string;
+  metricLabel: string;
+  before: string;
+  after: Partial<Record<ImpactPeriod, string>>;
+  changePct: Partial<Record<ImpactPeriod, number>>;
+  result: ImpactResult;
+  aiConclusion: string;
+}
+
+/* ------------------------------------------------------------------ */
+/* AI System — Usage, providers, routing                               */
+/* ------------------------------------------------------------------ */
+
+export interface AIUsageTotals {
+  requests: number;
+  inputTokens: number;
+  outputTokens: number;
+  costToday: number;
+  costMonth: number;
+  requestsDeltaLabel: string;
+}
+
+export interface AIUsageByAgent {
+  agent: AIAgentId;
+  cost: number;
+  requests: number;
+  tokens: number;
+}
+
+export interface AIUsageByProvider {
+  provider: string;
+  cost: number;
+  share: number;
+}
+
+export type AIProviderStatus = "connected" | "not_connected" | "degraded";
+
+export interface AIProviderInfo {
+  id: string;
+  provider: string;
+  model: string;
+  status: AIProviderStatus;
+  usageShare: number;
+  cost: number;
+  latencyMs: number;
+  successRate: number;
+}
+
+export type AIRoutingStrategyName = "Balanced" | "Quality First" | "Cost Saver" | "Speed First";
+
+export interface AIRoutingStrategy {
+  name: AIRoutingStrategyName;
+  automatic: boolean;
+  quality: number;
+  speed: number;
+  costEfficiency: number;
+  taskRouting: { taskType: string; routedTo: string; reason: string }[];
+}
+
+/* ------------------------------------------------------------------ */
+/* Ask AI — context-aware chat                                         */
+/* ------------------------------------------------------------------ */
+
+export type AiChatContextKey =
+  | "overview"
+  | "seo"
+  | "content"
+  | "ads"
+  | "leads"
+  | "cro"
+  | "campaigns"
+  | "impact"
+  | "actions"
+  | "recommendations"
+  | "usage"
+  | "providers"
+  | "general";
+
+export interface AiChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  createdAt: string;
+}
+
+export interface ChannelPerformanceItem {
+  channel: string;
+  value: number;
+  share: number;
+  tone: "ai" | "insight" | "success" | "warning" | "info";
 }
 
 export interface ContentQueueItem {

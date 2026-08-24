@@ -1,13 +1,11 @@
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import type { AIKpi } from "@/lib/ai/types";
-import { CountUp, Panel, Sparkline, StatusDot, toneText, type Tone } from "./primitives";
+import { CountUp, Panel, Sparkline, StatusDot } from "./primitives";
 import { cn } from "@/lib/utils";
 
-export function KpiCard({ kpi, index = 0, tone }: { kpi: AIKpi; index?: number; tone?: Tone }) {
+export function KpiCard({ kpi, index = 0 }: { kpi: AIKpi; index?: number }) {
   const Icon =
     kpi.deltaDirection === "up" ? ArrowUpRight : kpi.deltaDirection === "down" ? ArrowDownRight : Minus;
-  const sparklineTones = ["ai", "insight", "success", "warning", "info", "brass"] as const;
-  const sparkTone = tone && (sparklineTones as readonly string[]).includes(tone) ? (tone as (typeof sparklineTones)[number]) : "brass";
 
   return (
     <Panel
@@ -25,11 +23,7 @@ export function KpiCard({ kpi, index = 0, tone }: { kpi: AIKpi; index?: number; 
         </div>
 
         <div className="mt-3 flex items-baseline gap-1">
-          <CountUp
-            value={kpi.value}
-            decimals={kpi.decimals ?? 0}
-            className={cn("text-display text-4xl leading-none", tone ? toneText[tone] : undefined)}
-          />
+          <CountUp value={kpi.value} className="text-display text-4xl leading-none" />
           {kpi.suffix ? (
             <span className="num text-lg text-muted-foreground">{kpi.suffix}</span>
           ) : null}
@@ -52,7 +46,7 @@ export function KpiCard({ kpi, index = 0, tone }: { kpi: AIKpi; index?: number; 
         ) : null}
 
         <div className="mt-4 opacity-70 transition-opacity duration-300 group-hover:opacity-100">
-          <Sparkline points={kpi.spark} tone={tone ? sparkTone : kpi.live ? "brass" : "muted"} />
+          <Sparkline points={kpi.spark} tone={kpi.live ? "brass" : "muted"} />
         </div>
 
         <p className="mt-3 border-t border-border pt-3 text-[11px] tracking-wide text-muted-foreground">

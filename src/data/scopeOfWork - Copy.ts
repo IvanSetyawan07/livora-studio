@@ -51,6 +51,6 @@ export const scopeItems: ScopeItem[] = [
     href: "/catalog",
     featured: true,
     ctaLabel: "See All Projects",
-    ctaUrl: "livora.architechture/materials",
+    ctaUrl: "livora.studio/materials",
   },
 ];

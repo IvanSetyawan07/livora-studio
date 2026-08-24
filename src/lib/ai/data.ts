@@ -12,7 +12,10 @@ import type {
   AIInsight,
   AIKpi,
   AIRecommendation,
+  BusinessHealth,
+  ChannelPerformanceItem,
   ContentQueueItem,
+  PriorityItem,
   SeoOpportunity,
   TimeseriesPoint,
 } from "./types";
@@ -271,6 +274,28 @@ export const insights: AIInsight[] = [
     analyticsHref: "/admin/analytics",
     createdAt: "2026-08-21T16:02:00Z",
   },
+  {
+    id: "ins_007",
+    title: "6 reviews from the last 30 days have no response",
+    description: "Local listing reviews are trending positive, but the lowest-rated ones are going unanswered.",
+    type: "warning",
+    severity: "medium",
+    confidence: 90,
+    source: ["Web Analytics"],
+    agent: "seo",
+    reasoning:
+      "Of 212 reviews in the last 30 days, six sit at 1–2★ with no owner reply. Response rate on low ratings is a known local-pack ranking signal.",
+    whatHappened: "6 of 212 recent reviews (1–2★) have no reply after 30 days.",
+    whyItMatters: "Unanswered negative reviews are disproportionately visible and can slow local pack momentum.",
+    expectedImpact: "Responding typically limits further rating slide and can lift the response-rate signal used in local ranking.",
+    metrics: [
+      { label: "Unanswered", value: "6" },
+      { label: "Local pack rank", value: "#3", delta: "from #4" },
+    ],
+    analyticsHref: "/admin/ai-marketing/seo",
+    recommendationId: "rec_007",
+    createdAt: "2026-08-23T07:38:00Z",
+  },
 ];
 
 export const recommendations: AIRecommendation[] = [
@@ -287,6 +312,9 @@ export const recommendations: AIRecommendation[] = [
     confidence: 87,
     agent: "seo",
     createdAt: "2026-08-23T08:26:00Z",
+    priority: "medium",
+    why: "Demand exists (41% engagement growth) but organic visibility hasn't followed — a metadata rewrite is the lowest-risk lever to close that gap.",
+    suggestedAction: "AI drafts a new title, meta description and H1 for your review.",
   },
   {
     id: "rec_002",
@@ -301,6 +329,10 @@ export const recommendations: AIRecommendation[] = [
     confidence: 81,
     agent: "cro",
     createdAt: "2026-08-23T08:31:00Z",
+    priority: "high",
+    why: "A third of qualified interest is lost after step two — cutting the form down removes the most common exit point.",
+    suggestedAction: "AI proposes the trimmed field set and defers budget capture to a follow-up email.",
+    change: { from: "9 fields", to: "5 fields" },
   },
   {
     id: "rec_003",
@@ -314,6 +346,9 @@ export const recommendations: AIRecommendation[] = [
     confidence: 79,
     agent: "content",
     createdAt: "2026-08-22T09:20:00Z",
+    priority: "low",
+    why: "Oak & Linen ranks top-three by engagement with zero editorial coverage — a feature compounds existing interest instead of buying new traffic.",
+    suggestedAction: "AI drafts a 1,200-word feature brief for the content team.",
   },
   {
     id: "rec_004",
@@ -327,6 +362,9 @@ export const recommendations: AIRecommendation[] = [
     confidence: 83,
     agent: "leads",
     createdAt: "2026-08-21T16:10:00Z",
+    priority: "medium",
+    why: "Behavioural scoring flagged three identities as high-intent — response speed is the strongest lever available on enquiries this warm.",
+    suggestedAction: "Route to the senior consultation queue with full context attached.",
   },
   {
     id: "rec_005",
@@ -340,6 +378,9 @@ export const recommendations: AIRecommendation[] = [
     confidence: 74,
     agent: "cro",
     createdAt: "2026-08-22T12:02:00Z",
+    priority: "high",
+    why: "TTFB spiked in lockstep with the session drop on one template — a rendering regression, not seasonality.",
+    suggestedAction: "Engineering ticket opened; sessions are being monitored for recovery.",
   },
   {
     id: "rec_006",
@@ -353,6 +394,26 @@ export const recommendations: AIRecommendation[] = [
     confidence: 68,
     agent: "seo",
     createdAt: "2026-08-20T10:44:00Z",
+    priority: "low",
+    why: "Splitting the catalogue index would deepen the crawlable surface, but the change touches every catalogue URL — a wide blast radius for the traffic gain on offer.",
+    suggestedAction: "Revisit with a smaller pilot on one material category before a full split.",
+  },
+  {
+    id: "rec_007",
+    insightId: "ins_007",
+    title: "Respond to 6 unanswered reviews",
+    description:
+      "Draft and send personalised replies to the six 1–2★ reviews from the last 30 days that have no owner response yet.",
+    actionType: "Review response",
+    risk: "low",
+    status: "pending",
+    expectedImpact: "Protect local pack rank (#3) and improve response-rate signal",
+    confidence: 90,
+    agent: "seo",
+    createdAt: "2026-08-23T07:40:00Z",
+    priority: "medium",
+    why: "Unanswered negative reviews correlate with lower local pack visibility, and these are the only ones without a reply.",
+    suggestedAction: "AI drafts a personalised reply for each review, ready for your approval.",
   },
 ];
 
@@ -604,6 +665,111 @@ export const contentQueue: ContentQueueItem[] = [
     scheduledFor: "Pending approval",
     aiAssisted: true,
   },
+];
+
+/* ------------------------------------------------------------------ */
+/* Overview — Business Health & Today's Priorities                     */
+/* ------------------------------------------------------------------ */
+
+export const businessHealth: BusinessHealth = {
+  score: 85,
+  status: "Healthy",
+  deltaLabel: "+4 pts vs last week",
+  deltaDirection: "up",
+  summary: "Overall performance is healthy. The consultation funnel and recent reviews need attention this week.",
+  areasNeedingAttention: 2,
+};
+
+export const priorities: PriorityItem[] = [
+  {
+    id: "pri_1",
+    priority: "high",
+    title: "Consultation funnel drop-off after step two",
+    explanation: "Completion fell from 71% to 38% — AI recommends simplifying the form.",
+    agent: "cro",
+    expectedImpact: "Recover 9–12 enquiries/month",
+    href: "/admin/ai-marketing/ai-center/recommendations",
+    recommendationId: "rec_002",
+  },
+  {
+    id: "pri_2",
+    priority: "medium",
+    title: "6 reviews need a response",
+    explanation: "1–2★ reviews from the last 30 days have no reply yet.",
+    agent: "seo",
+    expectedImpact: "Protect local pack rank (#3)",
+    href: "/admin/ai-marketing/ai-center/recommendations",
+    recommendationId: "rec_007",
+  },
+  {
+    id: "pri_3",
+    priority: "medium",
+    title: "Serenade demand isn't converting to search visibility",
+    explanation: "Engagement is up 41% while organic presence stays flat.",
+    agent: "seo",
+    expectedImpact: "+8–14% organic sessions this quarter",
+    href: "/admin/ai-marketing/ai-center/recommendations",
+    recommendationId: "rec_001",
+  },
+  {
+    id: "pri_4",
+    priority: "low",
+    title: "Oak & Linen has no editorial coverage",
+    explanation: "Top-three collection by engagement, zero supporting content.",
+    agent: "content",
+    expectedImpact: "Stronger internal linking",
+    href: "/admin/ai-marketing/ai-center/recommendations",
+    recommendationId: "rec_003",
+  },
+];
+
+export const overviewKpis: AIKpi[] = [
+  {
+    id: "revenue_impact",
+    label: "Revenue Impact",
+    value: 18.4,
+    suffix: "K",
+    decimals: 1,
+    deltaLabel: "+12.5% vs last week",
+    deltaDirection: "up",
+    footnote: "Modelled from approved AI actions",
+    spark: [9, 10.4, 11, 12.8, 14.1, 15.6, 16.9, 18.4],
+  },
+  {
+    id: "active_campaigns",
+    label: "Active Campaigns",
+    value: 3,
+    deltaLabel: "1 launched this week",
+    deltaDirection: "up",
+    footnote: "Across SEO, CRO & Content",
+    spark: [1, 1, 2, 2, 2, 3, 3, 3],
+  },
+  {
+    id: "ai_recommendations",
+    label: "AI Recommendations",
+    value: 7,
+    deltaLabel: "+1 this week",
+    deltaDirection: "up",
+    footnote: "3 awaiting your review",
+    spark: [3, 4, 4, 5, 5, 6, 6, 7],
+  },
+  {
+    id: "tasks_automated",
+    label: "Tasks Automated",
+    value: 34,
+    deltaLabel: "+9 this week",
+    deltaDirection: "up",
+    footnote: "Analyses, drafts & routed leads",
+    spark: [12, 15, 18, 21, 24, 27, 30, 34],
+  },
+];
+
+export const channelPerformance: ChannelPerformanceItem[] = [
+  { channel: "Organic Search", value: 12600, share: 38, tone: "ai" },
+  { channel: "Direct", value: 6800, share: 21, tone: "insight" },
+  { channel: "Referral", value: 5200, share: 16, tone: "success" },
+  { channel: "Social", value: 4900, share: 15, tone: "warning" },
+  { channel: "Email", value: 3100, share: 10, tone: "info" },
 ];
 
 export const agentById = (id: string) => agents.find((a) => a.id === id);

@@ -1,58 +1,108 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap');
 
 /*
  * Scoped theme for the standalone "AI Marketing" section.
  * Wrap the whole section in <div className="dark ai-marketing-scope">.
  * `dark` flips Livora's existing shadcn tokens (background, foreground,
- * card, border, muted, secondary, accent...) to the palette already
- * defined in index.css .dark { ... }. This file adds the tokens the
- * dashboards need on top of that (brass accent, chart palette, status
- * colours, darker sidebar) plus the matching utility classes, so the
- * section renders identically without touching tailwind.config.
+ * card, border, muted, secondary, accent...) to the palette defined in
+ * index.css `.dark { ... }`. This file OVERRIDES those on top with a
+ * cooler, near-black "AI operations" palette plus the functional accent
+ * system (purple = AI, pink = insight/impact, green = success, amber =
+ * warning, red = critical only, blue = secondary) and the matching
+ * utility classes, so the section renders identically without touching
+ * tailwind.config or any other part of the app.
  */
 
 .ai-marketing-scope {
-  --brass: 38 55% 68%;
-  --border-strong: 0 0% 100% / 0.16;
+  /* --- base surfaces: cool near-black, not warm-charcoal --------- */
+  --background: 240 16% 6%;
+  --foreground: 220 24% 95%;
+  --card: 240 14% 8%;
+  --card-foreground: 220 24% 95%;
+  --popover: 240 16% 7%;
+  --popover-foreground: 220 24% 95%;
+  --secondary: 240 12% 13%;
+  --secondary-foreground: 220 24% 95%;
+  --muted: 240 12% 12%;
+  --muted-foreground: 222 10% 62%;
+  --accent: 240 12% 15%;
+  --accent-foreground: 220 24% 95%;
+  --border: 240 10% 17%;
+  --input: 240 10% 17%;
+  --ring: 258 90% 66%;
 
-  /* Status colours */
-  --success: 152 55% 48%;
-  --warning: 40 90% 58%;
-  --info: 210 85% 62%;
+  --border-strong: 220 20% 100% / 0.14;
 
-  /* Surfaces */
-  --surface: 30 9% 11%;
-  --surface-raised: 30 8% 14%;
+  /* --- functional accent system ----------------------------------
+     Purple = AI / system chrome. Pink = insight / impact. Green =
+     success / healthy. Amber = warning / medium priority. Red
+     (destructive) = critical / high priority only. Blue = secondary,
+     never the dominant hue. */
+  --ai: 258 90% 67%;
+  --brass: var(--ai); /* legacy alias — every existing text-brass/bg-brass/
+                          border-brass utility across the section becomes
+                          the AI-purple accent automatically. */
+  --insight: 328 85% 62%;
+  --success: 152 62% 46%;
+  --warning: 38 95% 58%;
+  --info: 217 91% 62%;
+  --destructive: 356 78% 58%;
+  --destructive-foreground: 220 24% 97%;
 
-  /* Chart palette — Instagram pink, Facebook blue, TikTok teal,
-     YouTube red, brass. */
-  --chart-1: 330 78% 62%;
-  --chart-2: 217 88% 60%;
-  --chart-3: 172 68% 48%;
-  --chart-4: 0 78% 57%;
-  --chart-5: 38 85% 62%;
+  /* Surfaces used for illustrative/empty states */
+  --surface: 240 13% 10%;
+  --surface-raised: 240 12% 14%;
 
-  --sidebar-background: 30 10% 5%;
-  --sidebar-foreground: 36 20% 88%;
-  --sidebar-accent: 30 8% 14%;
-  --sidebar-accent-foreground: 36 20% 96%;
-  --sidebar-border: 0 0% 100% / 0.08;
+  /* Chart palette — purple / pink / green / amber / blue, always
+     distinguishable, never a single dominant hue. */
+  --chart-1: var(--ai);
+  --chart-2: var(--insight);
+  --chart-3: var(--success);
+  --chart-4: var(--warning);
+  --chart-5: var(--info);
+
+  --radius: 0.7rem;
+
+  --sidebar-background: 240 18% 4.5%;
+  --sidebar-foreground: 222 14% 85%;
+  --sidebar-accent: 240 12% 11%;
+  --sidebar-accent-foreground: 220 24% 97%;
+  --sidebar-border: 220 20% 100% / 0.07;
 
   font-family: 'Inter', system-ui, sans-serif;
+  color-scheme: dark;
 }
 
 /* --- colour utilities (independent from tailwind.config) ---------- */
-.ai-marketing-scope .text-brass { color: hsl(var(--brass)); }
-.ai-marketing-scope .text-brass\/80 { color: hsl(var(--brass) / 0.8); }
-.ai-marketing-scope .bg-brass { background-color: hsl(var(--brass)); }
-.ai-marketing-scope .bg-brass\/10 { background-color: hsl(var(--brass) / 0.1); }
-.ai-marketing-scope .bg-brass\/12 { background-color: hsl(var(--brass) / 0.12); }
-.ai-marketing-scope .bg-brass\/40 { background-color: hsl(var(--brass) / 0.4); }
-.ai-marketing-scope .border-brass { border-color: hsl(var(--brass)); }
-.ai-marketing-scope .border-brass\/25 { border-color: hsl(var(--brass) / 0.25); }
-.ai-marketing-scope .border-brass\/40 { border-color: hsl(var(--brass) / 0.4); }
-.ai-marketing-scope .border-brass\/50 { border-color: hsl(var(--brass) / 0.5); }
-.ai-marketing-scope .ring-brass\/15 { --tw-ring-color: hsl(var(--brass) / 0.15); }
+.ai-marketing-scope .text-brass,
+.ai-marketing-scope .text-ai { color: hsl(var(--ai)); }
+.ai-marketing-scope .text-brass\/80,
+.ai-marketing-scope .text-ai\/80 { color: hsl(var(--ai) / 0.8); }
+.ai-marketing-scope .bg-brass,
+.ai-marketing-scope .bg-ai { background-color: hsl(var(--ai)); }
+.ai-marketing-scope .bg-brass\/10,
+.ai-marketing-scope .bg-ai\/10 { background-color: hsl(var(--ai) / 0.1); }
+.ai-marketing-scope .bg-brass\/12,
+.ai-marketing-scope .bg-ai\/12 { background-color: hsl(var(--ai) / 0.12); }
+.ai-marketing-scope .bg-brass\/40,
+.ai-marketing-scope .bg-ai\/40 { background-color: hsl(var(--ai) / 0.4); }
+.ai-marketing-scope .border-brass,
+.ai-marketing-scope .border-ai { border-color: hsl(var(--ai)); }
+.ai-marketing-scope .border-brass\/25,
+.ai-marketing-scope .border-ai\/25 { border-color: hsl(var(--ai) / 0.25); }
+.ai-marketing-scope .border-brass\/40,
+.ai-marketing-scope .border-ai\/40 { border-color: hsl(var(--ai) / 0.4); }
+.ai-marketing-scope .border-brass\/50,
+.ai-marketing-scope .border-ai\/50 { border-color: hsl(var(--ai) / 0.5); }
+.ai-marketing-scope .ring-brass\/15 { --tw-ring-color: hsl(var(--ai) / 0.15); }
+
+.ai-marketing-scope .text-insight { color: hsl(var(--insight)); }
+.ai-marketing-scope .bg-insight { background-color: hsl(var(--insight)); }
+.ai-marketing-scope .bg-insight\/10 { background-color: hsl(var(--insight) / 0.1); }
+.ai-marketing-scope .bg-insight\/12 { background-color: hsl(var(--insight) / 0.12); }
+.ai-marketing-scope .border-insight { border-color: hsl(var(--insight)); }
+.ai-marketing-scope .border-insight\/25 { border-color: hsl(var(--insight) / 0.25); }
+.ai-marketing-scope .border-insight\/40 { border-color: hsl(var(--insight) / 0.4); }
 
 .ai-marketing-scope .border-border-strong { border-color: hsl(var(--border-strong)); }
 .ai-marketing-scope .bg-border-strong { background-color: hsl(var(--border-strong)); }
@@ -60,11 +110,17 @@
 .ai-marketing-scope .text-success { color: hsl(var(--success)); }
 .ai-marketing-scope .bg-success { background-color: hsl(var(--success)); }
 .ai-marketing-scope .bg-success\/12 { background-color: hsl(var(--success) / 0.12); }
+.ai-marketing-scope .border-success\/25 { border-color: hsl(var(--success) / 0.25); }
 .ai-marketing-scope .text-warning { color: hsl(var(--warning)); }
+.ai-marketing-scope .bg-warning { background-color: hsl(var(--warning)); }
 .ai-marketing-scope .bg-warning\/12 { background-color: hsl(var(--warning) / 0.12); }
+.ai-marketing-scope .border-warning\/25 { border-color: hsl(var(--warning) / 0.25); }
 .ai-marketing-scope .text-info { color: hsl(var(--info)); }
+.ai-marketing-scope .bg-info { background-color: hsl(var(--info)); }
 .ai-marketing-scope .bg-info\/12 { background-color: hsl(var(--info) / 0.12); }
+.ai-marketing-scope .text-destructive { color: hsl(var(--destructive)); }
 .ai-marketing-scope .bg-destructive\/14 { background-color: hsl(var(--destructive) / 0.14); }
+.ai-marketing-scope .border-destructive\/25 { border-color: hsl(var(--destructive) / 0.25); }
 .ai-marketing-scope .bg-muted-foreground\/12 { background-color: hsl(var(--muted-foreground) / 0.12); }
 
 .ai-marketing-scope .bg-surface { background-color: hsl(var(--surface)); }
@@ -80,34 +136,36 @@
 .ai-marketing-scope .bg-chart-3 { background-color: hsl(var(--chart-3)); }
 .ai-marketing-scope .bg-chart-4 { background-color: hsl(var(--chart-4)); }
 
+/* --- typography: confident sans display, mono system labels ------- */
 .ai-marketing-scope .text-display {
-  font-family: 'Cormorant Garamond', 'Times New Roman', serif;
-  font-weight: 300;
-  letter-spacing: -0.01em;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .ai-marketing-scope .label-eyebrow {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.625rem;
-  letter-spacing: 0.16em;
+  font-weight: 500;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
   color: hsl(var(--muted-foreground));
 }
 
 .ai-marketing-scope .panel {
-  background-image: linear-gradient(160deg, hsl(var(--card)) 0%, hsl(var(--background)) 100%);
+  background-image: linear-gradient(175deg, hsl(var(--card)) 0%, hsl(var(--background)) 130%);
   border: 1px solid hsl(var(--border));
-  box-shadow: 0 1px 0 0 hsl(0 0% 100% / 5%) inset, 0 18px 40px -24px hsl(0 0% 0% / 80%);
+  box-shadow: 0 1px 0 0 hsl(0 0% 100% / 4%) inset, 0 14px 32px -22px hsl(240 60% 2% / 70%);
   border-radius: calc(var(--radius) + 2px);
 }
 
 .ai-marketing-scope .panel-hover {
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s ease, box-shadow 0.35s ease;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease;
 }
 .ai-marketing-scope .panel-hover:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   border-color: hsl(var(--border-strong));
-  box-shadow: 0 24px 60px -32px hsl(0 0% 0% / 90%);
+  box-shadow: 0 20px 44px -26px hsl(240 60% 2% / 85%);
 }
 
 .ai-marketing-scope .rule-accent {
@@ -121,7 +179,8 @@
   top: 0.15em;
   bottom: 0.15em;
   width: 2px;
-  background: hsl(var(--brass));
+  border-radius: 2px;
+  background: hsl(var(--ai));
 }
 
 .ai-marketing-scope .num {
@@ -153,8 +212,31 @@
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.92); }
+  60% { opacity: 1; transform: scale(1.015); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes shimmer-sweep {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
 .ai-marketing-scope .animate-pulse-dot {
   animation: ai-pulse-dot 2.4s ease-in-out infinite;
+}
+.ai-marketing-scope .animate-pop-in {
+  animation: pop-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.ai-marketing-scope .skeleton-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    hsl(var(--muted) / 0.4) 30%,
+    hsl(var(--muted-foreground) / 0.16) 45%,
+    hsl(var(--muted-foreground) / 0.16) 55%,
+    hsl(var(--muted) / 0.4) 70%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-sweep 1.6s ease-in-out infinite;
 }
 
 /* Recharts legend/axis text should follow the section palette */

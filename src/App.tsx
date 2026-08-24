@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom"; // <-- Tambahkan Navigate
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +12,8 @@ import AboutPage from "./pages/About.tsx";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile.tsx";
 import { ChatWidget } from "./components/livora/ChatWidget.tsx";
+// import Login from "./pages/Login";
+// import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminOverview from "./pages/admin/AdminOverview";
@@ -34,7 +36,7 @@ import FurnitureFilter from "./pages/FurnitureFilter.tsx";
 import { CartDrawer } from "@/components/livora/CartDrawer.tsx";
 import { CartProvider } from "./context/CartContext.tsx";
 import CatalogPage from "./pages/CatalogPage";
-import CatalogDetail from "./pages/CatalogDetail";
+import CatalogDetail from "./pages/CatalogDetail"; // ← tambah ini
 import CatalogListAdmin from "@/pages/admin/CatalogListAdmin";
 import CatalogFormAdmin from "@/pages/admin/CatalogFormAdmin";
 import CollectionLanding from "./pages/CollectionLanding.tsx";
@@ -51,8 +53,6 @@ import AdminItemDetail from "./pages/admin/AdminItemDetail.tsx";
 import SalesScan from "./pages/sales/SalesScan.tsx";
 import SalesItemDetail from "./pages/sales/SalesItemDetail.tsx";
 import RequireRole from "./components/RequireRole.tsx";
-
-// --- AI MARKETING ROUTE IMPORTS ---
 import AiMarketingShell from "./pages/admin/ai-marketing/AiMarketingShell";
 import AiMarketingOverview from "./pages/admin/ai-marketing/AiMarketingOverview";
 import AiMarketingInsights from "./pages/admin/ai-marketing/AiMarketingInsights";
@@ -64,8 +64,13 @@ import AiMarketingCro from "./pages/admin/ai-marketing/AiMarketingCro";
 import AiMarketingApprovals from "./pages/admin/ai-marketing/AiMarketingApprovals";
 import AiMarketingActivity from "./pages/admin/ai-marketing/AiMarketingActivity";
 import AiMarketingSettings from "./pages/admin/ai-marketing/AiMarketingSettings";
-// Import Baru:
 import AiMarketingRecommendations from "./pages/admin/ai-marketing/AiMarketingRecommendations";
+import AiMarketingActions from "./pages/admin/ai-marketing/AiMarketingActions";
+import AiMarketingCampaigns from "./pages/admin/ai-marketing/AiMarketingCampaigns";
+import AiMarketingCampaignDetail from "./pages/admin/ai-marketing/AiMarketingCampaignDetail";
+import AiMarketingImpact from "./pages/admin/ai-marketing/AiMarketingImpact";
+import AiMarketingUsage from "./pages/admin/ai-marketing/AiMarketingUsage";
+import AiMarketingProviders from "./pages/admin/ai-marketing/AiMarketingProviders";
 
 const queryClient = new QueryClient();
 
@@ -91,7 +96,7 @@ function App() {
               <Route path="/furniture/:kind/:slug" element={<FurnitureFilter />} />
               <Route path="/catalog" element={<CatalogPage />} />
               <Route path="/catalog/:category" element={<CatalogPage />} />
-              <Route path="/catalog/:category/:slug" element={<CatalogDetail />} />
+              <Route path="/catalog/:category/:slug" element={<CatalogDetail />} /> {/* ← tambah ini */}
               <Route path="/collection" element={<CollectionLanding />} />
               <Route path="/collection/:slug" element={<CollectionDetail />} />
               <Route path="/collection/:slug/:category" element={<CollectionCategory />} />
@@ -105,43 +110,34 @@ function App() {
               </Route>
               <Route path="/dashboard" element={<Dashboard />} />
 
-              {/* Standalone AI Marketing section */}
+              {/* Standalone AI Marketing section — own shell/theme, NOT nested inside AdminLayout */}
               <Route path="/admin/ai-marketing" element={<AiMarketingShell />}>
-                {/* Auto redirect dari path utama ke overview */}
-                <Route index element={<Navigate to="overview" replace />} />
-                <Route path="overview" element={<AiMarketingOverview />} />
-                
-                {/* Phase 2: AI Center */}
-                <Route path="recommendations" element={<AiMarketingRecommendations />} />
-                <Route path="actions" element={<div className="p-8 text-slate-300">Actions Hub (WIP Phase 3)</div>} />
-
-                {/* Agents (Existing) */}
+                <Route index element={<AiMarketingOverview />} />
+                <Route path="insights" element={<AiMarketingInsights />} />
                 <Route path="seo" element={<AiMarketingSeo />} />
                 <Route path="content" element={<AiMarketingContent />} />
                 <Route path="ads" element={<AiMarketingAds />} />
                 <Route path="leads" element={<AiMarketingLeads />} />
                 <Route path="cro" element={<AiMarketingCro />} />
-                
-                {/* Fitur Lama (disimpan agar link lama tidak patah) */}
-                <Route path="insights" element={<AiMarketingInsights />} />
-
-                {/* Phase 3 & 4: Workspace, Governance, & Infrastructure */}
-                <Route path="campaigns" element={<div className="p-8 text-slate-300">Campaigns Workspace (WIP)</div>} />
-                <Route path="impact" element={<div className="p-8 text-slate-300">Impact Tracking (WIP)</div>} />
+                <Route path="ai-center/recommendations" element={<AiMarketingRecommendations />} />
+                <Route path="ai-center/actions" element={<AiMarketingActions />} />
+                <Route path="campaigns" element={<AiMarketingCampaigns />} />
+                <Route path="campaigns/:id" element={<AiMarketingCampaignDetail />} />
+                <Route path="impact" element={<AiMarketingImpact />} />
+                <Route path="usage" element={<AiMarketingUsage />} />
+                <Route path="providers" element={<AiMarketingProviders />} />
                 <Route path="approvals" element={<AiMarketingApprovals />} />
                 <Route path="activity" element={<AiMarketingActivity />} />
-                <Route path="usage" element={<div className="p-8 text-slate-300">Usage & Cost (WIP Phase 4)</div>} />
-                <Route path="routing" element={<div className="p-8 text-slate-300">Providers & Routing (WIP Phase 4)</div>} />
                 <Route path="settings" element={<AiMarketingSettings />} />
               </Route>
 
               <Route path="/admin" element={<AdminLayout />}>
-                <Route path="consultations" element={<AdminConsultations />} />
-                <Route path="consultations/:id" element={<AdminConsultationDetail />} />
-                <Route path="wishlists" element={<AdminWishlists />} />
-                <Route path="support" element={<AdminSupportChat />} />
-                <Route path="catalogs" element={<CatalogListAdmin />} />
-                <Route path="catalogs/create" element={<CatalogFormAdmin />} />
+               <Route path="consultations" element={<AdminConsultations />} />
+               <Route path="consultations/:id" element={<AdminConsultationDetail />} />
+               <Route path="wishlists" element={<AdminWishlists />} />
+               <Route path="support" element={<AdminSupportChat />} />
+              <Route path="catalogs"          element={<CatalogListAdmin />} />
+                <Route path="catalogs/create"   element={<CatalogFormAdmin />} />
                 <Route path="catalogs/:id/edit" element={<CatalogFormAdmin />} />
                 <Route index element={<AdminOverview />} />
                 <Route path="projects" element={<AdminProjects />} />
@@ -156,12 +152,14 @@ function App() {
                 <Route path="banners" element={<AdminBanners />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="marketing" element={<AdminMarketing />} />
+                
               </Route>
-              
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
             <CartDrawer />
             <ChatWidget />
+            {/* <WhatsAppButton /> */}
           </BrowserRouter>
         </CartProvider>
       </TooltipProvider>
