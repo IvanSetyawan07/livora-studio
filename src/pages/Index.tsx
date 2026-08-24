@@ -34,7 +34,7 @@ const Index = () => {
   }, [location.hash, location.key, ready]);
 
   useEffect(() => {
-    document.title = "LIVORA — Imagine. Create. Realize. | Interior Design Studio";
+    document.title = "LIVORA — Imagine. Create. Realize. | Interior Design Architecture & Custom Furniture";
     const meta = document.querySelector('meta[name="description"]') ?? (() => {
       const m = document.createElement("meta");
       m.setAttribute("name", "description");

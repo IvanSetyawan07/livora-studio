@@ -374,7 +374,7 @@ gsap.fromTo(
         Selected works, <em className="italic text-[#C9A97A]">crafted to last.</em>
       </h2>
       <p className="mt-5 text-sm text-foreground/60 max-w-[52ch]">
-        Scroll sideways to walk through the studio&rsquo;s most recent rooms.
+        Scroll sideways to walk through &rsquo;s most recent rooms.
       </p>
       <div className="flex gap-2 mt-8 flex-wrap">
         {categories.map((c) => (
@@ -444,7 +444,7 @@ gsap.fromTo(
                   Selected works, <em className="italic text-[#C9A97A]">crafted to last.</em>
                 </h2>
                 <p data-intro-item className="mt-5 text-sm text-foreground/60 max-w-[52ch]">
-                  Scroll sideways to walk through the studio&rsquo;s most recent rooms.
+                  Scroll sideways to walk through the &rsquo;s most recent rooms.
                 </p>
                 <div data-intro-item className="flex gap-2 mt-8 flex-wrap">
                   {categories.map((c) => (

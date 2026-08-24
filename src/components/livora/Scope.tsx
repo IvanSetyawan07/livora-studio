@@ -82,7 +82,7 @@ export const Scope = () => {
         <div className="flex items-end justify-between gap-6">
           <h2 className="text-lg md:text-xl font-medium tracking-tight">Scope of Work</h2>
           <p className="text-xs uppercase tracking-widest" style={{ color: C.muted }}>
-            Livora Studio
+            Livora — One-Stop Interior Creation
           </p>
         </div>
         <div className="scope-header-divider mt-5 h-px w-full" style={{ backgroundColor: C.line }} />
