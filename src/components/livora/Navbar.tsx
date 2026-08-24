@@ -482,15 +482,7 @@ export const Navbar = () => {
                         <Camera size={16} /> Scan QR
                       </Link>
                     )}
-                      {authUser.role === "admin" && (
-                        <Link
-                          to="/admin"
-                          onClick={() => setProfileOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60 border-t border-border"
-                        >
-                          <Shield size={16} /> Admin Panel
-                        </Link>
-                      )}
+                      
                       {authUser.role === "admin" && (
   <Link
     to="/admin/ai-marketing"
