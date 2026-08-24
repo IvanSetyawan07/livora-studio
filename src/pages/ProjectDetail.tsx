@@ -10,6 +10,7 @@ import { trackClick, trackView } from "@/lib/adminApi";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import ProjectSpaces from "@/components/livora/ProjectSpaces";
+import { Helmet } from "react-helmet-async";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -23,14 +24,17 @@ const ProjectDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { project, loading } = useProjectBySlug(slug);
+
   const heroSectionRef = useRef<HTMLElement>(null);
   const heroImgRef = useRef<HTMLImageElement>(null);
   const heroTitleRef = useRef<HTMLHeadingElement>(null);
   const heroSubtitleRef = useRef<HTMLParagraphElement>(null);
+  const startRef = useRef<number>(Date.now());
+
   const [slideIndex, setSlideIndex] = useState(0);
   const [showScrollHint, setShowScrollHint] = useState(false);
 
-  // Always start at top on mount / route change
+  // Always start at the top when the project route changes.
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
   }, [slug]);
@@ -39,9 +43,7 @@ const ProjectDetail = () => {
     setSlideIndex(0);
   }, [slug]);
 
-  // HERO ANIMATION — satu-satunya effect yang mengontrol title, subtitle, dan zoom gambar hero.
-  // Urutan: (1) entrance slide-in per kata → (2) baru setelah entrance selesai total,
-  // ScrollTrigger dibuat untuk animasi exit (naik + fade + zoom gambar) yang scrub & reversible.
+  // HERO ANIMATION
   useEffect(() => {
     if (!project) return;
 
@@ -50,7 +52,6 @@ const ProjectDetail = () => {
     const focusY = project.heroFocusY ?? 40;
 
     const ctx = gsap.context(() => {
-      // Base framing gambar — sepenuhnya dikelola GSAP, React tidak lagi menulis transform ke img ini
       gsap.set(heroImgRef.current, {
         scale: baseScale,
         transformOrigin: `${focusX}% ${focusY}%`,
@@ -58,17 +59,12 @@ const ProjectDetail = () => {
 
       const words = heroTitleRef.current?.querySelectorAll(".hero-word");
 
-      // Set state awal secara eksplisit sebelum animasi apapun jalan
       gsap.set(words, { x: 90, opacity: 0 });
       gsap.set(heroSubtitleRef.current, { x: 70, opacity: 0 });
 
-      // 1. Entrance — slide dari kanan, per kata (stagger)
       const entranceTl = gsap.timeline({
         defaults: { ease: "power3.out" },
         onComplete: () => {
-          // 2. ScrollTrigger baru dibuat SETELAH entrance selesai total,
-          //    supaya dia motret state akhir yang sudah bersih (x:0, opacity:1)
-          //    dan tidak rebutan properti dengan entrance timeline.
           gsap.timeline({
             scrollTrigger: {
               trigger: heroSectionRef.current,
@@ -76,7 +72,7 @@ const ProjectDetail = () => {
               end: "+=90%",
               pin: true,
               pinSpacing: true,
-              scrub: 0.8, // sedikit "catch-up" delay → berasa halus, bukan kaku
+              scrub: 0.8,
               invalidateOnRefresh: true,
             },
           })
@@ -94,39 +90,43 @@ const ProjectDetail = () => {
     return () => ctx.revert();
   }, [project?.slug]);
 
-  // Analytics: track click on mount, view duration on unmount
-  const startRef = useRef<number>(Date.now());
+  // Analytics
   useEffect(() => {
     const id = project?.apiId;
     if (!id) return;
+
     startRef.current = Date.now();
     trackClick("project", id);
+
     return () => {
-      const sec = Math.round((Date.now() - startRef.current) / 1000);
-      trackView("project", id, sec);
+      const seconds = Math.round((Date.now() - startRef.current) / 1000);
+      trackView("project", id, seconds);
     };
   }, [project?.apiId]);
 
-  // useReveal — re-run setelah project load dari API
+  // Reveal animation after project data is loaded.
   useEffect(() => {
     if (!project) return;
-    const els = document.querySelectorAll<HTMLElement>(".reveal");
-    const io = new IntersectionObserver(
+
+    const elements = document.querySelectorAll<HTMLElement>(".reveal");
+    const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            e.target.classList.add("is-visible");
-            io.unobserve(e.target);
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
           }
         });
       },
-      { threshold: 0.12, rootMargin: "0px 0px -60px 0px" }
+      { threshold: 0.12, rootMargin: "0px 0px -60px 0px" },
     );
-    els.forEach((el) => io.observe(el));
-    return () => io.disconnect();
-  }, [project]); // ← re-run setiap kali project berubah
 
-  // Scroll-down indicator: show after 2s idle, hide on scroll/movement past hero
+    elements.forEach((element) => observer.observe(element));
+
+    return () => observer.disconnect();
+  }, [project]);
+
+  // Scroll-down indicator.
   useEffect(() => {
     let idleTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -139,6 +139,7 @@ const ProjectDetail = () => {
 
     const scheduleShow = () => {
       clearIdle();
+
       if (window.scrollY < 80) {
         idleTimer = setTimeout(() => {
           if (window.scrollY < 80) setShowScrollHint(true);
@@ -176,29 +177,12 @@ const ProjectDetail = () => {
     };
   }, [slug]);
 
-  useEffect(() => {
-    if (project) {
-      document.title = `${project.name} — LIVORA`;
-      const meta =
-        document.querySelector('meta[name="description"]') ??
-        (() => {
-          const m = document.createElement("meta");
-          m.setAttribute("name", "description");
-          document.head.appendChild(m);
-          return m;
-        })();
-      meta.setAttribute(
-        "content",
-        `${project.name} — ${project.category} in ${project.location}. Interior design by LIVORA.`,
-      );
-    }
-  }, [project]);
-
+  // Keep the loading state separate from the not-found state.
   if (!project) {
-    // Still resolving from API — render blank instead of flashing "not found"
     if (loading) {
       return <main className="min-h-screen bg-background" />;
     }
+
     return (
       <main className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -211,6 +195,30 @@ const ProjectDetail = () => {
     );
   }
 
+  // SEO values must be created only after project exists.
+  const siteUrl = import.meta.env.VITE_SITE_URL || window.location.origin;
+  const projectUrl = `${siteUrl}/projects/${project.slug}`;
+  const description =
+    `${project.name}, ${project.category} di ${project.location}. ` +
+    `${project.description}`;
+
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "CreativeWork",
+    name: project.name,
+    description,
+    url: projectUrl,
+    image: project.img,
+    creator: {
+      "@type": "Organization",
+      name: "LIVORA",
+    },
+    locationCreated: {
+      "@type": "Place",
+      name: project.location,
+    },
+  };
+
   const handleBack = () => {
     navigate("/#projects");
   };
@@ -221,38 +229,78 @@ const ProjectDetail = () => {
   const displayTitle = currentSlide?.title ?? project.name;
   const displayImage = currentSlide?.image ?? project.img;
 
-  const goPrev = () => setSlideIndex((i) => (i - 1 + slides.length) % slides.length);
-  const goNext = () => setSlideIndex((i) => (i + 1) % slides.length);
+  const goPrev = () => {
+    if (!hasSlides) return;
+    setSlideIndex((index) => (index - 1 + slides.length) % slides.length);
+  };
+
+  const goNext = () => {
+    if (!hasSlides) return;
+    setSlideIndex((index) => (index + 1) % slides.length);
+  };
 
   return (
     <>
+      <Helmet>
+        <title>{project.name}, Interior Design | LIVORA</title>
+        <meta name="description" content={description} />
+        <link rel="canonical" href={projectUrl} />
+
+        <meta property="og:type" content="article" />
+        <meta property="og:title" content={`${project.name}, LIVORA`} />
+        <meta property="og:description" content={description} />
+        <meta property="og:url" content={projectUrl} />
+        <meta property="og:image" content={project.img} />
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${project.name}, LIVORA`} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content={project.img} />
+
+        <script type="application/ld+json">
+          {JSON.stringify(structuredData)}
+        </script>
+      </Helmet>
+
       <Navbar />
+
       <main style={{ background: "#FAFAF8" }}>
-        {/* HERO — full screen */}
-        <section ref={heroSectionRef} className="relative w-full overflow-hidden" style={{ height: "100vh" }}>
+        {/* HERO */}
+        <section
+          ref={heroSectionRef}
+          className="relative w-full overflow-hidden"
+          style={{ height: "100vh" }}
+        >
           <img
             ref={heroImgRef}
             src={project.img}
-            alt={`${project.name} — hero`}
+            alt={`${project.name}, ${project.category} interior design di ${project.location}`}
             className="absolute inset-0 w-full h-full object-cover"
             style={{
               objectPosition: `${project.heroFocusX ?? 50}% ${project.heroFocusY ?? 40}%`,
             }}
             onLoad={() => ScrollTrigger.refresh()}
           />
+
           <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.45)" }} />
+
           <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-6">
             <h1
               ref={heroTitleRef}
               className="serif font-light text-white leading-[1.05] text-balance"
               style={{ fontSize: "clamp(36px, 8vw, 112px)" }}
             >
-              {project.name.split(" ").map((word, i) => (
-                <span key={i} className="hero-word inline-block" style={{ marginRight: "0.25em" }}>
+              {project.name.split(" ").map((word, index) => (
+                <span
+                  key={`${word}-${index}`}
+                  className="hero-word inline-block"
+                  style={{ marginRight: "0.25em" }}
+                >
                   {word}
                 </span>
               ))}
             </h1>
+
             <p
               ref={heroSubtitleRef}
               className="text-white/85 mt-6 text-center"
@@ -266,7 +314,6 @@ const ProjectDetail = () => {
             </p>
           </div>
 
-          {/* Scroll-down indicator */}
           {showScrollHint && (
             <div
               className="scroll-indicator absolute z-10 pointer-events-none"
@@ -284,20 +331,26 @@ const ProjectDetail = () => {
           )}
         </section>
 
-        {/* SECTION 1 — BREADCRUMB + HERO TITLE */}
+        {/* BREADCRUMB + TITLE */}
         <PageBreadcrumb
-          items={[{ label: "Home", to: "/" }, { label: "Projects", to: "/projects" }, { label: project.name }]}
+          items={[
+            { label: "Home", to: "/" },
+            { label: "Projects", to: "/projects" },
+            { label: project.name },
+          ]}
         />
 
         <section
           className="reveal px-6 md:px-[60px] pb-8"
-          style={{
-            background: "#FAFAF8",
-          }}
+          style={{ background: "#FAFAF8" }}
         >
           <h2
             className="serif font-light leading-[1.05] text-balance mb-6 transition-opacity duration-500"
-            style={{ color: "#1A1A1A", fontSize: "clamp(32px, 6vw, 56px)", marginTop: "16px" }}
+            style={{
+              color: "#1A1A1A",
+              fontSize: "clamp(32px, 6vw, 56px)",
+              marginTop: "16px",
+            }}
             key={displayTitle}
           >
             {displayTitle}
@@ -305,9 +358,11 @@ const ProjectDetail = () => {
           <div className="h-px w-full bg-[#1A1A1A]/15" />
         </section>
 
-        {/* SECTION 2 — SPLIT CONTENT */}
-        <section className="grid grid-cols-1 md:grid-cols-5 reveal" style={{ transitionDelay: "0.1s" }}>
-          {/* LEFT 60% — slideshow */}
+        {/* SPLIT CONTENT */}
+        <section
+          className="grid grid-cols-1 md:grid-cols-5 reveal"
+          style={{ transitionDelay: "0.1s" }}
+        >
           <div
             className="md:col-span-3 relative group px-6 md:pl-[60px] md:pr-0"
             style={{ background: "#FAFAF8" }}
@@ -315,11 +370,9 @@ const ProjectDetail = () => {
             <img
               key={displayImage}
               src={displayImage}
-              alt={`${displayTitle} — ${project.category}`}
+              alt={`${displayTitle}, ${project.category} interior design di ${project.location}`}
               className="transition-opacity duration-500 animate-fade-in w-full h-[340px] sm:h-[440px] md:h-[600px] object-cover block"
-              style={{
-                borderRadius: 0,
-              }}
+              style={{ borderRadius: 0 }}
             />
 
             {hasSlides && slides.length > 1 && (
@@ -341,6 +394,7 @@ const ProjectDetail = () => {
                 >
                   ←
                 </button>
+
                 <button
                   onClick={goNext}
                   aria-label="Next slide"
@@ -361,18 +415,19 @@ const ProjectDetail = () => {
 
                 <div
                   className="absolute flex gap-2 bottom-4 left-1/2 -translate-x-1/2"
-                  aria-hidden="false"
+                  aria-label="Project image navigation"
                 >
-                  {slides.map((_, i) => (
+                  {slides.map((_, index) => (
                     <button
-                      key={i}
-                      onClick={() => setSlideIndex(i)}
-                      aria-label={`Go to slide ${i + 1}`}
+                      key={index}
+                      onClick={() => setSlideIndex(index)}
+                      aria-label={`Go to slide ${index + 1}`}
                       style={{
-                        width: i === slideIndex ? "24px" : "8px",
+                        width: index === slideIndex ? "24px" : "8px",
                         height: "8px",
                         borderRadius: "999px",
-                        background: i === slideIndex ? "#C9A97A" : "rgba(255,255,255,0.7)",
+                        background:
+                          index === slideIndex ? "#C9A97A" : "rgba(255,255,255,0.7)",
                         border: "none",
                         cursor: "pointer",
                         transition: "all 0.3s ease",
@@ -384,7 +439,6 @@ const ProjectDetail = () => {
             )}
           </div>
 
-          {/* RIGHT 40% */}
           <div
             className="md:col-span-2 flex flex-col px-6 py-10 md:px-12 md:py-12"
             style={{ background: "#FAFAF8" }}
@@ -399,13 +453,8 @@ const ProjectDetail = () => {
             >
               {project.category}
             </p>
-            <p
-              style={{
-                color: "#4A4A4A",
-                lineHeight: 1.8,
-                fontSize: "15px",
-              }}
-            >
+
+            <p style={{ color: "#4A4A4A", lineHeight: 1.8, fontSize: "15px" }}>
               {project.description}
             </p>
 
@@ -416,8 +465,8 @@ const ProjectDetail = () => {
                 { label: "LOCATION", value: project.location },
                 { label: "YEAR", value: project.year },
                 { label: "SCOPE", value: project.scope },
-              ].map((d) => (
-                <div key={d.label}>
+              ].map((detail) => (
+                <div key={detail.label}>
                   <p
                     className="uppercase"
                     style={{
@@ -426,16 +475,10 @@ const ProjectDetail = () => {
                       letterSpacing: "0.15em",
                     }}
                   >
-                    {d.label}
+                    {detail.label}
                   </p>
-                  <p
-                    style={{
-                      color: "#1A1A1A",
-                      fontSize: "14px",
-                      marginTop: "4px",
-                    }}
-                  >
-                    {d.value}
+                  <p style={{ color: "#1A1A1A", fontSize: "14px", marginTop: "4px" }}>
+                    {detail.value}
                   </p>
                 </div>
               ))}
@@ -461,11 +504,12 @@ const ProjectDetail = () => {
           </div>
         </section>
 
-        {/* SECTION 3 — FLOOR PLANS & ROOMS */}
+        {/* FLOOR PLANS & ROOMS */}
         <ProjectSpaces projectId={project.apiId} />
 
         <BookConsultation />
       </main>
+
       <Footer />
     </>
   );
