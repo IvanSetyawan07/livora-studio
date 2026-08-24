@@ -11,16 +11,15 @@ interface NavGroupProps {
   title: string;
   icon: React.ElementType;
   children: React.ReactNode;
-  defaultOpen?: boolean;
+  isOpen: boolean;
+  onToggle: () => void;
 }
 
-const NavGroup = ({ title, icon: Icon, children, defaultOpen = false }: NavGroupProps) => {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-
+const NavGroup = ({ title, icon: Icon, children, isOpen, onToggle }: NavGroupProps) => {
   return (
     <div className="mb-2">
       <button 
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={onToggle}
         className="w-full flex items-center justify-between p-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
       >
         <div className="flex items-center gap-3">
@@ -54,7 +53,20 @@ const NavItem = ({ to, children }: { to: string, children: React.ReactNode }) =>
   );
 };
 
+// Daftar nama group dijadikan union type biar type-safe saat compare/set state
+type GroupName = 'AI Center' | 'Agents' | 'Workspace' | 'Governance' | 'AI System';
+
 export default function MarketingSidebar() {
+  // Cuma satu state di parent yang menyimpan group mana yang sedang terbuka.
+  // Kalau mau "AI Center" default terbuka saat pertama render, isi initial state-nya di sini.
+  const [openGroup, setOpenGroup] = useState<GroupName | null>('AI Center');
+
+  // Toggle: kalau group yang diklik sama dengan yang sudah terbuka -> tutup (null),
+  // kalau beda -> buka group baru itu (otomatis menutup yang lama karena cuma 1 state).
+  const handleToggle = (group: GroupName) => {
+    setOpenGroup((prev) => (prev === group ? null : group));
+  };
+
   return (
     <div className="w-64 min-h-screen bg-[#0B0F19] border-r border-slate-800 flex flex-col">
       <div className="p-6">
@@ -73,12 +85,22 @@ export default function MarketingSidebar() {
           Overview
         </NavLink>
 
-        <NavGroup title="AI Center" icon={Sparkles} defaultOpen={true}>
+        <NavGroup 
+          title="AI Center" 
+          icon={Sparkles} 
+          isOpen={openGroup === 'AI Center'} 
+          onToggle={() => handleToggle('AI Center')}
+        >
           <NavItem to="/admin/ai-marketing/recommendations">Recommendations</NavItem>
           <NavItem to="/admin/ai-marketing/actions">Actions Hub</NavItem>
         </NavGroup>
 
-        <NavGroup title="Agents" icon={Bot}>
+        <NavGroup 
+          title="Agents" 
+          icon={Bot} 
+          isOpen={openGroup === 'Agents'} 
+          onToggle={() => handleToggle('Agents')}
+        >
           <NavItem to="/admin/ai-marketing/seo">SEO Agent</NavItem>
           <NavItem to="/admin/ai-marketing/content">Content Agent</NavItem>
           <NavItem to="/admin/ai-marketing/ads">Ads Agent</NavItem>
@@ -86,17 +108,32 @@ export default function MarketingSidebar() {
           <NavItem to="/admin/ai-marketing/cro">CRO Agent</NavItem>
         </NavGroup>
 
-        <NavGroup title="Workspace" icon={Briefcase}>
+        <NavGroup 
+          title="Workspace" 
+          icon={Briefcase} 
+          isOpen={openGroup === 'Workspace'} 
+          onToggle={() => handleToggle('Workspace')}
+        >
           <NavItem to="/admin/ai-marketing/campaigns">Campaigns</NavItem>
           <NavItem to="/admin/ai-marketing/impact">Impact Tracking</NavItem>
         </NavGroup>
 
-        <NavGroup title="Governance" icon={ShieldCheck}>
+        <NavGroup 
+          title="Governance" 
+          icon={ShieldCheck} 
+          isOpen={openGroup === 'Governance'} 
+          onToggle={() => handleToggle('Governance')}
+        >
           <NavItem to="/admin/ai-marketing/approvals">Approvals</NavItem>
           <NavItem to="/admin/ai-marketing/activity">Activity Log</NavItem>
         </NavGroup>
 
-        <NavGroup title="AI System" icon={Server}>
+        <NavGroup 
+          title="AI System" 
+          icon={Server} 
+          isOpen={openGroup === 'AI System'} 
+          onToggle={() => handleToggle('AI System')}
+        >
           <NavItem to="/admin/ai-marketing/usage">Usage & Cost</NavItem>
           <NavItem to="/admin/ai-marketing/routing">Providers & Routing</NavItem>
           <NavItem to="/admin/ai-marketing/settings">Settings</NavItem>

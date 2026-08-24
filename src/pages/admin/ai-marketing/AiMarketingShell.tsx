@@ -28,7 +28,7 @@ import { StatusDot } from "@/components/ai/primitives";
 import { MarketingAiDrawer } from "@/components/ai/MarketingAiDrawer"; // Pastikan import ini sesuai dengan lokasi file Drawer di Phase 1
 import "@/styles/ai-marketing.css";
 
-// 1. UPDATE STRUKTUR NAVIGASI (Dengan sistem grup/dropdown)
+// 1. STRUKTUR NAVIGASI (Dengan sistem grup/dropdown)
 const navConfig = [
   {
     isStandalone: true,
@@ -88,22 +88,36 @@ const navConfig = [
   }
 ];
 
-// 2. KOMPONEN NAVGROUP (Untuk Dropdown Logic)
-function NavGroup({ group, setMobileOpen }: { group: any, setMobileOpen: (v: boolean) => void }) {
-  const [isOpen, setIsOpen] = useState(group.defaultOpen);
+// 2. KOMPONEN NAVGROUP (Sekarang "controlled" oleh parent — tidak punya state sendiri lagi)
+function NavGroup({
+  group,
+  isOpen,
+  onToggle,
+  onAutoOpen,
+  setMobileOpen
+}: {
+  group: any;
+  isOpen: boolean;
+  onToggle: () => void;
+  onAutoOpen: () => void;
+  setMobileOpen: (v: boolean) => void;
+}) {
   const location = useLocation();
 
-  // Auto-open jika route aktif berada di dalam grup ini
+  // Auto-open jika route aktif berada di dalam grup ini.
+  // Ini tetap memanggil setter di parent (bukan state lokal lagi), jadi tetap konsisten
+  // dengan aturan "cuma satu grup yang boleh terbuka".
   useEffect(() => {
     if (group.items.some((item: any) => location.pathname.includes(item.to))) {
-      setIsOpen(true);
+      onAutoOpen();
     }
-  }, [location.pathname, group.items]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   return (
     <div className="mb-1">
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={onToggle}
         className="w-full flex items-center justify-between px-3 py-2 rounded-sm text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors duration-200"
       >
         <div className="flex items-center gap-3">
@@ -112,7 +126,7 @@ function NavGroup({ group, setMobileOpen }: { group: any, setMobileOpen: (v: boo
         </div>
         {isOpen ? <ChevronDown className="size-3.5 opacity-50" /> : <ChevronRight className="size-3.5 opacity-50" />}
       </button>
-      
+
       {isOpen && (
         <ul className="mt-0.5 space-y-0.5 border-l border-sidebar-border/50 ml-4 pl-3">
           {group.items.map((item: any) => (
@@ -143,7 +157,13 @@ export default function AiMarketingShell() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
-  
+
+  // Satu state di parent untuk melacak grup mana yang terbuka (accordion).
+  // Inisialnya diambil dari grup yang punya defaultOpen: true di navConfig.
+  const [openGroupTitle, setOpenGroupTitle] = useState<string | null>(
+    () => navConfig.find((g: any) => !g.isStandalone && g.defaultOpen)?.title ?? null
+  );
+
   // State untuk AI Drawer
   const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
 
@@ -216,7 +236,18 @@ export default function AiMarketingShell() {
                 </div>
               );
             }
-            return <NavGroup key={index} group={item} setMobileOpen={setOpen} />;
+            return (
+              <NavGroup
+                key={index}
+                group={item}
+                isOpen={openGroupTitle === item.title}
+                onToggle={() =>
+                  setOpenGroupTitle((prev) => (prev === item.title ? null : (item.title as string)))
+                }
+                onAutoOpen={() => setOpenGroupTitle(item.title as string)}
+                setMobileOpen={setOpen}
+              />
+            );
           })}
         </nav>
 
@@ -241,15 +272,15 @@ export default function AiMarketingShell() {
           <button className="lg:hidden" onClick={() => setOpen(true)} aria-label="Open navigation">
             <Menu className="size-4" />
           </button>
-          
+
           <span className="flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
             <Bot className="size-3.5 text-brass" />
             AI system · <StatusDot tone="success" /> Connected
           </span>
-          
+
           <div className="ml-auto flex items-center gap-4">
             {/* Tombol ASK AI - Membuka Drawer */}
-            <button 
+            <button
               onClick={() => setIsAiDrawerOpen(true)}
               className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium transition-colors"
             >
