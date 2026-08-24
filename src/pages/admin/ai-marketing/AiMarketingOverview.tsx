@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Calendar, Info, ChevronRight, AlertCircle, AlertTriangle, 
   Megaphone, TrendingUp, Star, FileText, Activity, ShieldCheck, ChevronDown
 } from 'lucide-react';
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
+import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 // --- ANIMATION HOOK ---
 function useAnimatedNumber(endValue: number, duration: number = 1000, isCurrency: boolean = false): string {
@@ -31,6 +33,20 @@ function useAnimatedNumber(endValue: number, duration: number = 1000, isCurrency
   return Math.floor(value).toString();
 }
 
+// --- HELPER COMPONENT UNTUK TOOLTIP INFO ---
+const InfoTooltip = ({ text }: { text: string }) => (
+  <Tooltip delayDuration={200}>
+    <TooltipTrigger asChild>
+      <button type="button" className="focus:outline-none ml-1 rounded-full hover:bg-slate-800 p-0.5 transition-colors">
+        <Info className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300 transition-colors" />
+      </button>
+    </TooltipTrigger>
+    <TooltipContent className="bg-slate-800 text-slate-200 border-slate-700 max-w-[250px] p-2">
+      <p className="text-xs leading-relaxed">{text}</p>
+    </TooltipContent>
+  </Tooltip>
+);
+
 // --- MOCK DATA ---
 const performanceData = [
   { name: 'May 12', Traffic: 250, Leads: 180, Conversions: 120, Revenue: 80 },
@@ -43,11 +59,11 @@ const performanceData = [
 ];
 
 const channelData = [
-  { name: 'Paid Search', value: 18200, color: '#a855f7' }, // Purple
-  { name: 'Organic Search', value: 12600, color: '#3b82f6' }, // Blue
-  { name: 'Direct', value: 6800, color: '#10b981' }, // Green
-  { name: 'Social Media', value: 3200, color: '#6366f1' }, // Indigo
-  { name: 'Email', value: 2000, color: '#f97316' }, // Orange
+  { name: 'Paid Search', value: 18200, color: '#a855f7' },
+  { name: 'Organic Search', value: 12600, color: '#3b82f6' },
+  { name: 'Direct', value: 6800, color: '#10b981' },
+  { name: 'Social Media', value: 3200, color: '#6366f1' },
+  { name: 'Email', value: 2000, color: '#f97316' },
 ];
 
 export default function AiMarketingOverview() {
@@ -56,6 +72,20 @@ export default function AiMarketingOverview() {
   const animatedCampaigns = useAnimatedNumber(12);
   const animatedRecommendations = useAnimatedNumber(27);
   const animatedTasks = useAnimatedNumber(156);
+
+  // States untuk Dropdowns
+  const [timeframeOpen, setTimeframeOpen] = useState(false);
+  const [timeframe, setTimeframe] = useState('7 Days');
+  const [dateRangeOpen, setDateRangeOpen] = useState(false);
+
+  // Fungsi untuk Action Buttons
+  const handleActionClick = (actionName: string) => {
+    toast.success(`${actionName} added to Needs Review queue.`);
+  };
+
+  const handleLinkClick = (linkName: string) => {
+    toast.info(`Navigating to ${linkName}...`);
+  };
 
   return (
     <div className="min-h-screen bg-[#0B0F19] text-slate-200 p-6 font-sans">
@@ -67,27 +97,52 @@ export default function AiMarketingOverview() {
           <h2 className="text-3xl font-semibold text-white tracking-tight">Overview</h2>
           <p className="text-sm text-slate-400 mt-1">Real-time intelligence and insights for Livora's digital growth.</p>
         </div>
-        <div className="flex items-center">
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#131825] border border-slate-800 rounded-lg text-sm text-slate-300 hover:bg-slate-800 transition-colors">
+        
+        {/* Date Range Dropdown */}
+        <div className="relative">
+          <button 
+            onClick={() => setDateRangeOpen(!dateRangeOpen)}
+            onBlur={() => setTimeout(() => setDateRangeOpen(false), 200)}
+            className="flex items-center gap-3 px-4 py-2 bg-[#131825] border border-slate-800 rounded-lg text-sm text-slate-300 hover:bg-slate-800 transition-colors focus:outline-none focus:ring-1 focus:ring-purple-500"
+          >
             May 12 - May 18, 2025
             <Calendar className="w-4 h-4 text-slate-500" />
           </button>
+          
+          {dateRangeOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-[#131825] border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden">
+              {['Today', 'Yesterday', 'Last 7 Days', 'Last 30 Days', 'This Month'].map((range) => (
+                <button
+                  key={range}
+                  onClick={() => {
+                    setDateRangeOpen(false);
+                    toast.success(`Date range updated to ${range}`);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                >
+                  {range}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* ROW 1: KPI CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         {/* Health Score */}
-        <div className="bg-[#131825] border border-slate-800 rounded-xl p-4 flex flex-col justify-between h-[140px]">
+        <div className="bg-[#131825] border border-slate-800 rounded-xl p-4 flex flex-col justify-between h-[140px] hover:border-slate-700 transition-colors">
           <div className="flex justify-between items-center text-xs text-slate-400">
-            <span className="flex items-center gap-1">Business Health Score <Info className="w-3 h-3" /></span>
+            <span className="flex items-center">
+              Business Health Score 
+              <InfoTooltip text="Aggregate score based on traffic, conversion rates, and campaign performance." />
+            </span>
           </div>
           <div className="flex items-end justify-between mt-2">
             <div className="flex items-baseline">
               <span className="text-4xl font-semibold text-pink-500">{animatedHealth}</span>
               <span className="text-sm text-slate-500 ml-1">/ 100</span>
             </div>
-            {/* SVG Sparkline Mock */}
             <svg width="80" height="30" viewBox="0 0 100 30" className="opacity-80">
               <path d="M0 20 Q 15 5, 30 15 T 60 25 T 80 10 T 100 20" fill="none" stroke="#ec4899" strokeWidth="2" strokeLinecap="round" />
             </svg>
@@ -99,9 +154,12 @@ export default function AiMarketingOverview() {
         </div>
 
         {/* Revenue Impact */}
-        <div className="bg-[#131825] border border-slate-800 rounded-xl p-4 flex flex-col justify-between h-[140px]">
+        <div className="bg-[#131825] border border-slate-800 rounded-xl p-4 flex flex-col justify-between h-[140px] hover:border-slate-700 transition-colors">
           <div className="flex justify-between items-center text-xs text-slate-400">
-            <span className="flex items-center gap-1">Revenue Impact <Info className="w-3 h-3" /></span>
+            <span className="flex items-center">
+              Revenue Impact 
+              <InfoTooltip text="Estimated revenue generated directly from marketing campaigns." />
+            </span>
           </div>
           <div className="flex items-end justify-between mt-2">
             <span className="text-4xl font-semibold text-green-500">${animatedRevenue}</span>
@@ -116,9 +174,12 @@ export default function AiMarketingOverview() {
         </div>
 
         {/* Active Campaigns */}
-        <div className="bg-[#131825] border border-slate-800 rounded-xl p-4 flex flex-col justify-between h-[140px]">
+        <div className="bg-[#131825] border border-slate-800 rounded-xl p-4 flex flex-col justify-between h-[140px] hover:border-slate-700 transition-colors">
           <div className="flex justify-between items-center text-xs text-slate-400">
-            <span className="flex items-center gap-1">Active Campaigns <Info className="w-3 h-3" /></span>
+            <span className="flex items-center">
+              Active Campaigns 
+              <InfoTooltip text="Currently running campaigns across all connected channels." />
+            </span>
           </div>
           <div className="flex items-end justify-between mt-2">
             <span className="text-4xl font-semibold text-blue-500">{animatedCampaigns}</span>
@@ -133,9 +194,12 @@ export default function AiMarketingOverview() {
         </div>
 
         {/* AI Recommendations */}
-        <div className="bg-[#131825] border border-slate-800 rounded-xl p-4 flex flex-col justify-between h-[140px]">
+        <div className="bg-[#131825] border border-slate-800 rounded-xl p-4 flex flex-col justify-between h-[140px] hover:border-slate-700 transition-colors">
           <div className="flex justify-between items-center text-xs text-slate-400">
-            <span className="flex items-center gap-1">AI Recommendations <Info className="w-3 h-3" /></span>
+            <span className="flex items-center">
+              AI Recommendations 
+              <InfoTooltip text="Total actionable insights generated by AI Agents awaiting your review." />
+            </span>
           </div>
           <div className="flex items-end justify-between mt-2">
             <span className="text-4xl font-semibold text-orange-500">{animatedRecommendations}</span>
@@ -150,9 +214,12 @@ export default function AiMarketingOverview() {
         </div>
 
         {/* Tasks Automated */}
-        <div className="bg-[#131825] border border-slate-800 rounded-xl p-4 flex flex-col justify-between h-[140px]">
+        <div className="bg-[#131825] border border-slate-800 rounded-xl p-4 flex flex-col justify-between h-[140px] hover:border-slate-700 transition-colors">
           <div className="flex justify-between items-center text-xs text-slate-400">
-            <span className="flex items-center gap-1">Tasks Automated <Info className="w-3 h-3" /></span>
+            <span className="flex items-center">
+              Tasks Automated 
+              <InfoTooltip text="Routine optimizations automatically executed by AI based on your policies." />
+            </span>
           </div>
           <div className="flex items-end justify-between mt-2">
             <span className="text-4xl font-semibold text-purple-500">{animatedTasks}</span>
@@ -172,8 +239,8 @@ export default function AiMarketingOverview() {
         
         {/* Top Priorities Today */}
         <div className="bg-[#131825] border border-slate-800 rounded-xl flex flex-col">
-          <div className="p-4 border-b border-slate-800/50 flex items-center gap-1 text-sm font-medium text-slate-200">
-            Top Priorities Today <Info className="w-3.5 h-3.5 text-slate-500" />
+          <div className="p-4 border-b border-slate-800/50 flex items-center text-sm font-medium text-slate-200">
+            Top Priorities Today <InfoTooltip text="Critical issues and high-impact opportunities that require your attention today." />
           </div>
           <div className="flex flex-col p-2">
             {[
@@ -182,7 +249,11 @@ export default function AiMarketingOverview() {
               { level: 'Medium Priority', color: 'orange', title: '15 reviews need response', desc: 'Quick responses can improve local SEO and reputation' },
               { level: 'Low Priority', color: 'green', title: 'New keyword opportunities found', desc: '3 high-potential keywords identified for content creation' },
             ].map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 hover:bg-slate-800/30 rounded-lg cursor-pointer transition-colors border-b border-slate-800/50 last:border-0">
+              <div 
+                key={idx} 
+                onClick={() => handleActionClick(item.title)}
+                className="flex items-center justify-between p-3 hover:bg-slate-800/40 rounded-lg cursor-pointer transition-colors border-b border-slate-800/50 last:border-0 group"
+              >
                 <div className="flex gap-3">
                   <div className="mt-1">
                     <div className={`w-5 h-5 rounded-full flex items-center justify-center bg-${item.color}-500/20`}>
@@ -191,11 +262,11 @@ export default function AiMarketingOverview() {
                   </div>
                   <div>
                     <span className={`text-[10px] uppercase font-bold text-${item.color}-500 mb-0.5 block`}>{item.level}</span>
-                    <h4 className="text-sm text-slate-200 font-medium">{item.title}</h4>
+                    <h4 className="text-sm text-slate-200 font-medium group-hover:text-white transition-colors">{item.title}</h4>
                     <p className="text-xs text-slate-500 mt-0.5">{item.desc}</p>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-600" />
+                <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-purple-400 transition-colors" />
               </div>
             ))}
           </div>
@@ -204,10 +275,12 @@ export default function AiMarketingOverview() {
         {/* AI Recommendations */}
         <div className="bg-[#131825] border border-slate-800 rounded-xl flex flex-col">
           <div className="p-4 border-b border-slate-800/50 flex items-center justify-between">
-            <div className="flex items-center gap-1 text-sm font-medium text-slate-200">
-              AI Recommendations <Info className="w-3.5 h-3.5 text-slate-500" />
+            <div className="flex items-center text-sm font-medium text-slate-200">
+              AI Recommendations <InfoTooltip text="Specific, actionable steps suggested by AI to improve your metrics." />
             </div>
-            <a href="#" className="text-xs text-purple-400 hover:text-purple-300">View all</a>
+            <button onClick={() => handleLinkClick('Recommendations')} className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
+              View all
+            </button>
           </div>
           <div className="flex flex-col p-3 gap-2">
             {[
@@ -216,14 +289,21 @@ export default function AiMarketingOverview() {
               { icon: Star, color: 'yellow', title: 'Respond to negative reviews', desc: '2 negative reviews need attention', impact: 'Medium Impact', conf: '78%', risk: 'Low Risk' },
               { icon: FileText, color: 'green', title: 'Create content for "wedding gifts"', desc: 'High search volume, low competition', impact: 'Low Impact', conf: '72%', risk: 'Low Risk' },
             ].map((item, idx) => (
-              <div key={idx} className="flex items-start gap-3 p-3 bg-[#0B0F19]/50 border border-slate-800/60 rounded-lg hover:border-slate-700 transition-colors">
+              <div key={idx} className="flex items-start gap-3 p-3 bg-[#0B0F19]/50 border border-slate-800/60 rounded-lg hover:border-slate-700 transition-colors group">
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-${item.color}-500/10 border border-${item.color}-500/20`}>
                   <item.icon className={`w-5 h-5 text-${item.color}-500`} />
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
-                    <h4 className="text-sm font-medium text-slate-200">{item.title} <Info className="w-3 h-3 inline text-slate-600" /></h4>
-                    <button className="text-xs px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">Review</button>
+                    <h4 className="text-sm font-medium text-slate-200 flex items-center gap-1">
+                      {item.title} 
+                    </h4>
+                    <button 
+                      onClick={() => handleActionClick(item.title)}
+                      className="text-xs px-3 py-1 bg-slate-800 hover:bg-purple-600 hover:text-white text-slate-300 rounded border border-slate-700 hover:border-purple-500 transition-all"
+                    >
+                      Review
+                    </button>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5 mb-2">{item.desc}</p>
                   <div className="flex gap-3 text-[10px] font-medium">
@@ -240,15 +320,14 @@ export default function AiMarketingOverview() {
         {/* AI Activity Feed */}
         <div className="bg-[#131825] border border-slate-800 rounded-xl flex flex-col">
           <div className="p-4 border-b border-slate-800/50 flex items-center justify-between">
-            <div className="flex items-center gap-1 text-sm font-medium text-slate-200">
-              AI Activity Feed <Info className="w-3.5 h-3.5 text-slate-500" />
+            <div className="flex items-center text-sm font-medium text-slate-200">
+              AI Activity Feed <InfoTooltip text="Real-time log of background tasks and analysis performed by AI Agents." />
             </div>
             <div className="flex items-center gap-1.5 text-xs text-green-500">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Live
             </div>
           </div>
           <div className="flex-1 p-4 flex flex-col relative">
-            {/* Vertical line connecting timeline */}
             <div className="absolute left-[39px] top-6 bottom-10 w-px bg-slate-800"></div>
             
             {[
@@ -258,7 +337,7 @@ export default function AiMarketingOverview() {
               { time: '10:15 AM', title: 'Generated 3 content recommendations', agent: 'Content Agent', color: 'purple', icon: FileText },
               { time: '10:12 AM', title: 'Lead scoring model updated', agent: 'Lead Intelligence', color: 'blue', icon: ShieldCheck },
             ].map((item, idx) => (
-              <div key={idx} className="flex gap-4 mb-5 relative z-10">
+              <div key={idx} className="flex gap-4 mb-5 relative z-10 hover:bg-slate-800/20 p-1 -m-1 rounded-md transition-colors cursor-default">
                 <div className="text-[10px] text-slate-500 w-[50px] pt-1.5 text-right shrink-0">{item.time}</div>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-${item.color}-500/10 border border-${item.color}-500/20 bg-[#131825]`}>
                   <item.icon className={`w-3.5 h-3.5 text-${item.color}-500`} />
@@ -271,7 +350,7 @@ export default function AiMarketingOverview() {
             ))}
           </div>
           <div className="p-3 border-t border-slate-800/50 flex justify-center">
-            <button className="text-xs text-slate-400 hover:text-slate-300 flex items-center gap-1 transition-colors">
+            <button onClick={() => handleLinkClick('Activity Log')} className="text-xs text-slate-400 hover:text-slate-300 flex items-center gap-1 transition-colors">
               View all activity <ChevronRight className="w-3 h-3" />
             </button>
           </div>
@@ -282,14 +361,40 @@ export default function AiMarketingOverview() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         
         {/* Performance Overview (Area Chart) */}
-        <div className="lg:col-span-3 bg-[#131825] border border-slate-800 rounded-xl p-5">
+        <div className="lg:col-span-3 bg-[#131825] border border-slate-800 rounded-xl p-5 relative">
           <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-1 text-sm font-medium text-slate-200">
-              Performance Overview <Info className="w-3.5 h-3.5 text-slate-500" />
+            <div className="flex items-center text-sm font-medium text-slate-200">
+              Performance Overview <InfoTooltip text="Trends for traffic, leads, conversions, and revenue over the selected period." />
             </div>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded text-xs text-slate-300">
-              7 Days <ChevronDown className="w-3.5 h-3.5" />
-            </button>
+            
+            {/* Timeframe Dropdown for Chart */}
+            <div className="relative">
+              <button 
+                onClick={() => setTimeframeOpen(!timeframeOpen)}
+                onBlur={() => setTimeout(() => setTimeframeOpen(false), 200)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded text-xs text-slate-300 hover:bg-slate-800 transition-colors focus:outline-none focus:ring-1 focus:ring-purple-500"
+              >
+                {timeframe} <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+              
+              {timeframeOpen && (
+                <div className="absolute right-0 mt-2 w-32 bg-[#131825] border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden">
+                  {['7 Days', '14 Days', '30 Days'].map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => {
+                        setTimeframe(t);
+                        setTimeframeOpen(false);
+                        toast.success(`Chart updated to ${t} view`);
+                      }}
+                      className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           
           {/* Custom Chart Legend */}
@@ -320,7 +425,7 @@ export default function AiMarketingOverview() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
-                <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px', fontSize: '12px', color: '#f1f5f9' }} itemStyle={{ color: '#e2e8f0' }}/>
+                <RechartsTooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px', fontSize: '12px', color: '#f1f5f9' }} itemStyle={{ color: '#e2e8f0' }}/>
                 <Area type="monotone" dataKey="Traffic" stroke="#ec4899" strokeWidth={2} fillOpacity={1} fill="url(#colorTraffic)" />
                 <Area type="monotone" dataKey="Leads" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorLeads)" />
                 <Area type="monotone" dataKey="Conversions" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorConv)" />
@@ -332,8 +437,8 @@ export default function AiMarketingOverview() {
 
         {/* Channel Performance (Donut Chart) */}
         <div className="lg:col-span-2 bg-[#131825] border border-slate-800 rounded-xl p-5 flex flex-col">
-          <div className="flex items-center gap-1 text-sm font-medium text-slate-200 mb-6">
-            Channel Performance <Info className="w-3.5 h-3.5 text-slate-500" />
+          <div className="flex items-center text-sm font-medium text-slate-200 mb-6">
+            Channel Performance <InfoTooltip text="Breakdown of revenue attribution by acquisition channel." />
           </div>
           
           <div className="flex-1 flex items-center justify-between relative">
@@ -354,9 +459,12 @@ export default function AiMarketingOverview() {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
+                  <RechartsTooltip 
+                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px', fontSize: '12px' }} 
+                    itemStyle={{ color: '#f1f5f9' }} 
+                  />
                 </PieChart>
               </ResponsiveContainer>
-              {/* Inner Text Donut */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <span className="text-xs text-slate-400">Total</span>
                 <span className="text-lg font-semibold text-white">$42.8K</span>
@@ -372,15 +480,19 @@ export default function AiMarketingOverview() {
                 { name: 'Social Media', amount: '$3.2K', pct: '7.5%', color: 'bg-indigo-500' },
                 { name: 'Email', amount: '$2.0K', pct: '4.7%', color: 'bg-orange-500' },
               ].map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between text-xs cursor-pointer hover:bg-slate-800/30 p-1 rounded transition-colors group">
+                <div 
+                  key={idx} 
+                  onClick={() => toast.info(`Viewing analytics for ${item.name}`)}
+                  className="flex items-center justify-between text-xs cursor-pointer hover:bg-slate-800/50 p-1.5 -m-1.5 rounded-lg transition-colors group"
+                >
                   <div className="flex items-center gap-2">
                     <span className={`w-2 h-2 rounded-full ${item.color}`}></span>
-                    <span className="text-slate-300 group-hover:text-slate-200">{item.name}</span>
+                    <span className="text-slate-300 group-hover:text-white transition-colors">{item.name}</span>
                   </div>
                   <div className="flex items-center gap-4">
                     <span className="font-medium text-slate-200">{item.amount}</span>
                     <span className="text-slate-500 w-10 text-right">{item.pct}</span>
-                    <ChevronRight className="w-3 h-3 text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ChevronRight className="w-3 h-3 text-slate-600 opacity-0 group-hover:opacity-100 group-hover:text-purple-400 transition-all" />
                   </div>
                 </div>
               ))}
