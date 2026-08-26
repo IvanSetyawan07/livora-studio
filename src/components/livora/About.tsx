@@ -23,7 +23,7 @@ export const About = () => (
       <div className="reveal md:col-span-7 hover-zoom">
         <img
           src={aboutImg}
-          alt="Livora studio interior"
+          alt="Livora Architechture interior"
           width={1280}
           height={896}
           loading="lazy"

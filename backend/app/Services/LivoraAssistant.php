@@ -97,7 +97,7 @@ class LivoraAssistant
      *
      * PENTING (identitas — sering salah dipahami, JANGAN diubah tanpa cek company profile):
      * - Livora = SHOWROOM interior & furniture, BUKAN "design studio" berdiri sendiri, BUKAN
-     *   "Livora Studio".
+     *   "Livora Architechture".
      * - PT. Langgeng Cipta Ruang = entitas/pusat resmi yang menaungi Livora (lihat header company
      *   profile: "PT. LANGGENG CIPTA RUANG" di atas logo "LIVORA").
      * - Showroom & kantor Livora ada di Jakarta Selatan, BUKAN Bandung. "Cihampelas, Bandung"

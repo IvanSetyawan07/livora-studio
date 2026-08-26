@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 type Point = { id: string; x: number; y: number; label: string; rank: string; self?: boolean };
 
 const points: Point[] = [
-  { id: "livora", x: 50, y: 48, label: "Livora Studio", rank: "Illustrative position", self: true },
+  { id: "livora", x: 50, y: 48, label: "Livora Architechture", rank: "Illustrative position", self: true },
   { id: "c1", x: 27, y: 32, label: "Competitor A", rank: "No data" },
   { id: "c2", x: 72, y: 62, label: "Competitor B", rank: "No data" },
   { id: "c3", x: 82, y: 30, label: "Competitor C", rank: "No data" },

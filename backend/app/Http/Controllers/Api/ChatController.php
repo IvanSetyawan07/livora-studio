@@ -157,7 +157,7 @@ class ChatController extends Controller
     private function askClaude(string $message, array $history, string $context): array
     {
         $systemPrompt = <<<PROMPT
-Kamu adalah Livora Concierge, asisten virtual untuk Livora Studio — platform interior design dan furniture.
+Kamu adalah Livora Concierge, asisten virtual untuk Livora Architechture — platform interior design dan furniture.
 
 Aturan:
 - Jawab HANYA berdasarkan informasi produk yang diberikan di bagian "Data produk relevan" di bawah. Jangan mengarang detail produk, harga, atau ketersediaan yang tidak ada di data tersebut.

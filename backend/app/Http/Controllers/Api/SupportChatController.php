@@ -57,7 +57,7 @@ class SupportChatController extends Controller
 
             $session->messages()->create([
                 'sender' => 'bot',
-                'text'   => 'Hi, saya Livora Concierge — asisten AI Livora Studio. Tanyakan apa saja soal profil kami, layanan, atau detail produk furniture. Kalau butuh bantuan langsung, bilang saja untuk terhubung ke customer service.',
+                'text'   => 'Hi, saya Livora Concierge — asisten AI Livora Architechture. Tanyakan apa saja soal profil kami, layanan, atau detail produk furniture. Kalau butuh bantuan langsung, bilang saja untuk terhubung ke customer service.',
             ]);
         }
 
