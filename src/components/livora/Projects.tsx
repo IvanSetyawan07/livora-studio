@@ -17,7 +17,6 @@ export const Projects = () => {
   const highlights = useHighlightProjects();
   const all = useAllProjects();
   const [filter, setFilter] = useState("All");
-  const [focusIndex, setFocusIndex] = useState(0);
 
   const sectionRef = useRef<HTMLElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -34,7 +33,7 @@ export const Projects = () => {
     return all.filter((p) => p.category === filter);
   }, [filter, highlights, all]);
 
-  /* ---------- Intro reveal (desktop copy only — see introRef below) ---------- */
+  /* ---------- Intro reveal ---------- */
   useLayoutEffect(() => {
     if (prefersReducedMotion()) return;
     registerGsap();
@@ -96,161 +95,219 @@ export const Projects = () => {
     return () => ctx.revert();
   }, []);
 
-  /* ---------- Horizontal scroll-jacked gallery (desktop only) ---------- */
+  /* ---------- Master Horizontal Scroll & Cinematic Focus System ---------- */
   useLayoutEffect(() => {
-    if (prefersReducedMotion()) return;
-    if (typeof window === "undefined") return;
+    if (prefersReducedMotion() || typeof window === "undefined") return;
     registerGsap();
 
     const section = sectionRef.current;
     const track = trackRef.current;
     if (!section || !track) return;
 
-    const mm = gsap.matchMedia();
+    const ctx = gsap.context(() => {
+      const mm = gsap.matchMedia();
 
-    mm.add("(min-width: 1px)", () => {
-      const distance = () => Math.max(0, track.scrollWidth - window.innerWidth);
+      mm.add("(min-width: 1px)", () => {
+        const getDistance = () => Math.max(0, track.scrollWidth - window.innerWidth);
+        // Sengaja hanya menargetkan `.project-card` — INTRO & ClosingPanel
+        // TIDAK boleh ikut sistem scale/opacity/rotation di bawah ini.
+        // Mereka hanya berpindah lewat translateX milik `track` (lihat tween di bawah).
+        const cards = gsap.utils.toArray<HTMLElement>(".project-card", track);
 
-      const tween = gsap.to(track, {
-        x: () => -distance(),
-        ease: EASE.scrub,
-      });
+        if (!cards.length) return;
 
-      const st = ScrollTrigger.create({
-        trigger: section,
-        start: "top top",
-        end: () => "+=" + distance(),
-        pin: true,
-        scrub: SCRUB,
-        animation: tween,
-        invalidateOnRefresh: true,
-        anticipatePin: 1,
-      });
-
-      const cards = gsap.utils.toArray<HTMLElement>(".project-card", track);
-
-      cards.forEach((card, i) => {
-        // contextual description reveal, synced to horizontal position
-        const desc = card.querySelector<HTMLElement>(".card-description");
-        if (desc) {
-          gsap.from(desc, {
-            autoAlpha: 0,
-            y: 12,
-            duration: DUR.card,
-            ease: EASE.card,
-            scrollTrigger: {
-              trigger: card,
-              containerAnimation: tween,
-              start: "left 30%",
-              toggleActions: "play reverse play reverse",
-            },
+        // Inisialisasi setter & style dasar card (Zero Rotation, Clean Vertical Layout)
+        const cardsData = cards.map((card) => {
+          const media = card.querySelector<HTMLElement>(".card-media");
+          gsap.set(card, {
+            transformPerspective: 1200,
+            transformOrigin: "50% 50%",
+            willChange: "transform, opacity",
+            force3D: true,
           });
-        }
+          return {
+            el: card,
+            media,
+            setScale: gsap.quickSetter(card, "scale"),
+            setOpacity: gsap.quickSetter(card, "opacity"),
+            setRotation: gsap.quickSetter(card, "rotation", "deg"), // Dikunci 0
+            setY: gsap.quickSetter(card, "y", "px"),
+            setX: gsap.quickSetter(card, "x", "px"),
+            baseX: 0,
+            cur: { f: 0 },
+          };
+        });
 
-        // subtle parallax: photo moves slower than the card
-        const img = card.querySelector<HTMLElement>(".card-photo");
-        if (img) {
-          gsap.fromTo(
-            img,
-            { xPercent: -8 },
-            {
-              xPercent: 8,
-              ease: EASE.scrub,
+        let trackBaseLeft = 0;
+        let focalPoint = window.innerWidth * 0.55;
+        let maxFocusDistance = window.innerWidth * 0.7;
+
+        const updateMetrics = () => {
+          const currentX = gsap.getProperty(track, "x") as number;
+          gsap.set(track, { x: 0 });
+
+          const trackRect = track.getBoundingClientRect();
+          trackBaseLeft = trackRect.left;
+          focalPoint = window.innerWidth * 0.55;
+          maxFocusDistance = window.innerWidth * 0.7;
+
+          cardsData.forEach((data) => {
+            const cardRect = data.el.getBoundingClientRect();
+            data.baseX = (cardRect.left - trackRect.left) + cardRect.width / 2;
+          });
+
+          gsap.set(track, { x: currentX });
+        };
+
+        ScrollTrigger.addEventListener("refreshInit", updateMetrics);
+        updateMetrics();
+
+        // 1) Master Tween Horizontal (Intro ikut bergerak natural dalam satu track)
+        const tween = gsap.to(track, {
+          x: () => -getDistance(),
+          ease: "none",
+        });
+
+        const st = ScrollTrigger.create({
+          trigger: section,
+          start: "top top",
+          end: () => "+=" + getDistance(),
+          pin: true,
+          scrub: SCRUB || 0.8,
+          animation: tween,
+          invalidateOnRefresh: true,
+          anticipatePin: 1,
+        });
+
+        // 2) Ticker-driven Continuous Interpolation Loop (Smooth Up/Down, No Hard Popping)
+        const FOCUS_RATIO = 0.55;
+        const clamp01 = gsap.utils.clamp(0, 1);
+        const easeFocus = gsap.parseEase("power2.out");
+
+        const measure = () => {
+          const currentTrackX = gsap.getProperty(track, "x") as number;
+          const vw = window.innerWidth;
+          const focal = vw * FOCUS_RATIO;
+          const span = (cards[0]?.offsetWidth || vw * 0.4) * 1.15;
+
+          // Secondary micro-interaction velocity energy
+          const velocity = Math.abs(st.getVelocity()) || 0;
+          const energy = clamp01(velocity / 2600);
+
+          let bestIdx = 0;
+          let minAbsDist = Infinity;
+
+          for (let i = 0; i < cardsData.length; i++) {
+            const data = cardsData[i];
+            const cardScreenX = trackBaseLeft + currentTrackX + data.baseX;
+            const distToFocus = cardScreenX - focal;
+            const absDist = Math.abs(distToFocus);
+
+            if (absDist < minAbsDist) {
+              minAbsDist = absDist;
+              bestIdx = i;
+            }
+
+            const signed = (cardScreenX - focal) / span;
+            const dist = Math.abs(signed);
+            const fTarget = easeFocus(clamp01(1 - dist));
+
+            // Lerp halus untuk mencegah snapping/jumping
+            data.cur.f += (fTarget - data.cur.f) * 0.14;
+            const f = data.cur.f;
+
+            // Target Values: Scale (0.84 - 1.10), Lift Y (-28px), Opacity (0.82 - 1)
+            const scale = gsap.utils.interpolate(0.84, 1.10, f) + energy * 0.01;
+            const liftY = gsap.utils.interpolate(16, -28, f); // Focused card naik -28px
+            const opacity = gsap.utils.interpolate(0.82, 1, f); // dulu 0.45 — kegelapan di foto gelap, sekarang lebih ringan
+            const subX = gsap.utils.clamp(-6, 6, signed * 6); // Subtle horizontal offset maks 6px
+
+            data.setScale(scale);
+            data.setOpacity(opacity);
+            data.setY(liftY);
+            data.setRotation(0); // Sesuai instruksi: STRICTLY NO ROTATION
+            data.setX(subX);
+
+            // Z-Index hierarchy
+            data.el.style.zIndex = String(50 + Math.round(f * 50));
+          }
+        };
+
+        gsap.ticker.add(measure);
+        measure();
+
+        // 3) Cinematic Image Parallax di dalam card-photo
+        cards.forEach((card) => {
+          const img = card.querySelector<HTMLElement>(".card-photo");
+          if (img) {
+            gsap.fromTo(
+              img,
+              { xPercent: -5 },
+              {
+                xPercent: 5,
+                ease: "none",
+                scrollTrigger: {
+                  trigger: card,
+                  containerAnimation: tween,
+                  start: "left right",
+                  end: "right left",
+                  scrub: true,
+                },
+              }
+            );
+          }
+
+          const desc = card.querySelector<HTMLElement>(".card-description");
+          if (desc) {
+            gsap.from(desc, {
+              autoAlpha: 0,
+              y: 12,
+              duration: DUR.card,
+              ease: EASE.card,
               scrollTrigger: {
                 trigger: card,
                 containerAnimation: tween,
-                start: "left right",
-                end: "right left",
-                scrub: true,
+                start: "left 30%",
+                toggleActions: "play reverse play reverse",
               },
-            },
-          );
-        }
-const setScaleX = gsap.quickTo(card, "scaleX", { duration: 0.4, ease: "power2.out" });
-const setScaleY = gsap.quickTo(card, "scaleY", { duration: 0.4, ease: "power2.out" });
-const setRotate = gsap.quickTo(card, "rotation", { duration: 0.4, ease: "power2.out" });        // gentle physicality: the whole card drifts + rotates as it crosses the track
-        ScrollTrigger.create({
-  trigger: card,
-  containerAnimation: tween,
-  start: "left right",
-  end: "right left",
-  scrub: true,
-  onUpdate: (self) => {
-    const p = self.progress;              // 0 = masuk dari kanan, 1 = keluar ke kiri
-    const arc = 1 - Math.abs(p - 0.5) * 2; // 0 di tepi, 1 tepat di tengah
-    const eased = gsap.parseEase("power2.inOut")(arc);
-    setScaleX(0.94 + eased * 0.06);
-setScaleY(0.94 + eased * 0.06);
-setRotate(4 * (1 - eased * 0.6));        // sedikit membesar di tengah
-  },
-});
-
-        // breathing scale: card grows as it reaches the centre of the viewport
-        const media = card.querySelector<HTMLElement>(".card-media");
-        if (media) {
-          gsap.fromTo(
-  card,
-  { yPercent: 5, rotate: 1.5 },
-  {
-    yPercent: -3,
-    rotate: 0,
-    ease: "none",
-    immediateRender: false,
-    scrollTrigger: {
-      trigger: card,
-      containerAnimation: tween,
-      start: "left right",
-      end: "center center",
-      scrub: true,
-    },
-  },
-);
-gsap.fromTo(
-  card,
-  { yPercent: -3, rotate: 0 },
-  {
-    yPercent: 5,
-    rotate: -1.5,
-    ease: "none",
-    immediateRender: false,
-    scrollTrigger: {
-      trigger: card,
-      containerAnimation: tween,
-      start: "center center",
-      end: "right left",
-      scrub: true,
-    },
-  },
-);
-        }
-
-        // focus tracking
-        ScrollTrigger.create({
-          trigger: card,
-          containerAnimation: tween,
-          start: "left 55%",
-          end: "right 55%",
-          onToggle: (self) => self.isActive && setFocusIndex(i),
+            });
+          }
         });
+
+        const onResize = () => {
+          ScrollTrigger.refresh();
+        };
+        window.addEventListener("resize", onResize);
+
+        return () => {
+          gsap.ticker.remove(measure);
+          window.removeEventListener("resize", onResize);
+          ScrollTrigger.removeEventListener("refreshInit", updateMetrics);
+          st.kill();
+          tween.kill();
+        };
       });
+    }, section);
 
-      return () => {
-        st.kill();
-        tween.kill();
-      };
-    });
+    const timeout = setTimeout(() => {
+      ScrollTrigger.refresh();
+    }, 150);
 
-    ScrollTrigger.refresh();
-    return () => mm.revert();
+    return () => {
+      clearTimeout(timeout);
+      ctx.revert();
+    };
   }, [filtered]);
 
-  /* ---------- Crossfade on filter change + recompute track ---------- */
+  /* ---------- Filter Change Crossfade ---------- */
   useEffect(() => {
     if (prefersReducedMotion()) return;
     const track = trackRef.current;
     if (!track) return;
-    setFocusIndex(0);
+
     const cards = track.querySelectorAll<HTMLElement>(".project-card");
+    if (!cards.length) return;
+
     gsap.fromTo(
       cards,
       { autoAlpha: 0 },
@@ -262,39 +319,14 @@ gsap.fromTo(
         onComplete: () => ScrollTrigger.refresh(),
       },
     );
+
     const t = setTimeout(() => ScrollTrigger.refresh(), 120);
     return () => clearTimeout(t);
   }, [filter]);
 
-  /* ---------- Mobile focus tracking (native scroll-snap) ---------- */
-  const mobileScrollerRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const el = mobileScrollerRef.current;
-    if (!el) return;
-    const onScroll = () => {
-      const cards = Array.from(el.querySelectorAll<HTMLElement>(".project-card"));
-      if (!cards.length) return;
-      const center = el.scrollLeft + el.clientWidth / 2;
-      let best = 0;
-      let bestDist = Infinity;
-      cards.forEach((c, i) => {
-        const d = Math.abs(c.offsetLeft + c.offsetWidth / 2 - center);
-        if (d < bestDist) { bestDist = d; best = i; }
-      });
-      setFocusIndex(best);
-    };
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
-  }, [filtered]);
-
-  /**
-   * Card — full-bleed photo, all copy overlaid at the bottom on a floor
-   * gradient. Name + eyebrow are always visible; description and the "View
-   * Project" tag reveal on hover, matching the reference treatment.
-   */
   const Card = ({ p, i }: { p: (typeof filtered)[number]; i: number }) => (
     <article
-      className="project-card shrink-0 w-[82vw] sm:w-[62vw] lg:w-[38vw] xl:w-[34vw] mt-0 lg:mt-[var(--card-offset)]"
+      className="project-card shrink-0 w-[82vw] sm:w-[62vw] lg:w-[38vw] xl:w-[34vw] mt-0 lg:mt-[var(--card-offset)] relative"
       style={{ ["--card-offset" as string]: i % 2 === 1 ? "5rem" : i % 3 === 2 ? "2.5rem" : "0rem" }}
     >
       <Link to={`/projects/${p.slug}`} className="group block focus:outline-none">
@@ -310,7 +342,6 @@ gsap.fromTo(
             className="card-photo w-[116%] h-full object-cover max-w-none transition-transform duration-700 group-hover:scale-[1.04]"
           />
 
-          {/* permanent floor gradient — keeps the overlaid copy legible */}
           <div
             className="pointer-events-none absolute inset-0"
             style={{
@@ -318,27 +349,26 @@ gsap.fromTo(
                 "linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.28) 42%, transparent 68%)",
             }}
           />
-          {/* hover-only darken, so the description reads cleanly on any photo */}
           <div
             className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-700 group-hover:opacity-100"
             style={{ background: "rgba(0,0,0,0.22)" }}
           />
 
           <div className="absolute inset-x-0 bottom-0 p-6 md:p-8">
-           <p className="text-[10px] uppercase tracking-[0.32em] text-white/75 mb-3 transition-all duration-500 lg:opacity-0 lg:-translate-y-2 lg:group-hover:opacity-100 lg:group-hover:translate-y-0">
-  {p.category}{p.location ? ` — ${p.location}` : ""}{p.year ? ` · ${p.year}` : ""}
-</p>
-<h3 className="serif text-3xl md:text-4xl font-light leading-tight text-white">
-  {p.name}
-</h3>
-{p.description && (
-  <p className="card-description mt-3 max-w-[42ch] text-sm font-light text-white/80 line-clamp-2 transition-all duration-700 delay-75 lg:translate-y-3 lg:text-white/0 lg:group-hover:translate-y-0 lg:group-hover:text-white/80">
-    {p.description}
-  </p>
-)}
-<span className="mt-5 inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-[#C9A97A] transition-all duration-700 delay-150 lg:opacity-0 lg:translate-y-2 lg:group-hover:opacity-100 lg:group-hover:translate-y-0">
-  View Project ↗
-</span>
+            <p className="text-[10px] uppercase tracking-[0.32em] text-white/75 mb-3 transition-all duration-500 lg:opacity-0 lg:-translate-y-2 lg:group-hover:opacity-100 lg:group-hover:translate-y-0">
+              {p.category}{p.location ? ` — ${p.location}` : ""}{p.year ? ` · ${p.year}` : ""}
+            </p>
+            <h3 className="serif text-3xl md:text-4xl font-light leading-tight text-white">
+              {p.name}
+            </h3>
+            {p.description && (
+              <p className="card-description mt-3 max-w-[42ch] text-sm font-light text-white/80 line-clamp-2 transition-all duration-700 delay-75 lg:translate-y-3 lg:text-white/0 lg:group-hover:translate-y-0 lg:group-hover:text-white/80">
+                {p.description}
+              </p>
+            )}
+            <span className="mt-5 inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-[#C9A97A] transition-all duration-700 delay-150 lg:opacity-0 lg:translate-y-2 lg:group-hover:opacity-100 lg:group-hover:translate-y-0">
+              View Project ↗
+            </span>
           </div>
         </div>
       </Link>
@@ -361,9 +391,6 @@ gsap.fromTo(
 
   const reduced = prefersReducedMotion();
 
-  // Shared intro copy (heading, description, filter tabs) — rendered once,
-  // statically, for mobile/reduced-motion, and once, animated, as the first
-  // column of the desktop pinned track (see introRef below).
   const IntroCopy = () => (
     <>
       <p className="text-[10px] md:text-xs uppercase tracking-[0.45em] text-foreground/60 mb-5">
@@ -414,7 +441,6 @@ gsap.fromTo(
 
   return (
     <>
-      {/* Mobile/tablet: intro sits above the pinned gallery */}
       <div className="container-livora pt-24 pb-10 lg:hidden">
         <IntroCopy />
       </div>
@@ -425,7 +451,16 @@ gsap.fromTo(
         className="h-screen flex flex-col justify-center overflow-hidden py-10 lg:py-32"
       >
         <div>
-          <div ref={trackRef} className="flex items-center lg:items-start gap-6 lg:gap-10 xl:gap-14 pl-6 lg:pl-[max(1.5rem,calc((100vw-1680px)/2+2rem))] pr-[18vw] lg:pr-[12vw] will-change-transform">
+          <div ref={trackRef} className="flex w-max items-center lg:items-start gap-6 lg:gap-10 xl:gap-14 pl-6 lg:pl-[max(1.5rem,calc((100vw-1680px)/2+2rem))] pr-[18vw] lg:pr-[12vw] will-change-transform">
+              {/*
+                INTRO = "slide" pertama di dalam track horizontal yang sama dengan project cards.
+                WAJIB tetap flex child biasa dari `trackRef`.
+                DILARANG KERAS memberi position: sticky / fixed di sini atau di parent-nya —
+                pergerakannya harus 100% murni ikut translateX() milik `track` (lihat master
+                tween "1) Master Tween Horizontal" di atas). Intro juga sengaja TIDAK dimasukkan
+                ke `.project-card`, jadi ia tidak ikut sistem scale/opacity/rotation cinematic
+                focus — ukurannya tetap normal, hanya posisinya yang bergeser bersama track.
+              */}
               <div
                 ref={introRef}
                 className="hidden lg:flex shrink-0 w-[34vw] xl:w-[30vw] flex-col justify-center pr-10"
