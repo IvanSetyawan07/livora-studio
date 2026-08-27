@@ -231,16 +231,17 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
 
         // Title leaves
         .to(
-          ".hero-title",
-          {
-            yPercent: -60,
-            scale: 1.35,
-            opacity: 0,
-            filter: "blur(6px)",
-            ease: "power2.in",
-          },
-          0
-        )
+  ".hero-title",
+  {
+    yPercent: -60,
+    scaleX: 1.35,
+    scaleY: 1.35,
+    opacity: 0,
+    filter: "blur(6px)",
+    ease: "power2.in",
+  },
+  0
+)
         .to(".hero-scroll", { opacity: 0, y: -30, ease: "power2.in" }, 0)
 
         // Sky to house pan (transform based so it works on every screen ratio)

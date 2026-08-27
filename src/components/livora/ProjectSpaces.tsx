@@ -144,7 +144,8 @@ const RoomVisual = ({
           { clipPath: "inset(14% 10% 14% 10% round 2px)", scale: 1.06, opacity: 0.35 },
           {
             clipPath: "inset(0% 0% 0% 0% round 2px)",
-            scale: 1,
+            scaleX: 1,
+            scaleY: 1,
             opacity: 1,
             duration: DUR.card,
             ease: EASE.card,

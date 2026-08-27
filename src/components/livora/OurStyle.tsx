@@ -50,11 +50,12 @@ export function OurStyle() {
 
       panels.forEach((panel) => {
         gsap.fromTo(
-          panel.querySelector(".style-img"),
-          { scale: 1.25 },
-          {
-            scale: 1,
-            ease: "none",
+  panel.querySelector(".style-img"),
+  { scaleX: 1.25, scaleY: 1.25 },
+  {
+    scaleX: 1,
+    scaleY: 1,
+    ease: "none",
             scrollTrigger: {
               trigger: panel,
               containerAnimation: tl,

@@ -128,7 +128,8 @@ export const Projects = () => {
           return {
             el: card,
             media,
-            setScale: gsap.quickSetter(card, "scale"),
+            setScaleX: gsap.quickSetter(card, "scaleX"),
+setScaleY: gsap.quickSetter(card, "scaleY"),
             setOpacity: gsap.quickSetter(card, "opacity"),
             setRotation: gsap.quickSetter(card, "rotation", "deg"), // Dikunci 0
             setY: gsap.quickSetter(card, "y", "px"),
@@ -222,7 +223,8 @@ export const Projects = () => {
             const opacity = gsap.utils.interpolate(0.82, 1, f); // dulu 0.45 — kegelapan di foto gelap, sekarang lebih ringan
             const subX = gsap.utils.clamp(-6, 6, signed * 6); // Subtle horizontal offset maks 6px
 
-            data.setScale(scale);
+            data.setScaleX(scale);
+data.setScaleY(scale);
             data.setOpacity(opacity);
             data.setY(liftY);
             data.setRotation(0); // Sesuai instruksi: STRICTLY NO ROTATION

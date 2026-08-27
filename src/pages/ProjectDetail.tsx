@@ -52,8 +52,9 @@ const ProjectDetail = () => {
     const ctx = gsap.context(() => {
       // Base framing gambar — sepenuhnya dikelola GSAP, React tidak lagi menulis transform ke img ini
       gsap.set(heroImgRef.current, {
-        scale: baseScale,
-        transformOrigin: `${focusX}% ${focusY}%`,
+         scaleX: baseScale,
+  scaleY: baseScale,
+  transformOrigin: `${focusX}% ${focusY}%`,
       });
 
       const words = heroTitleRef.current?.querySelectorAll(".hero-word");
@@ -82,7 +83,7 @@ const ProjectDetail = () => {
           })
             .to(words, { y: -70, opacity: 0, stagger: 0.03, ease: "power2.inOut" }, 0)
             .to(heroSubtitleRef.current, { y: -50, opacity: 0, ease: "power2.inOut" }, 0)
-            .to(heroImgRef.current, { scale: baseScale * 1.2, ease: "power2.inOut" }, 0);
+            .to(heroImgRef.current, { scaleX: baseScale * 1.2, scaleY: baseScale * 1.2, ease: "power2.inOut" }, 0);
         },
       });
 
