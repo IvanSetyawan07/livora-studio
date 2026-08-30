@@ -1,3 +1,5 @@
+// src/pages/admin/ai-marketing/AiMarketingOverview.tsx
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowUpRight, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
@@ -11,28 +13,63 @@ import { PriorityList } from "@/components/ai/priority-list";
 import { RecommendationCard } from "@/components/ai/recommendation-card";
 import { DemoBadge, Panel, Reveal, SectionHeading } from "@/components/ai/primitives";
 import { usePageContext } from "@/context/AiMarketingContext";
-import {
-  activity,
-  agents,
-  businessHealth,
-  channelPerformance,
-  overviewKpis,
-  priorities,
-  recommendations,
-} from "@/lib/ai/data";
+import { aiServices } from "@/lib/ai/services";
+import type {
+  AIAgent,
+  AIKpi,
+  AIRecommendation,
+  BusinessHealth,
+  PriorityItem,
+} from "@/lib/ai/types";
+// Activity feed & channel performance don't have a backend endpoint yet
+// (ai_activity_log has no controller, and channel-level performance was
+// never scoped) — keep these on demo fixtures until that's built.
+import { activity, channelPerformance } from "@/lib/ai/data";
 
 const kpiTones = ["success", "info", "warning", "ai"] as const;
+const priorityOrder = { high: 0, medium: 1, low: 2 } as const;
 
 export default function AiMarketingOverview() {
   usePageContext("overview");
 
-  const topRecommendations = recommendations
-    .filter((r) => r.status === "pending")
-    .sort((a, b) => {
-      const order = { high: 0, medium: 1, low: 2 } as const;
-      return order[a.priority ?? "medium"] - order[b.priority ?? "medium"];
-    })
-    .slice(0, 4);
+  const [loading, setLoading] = useState(true);
+  const [businessHealth, setBusinessHealth] = useState<BusinessHealth | null>(null);
+  const [overviewKpis, setOverviewKpis] = useState<AIKpi[]>([]);
+  const [priorities, setPriorities] = useState<PriorityItem[]>([]);
+  const [agents, setAgents] = useState<AIAgent[]>([]);
+  const [topRecommendations, setTopRecommendations] = useState<AIRecommendation[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      const [health, kpis, priorityItems, agentList, pendingRecs] = await Promise.all([
+        aiServices.dashboard.getBusinessHealth(),
+        aiServices.dashboard.getOverviewKpis(),
+        aiServices.dashboard.getPriorities(),
+        aiServices.dashboard.getAgents(),
+        aiServices.recommendations.list({ status: "pending" }),
+      ]);
+
+      if (cancelled) return;
+
+      setBusinessHealth(health);
+      setOverviewKpis(kpis);
+      setPriorities(priorityItems);
+      setAgents(agentList);
+      setTopRecommendations(
+        [...pendingRecs]
+          .sort((a, b) => priorityOrder[a.priority ?? "medium"] - priorityOrder[b.priority ?? "medium"])
+          .slice(0, 4),
+      );
+      setLoading(false);
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <>
@@ -44,14 +81,15 @@ export default function AiMarketingOverview() {
 
       <div className="mb-8 flex flex-wrap items-center gap-3 rounded-sm border border-border bg-surface/40 px-4 py-3 text-xs text-muted-foreground">
         <DemoBadge />
-        Figures below are illustrative until the Laravel AI API and analytics endpoints are connected.
-        No production values are being reported.
+        Business Health, Priorities, Recommendations and Marketing Systems below are live from the
+        AI API. The Activity feed and Channel Performance chart are still demo data pending their
+        own backend endpoints.
       </div>
 
       {/* Business Health + KPI row */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-[1.1fr_1fr_1fr_1fr_1fr]">
         <div className="sm:col-span-2 xl:col-span-1">
-          <BusinessHealthCard health={businessHealth} />
+          {businessHealth && <BusinessHealthCard health={businessHealth} />}
         </div>
         {overviewKpis.map((k, i) => (
           <KpiCard key={k.id} kpi={k} index={i + 1} tone={kpiTones[i]} />
@@ -87,6 +125,9 @@ export default function AiMarketingOverview() {
               <RecommendationCard rec={r} variant="compact" />
             </Reveal>
           ))}
+          {!loading && topRecommendations.length === 0 && (
+            <p className="text-sm text-muted-foreground">No pending recommendations right now.</p>
+          )}
         </div>
       </section>
 
