@@ -24,6 +24,17 @@ use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\CatalogSceneController;
 use App\Http\Controllers\Api\CatalogItemLayoutController;
 
+// ── AI Marketing Dashboard (Fase 3) ─────────────────────────────
+use App\Http\Controllers\Api\Ai\DashboardController as AiDashboardController;
+use App\Http\Controllers\Api\Ai\AgentController as AiAgentController;
+use App\Http\Controllers\Api\Ai\RecommendationController as AiRecommendationController;
+use App\Http\Controllers\Api\Ai\ActionController as AiActionController;
+use App\Http\Controllers\Api\Ai\ChatController as AiChatController;
+use App\Http\Controllers\Api\Ai\UsageController as AiUsageController;
+use App\Http\Controllers\Api\Ai\ProviderController as AiProviderController;
+use App\Http\Controllers\Api\Ai\CampaignController as AiCampaignController;
+use App\Http\Controllers\Api\Ai\ImpactController as AiImpactController;
+
 /**
  * Media proxy — melayani file dari storage lewat route API supaya selalu
  * membawa header CORS. Dipakai generator PDF (canvas/fetch) yang butuh
@@ -277,5 +288,37 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::get('/users', [\App\Http\Controllers\Api\AdminUserController::class, 'index']);
         Route::get('/users/{user}', [\App\Http\Controllers\Api\AdminUserController::class, 'show']);
         Route::get('/users/{user}/activities', [\App\Http\Controllers\Api\AdminUserController::class, 'activities']);
+    });
+
+    // ================= AI MARKETING DASHBOARD (Fase 3) =================
+    // Prefix /ai, admin-only. Base URL frontend: VITE_API_URL + /ai/...
+    Route::middleware('admin')->prefix('ai')->group(function () {
+        Route::get('/dashboard/health', [AiDashboardController::class, 'health']);
+        Route::get('/dashboard/priorities', [AiDashboardController::class, 'priorities']);
+        Route::get('/dashboard/kpis', [AiDashboardController::class, 'kpis']);
+        Route::get('/agents', [AiAgentController::class, 'index']);
+
+        Route::get('/recommendations', [AiRecommendationController::class, 'index']);
+        Route::get('/recommendations/{recommendation}', [AiRecommendationController::class, 'show']);
+        Route::post('/recommendations/{recommendation}/approve', [AiRecommendationController::class, 'approve']);
+        Route::post('/recommendations/{recommendation}/reject', [AiRecommendationController::class, 'reject']);
+
+        Route::get('/actions', [AiActionController::class, 'index']);
+        Route::post('/actions/{action}/approve-execute', [AiActionController::class, 'approveAndExecute']);
+        Route::post('/actions/{action}/reject', [AiActionController::class, 'reject']);
+
+        Route::post('/chat', [AiChatController::class, 'ask']);
+
+        Route::get('/usage/totals', [AiUsageController::class, 'totals']);
+        Route::get('/usage/by-agent', [AiUsageController::class, 'byAgent']);
+        Route::get('/usage/by-provider', [AiUsageController::class, 'byProvider']);
+
+        Route::get('/providers', [AiProviderController::class, 'index']);
+        Route::get('/routing-strategy', [AiProviderController::class, 'routingStrategy']);
+
+        Route::get('/campaigns', [AiCampaignController::class, 'index']);
+        Route::get('/campaigns/{campaign}', [AiCampaignController::class, 'show']);
+
+        Route::get('/impact', [AiImpactController::class, 'index']);
     });
 });
