@@ -1,52 +1,75 @@
 /**
- * Laravel adapter — talks to the real AI orchestration API.
+ * Laravel adapter — talks to the real AI orchestration API (Fase 3/4).
  *
- * Not used by default (see index.ts). Every endpoint below is a
- * reasonable REST convention for what the Laravel side is expected to
- * expose; adjust paths to match the actual API once it's built. Because
- * every page imports `aiServices` (not this file directly), switching
- * from mock to live data is a one-line change in index.ts — no UI code
- * needs to move.
+ * Path di sini SUDAH dicocokkan satu-satu dengan routes/api.php
+ * (group `Route::middleware('admin')->prefix('ai')`).
+ *
+ * Catatan penting: sebagian endpoint memakai JsonResource (agents,
+ * recommendations, campaigns, impact, providers) dan sebagian lagi
+ * `response()->json(...)` polos (dashboard, usage). Kalau suatu saat
+ * `JsonResource::withoutWrapping()` tidak jalan (BOM di provider,
+ * config cache basi, dsb) response resource akan terbungkus `{ data: ... }`
+ * dan UI langsung kosong tanpa error. `unwrap()` di bawah bikin adapter
+ * tahan dua-duanya — bukan menutupi bug backend, cuma tidak bikin
+ * dashboard blank karena satu byte.
  */
 import { api } from "@/lib/api";
 import type { AIApproval, AIRecommendation } from "../types";
 import type { AIServiceBundle } from "./types";
 
+function unwrap<T>(payload: unknown): T {
+  if (
+    payload &&
+    typeof payload === "object" &&
+    !Array.isArray(payload) &&
+    "data" in (payload as Record<string, unknown>)
+  ) {
+    return (payload as { data: T }).data;
+  }
+  return payload as T;
+}
+
+const get = <T>(url: string, config?: Parameters<typeof api.get>[1]) =>
+  api.get(url, config).then((r) => unwrap<T>(r.data));
+
+const post = <T>(url: string, body?: unknown) =>
+  api.post(url, body).then((r) => unwrap<T>(r.data));
+
 export const laravelServices: AIServiceBundle = {
   dashboard: {
-    getBusinessHealth: () => api.get("/ai/dashboard/health").then((r) => r.data),
-    getPriorities: () => api.get("/ai/dashboard/priorities").then((r) => r.data),
-    getOverviewKpis: () => api.get("/ai/dashboard/kpis").then((r) => r.data),
-    getAgents: () => api.get("/ai/agents").then((r) => r.data),
+    getBusinessHealth: () => get("/ai/dashboard/health"),
+    getPriorities: () => get("/ai/dashboard/priorities"),
+    getOverviewKpis: () => get("/ai/dashboard/kpis"),
+    getAgents: () => get("/ai/agents"),
   },
   recommendations: {
-    list: (params) => api.get("/ai/recommendations", { params }).then((r) => r.data),
-    getById: (id) => api.get(`/ai/recommendations/${id}`).then((r) => r.data),
-    approve: (id) => api.post<AIRecommendation>(`/ai/recommendations/${id}/approve`).then((r) => r.data),
-    reject: (id) => api.post<AIRecommendation>(`/ai/recommendations/${id}/reject`).then((r) => r.data),
+    list: (params) => get("/ai/recommendations", { params }),
+    getById: (id) => get(`/ai/recommendations/${id}`),
+    approve: (id) => post<AIRecommendation>(`/ai/recommendations/${id}/approve`),
+    reject: (id) => post<AIRecommendation>(`/ai/recommendations/${id}/reject`),
   },
   actions: {
-    list: () => api.get("/ai/actions").then((r) => r.data),
-    approveAndExecute: (id) => api.post<AIApproval>(`/ai/actions/${id}/approve-execute`).then((r) => r.data),
-    reject: (id) => api.post<AIApproval>(`/ai/actions/${id}/reject`).then((r) => r.data),
+    list: () => get("/ai/actions"),
+    approveAndExecute: (id) => post<AIApproval>(`/ai/actions/${id}/approve-execute`),
+    reject: (id) => post<AIApproval>(`/ai/actions/${id}/reject`),
   },
   chat: {
-    ask: (message, context) => api.post("/ai/chat", { message, context }).then((r) => r.data),
+    ask: (message, context) => post("/ai/chat", { message, context }),
   },
   usage: {
-    getTotals: () => api.get("/ai/usage/totals").then((r) => r.data),
-    getByAgent: () => api.get("/ai/usage/by-agent").then((r) => r.data),
-    getByProvider: () => api.get("/ai/usage/by-provider").then((r) => r.data),
+    getTotals: () => get("/ai/usage/totals"),
+    getByAgent: () => get("/ai/usage/by-agent"),
+    getByProvider: () => get("/ai/usage/by-provider"),
   },
   providers: {
-    list: () => api.get("/ai/providers").then((r) => r.data),
-    getRoutingStrategy: () => api.get("/ai/routing-strategy").then((r) => r.data),
+    list: () => get("/ai/providers"),
+    getRoutingStrategy: () => get("/ai/routing-strategy"),
   },
   campaigns: {
-    list: () => api.get("/ai/campaigns").then((r) => r.data),
-    getById: (id) => api.get(`/ai/campaigns/${id}`).then((r) => r.data),
+    list: () => get("/ai/campaigns"),
+    getById: (id) => get(`/ai/campaigns/${id}`),
   },
   impact: {
-    list: () => api.get("/ai/impact").then((r) => r.data),
+    list: () => get("/ai/impact"),
   },
 };
