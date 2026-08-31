@@ -4,7 +4,7 @@ import { CategoryBarChart, StatGrid, type StatKpi } from "@/components/ai/dashbo
 import { Panel } from "@/components/ai/primitives";
 import { usePageContext } from "@/context/AiMarketingContext";
 import { aiServices } from "@/lib/ai/services";
-import { agentById } from "@/lib/ai/data";
+import { useAiAgents } from "@/hooks/useAiDashboard";
 import type { AIUsageByAgent, AIUsageByProvider, AIUsageTotals } from "@/lib/ai/types";
 
 const chartColors = [
@@ -26,12 +26,17 @@ export default function AiMarketingUsage() {
   const [totals, setTotals] = useState<AIUsageTotals | null>(null);
   const [byAgent, setByAgent] = useState<AIUsageByAgent[] | null>(null);
   const [byProvider, setByProvider] = useState<AIUsageByProvider[] | null>(null);
+  const { data: agents } = useAiAgents();
 
   useEffect(() => {
     aiServices.usage.getTotals().then(setTotals);
     aiServices.usage.getByAgent().then(setByAgent);
     aiServices.usage.getByProvider().then(setByProvider);
   }, []);
+
+  function agentName(key: string) {
+    return agents?.find((a) => a.id === key)?.name ?? key;
+  }
 
   const stats: StatKpi[] | null = totals
     ? [
@@ -48,7 +53,7 @@ export default function AiMarketingUsage() {
 
   return (
     <>
-       <PageHeader
+      <PageHeader
         eyebrow="AI System"
         title="Usage & Cost"
         description="Simple enough to check at a glance, detailed enough to audit."
@@ -69,7 +74,7 @@ export default function AiMarketingUsage() {
           <CategoryBarChart
             title="Cost by Agent"
             data={byAgent.map((u, i) => ({
-              label: agentById(u.agent)?.name ?? u.agent,
+              label: agentName(u.agent),
               value: u.cost,
               color: chartColors[i % chartColors.length],
             }))}
@@ -100,7 +105,7 @@ export default function AiMarketingUsage() {
           <div className="space-y-2">
             {byAgent.map((u) => (
               <div key={u.agent} className="flex items-center justify-between border-t border-border py-2 first:border-t-0 text-sm">
-                <span className="text-foreground/80">{agentById(u.agent)?.name ?? u.agent}</span>
+                <span className="text-foreground/80">{agentName(u.agent)}</span>
                 <span className="flex items-center gap-4 text-xs text-muted-foreground">
                   <span className="num">{u.requests.toLocaleString()} req</span>
                   <span className="num">{formatTokens(u.tokens)} tok</span>
