@@ -41,7 +41,7 @@ import {
 import { AskAIDrawer } from "@/components/ai/ask-ai-drawer";
 import { Pill, StatusDot } from "@/components/ai/primitives";
 import { AiMarketingProvider, useAiMarketingContext } from "@/context/AiMarketingContext";
-import { activity } from "@/lib/ai/data";
+import { useAiActivity } from "@/hooks/useAiDashboard";
 import { cn } from "@/lib/utils";
 import "@/styles/ai-marketing.css";
 
@@ -200,7 +200,8 @@ const dateRangeOptions = ["Last 7 days", "Last 14 days", "Last 30 days", "This m
 function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) {
   const { openAsk } = useAiMarketingContext();
   const [dateRange, setDateRange] = useState(dateRangeOptions[0]);
-  const recentActivity = activity.slice(0, 4);
+  const { data: activityData } = useAiActivity();
+  const recentActivity = (activityData ?? []).slice(0, 4);
 
   return (
     <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-background/85 px-4 py-3 backdrop-blur-md sm:px-6">
@@ -251,16 +252,20 @@ function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) 
             <span className="absolute right-1 top-1 size-1.5 rounded-full bg-insight" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-72">
-            <DropdownMenuLabel>Recent activity</DropdownMenuLabel>
+                        <DropdownMenuLabel>Recent activity</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {recentActivity.map((a) => (
-              <DropdownMenuItem key={a.id} className="flex flex-col items-start gap-0.5 whitespace-normal">
-                <span className="text-xs text-foreground/90">{a.message}</span>
-                <span className="text-[10px] text-muted-foreground">
-                  {new Date(a.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                </span>
-              </DropdownMenuItem>
-            ))}
+            {recentActivity.length === 0 ? (
+              <p className="px-2 py-3 text-xs text-muted-foreground">No activity logged yet.</p>
+            ) : (
+              recentActivity.map((a) => (
+                <DropdownMenuItem key={a.id} className="flex flex-col items-start gap-0.5 whitespace-normal">
+                  <span className="text-xs text-foreground/90">{a.message}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {new Date(a.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </DropdownMenuItem>
+              ))
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 

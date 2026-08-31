@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Check, CircleDashed, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
-import { DemoBadge, Panel, Pill, SectionHeading, Sparkline } from "@/components/ai/primitives";
+import { Panel, Pill, SectionHeading, Sparkline } from "@/components/ai/primitives";
 import { RecommendationCard } from "@/components/ai/recommendation-card";
 import { usePageContext } from "@/context/AiMarketingContext";
 import { aiServices } from "@/lib/ai/services";
-import { recommendations } from "@/lib/ai/data";
+import { useRecommendations } from "@/hooks/useAiDashboard";
 import type { Campaign, CampaignHealth } from "@/lib/ai/types";
 
 const healthTone: Record<CampaignHealth, "success" | "warning" | "danger"> = {
@@ -19,6 +19,7 @@ export default function AiMarketingCampaignDetail() {
   usePageContext("campaigns");
   const { id } = useParams();
   const [campaign, setCampaign] = useState<Campaign | null | undefined>(undefined);
+  const { data: recommendations } = useRecommendations();
 
   useEffect(() => {
     if (!id) return;
@@ -39,7 +40,9 @@ export default function AiMarketingCampaignDetail() {
     );
   }
 
-  const relatedRecs = recommendations.filter((r) => campaign.relatedRecommendationIds.includes(r.id));
+  const relatedRecs = (recommendations ?? []).filter((r) =>
+    campaign.relatedRecommendationIds.includes(r.id),
+  );
 
   return (
     <>
@@ -57,12 +60,6 @@ export default function AiMarketingCampaignDetail() {
         description={campaign.summary}
         action={<Pill tone={healthTone[campaign.health]}>{campaign.health}</Pill>}
       />
-
-      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-sm border border-border bg-surface/40 px-4 py-3 text-xs text-muted-foreground">
-        <DemoBadge />
-        This plan is illustrative — steps and experiments will run for real once the campaign is wired to a live
-        data source.
-      </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_1.2fr]">
         <div className="space-y-4">

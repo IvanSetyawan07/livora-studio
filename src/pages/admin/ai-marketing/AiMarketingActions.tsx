@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Check, Loader2, X } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
-import { DemoBadge, Panel, Pill, RiskPill, StatusDot } from "@/components/ai/primitives";
+import { Panel, Pill, RiskPill, StatusDot } from "@/components/ai/primitives";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePageContext } from "@/context/AiMarketingContext";
-import { aiServices } from "@/lib/ai/services";
-import { agentById, recommendations } from "@/lib/ai/data";
+import { useActionDecision, useAiActions, useAiAgents, useRecommendations } from "@/hooks/useAiDashboard";
 import type { AIApproval } from "@/lib/ai/types";
 
 type TabKey = "needs_review" | "scheduled" | "running" | "completed" | "failed";
@@ -21,26 +20,26 @@ const tabs: { key: TabKey; label: string }[] = [
 
 export default function AiMarketingActions() {
   usePageContext("actions");
-  const [items, setItems] = useState<AIApproval[] | null>(null);
   const [runningIds, setRunningIds] = useState<Set<string>>(new Set());
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  async function refresh() {
-    const data = await aiServices.actions.list();
-    setItems(data);
-  }
+  const { data: items, isLoading, error } = useAiActions();
+  const { data: agents } = useAiAgents();
+  const { data: recommendations } = useRecommendations();
+  const { approveAndExecute, reject } = useActionDecision();
 
-  useEffect(() => {
-    refresh();
-  }, []);
+  function agentName(key: string) {
+    return agents?.find((a) => a.id === key)?.name ?? key;
+  }
 
   async function handleApproveExecute(a: AIApproval) {
     setBusyId(a.id);
     setRunningIds((prev) => new Set(prev).add(a.id));
     try {
-      await aiServices.actions.approveAndExecute(a.id);
+      await approveAndExecute.mutateAsync(a.id);
       toast.success("Action executed successfully", { description: `${a.title} updated.` });
-      await refresh();
+    } catch {
+      toast.error("Failed to execute action");
     } finally {
       setRunningIds((prev) => {
         const next = new Set(prev);
@@ -54,9 +53,10 @@ export default function AiMarketingActions() {
   async function handleReject(a: AIApproval) {
     setBusyId(a.id);
     try {
-      await aiServices.actions.reject(a.id);
+      await reject.mutateAsync(a.id);
       toast("Action rejected", { description: `${a.title} will not be executed.` });
-      await refresh();
+    } catch {
+      toast.error("Failed to reject action");
     } finally {
       setBusyId(null);
     }
@@ -79,11 +79,11 @@ export default function AiMarketingActions() {
         description="Every AI-recommended action, from first review to execution, in one place."
       />
 
-      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-sm border border-border bg-surface/40 px-4 py-3 text-xs text-muted-foreground">
-        <DemoBadge />
-        Approve & Execute mutates in-memory demo state for this session only. Nothing here reaches a real ad
-        platform, CMS, or inbox until the Laravel API is connected.
-      </div>
+      {error ? (
+        <div className="mb-6 rounded-sm border border-dashed border-border-strong px-4 py-3 text-xs text-muted-foreground">
+          Actions tidak bisa dimuat dari server.
+        </div>
+      ) : null}
 
       <Tabs defaultValue="needs_review">
         <TabsList className="h-auto flex-wrap gap-1 bg-transparent p-0">
@@ -104,7 +104,7 @@ export default function AiMarketingActions() {
 
         {tabs.map((t) => (
           <TabsContent key={t.key} value={t.key} className="mt-5 space-y-3">
-            {!items ? (
+            {isLoading ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 {[0, 1].map((i) => (
                   <div key={i} className="skeleton-shimmer h-40 rounded-lg" />
@@ -114,15 +114,14 @@ export default function AiMarketingActions() {
               <Panel className="p-8 text-center text-sm text-muted-foreground">Nothing in {t.label.toLowerCase()} right now.</Panel>
             ) : (
               itemsFor(t.key).map((a) => {
-                const agent = agentById(a.agent);
-                const rec = recommendations.find((r) => r.id === a.recommendationId);
+                const rec = recommendations?.find((r) => r.id === a.recommendationId);
                 const running = runningIds.has(a.id);
                 return (
                   <Panel key={a.id} className="p-5">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0 space-y-1.5">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="label-eyebrow">{agent?.name ?? a.agent}</span>
+                          <span className="label-eyebrow">{agentName(a.agent)}</span>
                           <RiskPill risk={a.risk} />
                           {running ? (
                             <Pill tone="info">

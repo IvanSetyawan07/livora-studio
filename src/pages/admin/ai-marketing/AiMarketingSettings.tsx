@@ -1,7 +1,9 @@
 import { PageHeader } from "@/components/admin/PageHeader";
-import { DemoBadge, NotConnected, Panel, Pill, SectionHeading, StatusDot } from "@/components/ai/primitives";
-import { agents, DATA_MODE } from "@/lib/ai/data";
-import type { ConnectionState } from "@/lib/ai/types";
+import { Panel, Pill, SectionHeading, StatusDot } from "@/components/ai/primitives";
+import { useAiAgents } from "@/hooks/useAiDashboard";
+import { aiServices } from "@/lib/ai/services";
+import { useQuery } from "@tanstack/react-query";
+import type { AIProviderInfo, ConnectionState } from "@/lib/ai/types";
 
 const connLabel: Record<ConnectionState, string> = {
   connected: "Connected",
@@ -15,9 +17,22 @@ const connTone: Record<ConnectionState, "success" | "neutral"> = {
   coming_soon: "neutral",
 };
 
+const providerTone: Record<AIProviderInfo["status"], "success" | "neutral" | "warning"> = {
+  connected: "success",
+  not_connected: "neutral",
+  degraded: "warning",
+};
+
 export default function SettingsPage() {
+  const { data: agents, isLoading: agentsLoading } = useAiAgents();
+  const { data: providers, isLoading: providersLoading } = useQuery<AIProviderInfo[]>({
+    queryKey: ["ai", "providers"],
+    queryFn: () => aiServices.providers.list(),
+    staleTime: 60_000,
+  });
+
   const integrations = new Map<string, ConnectionState>();
-  for (const agent of agents) {
+  for (const agent of agents ?? []) {
     for (const dep of agent.dependencies) {
       const existing = integrations.get(dep.name);
       // Prefer showing "connected" if any agent already has it connected.
@@ -33,7 +48,6 @@ export default function SettingsPage() {
         eyebrow="Governance"
         title="Settings"
         description="Integration status for every data source and platform the AI Marketing system depends on. Credentials are managed server-side in the Laravel backend — never in this dashboard."
-        action={<DemoBadge />}
       />
 
       <section>
@@ -42,41 +56,55 @@ export default function SettingsPage() {
           description="Read-only status. Connecting a service happens in the Laravel admin, not here."
         />
         <Panel className="overflow-hidden">
-          <ul className="divide-y divide-border">
-            {[...integrations.entries()].map(([name, state]) => (
-              <li key={name} className="flex items-center justify-between px-5 py-3.5 text-sm">
-                {name}
-                <Pill tone={connTone[state]}>
-                  <StatusDot tone={connTone[state]} pulse={state === "connected"} />
-                  {connLabel[state]}
-                </Pill>
-              </li>
-            ))}
-          </ul>
+          {agentsLoading ? (
+            <div className="h-32 animate-pulse bg-surface/40" />
+          ) : integrations.size === 0 ? (
+            <p className="p-6 text-center text-sm text-muted-foreground">
+              No agent dependencies registered yet.
+            </p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {[...integrations.entries()].map(([name, state]) => (
+                <li key={name} className="flex items-center justify-between px-5 py-3.5 text-sm">
+                  {name}
+                  <Pill tone={connTone[state]}>
+                    <StatusDot tone={connTone[state]} pulse={state === "connected"} />
+                    {connLabel[state]}
+                  </Pill>
+                </li>
+              ))}
+            </ul>
+          )}
         </Panel>
       </section>
 
-      <section className="mt-10 grid gap-4 lg:grid-cols-2">
-        <Panel className="p-6">
-          <SectionHeading title="AI orchestration" />
-          <NotConnected
-            state="coming_soon"
-            title="Claude via Laravel API is not connected"
-            description="Once the orchestration endpoint exists, every agent on this dashboard will reason over live data instead of demo fixtures."
-          />
-        </Panel>
-        <Panel className="p-6">
-          <SectionHeading title="Data mode" />
-          <div className="flex items-center gap-2 rounded-sm border border-dashed border-border-strong bg-background/40 p-5">
-            <Pill tone="neutral">
-              <StatusDot tone="neutral" />
-              {DATA_MODE}
-            </Pill>
-            <p className="text-sm text-muted-foreground">
-              Every insight, agent and metric in this dashboard is illustrative preview data, not
-              production analytics.
+      <section className="mt-10">
+        <SectionHeading
+          title="AI orchestration"
+          description="Providers the Laravel backend can fall back across when an agent asks the AI a question."
+        />
+        <Panel className="overflow-hidden">
+          {providersLoading ? (
+            <div className="h-32 animate-pulse bg-surface/40" />
+          ) : (providers ?? []).length === 0 ? (
+            <p className="p-6 text-center text-sm text-muted-foreground">
+              No AI provider registered yet — run the provider seeder on the backend.
             </p>
-          </div>
+          ) : (
+            <ul className="divide-y divide-border">
+              {(providers ?? []).map((p) => (
+                <li key={p.id} className="flex items-center justify-between px-5 py-3.5 text-sm">
+                  <span className="capitalize">
+                    {p.provider} <span className="text-muted-foreground">— {p.model}</span>
+                  </span>
+                  <Pill tone={providerTone[p.status]}>
+                    <StatusDot tone={providerTone[p.status]} pulse={p.status === "connected"} />
+                    {p.status === "connected" ? "Connected" : p.status === "degraded" ? "Degraded" : "Not connected"}
+                  </Pill>
+                </li>
+              ))}
+            </ul>
+          )}
         </Panel>
       </section>
     </>

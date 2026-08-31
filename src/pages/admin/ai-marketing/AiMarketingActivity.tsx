@@ -1,8 +1,7 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { ActivityStream } from "@/components/ai/activity-stream";
-import { DemoBadge } from "@/components/ai/primitives";
-import { activity as allActivity } from "@/lib/ai/data";
+import { useAiActivity } from "@/hooks/useAiDashboard";
 import type { AIAgentId } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
 
@@ -11,10 +10,8 @@ const agentFilters: (AIAgentId | "all")[] = ["all", "seo", "content", "ads", "le
 export default function ActivityPage() {
   const [filter, setFilter] = useState<AIAgentId | "all">("all");
 
-  const visible = useMemo(
-    () => allActivity.filter((a) => filter === "all" || a.agent === filter),
-    [filter],
-  );
+  const { data, isLoading, error } = useAiActivity(filter);
+  const visible = data ?? [];
 
   return (
     <>
@@ -22,7 +19,6 @@ export default function ActivityPage() {
         eyebrow="Governance"
         title="Activity"
         description="Every analysis, insight, recommendation, approval and execution is logged here — the full trail behind each AI decision."
-        action={<DemoBadge />}
       />
 
       <div className="scroll-rail mb-6 flex gap-2 pb-2">
@@ -42,13 +38,27 @@ export default function ActivityPage() {
         ))}
       </div>
 
-      <ActivityStream items={visible} />
-
-      {visible.length === 0 ? (
-        <p className="mt-4 rounded-sm border border-dashed border-border-strong p-8 text-center text-sm text-muted-foreground">
-          No activity logged for this agent yet.
+      {isLoading ? (
+        <div className="space-y-3">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-16 animate-pulse rounded-sm border border-border bg-surface/40" />
+          ))}
+        </div>
+      ) : error ? (
+        <p className="rounded-sm border border-dashed border-border-strong p-8 text-center text-sm text-muted-foreground">
+          Activity log tidak bisa dimuat dari server.
         </p>
-      ) : null}
+      ) : (
+        <>
+          <ActivityStream items={visible} />
+
+          {visible.length === 0 ? (
+            <p className="mt-4 rounded-sm border border-dashed border-border-strong p-8 text-center text-sm text-muted-foreground">
+              No activity logged for this agent yet.
+            </p>
+          ) : null}
+        </>
+      )}
     </>
   );
 }

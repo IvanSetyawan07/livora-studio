@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/admin/PageHeader";
-import { DemoBadge, Panel, Pill } from "@/components/ai/primitives";
+import { Panel, Pill } from "@/components/ai/primitives";
 import { usePageContext } from "@/context/AiMarketingContext";
 import { aiServices } from "@/lib/ai/services";
-import { agentById } from "@/lib/ai/data";
+import { useAiAgents } from "@/hooks/useAiDashboard";
 import type { ImpactPeriod, ImpactRecord, ImpactResult } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
 
@@ -27,10 +27,15 @@ export default function AiMarketingImpact() {
   usePageContext("impact");
   const [records, setRecords] = useState<ImpactRecord[] | null>(null);
   const [period, setPeriod] = useState<ImpactPeriod>(14);
+  const { data: agents } = useAiAgents();
 
   useEffect(() => {
     aiServices.impact.list().then(setRecords);
   }, []);
+
+  function agentName(key: string) {
+    return agents?.find((a) => a.id === key)?.name ?? key;
+  }
 
   return (
     <>
@@ -39,12 +44,6 @@ export default function AiMarketingImpact() {
         title="Impact"
         description="Recommendations are only as good as the results they produce. This is where that gets checked."
       />
-
-      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-sm border border-border bg-surface/40 px-4 py-3 text-xs text-muted-foreground">
-        <DemoBadge />
-        Before/after figures are illustrative until analytics are wired up. The measurement flow itself works
-        exactly as it will in production.
-      </div>
 
       <div className="mb-6 flex items-center gap-2">
         <span className="label-eyebrow mr-1">Period</span>
@@ -78,13 +77,12 @@ export default function AiMarketingImpact() {
             const after = r.after[period];
             const changePct = r.changePct[period];
             const effectiveResult: ImpactResult = after ? r.result : "monitoring";
-            const agent = agentById(r.agent);
 
             return (
               <Panel key={r.id} className="p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="space-y-1">
-                    <span className="label-eyebrow">{agent?.name ?? r.agent}</span>
+                    <span className="label-eyebrow">{agentName(r.agent)}</span>
                     <p className="text-sm font-medium text-foreground">{r.title}</p>
                     <p className="text-xs text-muted-foreground">{r.metricLabel}</p>
                   </div>
