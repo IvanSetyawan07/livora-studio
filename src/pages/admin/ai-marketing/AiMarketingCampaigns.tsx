@@ -1,8 +1,9 @@
+// src/pages/admin/ai-marketing/AiMarketingCampaigns.tsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowUpRight } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
-import { DemoBadge, Panel, Pill, Sparkline } from "@/components/ai/primitives";
+import { Panel, Pill, Sparkline } from "@/components/ai/primitives";
 import { usePageContext } from "@/context/AiMarketingContext";
 import { aiServices } from "@/lib/ai/services";
 import type { Campaign, CampaignHealth } from "@/lib/ai/types";
@@ -16,9 +17,16 @@ const healthTone: Record<CampaignHealth, "success" | "warning" | "danger"> = {
 export default function AiMarketingCampaigns() {
   usePageContext("campaigns");
   const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    aiServices.campaigns.list().then(setCampaigns);
+    aiServices.campaigns
+      .list()
+      .then((data) => {
+        setCampaigns(data);
+        setError(false);
+      })
+      .catch(() => setError(true));
   }, []);
 
   return (
@@ -29,20 +37,23 @@ export default function AiMarketingCampaigns() {
         description="Not just analytics — AI helps plan the fix, not only report the problem."
       />
 
-      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-sm border border-border bg-surface/40 px-4 py-3 text-xs text-muted-foreground">
-        <DemoBadge />
-        Campaign plans and experiments are illustrative until connected to live ad, SEO and CRO data.
-      </div>
-
-      {!campaigns ? (
+      {!campaigns && !error ? (
         <div className="grid gap-4 lg:grid-cols-3">
           {[0, 1, 2].map((i) => (
             <div key={i} className="skeleton-shimmer h-64 rounded-lg" />
           ))}
         </div>
+      ) : error ? (
+        <Panel className="p-10 text-center text-sm text-muted-foreground">
+          Campaigns tidak bisa dimuat dari server. Coba muat ulang halaman.
+        </Panel>
+      ) : campaigns && campaigns.length === 0 ? (
+        <Panel className="p-10 text-center text-sm text-muted-foreground">
+          Belum ada AI campaign yang dibuat. Campaign akan muncul di sini begitu sebuah agent membuat rencana aksi.
+        </Panel>
       ) : (
         <div className="grid gap-4 lg:grid-cols-3">
-          {campaigns.map((c, i) => {
+          {(campaigns ?? []).map((c, i) => {
             const done = c.plan.filter((s) => s.state === "done").length;
             return (
               <Link
