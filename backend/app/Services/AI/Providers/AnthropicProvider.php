@@ -2,6 +2,7 @@
 
 namespace App\Services\AI\Providers;
 
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 
 class AnthropicProvider implements AIProviderContract
@@ -64,6 +65,33 @@ class AnthropicProvider implements AIProviderContract
             inputTokens: (int) ($usage['input_tokens'] ?? 0),
             outputTokens: (int) ($usage['output_tokens'] ?? 0),
             durationMs: (int) ((microtime(true) - $start) * 1000),
+            rlRequestsLimit: $this->headerInt($response, 'anthropic-ratelimit-requests-limit'),
+            rlRequestsRemaining: $this->headerInt($response, 'anthropic-ratelimit-requests-remaining'),
+            rlTokensLimit: $this->headerInt($response, 'anthropic-ratelimit-tokens-limit'),
+            rlTokensRemaining: $this->headerInt($response, 'anthropic-ratelimit-tokens-remaining'),
+            rlRequestsResetAt: $this->parseTimestamp($response->header('anthropic-ratelimit-requests-reset')),
+            rlTokensResetAt: $this->parseTimestamp($response->header('anthropic-ratelimit-tokens-reset')),
         );
+    }
+
+    protected function headerInt(Response $response, string $name): ?int
+    {
+        $value = $response->header($name);
+
+        return $value !== null && $value !== '' ? (int) $value : null;
+    }
+
+    /** Anthropic mengirim reset sebagai timestamp RFC 3339, beda dari Groq yang berupa durasi. */
+    protected function parseTimestamp(?string $raw): ?\DateTimeInterface
+    {
+        if (!$raw) {
+            return null;
+        }
+
+        try {
+            return new \DateTimeImmutable($raw);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }

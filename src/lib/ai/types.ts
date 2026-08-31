@@ -317,6 +317,25 @@ export interface AIRoutingStrategy {
   taskRouting: { taskType: string; routedTo: string; reason: string }[];
 }
 
+export interface AIProviderQuota {
+  provider: string;
+  requestsLimit: number | null;
+  requestsRemaining: number | null;
+  requestsUsedPct: number | null;
+  tokensLimit: number | null;
+  tokensRemaining: number | null;
+  tokensUsedPct: number | null;
+  requestsResetAt: string | null;
+  tokensResetAt: string | null;
+  note: string | null;
+  updatedAt: string | null;
+}
+
+export interface AIProviderPreference {
+  preferredProvider: string | null;
+  scope: "global";
+}
+
 /* ------------------------------------------------------------------ */
 /* Ask AI — context-aware chat                                         */
 /* ------------------------------------------------------------------ */

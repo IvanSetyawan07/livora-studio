@@ -179,6 +179,18 @@ const providers: AIProviderService = {
     await delay(280);
     return routingStrategy;
   },
+  async getQuota() {
+    await delay(200);
+    return [];
+  },
+  async getPreference() {
+    await delay(150);
+    return { preferredProvider: null, scope: "global" };
+  },
+  async setPreference(provider) {
+    await delay(200);
+    return { preferredProvider: provider, scope: "global" };
+  },
 };
 const insights: AIInsightService = {
   async list(params) {

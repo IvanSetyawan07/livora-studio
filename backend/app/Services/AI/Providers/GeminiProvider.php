@@ -6,6 +6,15 @@ use Illuminate\Support\Facades\Http;
 
 class GeminiProvider implements AIProviderContract
 {
+    /**
+     * Per 31 Agustus 2026, ai.google.dev/gemini-api/docs/rate-limits tidak lagi
+     * mempublikasikan angka RPM/RPD/TPM tetap dan tidak kirim header quota di
+     * respons — mereka arahkan ke dashboard AI Studio yang butuh login akun
+     * sendiri. Jadi field kuota Gemini selalu null di sini, jujur, bukan
+     * angka karangan.
+     */
+    public const QUOTA_NOTE = 'Gemini tidak mempublikasikan data quota via API — cek langsung di aistudio.google.com/rate-limit';
+
     public function __construct(
         protected ?string $apiKey,
         protected string $modelName,
@@ -65,6 +74,7 @@ class GeminiProvider implements AIProviderContract
             inputTokens: (int) ($usage['promptTokenCount'] ?? 0),
             outputTokens: (int) ($usage['candidatesTokenCount'] ?? 0),
             durationMs: (int) ((microtime(true) - $start) * 1000),
+            rlNote: self::QUOTA_NOTE,
         );
     }
 }

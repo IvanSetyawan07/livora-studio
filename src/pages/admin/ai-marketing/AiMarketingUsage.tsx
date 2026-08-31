@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { CategoryBarChart, StatGrid, type StatKpi } from "@/components/ai/dashboard-charts";
-import { DemoBadge, Panel } from "@/components/ai/primitives";
+import { Panel } from "@/components/ai/primitives";
 import { usePageContext } from "@/context/AiMarketingContext";
 import { aiServices } from "@/lib/ai/services";
 import { agentById } from "@/lib/ai/data";
@@ -48,17 +48,11 @@ export default function AiMarketingUsage() {
 
   return (
     <>
-      <PageHeader
+       <PageHeader
         eyebrow="AI System"
         title="Usage & Cost"
         description="Simple enough to check at a glance, detailed enough to audit."
       />
-
-      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-sm border border-border bg-surface/40 px-4 py-3 text-xs text-muted-foreground">
-        <DemoBadge />
-        Modelled figures — real usage and cost will populate here once the Laravel AI orchestration layer is
-        connected.
-      </div>
 
       {!stats ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

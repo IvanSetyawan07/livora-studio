@@ -2,6 +2,7 @@
 
 namespace App\Services\AI\Providers;
 
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 
 class GroqProvider implements AIProviderContract
@@ -62,6 +63,41 @@ class GroqProvider implements AIProviderContract
             inputTokens: (int) ($usage['prompt_tokens'] ?? 0),
             outputTokens: (int) ($usage['completion_tokens'] ?? 0),
             durationMs: (int) ((microtime(true) - $start) * 1000),
+            rlRequestsLimit: $this->headerInt($response, 'x-ratelimit-limit-requests'),
+            rlRequestsRemaining: $this->headerInt($response, 'x-ratelimit-remaining-requests'),
+            rlTokensLimit: $this->headerInt($response, 'x-ratelimit-limit-tokens'),
+            rlTokensRemaining: $this->headerInt($response, 'x-ratelimit-remaining-tokens'),
+            rlRequestsResetAt: $this->parseGroqDuration($response->header('x-ratelimit-reset-requests')),
+            rlTokensResetAt: $this->parseGroqDuration($response->header('x-ratelimit-reset-tokens')),
         );
+    }
+
+    protected function headerInt(Response $response, string $name): ?int
+    {
+        $value = $response->header($name);
+
+        return $value !== null && $value !== '' ? (int) $value : null;
+    }
+
+    /**
+     * Groq mengirim reset window sebagai durasi string (mis. "2m59.56s",
+     * "7.66s", "1h2m3s") — bukan timestamp — jadi di-parse manual jadi
+     * now() + durasi tersebut.
+     */
+    protected function parseGroqDuration(?string $raw): ?\DateTimeInterface
+    {
+        if (!$raw) {
+            return null;
+        }
+
+        if (!preg_match('/(?:(\d+)h)?(?:(\d+)m)?(?:([\d.]+)s)?/', $raw, $m)) {
+            return null;
+        }
+
+        $seconds = ((int) ($m[1] ?? 0)) * 3600
+            + ((int) ($m[2] ?? 0)) * 60
+            + (float) ($m[3] ?? 0);
+
+        return $seconds > 0 ? now()->addSeconds((int) ceil($seconds)) : null;
     }
 }

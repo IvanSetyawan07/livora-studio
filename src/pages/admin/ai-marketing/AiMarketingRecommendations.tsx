@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/admin/PageHeader";
-import { DemoBadge, Panel } from "@/components/ai/primitives";
+import { Panel } from "@/components/ai/primitives";
 import { RecommendationCard } from "@/components/ai/recommendation-card";
 import { usePageContext } from "@/context/AiMarketingContext";
 import { aiServices } from "@/lib/ai/services";
@@ -57,9 +57,7 @@ export default function AiMarketingRecommendations() {
         description="Actionable proposals from every agent. Approving one moves it to Actions for execution."
       />
 
-      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-sm border border-border bg-surface/40 px-4 py-3 text-xs text-muted-foreground">
-        <DemoBadge />
-        Approve/Reject mutate in-memory demo state for this session only — no request reaches a live backend yet.
+      <div className="mb-5 flex flex-wrap gap-2">
       </div>
 
       <div className="mb-5 flex flex-wrap gap-2">

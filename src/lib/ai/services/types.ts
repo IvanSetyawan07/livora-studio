@@ -15,6 +15,8 @@ import type {
   AIInsightType,
   AIKpi,
   AIProviderInfo,
+  AIProviderPreference,
+  AIProviderQuota,
   AIRecommendation,
   AIRoutingStrategy,
   AiChatContextKey,
@@ -62,6 +64,10 @@ export interface AIUsageService {
 export interface AIProviderService {
   list(): Promise<AIProviderInfo[]>;
   getRoutingStrategy(): Promise<AIRoutingStrategy>;
+  /** Snapshot kuota terakhir per provider, dibaca dari header respons API asli. */
+  getQuota(): Promise<AIProviderQuota[]>;
+  getPreference(): Promise<AIProviderPreference>;
+  setPreference(provider: string | null): Promise<AIProviderPreference>;
 }
 
 export interface AICampaignService {

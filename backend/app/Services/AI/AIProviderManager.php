@@ -3,8 +3,10 @@
 namespace App\Services\AI;
 
 use App\Models\AiProvider as AiProviderModel;
+use App\Models\AiSetting;
 use App\Models\AiUsageLog;
 use App\Services\AI\Providers\AIProviderContract;
+use App\Services\AI\Providers\AIProviderResult;
 use App\Services\AI\Providers\AnthropicProvider;
 use App\Services\AI\Providers\GeminiProvider;
 use App\Services\AI\Providers\GroqProvider;
@@ -29,13 +31,16 @@ class AIProviderManager
 
     /**
      * Kirim prompt ke provider pertama yang terkonfigurasi & berhasil.
-     * $forceProvider dipakai kalau user manual pilih provider di dashboard
-     * (Settings/Providers page). Kalau kosong, coba urut sesuai config/ai.php,
-     * jatuh ke provider berikutnya kalau satu gagal/limit habis.
+     * $forceProvider dipakai kalau caller mau paksa satu provider spesifik.
+     * Kalau kosong, urutan dipakai dari:
+     *   1. Preferensi manual di Settings > Providers (ai_settings.preferred_ai_provider), kalau ada & valid,
+     *   2. sisanya jatuh berurutan sesuai config/ai.php (Gemini → Groq → Anthropic).
+     * "Prioritaskan tapi tetap fallback": provider pilihan dicoba duluan, tapi
+     * kalau gagal/limit habis, otomatis lanjut ke provider berikutnya.
      */
     public function ask(string $systemPrompt, string $userMessage, ?string $agentKey = null, ?string $forceProvider = null): array
     {
-        $order = $forceProvider ? [$forceProvider] : array_keys($this->drivers);
+        $order = $forceProvider ? [$forceProvider] : $this->resolveOrder();
         $lastError = null;
 
         foreach ($order as $key) {
@@ -47,7 +52,7 @@ class AIProviderManager
             try {
                 $result = $driver->complete($systemPrompt, $userMessage);
                 $this->recordUsage($key, $agentKey, $result->model, $result->inputTokens, $result->outputTokens, $result->durationMs, 'success');
-                $this->touchProviderStatus($key, 'connected', $result->durationMs, true);
+                $this->touchProviderStatus($key, 'connected', $result->durationMs, true, $result);
 
                 return ['text' => $result->text, 'provider' => $key, 'model' => $result->model];
             } catch (\Throwable $e) {
@@ -68,6 +73,19 @@ class AIProviderManager
         return array_keys(array_filter($this->drivers, fn ($d) => $d->isConfigured()));
     }
 
+    /** Urutan fallback: preferensi manual (kalau valid) duluan, sisanya urutan config/ai.php. */
+    protected function resolveOrder(): array
+    {
+        $configOrder = array_keys($this->drivers);
+        $preferred = AiSetting::get('preferred_ai_provider');
+
+        if (!$preferred || !in_array($preferred, $configOrder, true)) {
+            return $configOrder;
+        }
+
+        return array_values(array_unique([$preferred, ...$configOrder]));
+    }
+
     protected function recordUsage(string $provider, ?string $agentKey, string $model, int $in, int $out, ?int $durationMs, string $status, ?string $error = null): void
     {
         AiUsageLog::create([
@@ -83,21 +101,35 @@ class AIProviderManager
         ]);
     }
 
-    protected function touchProviderStatus(string $provider, string $status, ?int $latencyMs, bool $success): void
+    protected function touchProviderStatus(string $provider, string $status, ?int $latencyMs, bool $success, ?AIProviderResult $result = null): void
     {
         $row = AiProviderModel::firstOrCreate(['provider' => $provider], [
             'model' => $this->drivers[$provider]->model(),
             'status' => 'not_connected',
         ]);
 
-        // Rolling average sederhana, biar success_rate gak lompat drastis tiap 1 request.
         $prevRate = (float) ($row->success_rate ?? ($success ? 100 : 0));
         $newRate = round(($prevRate * 0.8) + (($success ? 100 : 0) * 0.2), 2);
 
-        $row->update([
+        $update = [
             'status' => $status,
             'latency_ms' => $latencyMs ?? $row->latency_ms,
             'success_rate' => $newRate,
-        ]);
+        ];
+
+        // Kuota cuma ditimpa kalau request ini beneran sukses dan bawa data baru
+        // — supaya request yang gagal duluan (sebelum sempat dapat header) tidak
+        // menghapus snapshot kuota lama dengan null.
+        if ($result) {
+            $update['rl_requests_limit'] = $result->rlRequestsLimit ?? $row->rl_requests_limit;
+            $update['rl_requests_remaining'] = $result->rlRequestsRemaining ?? $row->rl_requests_remaining;
+            $update['rl_tokens_limit'] = $result->rlTokensLimit ?? $row->rl_tokens_limit;
+            $update['rl_tokens_remaining'] = $result->rlTokensRemaining ?? $row->rl_tokens_remaining;
+            $update['rl_requests_reset_at'] = $result->rlRequestsResetAt ?? $row->rl_requests_reset_at;
+            $update['rl_tokens_reset_at'] = $result->rlTokensResetAt ?? $row->rl_tokens_reset_at;
+            $update['rl_note'] = $result->rlNote ?? $row->rl_note;
+        }
+
+        $row->update($update);
     }
 }

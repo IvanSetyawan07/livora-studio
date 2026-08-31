@@ -62,9 +62,13 @@ export const laravelServices: AIServiceBundle = {
     getByAgent: () => api.get("/ai/usage/by-agent").then((r) => unwrapList(r.data)),
     getByProvider: () => api.get("/ai/usage/by-provider").then((r) => unwrapList(r.data)),
   },
-  providers: {
+    providers: {
     list: () => api.get("/ai/providers").then((r) => unwrapList(r.data)),
     getRoutingStrategy: () => api.get("/ai/routing-strategy").then((r) => unwrap(r.data)),
+    getQuota: () => api.get("/ai/providers/quota").then((r) => unwrapList(r.data)),
+    getPreference: () => api.get("/ai/providers/preference").then((r) => unwrap(r.data)),
+    setPreference: (provider) =>
+      api.post("/ai/providers/preference", { preferredProvider: provider }).then((r) => unwrap(r.data)),
   },
   campaigns: {
     list: () => api.get("/ai/campaigns").then((r) => unwrapList(r.data)),

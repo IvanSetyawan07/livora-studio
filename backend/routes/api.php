@@ -321,8 +321,11 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::get('/usage/by-provider', [AiUsageController::class, 'byProvider']);
 
         Route::get('/providers', [AiProviderController::class, 'index']);
+        Route::get('/providers/quota', [AiProviderController::class, 'quota']);
+        Route::get('/providers/preference', [AiProviderController::class, 'getPreference']);
+        Route::post('/providers/preference', [AiProviderController::class, 'updatePreference']);
         Route::get('/routing-strategy', [AiProviderController::class, 'routingStrategy']);
-
+        
         Route::get('/campaigns', [AiCampaignController::class, 'index']);
         Route::get('/campaigns/{campaign}', [AiCampaignController::class, 'show']);
 
