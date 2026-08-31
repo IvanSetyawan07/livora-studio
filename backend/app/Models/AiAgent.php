@@ -44,4 +44,30 @@ class AiAgent extends Model
     {
         return $this->hasMany(AiUsageLog::class, 'agent_key', 'key');
     }
+
+    /**
+     * Update state salah satu item di kolom `dependencies` (JSON array
+     * {name, state}) berdasarkan nama dependency-nya. Dipakai saat sebuah
+     * integrasi eksternal (Search Console, Meta, dst) berhasil/gagal
+     * connect, tanpa menyentuh `status`/`connection_state` agent itu sendiri
+     * (itu baru berubah kalau agent-nya benar-benar sudah pernah `run()`
+     * dengan sukses).
+     */
+    public static function setDependencyState(string $agentKey, string $dependencyName, string $state): void
+    {
+        $agent = static::where('key', $agentKey)->first();
+
+        if (!$agent) {
+            return;
+        }
+
+        $dependencies = collect($agent->dependencies ?? [])->map(function ($dep) use ($dependencyName, $state) {
+            if (($dep['name'] ?? null) === $dependencyName) {
+                $dep['state'] = $state;
+            }
+            return $dep;
+        })->toArray();
+
+        $agent->update(['dependencies' => $dependencies]);
+    }
 }

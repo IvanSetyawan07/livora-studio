@@ -36,7 +36,7 @@ use App\Http\Controllers\Api\Ai\CampaignController as AiCampaignController;
 use App\Http\Controllers\Api\Ai\ImpactController as AiImpactController;
 use App\Http\Controllers\Api\Ai\InsightController as AiInsightController;
 use App\Http\Controllers\Api\Ai\ActivityController as AiActivityController;
-
+use App\Http\Controllers\Api\Ai\GoogleIntegrationController;
 /**
  * Media proxy — melayani file dari storage lewat route API supaya selalu
  * membawa header CORS. Dipakai generator PDF (canvas/fetch) yang butuh
@@ -330,5 +330,8 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::get('/campaigns/{campaign}', [AiCampaignController::class, 'show']);
 
         Route::get('/impact', [AiImpactController::class, 'index']);
+        Route::get('/integrations/google/authorize-url', [GoogleIntegrationController::class, 'authorizeUrl']);
+        Route::get('/integrations/google/status', [GoogleIntegrationController::class, 'status']);
+        Route::post('/integrations/google/disconnect', [GoogleIntegrationController::class, 'disconnect']);
     });
 });

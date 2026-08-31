@@ -33,6 +33,17 @@ return [
     'google' => [
     'client_id' => env('GOOGLE_CLIENT_ID'),
     ],
+
+    // Kredensial OAuth terpisah untuk AI Marketing Dashboard (Search Console,
+    // dan nanti GA4/Ads). SENGAJA dipisah dari 'google.client_id' di atas
+    // (dipakai untuk fitur "Sign in with Google" login user) supaya tidak
+    // tertukar — dua project Google Cloud yang berbeda tujuan.
+    'google_marketing' => [
+        'client_id' => env('GOOGLE_MARKETING_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_MARKETING_CLIENT_SECRET'),
+        'redirect_uri' => env('GOOGLE_MARKETING_REDIRECT_URI'),
+    ],
+
     'anthropic' => [
         'api_key' => env('ANTHROPIC_API_KEY'),
     ],
