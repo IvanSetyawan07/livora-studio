@@ -26,6 +26,7 @@ import type {
   AIUsageTotals,
   BusinessHealth,
   Campaign,
+  GoogleIntegrationStatus,
   ImpactRecord,
   PriorityItem,
 } from "../types";
@@ -90,6 +91,17 @@ export interface AIActivityService {
   list(params?: { agent?: AIAgentId; kind?: AIActivity["kind"]; limit?: number }): Promise<AIActivity[]>;
 }
 
+/**
+ * Fase 6 — koneksi OAuth Google (Search Console) untuk SEO Agent.
+ * Path dicocokkan 1:1 dengan GoogleIntegrationController di backend.
+ */
+export interface AIIntegrationsService {
+  getGoogleStatus(): Promise<GoogleIntegrationStatus>;
+  /** Return URL consent screen Google — UI yang melakukan window.location.href. */
+  getGoogleAuthorizeUrl(): Promise<string>;
+  disconnectGoogle(): Promise<GoogleIntegrationStatus>;
+}
+
 export interface AIServiceBundle {
   dashboard: AIDashboardService;
   recommendations: AIRecommendationService;
@@ -101,4 +113,5 @@ export interface AIServiceBundle {
   impact: AIImpactService;
   insights: AIInsightService;
   activity: AIActivityService;
+  integrations: AIIntegrationsService;
 }

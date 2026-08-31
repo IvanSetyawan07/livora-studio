@@ -17,7 +17,7 @@ import {
 
 import { campaigns as campaignsFixture, impactRecords as impactFixture } from "../workspace-data";
 import { providers as providersFixture, routingStrategy, usageByAgent, usageByProvider, usageTotals } from "../system-data";
-import type { AIApproval, AIRecommendation, AiChatContextKey, AiChatMessage } from "../types";
+import type { AIApproval, AIRecommendation, AiChatContextKey, AiChatMessage, GoogleIntegrationStatus } from "../types";
 import type {
   AIActionService,
   AIActivityService,
@@ -26,6 +26,7 @@ import type {
   AIDashboardService,
   AIImpactService,
   AIInsightService,
+  AIIntegrationsService,
   AIProviderService,
   AIRecommendationService,
   AIServiceBundle,
@@ -236,6 +237,39 @@ const impact: AIImpactService = {
   },
 };
 
+// In-memory saja, jujur bukan koneksi Google beneran — cuma biar UI
+// "Connect / Disconnect" bisa dites tanpa backend saat VITE_AI_BACKEND=mock.
+let googleIntegrationState: GoogleIntegrationStatus = {
+  connected: false,
+  email: null,
+  scope: null,
+  connectedAt: null,
+};
+
+const integrations: AIIntegrationsService = {
+  async getGoogleStatus() {
+    await delay(200);
+    return googleIntegrationState;
+  },
+  async getGoogleAuthorizeUrl() {
+    await delay(200);
+    // Tidak ada consent screen asli di mode demo — langsung tandai connected
+    // supaya alurnya tetap bisa dicoba end-to-end di UI.
+    googleIntegrationState = {
+      connected: true,
+      email: "demo@livoralcr.com",
+      scope: "webmasters.readonly",
+      connectedAt: new Date().toISOString(),
+    };
+    return "#mock-google-connected";
+  },
+  async disconnectGoogle() {
+    await delay(200);
+    googleIntegrationState = { connected: false, email: null, scope: null, connectedAt: null };
+    return googleIntegrationState;
+  },
+};
+
 export const mockServices: AIServiceBundle = {
   dashboard,
   recommendations,
@@ -247,4 +281,5 @@ export const mockServices: AIServiceBundle = {
   impact,
   insights,
   activity,
+  integrations,
 };

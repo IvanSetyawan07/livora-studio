@@ -84,4 +84,14 @@ export const laravelServices: AIServiceBundle = {
   activity: {
     list: (params) => api.get("/ai/activity", { params }).then((r) => unwrapList(r.data)),
   },
+  integrations: {
+    getGoogleStatus: () =>
+      api.get("/ai/integrations/google/status").then((r) => unwrap(r.data)),
+    getGoogleAuthorizeUrl: () =>
+      api
+        .get("/ai/integrations/google/authorize-url")
+        .then((r) => unwrap<{ url: string }>(r.data).url),
+    disconnectGoogle: () =>
+      api.post("/ai/integrations/google/disconnect").then((r) => unwrap(r.data)),
+  },
 };

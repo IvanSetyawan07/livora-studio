@@ -378,3 +378,11 @@ export interface ContentQueueItem {
   aiAssisted: boolean;
   engagement?: { label: string; value: string }[];
 }
+
+/** Fase 6 — status koneksi OAuth Google (Search Console) untuk SEO Agent. */
+export interface GoogleIntegrationStatus {
+  connected: boolean;
+  email: string | null;
+  scope: string | null;
+  connectedAt: string | null;
+}
