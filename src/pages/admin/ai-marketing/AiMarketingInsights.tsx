@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { InsightCard, typeMeta } from "@/components/ai/insight-card";
-import { DemoBadge, Reveal } from "@/components/ai/primitives";
-import { insights as allInsights } from "@/lib/ai/data";
+import { Reveal } from "@/components/ai/primitives";
+import { useAiInsights } from "@/hooks/useAiDashboard";
 import type { AIInsightType } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
 
@@ -20,13 +20,8 @@ export default function InsightsPage() {
   const [filter, setFilter] = useState<AIInsightType | "all">("all");
   const [dismissed, setDismissed] = useState<string[]>([]);
 
-  const visible = useMemo(
-    () =>
-      allInsights.filter(
-        (i) => !dismissed.includes(i.id) && (filter === "all" || i.type === filter),
-      ),
-    [filter, dismissed],
-  );
+  const { data, isLoading, error } = useAiInsights(filter);
+  const visible = (data ?? []).filter((i) => !dismissed.includes(i.id));
 
   return (
     <>
@@ -34,7 +29,6 @@ export default function InsightsPage() {
         eyebrow="Intelligence"
         title="AI Insights"
         description="Every insight carries its source data, reasoning and confidence. Recommendations are separate objects and always require approval."
-        action={<DemoBadge />}
       />
 
       <div className="scroll-rail mb-6 flex gap-2 pb-2">
@@ -54,22 +48,34 @@ export default function InsightsPage() {
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {visible.map((i, idx) => (
-          <Reveal key={i.id} delay={idx * 70}>
-            <InsightCard
-              insight={i}
-              onDismiss={(id) => setDismissed((d) => [...d, id])}
-            />
-          </Reveal>
-        ))}
-      </div>
-
-      {visible.length === 0 ? (
+      {isLoading ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-44 animate-pulse rounded-sm border border-border bg-surface/40" />
+          ))}
+        </div>
+      ) : error ? (
         <p className="rounded-sm border border-dashed border-border-strong p-8 text-center text-sm text-muted-foreground">
-          No insights in this category.
+          Insights tidak bisa dimuat dari server.
         </p>
-      ) : null}
+      ) : (
+        <>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {visible.map((i, idx) => (
+              <Reveal key={i.id} delay={idx * 70}>
+                <InsightCard insight={i} onDismiss={(id) => setDismissed((d) => [...d, id])} />
+              </Reveal>
+            ))}
+          </div>
+
+          {visible.length === 0 ? (
+            <p className="rounded-sm border border-dashed border-border-strong p-8 text-center text-sm text-muted-foreground">
+              Belum ada insight{filter === "all" ? "" : " di kategori ini"}. Agent AI akan mengisi
+              halaman ini begitu analisis pertama dijalankan.
+            </p>
+          ) : null}
+        </>
+      )}
     </>
   );
 }

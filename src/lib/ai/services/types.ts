@@ -2,15 +2,17 @@
  * Service contracts for the AI Marketing surface.
  *
  * The UI only ever imports `aiServices` from `./index`, never a concrete
- * implementation directly. That keeps every page swappable: today
- * `aiServices` resolves to `mockServices` (in-memory demo data); once the
- * Laravel AI orchestration API exists, flip `VITE_AI_BACKEND=live` (see
- * index.ts) and `laravelServices` takes over with zero UI changes.
+ * implementation directly. Default sekarang LIVE (Laravel); set
+ * VITE_AI_BACKEND=mock untuk kembali ke fixture demo.
  */
 import type {
+  AIActivity,
   AIAgent,
+  AIAgentId,
   AIApproval,
   AIApprovalStatus,
+  AIInsight,
+  AIInsightType,
   AIKpi,
   AIProviderInfo,
   AIRecommendation,
@@ -71,6 +73,17 @@ export interface AIImpactService {
   list(): Promise<ImpactRecord[]>;
 }
 
+/** Fase 5 — tabel ai_insights (InsightController). */
+export interface AIInsightService {
+  list(params?: { type?: AIInsightType; agent?: AIAgentId; limit?: number }): Promise<AIInsight[]>;
+  getById(id: string): Promise<AIInsight | undefined>;
+}
+
+/** Fase 5 — tabel ai_activity_log (ActivityController). */
+export interface AIActivityService {
+  list(params?: { agent?: AIAgentId; kind?: AIActivity["kind"]; limit?: number }): Promise<AIActivity[]>;
+}
+
 export interface AIServiceBundle {
   dashboard: AIDashboardService;
   recommendations: AIRecommendationService;
@@ -80,4 +93,6 @@ export interface AIServiceBundle {
   providers: AIProviderService;
   campaigns: AICampaignService;
   impact: AIImpactService;
+  insights: AIInsightService;
+  activity: AIActivityService;
 }

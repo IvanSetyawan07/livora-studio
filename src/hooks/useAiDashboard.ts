@@ -1,28 +1,39 @@
 /**
- * Hook data AI Marketing — satu tempat untuk semua query dashboard.
+ * React Query hooks untuk AI Marketing.
  *
- * Pakai @tanstack/react-query (QueryClientProvider sudah dipasang di App.tsx).
- * Semua hook di sini lewat `aiServices`, jadi otomatis ikut mode live/mock.
+ * Semua halaman AI Marketing sebaiknya lewat sini, bukan memanggil
+ * aiServices langsung di useEffect — supaya caching, refetch dan
+ * invalidasi setelah approve/reject konsisten di seluruh dashboard.
  */
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { aiServices } from "@/lib/ai/services";
 import type {
+  AIActivity,
   AIAgent,
+  AIAgentId,
+  AIApproval,
+  AIApprovalStatus,
+  AIInsight,
+  AIInsightType,
   AIKpi,
   AIRecommendation,
   BusinessHealth,
   PriorityItem,
 } from "@/lib/ai/types";
 
-const STALE = 60_000; // 1 menit — dashboard tidak perlu real-time per detik
-
 export const aiKeys = {
   health: ["ai", "dashboard", "health"] as const,
   kpis: ["ai", "dashboard", "kpis"] as const,
   priorities: ["ai", "dashboard", "priorities"] as const,
   agents: ["ai", "agents"] as const,
-  recommendations: (status?: string) => ["ai", "recommendations", status ?? "all"] as const,
+  recommendations: (status?: AIApprovalStatus) => ["ai", "recommendations", status ?? "all"] as const,
+  actions: ["ai", "actions"] as const,
+  insights: (type?: AIInsightType | "all", agent?: AIAgentId | "all") =>
+    ["ai", "insights", type ?? "all", agent ?? "all"] as const,
+  activity: (agent?: AIAgentId | "all") => ["ai", "activity", agent ?? "all"] as const,
 };
+
+const STALE = 60_000;
 
 export function useBusinessHealth() {
   return useQuery<BusinessHealth>({
@@ -56,7 +67,7 @@ export function useAiAgents() {
   });
 }
 
-export function useRecommendations(status?: "pending" | "approved" | "rejected") {
+export function useRecommendations(status?: AIApprovalStatus) {
   return useQuery<AIRecommendation[]>({
     queryKey: aiKeys.recommendations(status),
     queryFn: () => aiServices.recommendations.list(status ? { status } : undefined),
@@ -64,7 +75,35 @@ export function useRecommendations(status?: "pending" | "approved" | "rejected")
   });
 }
 
-/** Approve / reject rekomendasi + invalidasi semua data dashboard yang terpengaruh. */
+export function useAiActions() {
+  return useQuery<AIApproval[]>({
+    queryKey: aiKeys.actions,
+    queryFn: () => aiServices.actions.list(),
+    staleTime: STALE,
+  });
+}
+
+export function useAiInsights(type?: AIInsightType | "all", agent?: AIAgentId | "all") {
+  return useQuery<AIInsight[]>({
+    queryKey: aiKeys.insights(type, agent),
+    queryFn: () =>
+      aiServices.insights.list({
+        ...(type && type !== "all" ? { type } : {}),
+        ...(agent && agent !== "all" ? { agent } : {}),
+      }),
+    staleTime: STALE,
+  });
+}
+
+export function useAiActivity(agent?: AIAgentId | "all") {
+  return useQuery<AIActivity[]>({
+    queryKey: aiKeys.activity(agent),
+    queryFn: () => aiServices.activity.list(agent && agent !== "all" ? { agent } : undefined),
+    staleTime: 30_000,
+  });
+}
+
+/** Approve / reject sebuah recommendation, lalu invalidasi semua turunannya. */
 export function useRecommendationDecision() {
   const qc = useQueryClient();
 
@@ -83,4 +122,22 @@ export function useRecommendationDecision() {
   });
 
   return { approve, reject };
+}
+
+/** Approve+execute / reject sebuah action (AIApproval). */
+export function useActionDecision() {
+  const qc = useQueryClient();
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["ai"] });
+
+  const approveAndExecute = useMutation({
+    mutationFn: (id: string) => aiServices.actions.approveAndExecute(id),
+    onSuccess: invalidate,
+  });
+
+  const reject = useMutation({
+    mutationFn: (id: string) => aiServices.actions.reject(id),
+    onSuccess: invalidate,
+  });
+
+  return { approveAndExecute, reject };
 }

@@ -34,6 +34,8 @@ use App\Http\Controllers\Api\Ai\UsageController as AiUsageController;
 use App\Http\Controllers\Api\Ai\ProviderController as AiProviderController;
 use App\Http\Controllers\Api\Ai\CampaignController as AiCampaignController;
 use App\Http\Controllers\Api\Ai\ImpactController as AiImpactController;
+use App\Http\Controllers\Api\Ai\InsightController as AiInsightController;
+use App\Http\Controllers\Api\Ai\ActivityController as AiActivityController;
 
 /**
  * Media proxy — melayani file dari storage lewat route API supaya selalu
@@ -297,6 +299,11 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::get('/dashboard/priorities', [AiDashboardController::class, 'priorities']);
         Route::get('/dashboard/kpis', [AiDashboardController::class, 'kpis']);
         Route::get('/agents', [AiAgentController::class, 'index']);
+
+        Route::get('/insights', [AiInsightController::class, 'index']);
+        Route::get('/insights/{insight}', [AiInsightController::class, 'show']);
+
+        Route::get('/activity', [AiActivityController::class, 'index']);
 
         Route::get('/recommendations', [AiRecommendationController::class, 'index']);
         Route::get('/recommendations/{recommendation}', [AiRecommendationController::class, 'show']);

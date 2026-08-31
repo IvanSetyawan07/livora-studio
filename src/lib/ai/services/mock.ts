@@ -5,22 +5,27 @@
  * disabled buttons), while staying honest that nothing here is real.
  */
 import {
+  activity as activityFixture,
   agents as agentsFixture,
   approvals as approvalsFixture,
   businessHealth as businessHealthFixture,
+  insights as insightsFixture,
   overviewKpis,
   priorities as prioritiesFixture,
   recommendations as recommendationsFixture,
 } from "../data";
+
 import { campaigns as campaignsFixture, impactRecords as impactFixture } from "../workspace-data";
 import { providers as providersFixture, routingStrategy, usageByAgent, usageByProvider, usageTotals } from "../system-data";
 import type { AIApproval, AIRecommendation, AiChatContextKey, AiChatMessage } from "../types";
 import type {
   AIActionService,
+  AIActivityService,
   AICampaignService,
   AIChatService,
   AIDashboardService,
   AIImpactService,
+  AIInsightService,
   AIProviderService,
   AIRecommendationService,
   AIServiceBundle,
@@ -114,6 +119,7 @@ const actions: AIActionService = {
     );
     return updated;
   },
+  
 };
 
 // Small, scripted, context-aware canned responses — NOT a real model call.
@@ -174,6 +180,31 @@ const providers: AIProviderService = {
     return routingStrategy;
   },
 };
+const insights: AIInsightService = {
+  async list(params) {
+    await delay(300);
+    return insightsFixture.filter(
+      (i) =>
+        (!params?.type || i.type === params.type) &&
+        (!params?.agent || i.agent === params.agent),
+    );
+  },
+  async getById(id) {
+    await delay(200);
+    return insightsFixture.find((i) => i.id === id);
+  },
+};
+
+const activity: AIActivityService = {
+  async list(params) {
+    await delay(280);
+    return activityFixture.filter(
+      (a) =>
+        (!params?.agent || a.agent === params.agent) &&
+        (!params?.kind || a.kind === params.kind),
+    );
+  },
+};
 
 const campaigns: AICampaignService = {
   async list() {
@@ -202,4 +233,6 @@ export const mockServices: AIServiceBundle = {
   providers,
   campaigns,
   impact,
+  insights,
+  activity,
 };

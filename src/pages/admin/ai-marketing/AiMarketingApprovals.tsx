@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
 import {
   ConfidenceBar,
-  DemoBadge,
-  NotConnected,
   Panel,
   Pill,
   StatusDot,
@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { approvals as allApprovals, recommendationById } from "@/lib/ai/data";
+import { useActionDecision, useAiActions, useRecommendations } from "@/hooks/useAiDashboard";
 import type { AIApproval, AIApprovalStatus, AIRisk } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
 
@@ -37,14 +37,46 @@ const filters: (AIApprovalStatus | "all")[] = ["all", "pending", "approved", "re
 
 export default function ApprovalsPage() {
   const [filter, setFilter] = useState<AIApprovalStatus | "all">("all");
-  const [selected, setSelected] = useState<AIApproval | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const { data, isLoading, error } = useAiActions();
+  const { data: allRecs } = useRecommendations();
+  const { approveAndExecute, reject } = useActionDecision();
+
+  const approvals = data ?? [];
+  const selected: AIApproval | null = approvals.find((a) => a.id === selectedId) ?? null;
 
   const visible = useMemo(
-    () => allApprovals.filter((a) => filter === "all" || a.status === filter),
-    [filter],
+    () => approvals.filter((a) => filter === "all" || a.status === filter),
+    [approvals, filter],
   );
 
-  const pendingCount = allApprovals.filter((a) => a.status === "pending").length;
+  const pendingCount = approvals.filter((a) => a.status === "pending").length;
+  const busy = approveAndExecute.isPending || reject.isPending;
+
+  async function onApprove(a: AIApproval) {
+    try {
+      await approveAndExecute.mutateAsync(a.id);
+      toast.success("Approval dieksekusi", { description: a.title });
+      setSelectedId(null);
+    } catch {
+      toast.error("Gagal mengeksekusi approval");
+    }
+  }
+
+  async function onReject(a: AIApproval) {
+    try {
+      await reject.mutateAsync(a.id);
+      toast("Approval ditolak", { description: a.title });
+      setSelectedId(null);
+    } catch {
+      toast.error("Gagal menolak approval");
+    }
+  }
+
+  const selectedRec = selected
+    ? (allRecs ?? []).find((r) => r.id === selected.recommendationId)
+    : undefined;
 
   return (
     <>
@@ -52,22 +84,21 @@ export default function ApprovalsPage() {
         eyebrow="Governance"
         title="Approvals"
         description="Every AI recommendation is a proposal, never an action. Nothing executes against the live site or campaigns without an explicit approval recorded here."
-        action={<DemoBadge />}
       />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <Panel className="p-5">
           <p className="label-eyebrow">Pending review</p>
-          <p className="text-display mt-2 text-2xl">{pendingCount}</p>
+          <p className="text-display mt-2 text-2xl">{isLoading ? "—" : pendingCount}</p>
         </Panel>
         <Panel className="p-5">
           <p className="label-eyebrow">Total recommendations</p>
-          <p className="text-display mt-2 text-2xl">{allApprovals.length}</p>
+          <p className="text-display mt-2 text-2xl">{isLoading ? "—" : approvals.length}</p>
         </Panel>
         <Panel className="p-5">
           <p className="label-eyebrow">Approval execution</p>
           <p className="mt-2 flex items-center gap-1.5 font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
-            <StatusDot tone="neutral" /> Not wired to Laravel yet
+            <StatusDot tone={error ? "danger" : "success"} /> {error ? "Backend unreachable" : "Live — Laravel"}
           </p>
         </Panel>
       </div>
@@ -105,7 +136,7 @@ export default function ApprovalsPage() {
               {visible.map((a) => (
                 <tr
                   key={a.id}
-                  onClick={() => setSelected(a)}
+                  onClick={() => setSelectedId(a.id)}
                   className="cursor-pointer border-b border-border transition-colors duration-200 last:border-0 hover:bg-accent/40"
                 >
                   <td className="px-5 py-4">{a.title}</td>
@@ -130,21 +161,25 @@ export default function ApprovalsPage() {
             </tbody>
           </table>
         </div>
-        {visible.length === 0 ? (
+        {isLoading ? (
+          <p className="p-8 text-center text-sm text-muted-foreground">Memuat approvals…</p>
+        ) : error ? (
           <p className="p-8 text-center text-sm text-muted-foreground">
-            No approvals in this category.
+            Approvals tidak bisa dimuat dari server.
+          </p>
+        ) : visible.length === 0 ? (
+          <p className="p-8 text-center text-sm text-muted-foreground">
+            Belum ada approval{filter === "all" ? "" : " di kategori ini"}.
           </p>
         ) : null}
       </Panel>
 
-      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelectedId(null)}>
         <DialogContent className="border-border-strong bg-popover sm:max-w-xl">
           {selected ? (
             <>
               <DialogHeader>
-                <DialogTitle className="text-display text-xl font-light">
-                  {selected.title}
-                </DialogTitle>
+                <DialogTitle className="text-display text-xl font-light">{selected.title}</DialogTitle>
                 <DialogDescription>
                   {selected.agent} agent · requested{" "}
                   {new Date(selected.requestedAt).toLocaleDateString("en-GB", {
@@ -157,22 +192,19 @@ export default function ApprovalsPage() {
               <div className="space-y-4">
                 <p className="text-sm leading-relaxed text-foreground/85">{selected.summary}</p>
 
-                {(() => {
-                  const rec = recommendationById(selected.recommendationId);
-                  return rec ? (
-                    <>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Pill tone={riskTone[rec.risk]}>{rec.risk} risk</Pill>
-                        <span className="label-eyebrow">{rec.actionType}</span>
-                      </div>
-                      <ConfidenceBar value={rec.confidence} />
-                      <div>
-                        <p className="label-eyebrow">Expected impact</p>
-                        <p className="mt-1 text-sm text-muted-foreground">{rec.expectedImpact}</p>
-                      </div>
-                    </>
-                  ) : null;
-                })()}
+                {selectedRec ? (
+                  <>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Pill tone={riskTone[selectedRec.risk]}>{selectedRec.risk} risk</Pill>
+                      <span className="label-eyebrow">{selectedRec.actionType}</span>
+                    </div>
+                    <ConfidenceBar value={selectedRec.confidence} />
+                    <div>
+                      <p className="label-eyebrow">Expected impact</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{selectedRec.expectedImpact}</p>
+                    </div>
+                  </>
+                ) : null}
 
                 {selected.decidedBy ? (
                   <p className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
@@ -181,25 +213,23 @@ export default function ApprovalsPage() {
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     <button
-                      disabled
-                      className="cursor-not-allowed rounded-sm bg-brass/40 px-3 py-1.5 text-xs font-medium text-primary-foreground"
+                      disabled={busy}
+                      onClick={() => onApprove(selected)}
+                      className="inline-flex items-center gap-1.5 rounded-sm bg-brass px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
                     >
-                      Approve
+                      {approveAndExecute.isPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
+                      Approve &amp; execute
                     </button>
                     <button
-                      disabled
-                      className="cursor-not-allowed rounded-sm border border-border-strong px-3 py-1.5 text-xs text-muted-foreground"
+                      disabled={busy}
+                      onClick={() => onReject(selected)}
+                      className="inline-flex items-center gap-1.5 rounded-sm border border-border-strong px-3 py-1.5 text-xs text-muted-foreground disabled:opacity-50"
                     >
+                      {reject.isPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
                       Reject
                     </button>
                   </div>
                 )}
-
-                <NotConnected
-                  state="coming_soon"
-                  title="Approval actions are not wired to the backend"
-                  description="Approving or rejecting here will call the Laravel orchestration endpoint once it exists. Nothing executes from this preview."
-                />
               </div>
             </>
           ) : null}

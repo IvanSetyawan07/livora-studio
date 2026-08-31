@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { AlertTriangle, ArrowUpRight, Sparkles } from "lucide-react";
+import { ArrowUpRight, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { ActivityStream } from "@/components/ai/activity-stream";
 import { AgentRail } from "@/components/ai/agent-rail";
@@ -10,29 +10,52 @@ import { PerformanceChart } from "@/components/ai/performance-chart";
 import { PriorityList } from "@/components/ai/priority-list";
 import { RecommendationCard } from "@/components/ai/recommendation-card";
 import { DemoBadge, Panel, Reveal, SectionHeading } from "@/components/ai/primitives";
-import { Skeleton } from "@/components/ui/skeleton";
 import { usePageContext } from "@/context/AiMarketingContext";
-import { AI_BACKEND_MODE } from "@/lib/ai/services";
 import {
+  useAiActivity,
   useAiAgents,
   useBusinessHealth,
   useOverviewKpis,
   usePriorities,
   useRecommendations,
 } from "@/hooks/useAiDashboard";
-// Belum ada endpoint untuk activity stream, channel mix, dan grafik performa —
-// tiga blok itu masih memakai data demo dan ditandai jelas di UI.
-import { activity, channelPerformance } from "@/lib/ai/data";
+import { channelPerformance } from "@/lib/ai/data";
 
 const kpiTones = ["success", "info", "warning", "ai"] as const;
 
-function ErrorNote({ label }: { label: string }) {
-  return (
-    <div className="flex items-center gap-2 rounded-sm border border-destructive/40 bg-destructive/5 px-4 py-3 text-xs text-destructive">
-      <AlertTriangle className="size-3.5 shrink-0" />
-      {label} gagal dimuat dari API. Cek koneksi atau login admin kamu.
-    </div>
-  );
+function Block({
+  loading,
+  error,
+  empty,
+  emptyText,
+  height = "h-28",
+  children,
+}: {
+  loading: boolean;
+  error: unknown;
+  empty?: boolean;
+  emptyText?: string;
+  height?: string;
+  children: React.ReactNode;
+}) {
+  if (loading) {
+    return <div className={`w-full animate-pulse rounded-sm border border-border bg-surface/40 ${height}`} />;
+  }
+  if (error) {
+    return (
+      <p className="rounded-sm border border-dashed border-border-strong p-6 text-center text-sm text-muted-foreground">
+        Data tidak bisa dimuat dari server. Coba muat ulang halaman.
+      </p>
+    );
+  }
+  if (empty) {
+    return (
+      <p className="rounded-sm border border-dashed border-border-strong p-8 text-center text-sm text-muted-foreground">
+        {emptyText ?? "Belum ada data."}
+      </p>
+    );
+  }
+  return <>{children}</>;
 }
 
 export default function AiMarketingOverview() {
@@ -42,16 +65,14 @@ export default function AiMarketingOverview() {
   const kpis = useOverviewKpis();
   const priorities = usePriorities();
   const agents = useAiAgents();
-  const recommendations = useRecommendations("pending");
+  const pendingRecs = useRecommendations("pending");
+  const activity = useAiActivity();
 
-  const priorityOrder = { high: 0, medium: 1, low: 2 } as const;
-
-  const topRecommendations = (recommendations.data ?? [])
-    .slice()
-    .sort(
-      (a, b) =>
-        priorityOrder[a.priority ?? "medium"] - priorityOrder[b.priority ?? "medium"],
-    )
+  const topRecommendations = [...(pendingRecs.data ?? [])]
+    .sort((a, b) => {
+      const order = { high: 0, medium: 1, low: 2 } as const;
+      return order[a.priority ?? "medium"] - order[b.priority ?? "medium"];
+    })
     .slice(0, 4);
 
   return (
@@ -62,63 +83,39 @@ export default function AiMarketingOverview() {
         description="Real-time intelligence and recommendations for Livora's digital growth."
       />
 
-      {AI_BACKEND_MODE === "mock" && (
-        <div className="mb-8 flex flex-wrap items-center gap-3 rounded-sm border border-border bg-surface/40 px-4 py-3 text-xs text-muted-foreground">
-          <DemoBadge />
-          Running in demo mode (VITE_AI_BACKEND=mock). Numbers are illustrative, not production values.
-        </div>
-      )}
-
-      {/* Business Health + KPI row */}
+      {/* Business Health + KPI row — LIVE */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-[1.1fr_1fr_1fr_1fr_1fr]">
         <div className="sm:col-span-2 xl:col-span-1">
-          {health.isLoading ? (
-            <Skeleton className="h-[188px] w-full rounded-sm" />
-          ) : health.isError || !health.data ? (
-            <ErrorNote label="Business health" />
-          ) : (
-            <BusinessHealthCard health={health.data} />
-          )}
+          <Block loading={health.isLoading} error={health.error} height="h-40">
+            {health.data ? <BusinessHealthCard health={health.data} /> : null}
+          </Block>
         </div>
-
         {kpis.isLoading
-          ? Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-[188px] w-full rounded-sm" />
+          ? [0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-40 animate-pulse rounded-sm border border-border bg-surface/40" />
             ))
-          : (kpis.data ?? []).map((k, i) => (
-              <KpiCard key={k.id} kpi={k} index={i + 1} tone={kpiTones[i % kpiTones.length]} />
+          : (kpis.data ?? []).slice(0, 4).map((k, i) => (
+              <KpiCard key={k.id} kpi={k} index={i + 1} tone={kpiTones[i]} />
             ))}
       </div>
-      {kpis.isError && (
-        <div className="mt-4">
-          <ErrorNote label="KPI" />
-        </div>
-      )}
 
-      {/* Today's Top Priorities */}
+      {/* Today's Top Priorities — LIVE */}
       <section className="mt-10">
         <SectionHeading
           title="Today's Priorities"
           description="The 3–5 things that matter most right now — the AI has already ranked them for you."
         />
-        {priorities.isLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 w-full rounded-sm" />
-            ))}
-          </div>
-        ) : priorities.isError ? (
-          <ErrorNote label="Priorities" />
-        ) : (priorities.data ?? []).length === 0 ? (
-          <Panel className="p-6 text-sm text-muted-foreground">
-            Belum ada prioritas. Agent akan mengisi bagian ini begitu ada rekomendasi pending.
-          </Panel>
-        ) : (
+        <Block
+          loading={priorities.isLoading}
+          error={priorities.error}
+          empty={(priorities.data ?? []).length === 0}
+          emptyText="Belum ada prioritas. Agent AI belum menghasilkan rekomendasi pending."
+        >
           <PriorityList items={priorities.data ?? []} />
-        )}
+        </Block>
       </section>
 
-      {/* AI Recommendations */}
+      {/* AI Recommendations — LIVE */}
       <section className="mt-10">
         <SectionHeading
           title="AI Recommendations"
@@ -132,19 +129,12 @@ export default function AiMarketingOverview() {
             </Link>
           }
         />
-        {recommendations.isLoading ? (
-          <div className="grid gap-4 lg:grid-cols-2">
-            {Array.from({ length: 2 }).map((_, i) => (
-              <Skeleton key={i} className="h-52 w-full rounded-sm" />
-            ))}
-          </div>
-        ) : recommendations.isError ? (
-          <ErrorNote label="Recommendations" />
-        ) : topRecommendations.length === 0 ? (
-          <Panel className="p-6 text-sm text-muted-foreground">
-            Tidak ada rekomendasi pending saat ini.
-          </Panel>
-        ) : (
+        <Block
+          loading={pendingRecs.isLoading}
+          error={pendingRecs.error}
+          empty={topRecommendations.length === 0}
+          emptyText="Tidak ada rekomendasi menunggu persetujuan."
+        >
           <div className="grid gap-4 lg:grid-cols-2">
             {topRecommendations.map((r, i) => (
               <Reveal key={r.id} delay={i * 80}>
@@ -152,24 +142,26 @@ export default function AiMarketingOverview() {
               </Reveal>
             ))}
           </div>
-        )}
+        </Block>
       </section>
 
-      {/* Performance + Channel Performance — belum ada endpoint, masih demo */}
-      <div className="mt-10 grid gap-4 xl:grid-cols-[1.55fr_1fr]">
-        <Reveal>
-          <PerformanceChart />
-        </Reveal>
-        <Reveal delay={120}>
-          <ChannelPerformanceCard channels={channelPerformance} />
-        </Reveal>
+      {/* Performance + Channel mix — masih demo, endpoint belum ada */}
+      <div className="mt-10">
+        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-sm border border-border bg-surface/40 px-4 py-3 text-xs text-muted-foreground">
+          <DemoBadge />
+          Performance chart dan channel mix masih data ilustratif — endpoint-nya belum dibuat (Fase 6).
+        </div>
+        <div className="grid gap-4 xl:grid-cols-[1.55fr_1fr]">
+          <Reveal>
+            <PerformanceChart />
+          </Reveal>
+          <Reveal delay={120}>
+            <ChannelPerformanceCard channels={channelPerformance} />
+          </Reveal>
+        </div>
       </div>
-      <p className="mt-2 flex items-center gap-2 text-[11px] text-muted-foreground">
-        <DemoBadge />
-        Performance chart & channel mix belum punya endpoint di backend — masih data contoh.
-      </p>
 
-      {/* AI Activity — belum ada endpoint, masih demo */}
+      {/* AI Activity — LIVE */}
       <section className="mt-10">
         <SectionHeading
           title="AI Activity"
@@ -183,25 +175,32 @@ export default function AiMarketingOverview() {
             </Link>
           }
         />
-        <ActivityStream items={activity} compact />
+        <Block
+          loading={activity.isLoading}
+          error={activity.error}
+          empty={(activity.data ?? []).length === 0}
+          emptyText="Belum ada aktivitas AI yang tercatat."
+        >
+          <ActivityStream items={(activity.data ?? []).slice(0, 8)} compact />
+        </Block>
       </section>
 
-      {/* Agents — LIVE dari /api/ai/agents */}
+      {/* Marketing systems — LIVE */}
       <section className="mt-10">
         <SectionHeading
           title="Your Marketing Systems"
           description="Every specialised agent, at a glance. Detail lives on each agent's own page."
         />
-        {agents.isLoading ? (
-          <Skeleton className="h-40 w-full rounded-sm" />
-        ) : agents.isError ? (
-          <ErrorNote label="Agents" />
-        ) : (
+        <Block
+          loading={agents.isLoading}
+          error={agents.error}
+          empty={(agents.data ?? []).length === 0}
+          emptyText="Belum ada agent terdaftar."
+        >
           <AgentRail agents={agents.data ?? []} />
-        )}
+        </Block>
       </section>
 
-      {/* Concept footer */}
       <Panel className="mt-10 p-6">
         <p className="label-eyebrow flex items-center gap-2">
           <Sparkles className="size-3.5 text-ai" />

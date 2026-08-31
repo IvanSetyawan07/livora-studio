@@ -1,23 +1,21 @@
 /**
- * Laravel adapter — talks to the real AI orchestration API (Fase 3/4).
+ * Laravel adapter — talks to the real AI orchestration API.
  *
- * Path di sini SUDAH dicocokkan satu-satu dengan routes/api.php
- * (group `Route::middleware('admin')->prefix('ai')`).
+ * Path dicocokkan 1:1 dengan routes/api.php (prefix /ai, auth:sanctum + admin).
  *
- * Catatan penting: sebagian endpoint memakai JsonResource (agents,
- * recommendations, campaigns, impact, providers) dan sebagian lagi
- * `response()->json(...)` polos (dashboard, usage). Kalau suatu saat
- * `JsonResource::withoutWrapping()` tidak jalan (BOM di provider,
- * config cache basi, dsb) response resource akan terbungkus `{ data: ... }`
- * dan UI langsung kosong tanpa error. `unwrap()` di bawah bikin adapter
- * tahan dua-duanya — bukan menutupi bug backend, cuma tidak bikin
- * dashboard blank karena satu byte.
+ * Catatan penting: `AppServiceProvider::boot()` memanggil
+ * JsonResource::withoutWrapping(), jadi response Resource TIDAK terbungkus
+ * { "data": ... }. Helper unwrap() di bawah tetap dipasang sebagai jaring
+ * pengaman kalau config cache di server belum ke-clear — supaya UI tidak
+ * blank / tidak melempar "x.map is not a function".
  */
 import { api } from "@/lib/api";
 import type { AIApproval, AIRecommendation } from "../types";
 import type { AIServiceBundle } from "./types";
 
-function unwrap<T>(payload: unknown): T {
+type Envelope<T> = T | { data: T };
+
+function unwrap<T>(payload: Envelope<T>): T {
   if (
     payload &&
     typeof payload === "object" &&
@@ -29,47 +27,57 @@ function unwrap<T>(payload: unknown): T {
   return payload as T;
 }
 
-const get = <T>(url: string, config?: Parameters<typeof api.get>[1]) =>
-  api.get(url, config).then((r) => unwrap<T>(r.data));
-
-const post = <T>(url: string, body?: unknown) =>
-  api.post(url, body).then((r) => unwrap<T>(r.data));
+/** Untuk endpoint list: apapun yang datang, UI selalu dapat array. */
+function unwrapList<T>(payload: unknown): T[] {
+  const value = unwrap<unknown>(payload as Envelope<unknown>);
+  return Array.isArray(value) ? (value as T[]) : [];
+}
 
 export const laravelServices: AIServiceBundle = {
   dashboard: {
-    getBusinessHealth: () => get("/ai/dashboard/health"),
-    getPriorities: () => get("/ai/dashboard/priorities"),
-    getOverviewKpis: () => get("/ai/dashboard/kpis"),
-    getAgents: () => get("/ai/agents"),
+    getBusinessHealth: () => api.get("/ai/dashboard/health").then((r) => unwrap(r.data)),
+    getPriorities: () => api.get("/ai/dashboard/priorities").then((r) => unwrapList(r.data)),
+    getOverviewKpis: () => api.get("/ai/dashboard/kpis").then((r) => unwrapList(r.data)),
+    getAgents: () => api.get("/ai/agents").then((r) => unwrapList(r.data)),
   },
   recommendations: {
-    list: (params) => get("/ai/recommendations", { params }),
-    getById: (id) => get(`/ai/recommendations/${id}`),
-    approve: (id) => post<AIRecommendation>(`/ai/recommendations/${id}/approve`),
-    reject: (id) => post<AIRecommendation>(`/ai/recommendations/${id}/reject`),
+    list: (params) => api.get("/ai/recommendations", { params }).then((r) => unwrapList(r.data)),
+    getById: (id) => api.get(`/ai/recommendations/${id}`).then((r) => unwrap(r.data)),
+    approve: (id) =>
+      api.post(`/ai/recommendations/${id}/approve`).then((r) => unwrap<AIRecommendation>(r.data)),
+    reject: (id) =>
+      api.post(`/ai/recommendations/${id}/reject`).then((r) => unwrap<AIRecommendation>(r.data)),
   },
   actions: {
-    list: () => get("/ai/actions"),
-    approveAndExecute: (id) => post<AIApproval>(`/ai/actions/${id}/approve-execute`),
-    reject: (id) => post<AIApproval>(`/ai/actions/${id}/reject`),
+    list: () => api.get("/ai/actions").then((r) => unwrapList(r.data)),
+    approveAndExecute: (id) =>
+      api.post(`/ai/actions/${id}/approve-execute`).then((r) => unwrap<AIApproval>(r.data)),
+    reject: (id) => api.post(`/ai/actions/${id}/reject`).then((r) => unwrap<AIApproval>(r.data)),
   },
   chat: {
-    ask: (message, context) => post("/ai/chat", { message, context }),
+    ask: (message, context) => api.post("/ai/chat", { message, context }).then((r) => unwrap(r.data)),
   },
   usage: {
-    getTotals: () => get("/ai/usage/totals"),
-    getByAgent: () => get("/ai/usage/by-agent"),
-    getByProvider: () => get("/ai/usage/by-provider"),
+    getTotals: () => api.get("/ai/usage/totals").then((r) => unwrap(r.data)),
+    getByAgent: () => api.get("/ai/usage/by-agent").then((r) => unwrapList(r.data)),
+    getByProvider: () => api.get("/ai/usage/by-provider").then((r) => unwrapList(r.data)),
   },
   providers: {
-    list: () => get("/ai/providers"),
-    getRoutingStrategy: () => get("/ai/routing-strategy"),
+    list: () => api.get("/ai/providers").then((r) => unwrapList(r.data)),
+    getRoutingStrategy: () => api.get("/ai/routing-strategy").then((r) => unwrap(r.data)),
   },
   campaigns: {
-    list: () => get("/ai/campaigns"),
-    getById: (id) => get(`/ai/campaigns/${id}`),
+    list: () => api.get("/ai/campaigns").then((r) => unwrapList(r.data)),
+    getById: (id) => api.get(`/ai/campaigns/${id}`).then((r) => unwrap(r.data)),
   },
   impact: {
-    list: () => get("/ai/impact"),
+    list: () => api.get("/ai/impact").then((r) => unwrapList(r.data)),
+  },
+  insights: {
+    list: (params) => api.get("/ai/insights", { params }).then((r) => unwrapList(r.data)),
+    getById: (id) => api.get(`/ai/insights/${id}`).then((r) => unwrap(r.data)),
+  },
+  activity: {
+    list: (params) => api.get("/ai/activity", { params }).then((r) => unwrapList(r.data)),
   },
 };
