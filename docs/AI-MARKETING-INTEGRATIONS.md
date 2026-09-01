@@ -42,3 +42,20 @@ Setelah mengisi: `php artisan config:clear`.
 
 Ads, Content/Social, Local SEO, Overview performance chart & channel mix,
 metrik email di halaman Leads.
+
+## Endpoint data nyata (tanpa AI, tanpa fixture)
+
+| Endpoint | Sumber |
+|---|---|
+| `GET /api/ai/seo/search-console-summary?days=28` | Google Search Console (cache 20 menit) |
+| `GET /api/ai/cro/funnel-summary` | tabel `consultations` + `consultation_status_histories` |
+
+## Verifikasi di server
+
+```bash
+cd backend
+php artisan config:clear
+php artisan route:list --path=ai
+php artisan ai:run-agent seo --limit=5
+php artisan ai:run-agent cro --limit=5
+```
