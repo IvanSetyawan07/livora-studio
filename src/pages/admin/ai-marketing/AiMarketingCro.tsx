@@ -1,11 +1,13 @@
+// src/pages/admin/ai-marketing/AiMarketingCro.tsx
 import { AgentPageShell } from "@/components/ai/agent-page";
 import { InsightCard } from "@/components/ai/insight-card";
 import { DemoBadge, NotConnected, Panel, Reveal, SectionHeading } from "@/components/ai/primitives";
-import { agentById, insights } from "@/lib/ai/data";
+import { agentById } from "@/lib/ai/data";
+import { useAiInsights } from "@/hooks/useAiDashboard";
 
 export default function CroAgentPage() {
   const agent = agentById("cro")!;
-  const agentInsights = insights.filter((i) => i.agent === "cro");
+  const { data: agentInsights = [], isLoading } = useAiInsights("all", "cro");
 
   return (
     <AgentPageShell agent={agent}>
@@ -37,7 +39,15 @@ export default function CroAgentPage() {
           title="AI insights"
           description="Funnel drop-off, anomalies and UX friction detected across the site."
         />
-        {agentInsights.length > 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div
+              className="h-6 w-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
+              role="status"
+              aria-label="Loading insights"
+            />
+          </div>
+        ) : agentInsights.length > 0 ? (
           <div className="grid gap-4 lg:grid-cols-2">
             {agentInsights.map((i, idx) => (
               <Reveal key={i.id} delay={idx * 70}>

@@ -163,6 +163,16 @@ export interface AIKpi {
   spark: number[];
   live?: boolean;
 }
+export interface SearchConsoleSummary {
+  connected: boolean;
+  hasData: boolean;
+  message: string | null;
+  period: { start: string; end: string; days: number } | null;
+  totals: { clicks: number; impressions: number; ctr: number; position: number } | null;
+  siteUrl: string | null;
+}
+
+export interface AISeoService { getSearchConsoleSummary(days?: number): Promise<SearchConsoleSummary>; }
 
 export interface SeoOpportunity {
   id: string;

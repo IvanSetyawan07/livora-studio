@@ -94,4 +94,9 @@ export const laravelServices: AIServiceBundle = {
     disconnectGoogle: () =>
       api.post("/ai/integrations/google/disconnect").then((r) => unwrap(r.data)),
   },
+  seo: {
+  getSearchConsoleSummary: (days = 28) =>
+    api.get("/ai/seo/search-console-summary", { params: { days } }).then((r) => unwrap(r.data)),
+},
+
 };

@@ -19,6 +19,7 @@ import type {
   AIRecommendation,
   BusinessHealth,
   PriorityItem,
+  SearchConsoleSummary,
 } from "@/lib/ai/types";
 
 export const aiKeys = {
@@ -31,6 +32,7 @@ export const aiKeys = {
   insights: (type?: AIInsightType | "all", agent?: AIAgentId | "all") =>
     ["ai", "insights", type ?? "all", agent ?? "all"] as const,
   activity: (agent?: AIAgentId | "all") => ["ai", "activity", agent ?? "all"] as const,
+  searchConsole: (days: number) => ["ai", "seo", "search-console", days] as const,
 };
 
 const STALE = 60_000;
@@ -42,7 +44,13 @@ export function useBusinessHealth() {
     staleTime: STALE,
   });
 }
-
+export function useSearchConsoleSummary(days = 28) {
+  return useQuery<SearchConsoleSummary>({
+    queryKey: aiKeys.searchConsole(days),
+    queryFn: () => aiServices.seo.getSearchConsoleSummary(days),
+    staleTime: 10 * 60_000, // backend sudah cache 20 menit; ini cuma cegah refetch tiap mount
+  });
+}
 export function useOverviewKpis() {
   return useQuery<AIKpi[]>({
     queryKey: aiKeys.kpis,
@@ -138,6 +146,7 @@ export function useActionDecision() {
     mutationFn: (id: string) => aiServices.actions.reject(id),
     onSuccess: invalidate,
   });
+  
 
   return { approveAndExecute, reject };
 }

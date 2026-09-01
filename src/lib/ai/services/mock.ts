@@ -1,3 +1,4 @@
+// src/lib/ai/services/mock.ts
 /**
  * Mock adapter — the default implementation until the Laravel AI
  * orchestration API exists. State lives in memory for the session so
@@ -17,7 +18,7 @@ import {
 
 import { campaigns as campaignsFixture, impactRecords as impactFixture } from "../workspace-data";
 import { providers as providersFixture, routingStrategy, usageByAgent, usageByProvider, usageTotals } from "../system-data";
-import type { AIApproval, AIRecommendation, AiChatContextKey, AiChatMessage, GoogleIntegrationStatus } from "../types";
+import type { AIApproval, AIRecommendation, AISeoService, AiChatContextKey, AiChatMessage, GoogleIntegrationStatus } from "../types";
 import type {
   AIActionService,
   AIActivityService,
@@ -29,8 +30,8 @@ import type {
   AIIntegrationsService,
   AIProviderService,
   AIRecommendationService,
-  AIServiceBundle,
   AIUsageService,
+  AIServiceBundle,
 } from "./types";
 
 const delay = (ms = 380) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -120,7 +121,6 @@ const actions: AIActionService = {
     );
     return updated;
   },
-  
 };
 
 // Small, scripted, context-aware canned responses — NOT a real model call.
@@ -193,6 +193,7 @@ const providers: AIProviderService = {
     return { preferredProvider: provider, scope: "global" };
   },
 };
+
 const insights: AIInsightService = {
   async list(params) {
     await delay(300);
@@ -270,6 +271,22 @@ const integrations: AIIntegrationsService = {
   },
 };
 
+// Honest-empty: belum ada koneksi Search Console beneran di mode mock,
+// jadi selalu balikin status disconnected/no-data (bukan angka fiktif).
+const seo: AISeoService = {
+  async getSearchConsoleSummary() {
+    await delay(250);
+    return {
+      connected: false,
+      hasData: false,
+      message: "Search Console belum terhubung.",
+      period: null,
+      totals: null,
+      siteUrl: null,
+    };
+  },
+};
+
 export const mockServices: AIServiceBundle = {
   dashboard,
   recommendations,
@@ -282,4 +299,5 @@ export const mockServices: AIServiceBundle = {
   insights,
   activity,
   integrations,
+  seo,
 };

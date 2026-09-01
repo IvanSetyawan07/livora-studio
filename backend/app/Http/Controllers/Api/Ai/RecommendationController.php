@@ -11,12 +11,28 @@ use Illuminate\Support\Facades\DB;
 
 class RecommendationController extends Controller
 {
+    /**
+     * GET /api/ai/recommendations?status=pending&agent=seo&limit=50
+     *
+     * Filter `agent` ditambahkan supaya halaman agent (mis. SEO Agent) bisa
+     * menampilkan rekomendasi miliknya sendiri tanpa harus mengambil semua
+     * baris lalu memfilter di frontend. Nama query param-nya `agent`
+     * (bukan `agent_key`) supaya konsisten dengan InsightController.
+     */
     public function index(Request $request)
     {
         $query = AiRecommendation::query()->orderByDesc('created_at');
 
         if ($status = $request->query('status')) {
             $query->where('status', $status);
+        }
+
+        if ($agent = $request->query('agent')) {
+            $query->where('agent_key', $agent);
+        }
+
+        if ($limit = (int) $request->query('limit')) {
+            $query->limit(max(1, min($limit, 200)));
         }
 
         return AiRecommendationResource::collection($query->get());

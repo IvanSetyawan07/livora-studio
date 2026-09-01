@@ -1,3 +1,4 @@
+// src/lib/ai/services/types.ts
 /**
  * Service contracts for the AI Marketing surface.
  *
@@ -24,6 +25,7 @@ import type {
   AIUsageByAgent,
   AIUsageByProvider,
   AIUsageTotals,
+  AISeoService,
   BusinessHealth,
   Campaign,
   GoogleIntegrationStatus,
@@ -39,7 +41,7 @@ export interface AIDashboardService {
 }
 
 export interface AIRecommendationService {
-  list(params?: { status?: AIApprovalStatus }): Promise<AIRecommendation[]>;
+  list(params?: { agent?: AIAgentId; status?: AIApprovalStatus }): Promise<AIRecommendation[]>;
   getById(id: string): Promise<AIRecommendation | undefined>;
   approve(id: string): Promise<AIRecommendation>;
   reject(id: string): Promise<AIRecommendation>;
@@ -114,4 +116,5 @@ export interface AIServiceBundle {
   insights: AIInsightService;
   activity: AIActivityService;
   integrations: AIIntegrationsService;
+  seo: AISeoService;
 }

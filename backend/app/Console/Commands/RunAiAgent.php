@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\AI\CroAgentService;
+use App\Services\AI\SeoAgentService;
 use Illuminate\Console\Command;
 
 /**
@@ -10,27 +11,29 @@ use Illuminate\Console\Command;
  *
  * Sengaja MANUAL (bukan scheduler) supaya hasilnya bisa direview dulu sebelum
  * diotomatisasi. Dispatch berdasarkan {key} supaya agent berikutnya (content,
- * leads, seo) tinggal ditambahkan match arm-nya di sini tanpa bikin command baru.
+ * leads, ads) tinggal ditambahkan match arm-nya di sini tanpa bikin command baru.
  *
- * Baru "cro" yang diimplementasikan. Key lain akan gagal dengan pesan jujur,
+ * Yang sudah diimplementasikan: "cro" (data funnel konsultasi) dan "seo"
+ * (data Google Search Console). Key lain masih gagal dengan pesan jujur,
  * bukan silent no-op.
  */
 class RunAiAgent extends Command
 {
-    protected $signature = 'ai:run-agent {key : Agent key, mis. cro} {--limit=5 : Maksimal insight per run}';
+    protected $signature = 'ai:run-agent {key : Agent key, mis. cro atau seo} {--limit=5 : Maksimal insight per run}';
 
     protected $description = 'Jalankan satu siklus analisis AI untuk agent tertentu (Fase 6)';
 
-    public function handle(CroAgentService $croAgent): int
+    public function handle(CroAgentService $croAgent, SeoAgentService $seoAgent): int
     {
         $key = strtolower($this->argument('key'));
         $limit = max(1, (int) $this->option('limit'));
 
         $result = match ($key) {
             'cro' => $croAgent->run($limit),
+            'seo' => $seoAgent->run($limit),
             default => [
                 'status' => 'not_implemented',
-                'message' => "Agent '{$key}' belum diimplementasikan di Fase 6. Baru 'cro' yang siap.",
+                'message' => "Agent '{$key}' belum diimplementasikan di Fase 6. Baru 'cro' dan 'seo' yang siap.",
             ],
         };
 
