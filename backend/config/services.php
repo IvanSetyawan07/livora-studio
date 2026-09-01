@@ -51,4 +51,47 @@ return [
         'api_key' => env('GEMINI_API_KEY'),
         'model'   => env('GEMINI_MODEL', 'gemini-3.6-flash'),
     ],
+
+    // ---------------------------------------------------------------
+    // AI Marketing — koneksi platform luar.
+    // Semua nilai dibaca dari backend/.env. Selama kosong, dashboard
+    // menampilkan blok "Not connected" dan TIDAK memakai data contoh.
+    // ---------------------------------------------------------------
+    'meta_ads' => [
+        'access_token' => env('META_ADS_ACCESS_TOKEN'),
+        'account_id' => env('META_ADS_ACCOUNT_ID'),
+        'api_version' => env('META_ADS_API_VERSION', 'v21.0'),
+    ],
+
+    'meta_graph' => [
+        'access_token' => env('META_GRAPH_ACCESS_TOKEN'),
+        'page_id' => env('META_PAGE_ID'),
+        'instagram_business_id' => env('META_INSTAGRAM_BUSINESS_ID'),
+    ],
+
+    'google_ads' => [
+        'developer_token' => env('GOOGLE_ADS_DEVELOPER_TOKEN'),
+        'customer_id' => env('GOOGLE_ADS_CUSTOMER_ID'),
+        'refresh_token' => env('GOOGLE_ADS_REFRESH_TOKEN'),
+    ],
+
+    'ga4' => [
+        'property_id' => env('GA4_PROPERTY_ID'),
+        'service_account_json' => env('GA4_SERVICE_ACCOUNT_JSON'),
+    ],
+
+    'google_business' => [
+        'account_id' => env('GOOGLE_BUSINESS_ACCOUNT_ID'),
+        'location_id' => env('GOOGLE_BUSINESS_LOCATION_ID'),
+    ],
+
+    'tiktok' => [
+        'access_token' => env('TIKTOK_ACCESS_TOKEN'),
+        'business_id' => env('TIKTOK_BUSINESS_ID'),
+    ],
+
+    'youtube' => [
+        'api_key' => env('YOUTUBE_API_KEY'),
+        'channel_id' => env('YOUTUBE_CHANNEL_ID'),
+    ],
 ];
