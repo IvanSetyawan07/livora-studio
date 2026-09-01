@@ -20,6 +20,7 @@ import type {
   BusinessHealth,
   PriorityItem,
   SearchConsoleSummary,
+  CroFunnelSummary,
 } from "@/lib/ai/types";
 import { agentMeta } from "@/lib/ai/agent-catalog";
 
@@ -34,6 +35,7 @@ export const aiKeys = {
     ["ai", "insights", type ?? "all", agent ?? "all"] as const,
   activity: (agent?: AIAgentId | "all") => ["ai", "activity", agent ?? "all"] as const,
   searchConsole: (days: number) => ["ai", "seo", "search-console", days] as const,
+  croFunnel: () => ["ai", "cro", "funnel"] as const,
 };
 
 const STALE = 60_000;
@@ -50,6 +52,15 @@ export function useSearchConsoleSummary(days = 28) {
     queryKey: aiKeys.searchConsole(days),
     queryFn: () => aiServices.seo.getSearchConsoleSummary(days),
     staleTime: 10 * 60_000, // backend sudah cache 20 menit; ini cuma cegah refetch tiap mount
+  });
+}
+
+/** KPI funnel CRO — dihitung backend dari tabel consultations (bukan LLM, bukan fixture). */
+export function useCroFunnelSummary() {
+  return useQuery<CroFunnelSummary>({
+    queryKey: aiKeys.croFunnel(),
+    queryFn: () => aiServices.cro.getFunnelSummary(),
+    staleTime: 5 * 60_000,
   });
 }
 export function useOverviewKpis() {
