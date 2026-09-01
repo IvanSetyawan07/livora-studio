@@ -35,14 +35,43 @@ class SearchConsoleSiteResolver
     {
         $override = AiSetting::get(self::SETTING_KEY);
 
-        if (is_string($override) && $override !== '') {
-            return ['site' => $override, 'reason' => null];
-        }
-
         try {
             $sites = $this->client->listSites();
         } catch (Throwable $e) {
             return ['site' => null, 'reason' => 'Tidak bisa membaca daftar property Search Console: '.$e->getMessage()];
+        }
+
+        // Override manual TETAP divalidasi ke daftar property milik akun yang
+        // terhubung. Kalau tidak divalidasi, salah ketik satu huruf bikin semua
+        // query balik kosong tanpa penjelasan — dan itu terlihat seperti
+        // "tidak ada trafik", padahal property-nya memang tidak ada.
+        if (is_string($override) && $override !== '') {
+            $match = null;
+            foreach ($sites as $site) {
+                if (strcasecmp($site['siteUrl'], $override) === 0) {
+                    $match = $site;
+                    break;
+                }
+            }
+
+            if ($match === null) {
+                return [
+                    'site' => null,
+                    'reason' => 'Override ai_settings "'.self::SETTING_KEY.'" berisi "'.$override.'", '
+                        .'tapi property itu tidak ada di akun Google yang terhubung. Property tersedia: '
+                        .(count($sites) ? implode(', ', array_column($sites, 'siteUrl')) : '(kosong)').'.',
+                ];
+            }
+
+            if (($match['permissionLevel'] ?? '') === 'siteUnverifiedUser') {
+                return [
+                    'site' => null,
+                    'reason' => 'Property "'.$override.'" ada tapi belum terverifikasi untuk akun ini, '
+                        .'jadi Search Console tidak akan mengembalikan data apa pun.',
+                ];
+            }
+
+            return ['site' => $match['siteUrl'], 'reason' => null];
         }
 
         // Property yang belum terverifikasi tidak akan mengembalikan data apapun,
