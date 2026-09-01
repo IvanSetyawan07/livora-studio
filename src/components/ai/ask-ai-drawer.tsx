@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 import { useAiMarketingContext } from "@/context/AiMarketingContext";
 import { aiServices } from "@/lib/ai/services";
 import type { AiChatContextKey, AiChatMessage } from "@/lib/ai/types";
-import { DemoBadge } from "./primitives";
 
 const contextLabel: Record<AiChatContextKey, string> = {
   overview: "Overview",
@@ -122,10 +121,6 @@ export function AskAIDrawer() {
                     </button>
                   ))}
                 </div>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <DemoBadge />
-                <span className="text-[11px] text-muted-foreground">Scripted preview replies, not a live model yet.</span>
               </div>
             </div>
           ) : (

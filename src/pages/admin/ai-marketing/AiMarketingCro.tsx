@@ -1,7 +1,7 @@
 // src/pages/admin/ai-marketing/AiMarketingCro.tsx
 import { AgentPageShell } from "@/components/ai/agent-page";
 import { InsightCard } from "@/components/ai/insight-card";
-import { DemoBadge, NotConnected, Panel, Reveal, SectionHeading } from "@/components/ai/primitives";
+import { NotConnected, Panel, Reveal, SectionHeading } from "@/components/ai/primitives";
 import { useAgent, useAiInsights } from "@/hooks/useAiDashboard";
 
 export default function CroAgentPage() {
@@ -14,7 +14,6 @@ export default function CroAgentPage() {
         <SectionHeading
           title="Conversion overview"
           description="Funnel and CTA performance are sourced from existing Web Analytics; session-level behaviour needs a capture layer."
-          action={<DemoBadge />}
         />
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {["Consultation starts", "Funnel completion", "Avg. abandon step", "CTA click rate"].map(

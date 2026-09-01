@@ -4,7 +4,6 @@ import { CheckCircle2, Loader2, Unlink } from "lucide-react";
 import { AgentPageShell } from "@/components/ai/agent-page";
 import {
   ConfidenceBar,
-  DemoBadge,
   NotConnected,
   Panel,
   Pill,
@@ -35,9 +34,9 @@ import type { AIInsight, AISeverity, GoogleIntegrationStatus } from "@/lib/ai/ty
  *  - AI opportunities → hasil `php artisan ai:run-agent seo` yang tersimpan di
  *                   tabel ai_insights (agent_key = 'seo').
  *
- * Section Local SEO sengaja MASIH pakai data statis + DemoBadge: sumbernya
+ * Section Local SEO menampilkan blok "belum tersambung": sumbernya
  * Google Business Profile API yang belum diintegrasikan sama sekali. Jangan
- * dihapus badge-nya sebelum integrasinya benar-benar ada.
+ * isi dengan angka contoh sebelum integrasinya benar-benar ada.
  */
 
 const severityTone: Record<AISeverity, "brass" | "info" | "neutral" | "danger"> = {
@@ -248,8 +247,7 @@ export default function SeoAgentPage() {
         <SeoKpiCards />
       </section>
 
-      {/* Local SEO masih memakai data statis — integrasi Google Business Profile
-          belum ada, jadi DemoBadge di dalamnya sengaja dipertahankan. */}
+      {/* Local SEO: integrasi Google Business Profile belum ada. */}
       <LocalSeoSection />
 
       <section className="mt-10">
@@ -308,14 +306,14 @@ export default function SeoAgentPage() {
 
       <section className="mt-10 grid gap-4 lg:grid-cols-2">
         <Panel className="p-6">
-          <SectionHeading title="Content opportunities" action={<DemoBadge />} />
+          <SectionHeading title="Content opportunities" />
           <NotConnected
             title="Content gap analysis belum dipisah dari insight umum"
             description="Untuk sekarang temuan content gap ikut muncul di tabel AI opportunities di atas."
           />
         </Panel>
         <Panel className="p-6">
-          <SectionHeading title="Technical issues" action={<DemoBadge />} />
+          <SectionHeading title="Technical issues" />
           <NotConnected
             title="Site crawl is not scheduled yet"
             description="The Laravel backend will run the crawl and pass structured findings to the SEO Agent for reasoning."
