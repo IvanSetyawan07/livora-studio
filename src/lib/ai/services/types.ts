@@ -25,6 +25,7 @@ import type {
   AIUsageByAgent,
   AIUsageByProvider,
   AIUsageTotals,
+  AICroService,
   AISeoService,
   BusinessHealth,
   Campaign,
@@ -117,4 +118,5 @@ export interface AIServiceBundle {
   activity: AIActivityService;
   integrations: AIIntegrationsService;
   seo: AISeoService;
+  cro: AICroService;
 }

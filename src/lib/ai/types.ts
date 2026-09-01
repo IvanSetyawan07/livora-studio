@@ -172,6 +172,35 @@ export interface SearchConsoleSummary {
   siteUrl: string | null;
 }
 
+export interface CroFunnelStage {
+  key: string;
+  label: string;
+  reached: number;
+  rate: number | null;
+  avgHoursInStage: number | null;
+  lost: number;
+}
+
+export interface CroFunnelSummary {
+  hasData: boolean;
+  message: string | null;
+  totals: {
+    consultations: number;
+    completed: number;
+    completionRate: number | null;
+    topDropOffStage: string | null;
+    topDropOffCount: number | null;
+    lostLast30d: number;
+    lostPrev30d: number;
+  } | null;
+  stages: CroFunnelStage[];
+  unavailable: { metric: string; reason: string }[];
+}
+
+export interface AICroService {
+  getFunnelSummary(): Promise<CroFunnelSummary>;
+}
+
 export interface AISeoService { getSearchConsoleSummary(days?: number): Promise<SearchConsoleSummary>; }
 
 export interface SeoOpportunity {
