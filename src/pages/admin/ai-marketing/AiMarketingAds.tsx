@@ -3,8 +3,10 @@ import { InsightCard } from "@/components/ai/insight-card";
 import { IntegrationRequired } from "@/components/ai/integration-required";
 import { NotConnected, Reveal, SectionHeading } from "@/components/ai/primitives";
 import { useAgent, useAiInsights } from "@/hooks/useAiDashboard";
+import { usePageContext } from "@/context/AiMarketingContext";
 
 export default function AdsAgentPage() {
+  usePageContext("ads");
   const { agent } = useAgent("ads");
   const { data: agentInsights = [], isLoading } = useAiInsights("all", "ads");
 

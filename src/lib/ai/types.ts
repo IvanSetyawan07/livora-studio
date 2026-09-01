@@ -72,7 +72,7 @@ export type AIPriority = "low" | "medium" | "high";
 
 export interface AIRecommendation {
   id: string;
-  insightId: string;
+  insightId: string | null;
   title: string;
   description: string;
   actionType: string;
@@ -399,6 +399,10 @@ export interface AiChatMessage {
   role: "user" | "assistant";
   text: string;
   createdAt: string;
+  /** Set kalau balasan ini menghasilkan rekomendasi baru yang otomatis
+   * ditulis ke Recommendations — dipakai buat nampilin kartu konfirmasi
+   * kecil di bawah bubble chat. */
+  recommendation?: AIRecommendation | null;
 }
 
 export interface ChannelPerformanceItem {

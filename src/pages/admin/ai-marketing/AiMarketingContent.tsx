@@ -2,8 +2,10 @@ import { AgentPageShell } from "@/components/ai/agent-page";
 import { IntegrationRequired } from "@/components/ai/integration-required";
 import { NotConnected, Panel, SectionHeading } from "@/components/ai/primitives";
 import { useAgent } from "@/hooks/useAiDashboard";
+import { usePageContext } from "@/context/AiMarketingContext";
 
 export default function ContentAgentPage() {
+  usePageContext("content");
   const { agent } = useAgent("content");
 
   return (

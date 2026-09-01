@@ -22,6 +22,7 @@ import { useAgent } from "@/hooks/useAiDashboard";
 import { aiServices } from "@/lib/ai/services";
 import { useAiInsights, useSearchConsoleSummary } from "@/hooks/useAiDashboard";
 import { LocalSeoSection } from "./AiMarketingSeoLocal";
+import { usePageContext } from "@/context/AiMarketingContext";
 import type { AIInsight, AISeverity, GoogleIntegrationStatus } from "@/lib/ai/types";
 
 /**
@@ -230,6 +231,7 @@ function SeoKpiCards() {
 }
 
 export default function SeoAgentPage() {
+  usePageContext("seo");
   const { agent } = useAgent("seo");
   const [selected, setSelected] = useState<AIInsight | null>(null);
   const { data: seoInsights, isLoading: insightsLoading } = useAiInsights("all", "seo");

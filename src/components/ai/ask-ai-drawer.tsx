@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Sparkles, ArrowUp, X } from "lucide-react";
+import { Sparkles, ArrowUp, X, CheckCircle2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useAiMarketingContext } from "@/context/AiMarketingContext";
@@ -126,7 +127,7 @@ export function AskAIDrawer() {
           ) : (
             <div className="space-y-3">
               {messages.map((m) => (
-                <div key={m.id} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
+                <div key={m.id} className={cn("flex flex-col gap-1.5", m.role === "user" ? "items-end" : "items-start")}>
                   <div
                     className={cn(
                       "max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm leading-relaxed",
@@ -135,6 +136,20 @@ export function AskAIDrawer() {
                   >
                     {m.text}
                   </div>
+                  {m.recommendation && (
+                    <Link
+                      to="/admin/ai-marketing/recommendations"
+                      className="panel panel-hover flex max-w-[85%] items-start gap-2 rounded-lg px-3.5 py-2.5 text-left"
+                    >
+                      <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-medium text-foreground/90">
+                          Rekomendasi baru ditambahkan: {m.recommendation.title}
+                        </p>
+                        <p className="label-eyebrow">Lihat di Recommendations →</p>
+                      </div>
+                    </Link>
+                  )}
                 </div>
               ))}
               {pending && (

@@ -3,8 +3,10 @@ import { AgentPageShell } from "@/components/ai/agent-page";
 import { InsightCard } from "@/components/ai/insight-card";
 import { NotConnected, Panel, Reveal, SectionHeading } from "@/components/ai/primitives";
 import { useAgent, useAiInsights, useCroFunnelSummary } from "@/hooks/useAiDashboard";
+import { usePageContext } from "@/context/AiMarketingContext";
 
 export default function CroAgentPage() {
+  usePageContext("cro");
   const { agent } = useAgent("cro");
   const { data: agentInsights = [], isLoading } = useAiInsights("all", "cro");
   const funnel = useCroFunnelSummary();

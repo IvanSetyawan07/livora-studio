@@ -356,11 +356,11 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
           <div className="absolute inset-0 bg-gradient-to-r from-foreground/90 via-foreground/45 to-transparent" />
           <div className="absolute inset-0 flex items-center">
             <div className="container-livora">
-              <span className="interior-line block text-[11px] uppercase tracking-[0.4em] text-background/70">
+              <span className="interior-line block text-[20px] uppercase tracking-[0.4em] text-background/70">
                 PT. Langgeng Cipta Ruang
               </span>
 
-              <div className="mt-6">
+              <div className="mt-6 ">
                 {["Imagine.", "Create.", "Realize."].map((w) => (
                   <span key={w} className="block overflow-hidden">
                     <span className="interior-line serif block text-[13vw] font-light leading-[1] text-background sm:text-[5.2vw]">
@@ -370,7 +370,7 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
                 ))}
               </div>
 
-              <p className="interior-body mt-8 max-w-md text-sm font-light leading-relaxed text-background/80 opacity-0 sm:text-base">
+              <p className="interior-body mt-8 max-w-md text-sm font-light leading-relaxed text-background/80 opacity-0 transition-opacity duration-20 ease-in-out sm:text-base">
                 Create your dream space with us — a single point of contact for design, supply and
                 construction.
               </p>
