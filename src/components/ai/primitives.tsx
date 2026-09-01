@@ -507,16 +507,3 @@ export function NotConnected({
   );
 }
 
-export function DemoBadge({ className }: { className?: string }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-sm border border-border-strong px-2 py-0.5 font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase",
-        className,
-      )}
-      title="Illustrative preview data — not production analytics"
-    >
-      Demo preview
-    </span>
-  );
-}

@@ -4,12 +4,11 @@ import { PageHeader } from "@/components/admin/PageHeader";
 import { ActivityStream } from "@/components/ai/activity-stream";
 import { AgentRail } from "@/components/ai/agent-rail";
 import { BusinessHealthCard } from "@/components/ai/business-health-card";
-import { ChannelPerformanceCard } from "@/components/ai/channel-performance-card";
 import { KpiCard } from "@/components/ai/kpi-card";
-import { PerformanceChart } from "@/components/ai/performance-chart";
+import { IntegrationRequired } from "@/components/ai/integration-required";
 import { PriorityList } from "@/components/ai/priority-list";
 import { RecommendationCard } from "@/components/ai/recommendation-card";
-import { DemoBadge, Panel, Reveal, SectionHeading } from "@/components/ai/primitives";
+import { Panel, Reveal, SectionHeading } from "@/components/ai/primitives";
 import { usePageContext } from "@/context/AiMarketingContext";
 import {
   useAiActivity,
@@ -19,7 +18,6 @@ import {
   usePriorities,
   useRecommendations,
 } from "@/hooks/useAiDashboard";
-import { channelPerformance } from "@/lib/ai/data";
 
 const kpiTones = ["success", "info", "warning", "ai"] as const;
 
@@ -145,21 +143,24 @@ export default function AiMarketingOverview() {
         </Block>
       </section>
 
-      {/* Performance + Channel mix — masih demo, endpoint belum ada */}
-      <div className="mt-10">
-        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-sm border border-border bg-surface/40 px-4 py-3 text-xs text-muted-foreground">
-          <DemoBadge />
-          Performance chart dan channel mix masih data ilustratif — endpoint-nya belum dibuat (Fase 6).
-        </div>
-        <div className="grid gap-4 xl:grid-cols-[1.55fr_1fr]">
-          <Reveal>
-            <PerformanceChart />
-          </Reveal>
-          <Reveal delay={120}>
-            <ChannelPerformanceCard channels={channelPerformance} />
-          </Reveal>
-        </div>
+      {/* Performance + Channel mix — sumber analytics belum tersambung */}
+      <div className="mt-10 grid gap-4 xl:grid-cols-2">
+        <IntegrationRequired
+          provider="Google Analytics 4"
+          title="Traffic, engagement dan conversion belum tersambung"
+          description="Grafik performa multi-metrik butuh GA4 Data API. Selama property GA4 belum dipasang, kartu ini sengaja kosong daripada menampilkan angka contoh."
+          envKeys={[
+            { key: "GA4_PROPERTY_ID", note: "properties/{id}" },
+            { key: "GA4_SERVICE_ACCOUNT_JSON", note: "path file kredensial service account" },
+          ]}
+        />
+        <IntegrationRequired
+          provider="Channel mix (GA4 + Meta Ads + Google Ads)"
+          title="Perbandingan channel belum bisa dihitung"
+          description="Channel mix menggabungkan sesi GA4 dengan spend iklan. Kartu ini aktif otomatis setelah GA4 dan minimal satu platform iklan tersambung."
+        />
       </div>
+
 
       {/* AI Activity — LIVE */}
       <section className="mt-10">
