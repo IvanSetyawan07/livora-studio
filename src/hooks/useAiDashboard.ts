@@ -21,6 +21,7 @@ import type {
   PriorityItem,
   SearchConsoleSummary,
   CroFunnelSummary,
+  CroFunnelSummary,
 } from "@/lib/ai/types";
 import { agentMeta } from "@/lib/ai/agent-catalog";
 
