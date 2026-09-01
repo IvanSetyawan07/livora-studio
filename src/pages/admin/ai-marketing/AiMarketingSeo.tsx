@@ -19,7 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { agentById } from "@/lib/ai/data";
+import { useAgent } from "@/hooks/useAiDashboard";
 import { aiServices } from "@/lib/ai/services";
 import { useAiInsights, useSearchConsoleSummary } from "@/hooks/useAiDashboard";
 import { LocalSeoSection } from "./AiMarketingSeoLocal";
@@ -231,7 +231,7 @@ function SeoKpiCards() {
 }
 
 export default function SeoAgentPage() {
-  const agent = agentById("seo")!;
+  const { agent } = useAgent("seo");
   const [selected, setSelected] = useState<AIInsight | null>(null);
   const { data: seoInsights, isLoading: insightsLoading } = useAiInsights("all", "seo");
 

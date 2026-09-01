@@ -2,11 +2,10 @@
 import { AgentPageShell } from "@/components/ai/agent-page";
 import { InsightCard } from "@/components/ai/insight-card";
 import { DemoBadge, NotConnected, Panel, Reveal, SectionHeading } from "@/components/ai/primitives";
-import { agentById } from "@/lib/ai/data";
-import { useAiInsights } from "@/hooks/useAiDashboard";
+import { useAgent, useAiInsights } from "@/hooks/useAiDashboard";
 
 export default function CroAgentPage() {
-  const agent = agentById("cro")!;
+  const { agent } = useAgent("cro");
   const { data: agentInsights = [], isLoading } = useAiInsights("all", "cro");
 
   return (

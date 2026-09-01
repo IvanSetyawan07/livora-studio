@@ -7,12 +7,12 @@ import {
 } from "@/components/ai/dashboard-charts";
 import { InsightCard } from "@/components/ai/insight-card";
 import { DemoBadge, NotConnected, Reveal, SectionHeading } from "@/components/ai/primitives";
-import { agentById, insights } from "@/lib/ai/data";
+import { useAgent, useAiInsights } from "@/hooks/useAiDashboard";
 import { adsFunnel, adsKpis, adsSeries, adsSeriesConfig, spendByPlatform } from "@/lib/ai/dashboard-data";
 
 export default function AdsAgentPage() {
-  const agent = agentById("ads")!;
-  const agentInsights = insights.filter((i) => i.agent === "ads");
+  const { agent } = useAgent("ads");
+  const { data: agentInsights = [], isLoading } = useAiInsights("all", "ads");
 
   return (
     <AgentPageShell agent={agent}>
@@ -44,7 +44,15 @@ export default function AdsAgentPage() {
           title="AI insights"
           description="Budget and creative recommendations the Ads Agent has surfaced."
         />
-        {agentInsights.length > 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div
+              className="h-6 w-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
+              role="status"
+              aria-label="Loading insights"
+            />
+          </div>
+        ) : agentInsights.length > 0 ? (
           <div className="grid gap-4 lg:grid-cols-2">
             {agentInsights.map((i, idx) => (
               <Reveal key={i.id} delay={idx * 70}>

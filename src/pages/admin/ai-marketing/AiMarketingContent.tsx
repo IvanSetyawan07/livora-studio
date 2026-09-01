@@ -7,7 +7,8 @@ import {
   StatStrip,
 } from "@/components/ai/dashboard-charts";
 import { DemoBadge, NotConnected, Panel, SectionHeading } from "@/components/ai/primitives";
-import { agentById, contentQueue } from "@/lib/ai/data";
+import { contentQueue } from "@/lib/ai/data";
+import { useAgent } from "@/hooks/useAiDashboard";
 import {
   postsByPlatform,
   socialEngagementSeries,
@@ -17,7 +18,7 @@ import {
 } from "@/lib/ai/dashboard-data";
 
 export default function ContentAgentPage() {
-  const agent = agentById("content")!;
+  const { agent } = useAgent("content");
 
   return (
     <AgentPageShell agent={agent}>
