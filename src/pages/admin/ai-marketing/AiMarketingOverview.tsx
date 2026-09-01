@@ -4,12 +4,11 @@ import { PageHeader } from "@/components/admin/PageHeader";
 import { ActivityStream } from "@/components/ai/activity-stream";
 import { AgentRail } from "@/components/ai/agent-rail";
 import { BusinessHealthCard } from "@/components/ai/business-health-card";
-import { ChannelPerformanceCard } from "@/components/ai/channel-performance-card";
 import { KpiCard } from "@/components/ai/kpi-card";
-import { PerformanceChart } from "@/components/ai/performance-chart";
+import { IntegrationRequired } from "@/components/ai/integration-required";
 import { PriorityList } from "@/components/ai/priority-list";
 import { RecommendationCard } from "@/components/ai/recommendation-card";
-import { DemoBadge, Panel, Reveal, SectionHeading } from "@/components/ai/primitives";
+import { Panel, Reveal, SectionHeading } from "@/components/ai/primitives";
 import { usePageContext } from "@/context/AiMarketingContext";
 import {
   useAiActivity,
@@ -19,7 +18,6 @@ import {
   usePriorities,
   useRecommendations,
 } from "@/hooks/useAiDashboard";
-import { channelPerformance } from "@/lib/ai/data";
 
 const kpiTones = ["success", "info", "warning", "ai"] as const;
 
