@@ -295,6 +295,7 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
     // ================= AI MARKETING DASHBOARD (Fase 3) =================
     // Prefix /ai, admin-only. Base URL frontend: VITE_API_URL + /ai/...
     Route::middleware('admin')->prefix('ai')->group(function () {
+        Route::get('/cro/funnel-summary', [\App\Http\Controllers\Api\Ai\CroController::class, 'funnelSummary']);
         Route::get('/seo/search-console-summary', [\App\Http\Controllers\Api\Ai\SeoController::class, 'searchConsoleSummary']);
         Route::get('/dashboard/health', [AiDashboardController::class, 'health']);
         Route::get('/dashboard/priorities', [AiDashboardController::class, 'priorities']);
