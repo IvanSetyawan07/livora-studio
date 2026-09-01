@@ -77,18 +77,27 @@ class AiAgentSeeder extends Seeder
         ];
 
         foreach ($agents as $agent) {
-            AiAgent::updateOrCreate(
-                ['key' => $agent['key']],
-                [
-                    'name' => $agent['name'],
-                    'purpose' => $agent['purpose'],
-                    'status' => 'coming_soon',
-                    'connection_state' => 'not_connected',
-                    'capabilities' => $agent['capabilities'],
-                    'dependencies' => $agent['dependencies'],
-                    'href' => '/admin/ai-marketing/'.$agent['key'],
-                ]
-            );
+            $existing = AiAgent::where('key', $agent['key'])->first();
+
+            // Hanya metadata statis (nama, tujuan, capabilities, href) yang di-refresh.
+            // `status`, `connection_state`, `last_run_at` dan `dependencies` TIDAK
+            // ditimpa untuk agent yang sudah ada — kalau ditimpa, agent yang sudah
+            // benar-benar pernah run (mis. seo/cro) akan balik jadi "coming_soon"
+            // padahal datanya live. Itu bikin dashboard berbohong.
+            $payload = [
+                'name' => $agent['name'],
+                'purpose' => $agent['purpose'],
+                'capabilities' => $agent['capabilities'],
+                'href' => '/admin/ai-marketing/'.$agent['key'],
+            ];
+
+            if (!$existing) {
+                $payload['status'] = 'coming_soon';
+                $payload['connection_state'] = 'not_connected';
+                $payload['dependencies'] = $agent['dependencies'];
+            }
+
+            AiAgent::updateOrCreate(['key' => $agent['key']], $payload);
         }
     }
 }

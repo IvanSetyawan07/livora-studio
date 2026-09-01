@@ -10,7 +10,7 @@ import {
   Reveal,
   SectionHeading,
 } from "@/components/ai/primitives";
-import { agentById, insights } from "@/lib/ai/data";
+import { useAgent, useAiInsights } from "@/hooks/useAiDashboard";
 import {
   emailFunnel,
   followUpLeads,
@@ -58,8 +58,8 @@ function LeadTimeline({ lead }: { lead: FollowUpLead }) {
 }
 
 export default function LeadsAgentPage() {
-  const agent = agentById("leads")!;
-  const agentInsights = insights.filter((i) => i.agent === "leads");
+  const { agent } = useAgent("leads");
+  const { data: agentInsights = [], isLoading } = useAiInsights("all", "leads");
 
   return (
     <AgentPageShell agent={agent}>
@@ -94,7 +94,15 @@ export default function LeadsAgentPage() {
           title="AI insights"
           description="High-intent identities flagged by repeat visits, catalogue downloads and wishlist activity."
         />
-        {agentInsights.length > 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div
+              className="h-6 w-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
+              role="status"
+              aria-label="Loading insights"
+            />
+          </div>
+        ) : agentInsights.length > 0 ? (
           <div className="grid gap-4 lg:grid-cols-2">
             {agentInsights.map((i, idx) => (
               <Reveal key={i.id} delay={idx * 70}>

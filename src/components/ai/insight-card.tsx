@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowUpRight, ChevronDown, ExternalLink } from "lucide-react";
 import type { AIInsight, AIInsightType } from "@/lib/ai/types";
-import { recommendationById } from "@/lib/ai/data";
+import { useRecommendation } from "@/hooks/useAiDashboard";
 import { ConfidenceBar, Panel, Pill, StatusDot } from "./primitives";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +26,7 @@ export function InsightCard({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const meta = typeMeta[insight.type];
-  const rec = insight.recommendationId ? recommendationById(insight.recommendationId) : undefined;
+  const { data: rec } = useRecommendation(insight.recommendationId);
 
   return (
     <Panel hover className="overflow-hidden">

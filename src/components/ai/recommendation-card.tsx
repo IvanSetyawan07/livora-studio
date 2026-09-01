@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Check, X } from "lucide-react";
 import type { AIRecommendation } from "@/lib/ai/types";
-import { agentById } from "@/lib/ai/data";
+import { agentMeta } from "@/lib/ai/agent-catalog";
 import { AnimatedBar, Panel, Pill, priorityTone, riskTone } from "./primitives";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +24,7 @@ export function RecommendationCard({
   onReject?: (id: string) => void;
   pending?: boolean;
 }) {
-  const agent = agentById(rec.agent);
+  const agent = agentMeta(rec.agent);
   const priority = rec.priority ?? "medium";
 
   return (
