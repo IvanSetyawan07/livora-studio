@@ -18,7 +18,7 @@ import {
 
 import { campaigns as campaignsFixture, impactRecords as impactFixture } from "../workspace-data";
 import { providers as providersFixture, routingStrategy, usageByAgent, usageByProvider, usageTotals } from "../system-data";
-import type { AIApproval, AIRecommendation, AISeoService, AiChatContextKey, AiChatMessage, GoogleIntegrationStatus } from "../types";
+import type { AICroService, AIApproval, AIRecommendation, AISeoService, AiChatContextKey, AiChatMessage, GoogleIntegrationStatus } from "../types";
 import type {
   AIActionService,
   AIActivityService,
@@ -287,6 +287,20 @@ const seo: AISeoService = {
   },
 };
 
+// Honest-empty juga untuk CRO: mode mock tidak punya database consultation.
+const cro: AICroService = {
+  async getFunnelSummary() {
+    await delay(200);
+    return {
+      hasData: false,
+      message: "Mode mock tidak terhubung ke database konsultasi.",
+      totals: null,
+      stages: [],
+      unavailable: [],
+    };
+  },
+};
+
 export const mockServices: AIServiceBundle = {
   dashboard,
   recommendations,
@@ -300,4 +314,5 @@ export const mockServices: AIServiceBundle = {
   activity,
   integrations,
   seo,
+  cro,
 };

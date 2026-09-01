@@ -24,7 +24,7 @@ class CroAgentService
     private const AGENT_KEY = 'cro';
 
     /** Minimal jumlah consultation supaya analisis funnel dianggap punya makna statistik. */
-    private const MIN_SAMPLE = 5;
+    public const MIN_SAMPLE = 5;
 
     private const STAGES = [
         Consultation::STATUS_NEW_INQUIRY,
@@ -169,7 +169,7 @@ class CroAgentService
      * Kumpulkan data funnel ASLI dari Consultation + ConsultationStatusHistory.
      * Return null kalau sample-nya terlalu kecil untuk dianalisis secara jujur.
      */
-    private function buildFunnelSnapshot(): ?array
+    public function buildFunnelSnapshot(): ?array
     {
         $total = Consultation::count();
 
