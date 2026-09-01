@@ -1,21 +1,7 @@
 import { AgentPageShell } from "@/components/ai/agent-page";
-import { ContentQueue } from "@/components/ai/content-queue";
-import {
-  CategoryBarChart,
-  MultiLineChart,
-  StatGrid,
-  StatStrip,
-} from "@/components/ai/dashboard-charts";
-import { DemoBadge, NotConnected, Panel, SectionHeading } from "@/components/ai/primitives";
-import { contentQueue } from "@/lib/ai/data";
+import { IntegrationRequired } from "@/components/ai/integration-required";
+import { NotConnected, Panel, SectionHeading } from "@/components/ai/primitives";
 import { useAgent } from "@/hooks/useAiDashboard";
-import {
-  postsByPlatform,
-  socialEngagementSeries,
-  socialKpis,
-  socialSeriesConfig,
-  socialStats,
-} from "@/lib/ai/dashboard-data";
 
 export default function ContentAgentPage() {
   const { agent } = useAgent("content");
@@ -25,36 +11,44 @@ export default function ContentAgentPage() {
       <section className="mt-10">
         <SectionHeading
           title="Social media — performance tracking"
-          description="Followers, publishing cadence and engagement across Instagram, Facebook, TikTok and YouTube."
-          action={<DemoBadge />}
+          description="Follower, cadence dan engagement per platform. Kosong sampai akun sosial tersambung — tidak ada angka ilustratif."
         />
-        <StatGrid kpis={socialKpis} />
-      </section>
-
-      <section className="mt-6 grid gap-4 lg:grid-cols-2">
-        <MultiLineChart
-          title="Engagement by Platform (30 Days)"
-          data={socialEngagementSeries}
-          series={socialSeriesConfig}
-          height={300}
-        />
-        <div>
-          <CategoryBarChart
-            title="Posts Published by Platform (7d)"
-            data={postsByPlatform}
-            height={240}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <IntegrationRequired
+            provider="Instagram & Facebook (Meta Graph API)"
+            title="Meta Graph API belum tersambung"
+            description="Butuh Page Access Token dengan scope instagram_basic, instagram_manage_insights, pages_read_engagement, dan ID Instagram Business yang tertaut ke Facebook Page Livora."
+            envKeys={[
+              { key: "META_GRAPH_ACCESS_TOKEN", note: "Page/System User token long-lived" },
+              { key: "META_PAGE_ID" },
+              { key: "META_INSTAGRAM_BUSINESS_ID" },
+            ]}
           />
-          <StatStrip items={socialStats} />
+          <IntegrationRequired
+            provider="TikTok & YouTube"
+            title="TikTok Business dan YouTube Data API belum tersambung"
+            description="Dipakai untuk jumlah posting, views dan engagement mingguan."
+            envKeys={[
+              { key: "TIKTOK_ACCESS_TOKEN" },
+              { key: "TIKTOK_BUSINESS_ID" },
+              { key: "YOUTUBE_API_KEY" },
+              { key: "YOUTUBE_CHANNEL_ID" },
+            ]}
+          />
         </div>
       </section>
 
       <section className="mt-10">
         <SectionHeading
           title="Content queue"
-          description="Planned and AI-assisted content across owned and social surfaces."
-          action={<DemoBadge />}
+          description="Draft dan jadwal konten yang dihasilkan Content Agent."
         />
-        <ContentQueue items={contentQueue} />
+        <Panel className="p-6">
+          <NotConnected
+            title="Antrian konten masih kosong"
+            description="Queue diisi hanya oleh draft nyata dari Content Agent (`php artisan ai:run-agent content`). Sebelum itu tabel sengaja dibiarkan kosong, bukan diisi contoh."
+          />
+        </Panel>
       </section>
 
       <section className="mt-10">
@@ -62,8 +56,8 @@ export default function ContentAgentPage() {
           <SectionHeading title="Generation" />
           <NotConnected
             state="coming_soon"
-            title="Draft generation runs through Claude"
-            description="Briefs and drafts will be produced server-side and enter the queue as Needs Review — never published automatically."
+            title="Draft generation berjalan lewat AIProviderManager"
+            description="Brief dan draft dibuat di sisi server dan masuk queue sebagai Needs Review — tidak pernah dipublikasikan otomatis."
           />
         </Panel>
       </section>
