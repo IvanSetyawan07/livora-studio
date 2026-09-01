@@ -1,14 +1,14 @@
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import type { PriorityItem } from "@/lib/ai/types";
-import { agentById } from "@/lib/ai/data";
+import { agentMeta } from "@/lib/ai/agent-catalog";
 import { Panel, PriorityPill } from "./primitives";
 
 export function PriorityList({ items }: { items: PriorityItem[] }) {
   return (
     <div className="space-y-2.5">
       {items.map((item, i) => {
-        const agent = agentById(item.agent);
+        const agent = agentMeta(item.agent);
         return (
           <Link
             key={item.id}
