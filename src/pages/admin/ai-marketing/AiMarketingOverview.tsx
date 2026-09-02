@@ -8,6 +8,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { LockedKpiCard, OfflinePanel, PlatformRow } from "@/components/ai/offline";
 import { ActivityStream } from "@/components/ai/activity-stream";
 import { AgentRail } from "@/components/ai/agent-rail";
 import { KpiCard } from "@/components/ai/kpi-card";
@@ -62,77 +63,6 @@ function Block({
     );
   }
   return <>{children}</>;
-}
-
-/* KPI card untuk metrik yang sumber datanya belum tersambung.
-   Struktur kartu tetap tampil (seperti screenshot), tapi nilainya jujur "—". */
-function LockedKpiCard({ label, provider, index = 0 }: { label: string; provider: string; index?: number }) {
-  return (
-    <Panel className="border-dashed p-5 opacity-80">
-      <div className="animate-[rise_0.6s_cubic-bezier(0.16,1,0.3,1)_both]" style={{ animationDelay: `${index * 70}ms` }}>
-        <div className="flex items-start justify-between gap-3">
-          <p className="label-eyebrow">{label}</p>
-          <StatusDot tone="neutral" />
-        </div>
-        <p className="text-display num mt-3 text-4xl leading-none text-muted-foreground">—</p>
-        <p className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
-          <KeyRound className="size-3" /> Not connected
-        </p>
-        <p className="mt-3 border-t border-border pt-3 text-[11px] tracking-wide text-muted-foreground">
-          Butuh {provider}
-        </p>
-      </div>
-    </Panel>
-  );
-}
-
-/* Panel dengan chrome lengkap (judul, aksi) tapi area isi menunjukkan
-   status "belum tersambung" — bukan angka contoh, bukan panel yang hilang. */
-function OfflinePanel({
-  title,
-  action,
-  provider,
-  message,
-  height = "h-56",
-  legend,
-}: {
-  title: string;
-  action?: React.ReactNode;
-  provider: string;
-  message: string;
-  height?: string;
-  legend?: { label: string; className: string }[];
-}) {
-  return (
-    <Panel className="flex h-full flex-col p-5 sm:p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-display rule-accent text-lg">{title}</h3>
-        {action}
-      </div>
-      <div
-        className={cn(
-          "flex flex-1 flex-col items-center justify-center gap-2 rounded-sm border border-dashed border-border-strong bg-muted/20 px-6 text-center",
-          height,
-        )}
-      >
-        <span className="inline-flex items-center gap-1.5 rounded-sm border border-dashed border-border-strong px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-          <KeyRound className="size-3" /> Not connected
-        </span>
-        <p className="text-sm font-medium">{provider}</p>
-        <p className="max-w-md text-xs leading-relaxed text-muted-foreground">{message}</p>
-      </div>
-      {legend ? (
-        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1">
-          {legend.map((l) => (
-            <span key={l.label} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <span className={cn("h-0.5 w-4 rounded-full", l.className)} />
-              {l.label}
-            </span>
-          ))}
-        </div>
-      ) : null}
-    </Panel>
-  );
 }
 
 function InsightRow({ insight }: { insight: AIInsight }) {
