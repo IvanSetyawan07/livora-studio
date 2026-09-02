@@ -1,15 +1,17 @@
 import { Link } from "react-router-dom";
 import { ArrowUpRight, Instagram, KeyRound, Megaphone, Sparkles, type LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
-import { LockedKpiCard, OfflinePanel, PlatformRow } from "@/components/ai/offline";
+import { OfflinePanel, PlatformRow } from "@/components/ai/offline";
 import { ActivityStream } from "@/components/ai/activity-stream";
 import { AgentRail } from "@/components/ai/agent-rail";
 import { KpiCard } from "@/components/ai/kpi-card";
 import { PriorityList } from "@/components/ai/priority-list";
 import { RecommendationCard } from "@/components/ai/recommendation-card";
 import { Panel, Pill, Reveal, SectionHeading, StatusDot } from "@/components/ai/primitives";
+import { SectionNotice } from "@/components/ai/section-state";
 import { typeMeta } from "@/components/ai/insight-card";
 import { usePageContext } from "@/context/AiMarketingContext";
+import { useSectionState } from "@/hooks/useSectionState";
 import {
   useAiActivity,
   useAiAgents,
@@ -18,7 +20,8 @@ import {
   usePriorities,
   useRecommendations,
 } from "@/hooks/useAiDashboard";
-import type { AIInsight } from "@/lib/ai/types";
+import { notConnectedState } from "@/lib/ai/section-state";
+import type { AIInsight, AIKpi } from "@/lib/ai/types";
 
 const kpiTones = ["success", "info", "warning", "ai"] as const;
 
@@ -89,13 +92,13 @@ export default function AiMarketingOverview() {
   usePageContext("overview");
 
   const kpis = useOverviewKpis();
+  const kpiSection = useSectionState(kpis);
   const priorities = usePriorities();
   const agents = useAiAgents();
   const pendingRecs = useRecommendations("pending");
   const insights = useAiInsights();
   const activity = useAiActivity();
 
-  const liveKpis = (kpis.data ?? []).slice(0, 4);
   const topInsights = (insights.data ?? []).slice(0, 4);
 
   const topRecommendations = [...(pendingRecs.data ?? [])]
@@ -113,15 +116,41 @@ export default function AiMarketingOverview() {
         description="Real-time intelligence and recommendations for Livora's digital growth."
       />
 
-      {/* KPI row — live KPI + kartu terkunci untuk metrik yang butuh integrasi */}
+      {/* KPI row — live KPI + slot terkunci untuk metrik yang butuh integrasi.
+          Semua sembilan status lewat SectionState sekarang, lewat KpiCard —
+          tidak ada lagi komponen LockedKpiCard terpisah (Phase 1, fondasi). */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-6">
-        {kpis.isLoading
-          ? [0, 1, 2, 3].map((i) => (
-              <div key={i} className="h-40 animate-pulse rounded-sm border border-border bg-surface/40" />
-            ))
-          : liveKpis.map((k, i) => <KpiCard key={k.id} kpi={k} index={i} tone={kpiTones[i]} />)}
-        <LockedKpiCard label="Avg Engagement" provider="GA4 Data API" index={4} />
-        <LockedKpiCard label="Ad ROAS" provider="Meta / Google Ads" index={5} />
+        {kpiSection.status === "loading" ? (
+          [0, 1, 2, 3, 4, 5].map((i) => <KpiCard key={i} label="KPI" index={i} state={kpiSection} />)
+        ) : kpiSection.status === "data" ? (
+          <>
+            {kpiSection.data.slice(0, 4).map((k: AIKpi, i: number) => (
+              <KpiCard
+                key={k.id}
+                label={k.label}
+                index={i}
+                tone={kpiTones[i]}
+                state={{ ...kpiSection, data: k }}
+              />
+            ))}
+            <KpiCard
+              label="Avg Engagement"
+              index={4}
+              provider="GA4 Data API"
+              state={notConnectedState("GA4 Data API")}
+            />
+            <KpiCard
+              label="Ad ROAS"
+              index={5}
+              provider="Meta / Google Ads"
+              state={notConnectedState("Meta / Google Ads")}
+            />
+          </>
+        ) : (
+          <Panel className="col-span-full">
+            <SectionNotice state={kpiSection} title="KPI tidak bisa dimuat" height="h-32" />
+          </Panel>
+        )}
       </div>
 
       {/* Performance chart + AI Insights */}
