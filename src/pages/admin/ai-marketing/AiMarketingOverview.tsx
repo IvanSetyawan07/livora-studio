@@ -1,12 +1,5 @@
 import { Link } from "react-router-dom";
-import {
-  ArrowUpRight,
-  Instagram,
-  KeyRound,
-  Megaphone,
-  Sparkles,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowUpRight, Instagram, Megaphone, Sparkles, type LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { LockedKpiCard, OfflinePanel, PlatformRow } from "@/components/ai/offline";
 import { ActivityStream } from "@/components/ai/activity-stream";
