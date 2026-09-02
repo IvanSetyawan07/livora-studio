@@ -35,6 +35,7 @@ function unwrapList<T>(payload: unknown): T[] {
 
 export const laravelServices: AIServiceBundle = {
   dashboard: {
+    
     getBusinessHealth: () => api.get("/ai/dashboard/health").then((r) => unwrap(r.data)),
     getPriorities: () => api.get("/ai/dashboard/priorities").then((r) => unwrapList(r.data)),
     getOverviewKpis: () => api.get("/ai/dashboard/kpis").then((r) => unwrapList(r.data)),
@@ -97,6 +98,7 @@ export const laravelServices: AIServiceBundle = {
   cro: {
     getFunnelSummary: () => api.get("/ai/cro/funnel-summary").then((r) => unwrap(r.data)),
   },
+  
   seo: {
   getSearchConsoleSummary: (days = 28) =>
     api.get("/ai/seo/search-console-summary", { params: { days } }).then((r) => unwrap(r.data)),

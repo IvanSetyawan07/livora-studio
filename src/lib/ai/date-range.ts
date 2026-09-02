@@ -1,43 +1,50 @@
-/**
- * AiDateRange — satu sumber kebenaran untuk kontrol date range global di
- * header AI Marketing Shell (lihat AiMarketingContext.dateRange).
- *
- * Phase 1 audit: dropdown date range di ShellHeader sebelumnya cuma
- * `useState` lokal di komponen header itu sendiri — memilih opsi lain
- * tidak mengubah data apa pun di halaman manapun (defect: "Date range
- * changes must update data" tidak pernah benar-benar terjadi). File ini
- * memberi tipe + helper bersama supaya context bisa menyimpan satu nilai
- * yang lalu dipakai sebagai bagian dari query key hook manapun yang
- * butuh range (mis. `useSearchConsoleSummary`).
- */
+/** Phase 1 — satu sumber kebenaran untuk date range global. */
 
-export type AiDateRangeKey = "7d" | "14d" | "30d" | "month";
+export type AiDateRangeKey = "7d" | "28d" | "90d" | "custom";
 
-export interface AiDateRangeOption {
+export interface AiDateRange {
   key: AiDateRangeKey;
-  label: string;
-  /** Jumlah hari yang dikirim ke endpoint yang menerima parameter `days`. */
+  /** ISO yyyy-mm-dd — wajib terisi juga untuk preset (dihitung dari hari ini). */
+  from: string;
+  to: string;
+  /** Dikirim ke endpoint lama yang masih menerima `days`. */
   days: number;
 }
 
-export const AI_DATE_RANGE_OPTIONS: AiDateRangeOption[] = [
-  { key: "7d", label: "Last 7 days", days: 7 },
-  { key: "14d", label: "Last 14 days", days: 14 },
-  { key: "30d", label: "Last 30 days", days: 30 },
-  { key: "month", label: "This month", days: daysElapsedThisMonth() },
+export const AI_DATE_RANGE_PRESETS: { key: AiDateRangeKey; label: string; days: number }[] = [
+  { key: "7d", label: "7D", days: 7 },
+  { key: "28d", label: "28D", days: 28 },
+  { key: "90d", label: "90D", days: 90 },
 ];
 
-export const DEFAULT_AI_DATE_RANGE: AiDateRangeKey = "30d";
+const iso = (d: Date) => d.toISOString().slice(0, 10);
 
-function daysElapsedThisMonth(): number {
-  const now = new Date();
-  return now.getDate();
+export function rangeFromDays(key: AiDateRangeKey, days: number): AiDateRange {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(to.getDate() - (days - 1));
+  return { key, from: iso(from), to: iso(to), days };
 }
 
-export function daysForRange(key: AiDateRangeKey): number {
-  return AI_DATE_RANGE_OPTIONS.find((o) => o.key === key)?.days ?? 30;
+export function customRange(from: string, to: string): AiDateRange {
+  const days =
+    Math.max(1, Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000) + 1) || 1;
+  return { key: "custom", from, to, days };
 }
 
-export function labelForRange(key: AiDateRangeKey): string {
-  return AI_DATE_RANGE_OPTIONS.find((o) => o.key === key)?.label ?? key;
+export const DEFAULT_AI_DATE_RANGE: AiDateRange = rangeFromDays("28d", 28);
+
+/** Bagian range yang masuk ke query key + query params. Stabil & serializable. */
+export function rangeParams(r: AiDateRange) {
+  return { from: r.from, to: r.to, days: r.days };
+}
+
+/** Dipakai di query key supaya perubahan range = refetch, bukan cache yang sama. */
+export function rangeKey(r: AiDateRange) {
+  return `${r.from}_${r.to}`;
+}
+
+export function formatRangeLabel(r: AiDateRange) {
+  const preset = AI_DATE_RANGE_PRESETS.find((p) => p.key === r.key);
+  return preset ? preset.label : `${r.from} → ${r.to}`;
 }

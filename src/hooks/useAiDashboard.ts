@@ -7,6 +7,10 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { aiServices } from "@/lib/ai/services";
+import { rangeKey, type AiDateRange } from "@/lib/ai/date-range";
+import { toSectionState } from "@/lib/ai/query-state";
+import { rangeParams } from "@/lib/ai/date-range";
+import { useAiMarketingContext } from "@/context/AiMarketingContext";
 import type {
   AIActivity,
   AIAgent,
@@ -33,6 +37,7 @@ import type {
   CroFunnelSummary,
 } from "@/lib/ai/types";
 import { agentMeta } from "@/lib/ai/agent-catalog";
+import { useCallback } from "react";
 
 /**
  * Single source of truth for every AI Marketing query key. Phase 1 audit:
@@ -42,31 +47,39 @@ import { agentMeta } from "@/lib/ai/agent-catalog";
  * code should always read a key from here, never write one inline.
  */
 export const aiKeys = {
-  health: ["ai", "dashboard", "health"] as const,
-  kpis: ["ai", "dashboard", "kpis"] as const,
+  all: ["ai"] as const,
+  health: (r: AiDateRange) => ["ai", "dashboard", "health", rangeKey(r)] as const,
+  kpis: (r: AiDateRange) => ["ai", "dashboard", "kpis", rangeKey(r)] as const,
   priorities: ["ai", "dashboard", "priorities"] as const,
   agents: ["ai", "agents"] as const,
-  recommendations: (status?: AIApprovalStatus) => ["ai", "recommendations", status ?? "all"] as const,
+  recommendations: (status?: string, agent?: string) =>
+    ["ai", "recommendations", status ?? "all", agent ?? "all"] as const,
   actions: ["ai", "actions"] as const,
-  insights: (type?: AIInsightType | "all", agent?: AIAgentId | "all") =>
-    ["ai", "insights", type ?? "all", agent ?? "all"] as const,
-  activity: (agent?: AIAgentId | "all") => ["ai", "activity", agent ?? "all"] as const,
-  searchConsole: (days: number) => ["ai", "seo", "search-console", days] as const,
-  croFunnel: () => ["ai", "cro", "funnel"] as const,
-  campaigns: ["ai", "campaigns"] as const,
-  campaign: (id: string) => ["ai", "campaigns", id] as const,
+  insights: (type?: string, agent?: string) => ["ai", "insights", type ?? "all", agent ?? "all"] as const,
+  activity: (agent?: string) => ["ai", "activity", agent ?? "all"] as const,
+  searchConsole: (r: AiDateRange) => ["ai", "seo", "search-console", rangeKey(r)] as const,
+  croFunnel: (r: AiDateRange) => ["ai", "cro", "funnel", rangeKey(r)] as const,
+  campaigns: (r: AiDateRange, platform?: string) =>
+    ["ai", "campaigns", rangeKey(r), platform ?? "all"] as const,
+  campaign: (id: string) => ["ai", "campaigns", "detail", id] as const,
   providers: ["ai", "providers"] as const,
   providerQuota: ["ai", "providers", "quota"] as const,
   providerPreference: ["ai", "providers", "preference"] as const,
   routingStrategy: ["ai", "routing-strategy"] as const,
-  usageTotals: ["ai", "usage", "totals"] as const,
-  usageByAgent: ["ai", "usage", "by-agent"] as const,
-  usageByProvider: ["ai", "usage", "by-provider"] as const,
-  impact: ["ai", "impact"] as const,
+  usageTotals: (r: AiDateRange) => ["ai", "usage", "totals", rangeKey(r)] as const,
+  usageByAgent: (r: AiDateRange) => ["ai", "usage", "by-agent", rangeKey(r)] as const,
+  usageByProvider: (r: AiDateRange) => ["ai", "usage", "by-provider", rangeKey(r)] as const,
+  impact: (r: AiDateRange) => ["ai", "impact", rangeKey(r)] as const,
   googleStatus: ["ai", "integrations", "google", "status"] as const,
 };
 
 const STALE = 60_000;
+
+/** Jangan retry error yang retry-nya percuma (403/404/422/not_connected). */
+const retryPolicy = (count: number, err: unknown) => {
+  const retriable = (err as { retriable?: boolean })?.retriable;
+  return retriable === false ? false : count < 2;
+};
 
 export function useBusinessHealth() {
   return useQuery<BusinessHealth>({
@@ -75,28 +88,45 @@ export function useBusinessHealth() {
     staleTime: STALE,
   });
 }
-export function useSearchConsoleSummary(days = 28) {
-  return useQuery<SearchConsoleSummary>({
-    queryKey: aiKeys.searchConsole(days),
-    queryFn: () => aiServices.seo.getSearchConsoleSummary(days),
-    staleTime: 10 * 60_000, // backend sudah cache 20 menit; ini cuma cegah refetch tiap mount
+export function useSearchConsoleSummary() {
+  const { dateRange } = useAiMarketingContext();
+  const q = useQuery<SearchConsoleSummary>({
+    queryKey: aiKeys.searchConsole(dateRange),
+    queryFn: () => aiServices.seo.getSearchConsoleSummary(dateRange.days),
+    staleTime: 10 * 60_000,
+    retry: retryPolicy,
+    placeholderData: (prev) => prev,
   });
+  return {
+    ...q,
+    section: toSectionState(q, {
+      provider: "Google Search Console",
+      connectHref: "/admin/ai-marketing/settings",
+      selectionLabel: "Search Console property",
+      emptyMessage: "Tidak ada data pada rentang tanggal ini.",
+    }),
+  };
 }
 
 /** KPI funnel CRO — dihitung backend dari tabel consultations (bukan LLM, bukan fixture). */
 export function useCroFunnelSummary() {
+  const { dateRange } = useAiMarketingContext();
   return useQuery<CroFunnelSummary>({
-    queryKey: aiKeys.croFunnel(),
+    queryKey: aiKeys.croFunnel(dateRange),
     queryFn: () => aiServices.cro.getFunnelSummary(),
     staleTime: 5 * 60_000,
   });
 }
 export function useOverviewKpis() {
-  return useQuery<AIKpi[]>({
-    queryKey: aiKeys.kpis,
-    queryFn: () => aiServices.dashboard.getOverviewKpis(),
+  const { dateRange } = useAiMarketingContext();
+  const q = useQuery<AIKpi[]>({
+    queryKey: aiKeys.kpis(dateRange),
+    queryFn: () => aiServices.dashboard.getOverviewKpis(rangeParams(dateRange)),
     staleTime: STALE,
+    retry: retryPolicy,
+    placeholderData: (prev) => prev, // range berubah: tampil "refreshing", bukan blank
   });
+  return { ...q, section: toSectionState(q, { emptyMessage: "Belum ada KPI untuk periode ini." }) };
 }
 
 export function usePriorities() {
@@ -164,9 +194,10 @@ export function useRecommendations(status?: AIApprovalStatus) {
 
 /** GET /ai/campaigns — dipakai halaman Campaigns dan panel "Campaign Performance" di Overview. */
 export function useCampaigns() {
+  const { dateRange } = useAiMarketingContext();
   return useQuery<Campaign[]>({
-    queryKey: aiKeys.campaigns,
-    queryFn: () => aiServices.campaigns.list(),
+    queryKey: aiKeys.campaigns(dateRange),
+    queryFn: () => aiServices.campaigns.list(rangeParams(dateRange)),
     staleTime: STALE,
   });
 }
@@ -226,25 +257,28 @@ export function useSetProviderPreference() {
 }
 
 export function useUsageTotals() {
+  const { dateRange } = useAiMarketingContext();
   return useQuery<AIUsageTotals>({
-    queryKey: aiKeys.usageTotals,
-    queryFn: () => aiServices.usage.getTotals(),
+    queryKey: aiKeys.usageTotals(dateRange),
+    queryFn: () => aiServices.usage.getTotals(rangeParams(dateRange)),
     staleTime: STALE,
   });
 }
 
 export function useUsageByAgent() {
+  const { dateRange } = useAiMarketingContext();
   return useQuery<AIUsageByAgent[]>({
-    queryKey: aiKeys.usageByAgent,
-    queryFn: () => aiServices.usage.getByAgent(),
+    queryKey: aiKeys.usageByAgent(dateRange),
+    queryFn: () => aiServices.usage.getByAgent(rangeParams(dateRange)),
     staleTime: STALE,
   });
 }
 
 export function useUsageByProvider() {
+  const { dateRange } = useAiMarketingContext();
   return useQuery<AIUsageByProvider[]>({
-    queryKey: aiKeys.usageByProvider,
-    queryFn: () => aiServices.usage.getByProvider(),
+    queryKey: aiKeys.usageByProvider(dateRange),
+    queryFn: () => aiServices.usage.getByProvider(rangeParams(dateRange)),
     staleTime: STALE,
   });
 }
@@ -363,4 +397,9 @@ export function useActionDecision() {
   
 
   return { approveAndExecute, reject };
+}
+/** Refresh manual per-section (dipakai tombol Retry/Refresh lokal). */
+export function useAiRefresh(queryKey: readonly unknown[]) {
+  const qc = useQueryClient();
+  return useCallback(() => void qc.invalidateQueries({ queryKey }), [qc, queryKey]);
 }

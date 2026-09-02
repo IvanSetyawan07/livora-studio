@@ -1,64 +1,94 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode,
+} from "react";
+import { useQueryClient, useIsFetching } from "@tanstack/react-query";
 import type { AiChatContextKey } from "@/lib/ai/types";
-import { DEFAULT_AI_DATE_RANGE, type AiDateRangeKey } from "@/lib/ai/date-range";
+import {
+  DEFAULT_AI_DATE_RANGE, rangeFromDays, customRange,
+  AI_DATE_RANGE_PRESETS, type AiDateRange, type AiDateRangeKey,
+} from "@/lib/ai/date-range";
 
-interface AiMarketingContextValue {
-  /** Which page/agent the user is currently looking at — read by the Ask AI
-   * drawer so it never makes the user re-explain what they're asking about. */
+export interface AiFilters {
+  agent?: string;
+  status?: string;
+  platform?: string;
+  search?: string;
+}
+
+interface Ctx {
   context: AiChatContextKey;
   askOpen: boolean;
   openAsk: () => void;
   closeAsk: () => void;
-  /**
-   * Global date range, set from the "Last 7/14/30 days" control in
-   * ShellHeader. Lives here (not local component state) so any page/hook
-   * that fetches range-bound data — e.g. `useSearchConsoleSummary` — can
-   * read the same value and actually refetch when it changes. See
-   * `lib/ai/date-range.ts` for the audit note this fixes.
-   */
-  dateRange: AiDateRangeKey;
-  setDateRange: (range: AiDateRangeKey) => void;
+
+  dateRange: AiDateRange;
+  setDateRangePreset: (key: AiDateRangeKey) => void;
+  setCustomDateRange: (from: string, to: string) => void;
+
+  filters: AiFilters;
+  setFilter: (k: keyof AiFilters, v?: string) => void;
+  resetFilters: () => void;
+
+  /** Refetch SEMUA query "ai" — dipakai tombol Refresh di header. */
+  refreshAll: () => Promise<void>;
+  isRefreshing: boolean;
+  lastRefreshedAt: string | null;
 }
 
-const AiMarketingCtx = createContext<AiMarketingContextValue | null>(null);
+const AiMarketingCtx = createContext<Ctx | null>(null);
+const SetterCtx = createContext<((k: AiChatContextKey) => void) | null>(null);
 
 export function AiMarketingProvider({ children }: { children: ReactNode }) {
+  const qc = useQueryClient();
   const [context, setContextState] = useState<AiChatContextKey>("overview");
   const [askOpen, setAskOpen] = useState(false);
-  const [dateRange, setDateRange] = useState<AiDateRangeKey>(DEFAULT_AI_DATE_RANGE);
+  const [dateRange, setDateRange] = useState<AiDateRange>(DEFAULT_AI_DATE_RANGE);
+  const [filters, setFilters] = useState<AiFilters>({});
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
 
-  const value = useMemo<AiMarketingContextValue>(
+  const inFlight = useIsFetching({ queryKey: ["ai"] });
+
+  const setDateRangePreset = useCallback((key: AiDateRangeKey) => {
+    const preset = AI_DATE_RANGE_PRESETS.find((p) => p.key === key);
+    if (preset) setDateRange(rangeFromDays(preset.key, preset.days));
+  }, []);
+
+  const setCustomDateRange = useCallback(
+    (from: string, to: string) => setDateRange(customRange(from, to)),
+    [],
+  );
+
+  const setFilter = useCallback(
+    (k: keyof AiFilters, v?: string) =>
+      setFilters((p) => ({ ...p, [k]: v && v !== "all" ? v : undefined })),
+    [],
+  );
+
+  const refreshAll = useCallback(async () => {
+    await qc.invalidateQueries({ queryKey: ["ai"] });
+    setLastRefreshedAt(new Date().toISOString());
+  }, [qc]);
+
+  const value = useMemo<Ctx>(
     () => ({
-      context,
-      askOpen,
+      context, askOpen,
       openAsk: () => setAskOpen(true),
       closeAsk: () => setAskOpen(false),
-      dateRange,
-      setDateRange,
+      dateRange, setDateRangePreset, setCustomDateRange,
+      filters, setFilter, resetFilters: () => setFilters({}),
+      refreshAll, isRefreshing: inFlight > 0, lastRefreshedAt,
     }),
-    [context, askOpen, dateRange],
+    [context, askOpen, dateRange, filters, inFlight, lastRefreshedAt,
+     setDateRangePreset, setCustomDateRange, setFilter, refreshAll],
   );
+
+  const setter = useCallback((k: AiChatContextKey) => setContextState(k), []);
 
   return (
-    <AiMarketingCtx.Provider value={{ ...value, context }}>
-      <AiMarketingContextSetterBridge setContextState={setContextState}>{children}</AiMarketingContextSetterBridge>
+    <AiMarketingCtx.Provider value={value}>
+      <SetterCtx.Provider value={setter}>{children}</SetterCtx.Provider>
     </AiMarketingCtx.Provider>
   );
-}
-
-// Internal — keeps the public hook API small (just `useAiMarketingContext`)
-// while still letting pages register their context key.
-const SetterCtx = createContext<((key: AiChatContextKey) => void) | null>(null);
-
-function AiMarketingContextSetterBridge({
-  setContextState,
-  children,
-}: {
-  setContextState: (key: AiChatContextKey) => void;
-  children: ReactNode;
-}) {
-  const setter = useCallback((key: AiChatContextKey) => setContextState(key), [setContextState]);
-  return <SetterCtx.Provider value={setter}>{children}</SetterCtx.Provider>;
 }
 
 export function useAiMarketingContext() {
@@ -67,11 +97,7 @@ export function useAiMarketingContext() {
   return ctx;
 }
 
-/** Call once per page (e.g. `usePageContext("seo")`) so Ask AI knows what
- * the user is looking at without them having to say so. */
 export function usePageContext(key: AiChatContextKey) {
   const setter = useContext(SetterCtx);
-  useEffect(() => {
-    setter?.(key);
-  }, [setter, key]);
+  useEffect(() => { setter?.(key); }, [setter, key]);
 }
