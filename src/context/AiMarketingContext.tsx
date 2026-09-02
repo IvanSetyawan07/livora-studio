@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { AiChatContextKey } from "@/lib/ai/types";
+import { DEFAULT_AI_DATE_RANGE, type AiDateRangeKey } from "@/lib/ai/date-range";
 
 interface AiMarketingContextValue {
   /** Which page/agent the user is currently looking at — read by the Ask AI
@@ -8,6 +9,15 @@ interface AiMarketingContextValue {
   askOpen: boolean;
   openAsk: () => void;
   closeAsk: () => void;
+  /**
+   * Global date range, set from the "Last 7/14/30 days" control in
+   * ShellHeader. Lives here (not local component state) so any page/hook
+   * that fetches range-bound data — e.g. `useSearchConsoleSummary` — can
+   * read the same value and actually refetch when it changes. See
+   * `lib/ai/date-range.ts` for the audit note this fixes.
+   */
+  dateRange: AiDateRangeKey;
+  setDateRange: (range: AiDateRangeKey) => void;
 }
 
 const AiMarketingCtx = createContext<AiMarketingContextValue | null>(null);
@@ -15,6 +25,7 @@ const AiMarketingCtx = createContext<AiMarketingContextValue | null>(null);
 export function AiMarketingProvider({ children }: { children: ReactNode }) {
   const [context, setContextState] = useState<AiChatContextKey>("overview");
   const [askOpen, setAskOpen] = useState(false);
+  const [dateRange, setDateRange] = useState<AiDateRangeKey>(DEFAULT_AI_DATE_RANGE);
 
   const value = useMemo<AiMarketingContextValue>(
     () => ({
@@ -22,8 +33,10 @@ export function AiMarketingProvider({ children }: { children: ReactNode }) {
       askOpen,
       openAsk: () => setAskOpen(true),
       closeAsk: () => setAskOpen(false),
+      dateRange,
+      setDateRange,
     }),
-    [context, askOpen],
+    [context, askOpen, dateRange],
   );
 
   return (

@@ -14,6 +14,8 @@ import {
   Cell,
 } from "recharts";
 import { Panel, useInView } from "./primitives";
+import { LastUpdated, SectionNotice } from "./section-state";
+import type { NonDataSectionState, SectionState } from "@/lib/ai/section-state";
 import { cn } from "@/lib/utils";
 
 const axisTick = { fill: "hsl(var(--muted-foreground))", fontSize: 11 };
@@ -106,6 +108,67 @@ function ChartPanel({
         ) : (
           <div className="h-full w-full animate-pulse rounded-sm bg-muted/40" />
         )}
+      </div>
+    </Panel>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* ChartSection — state-aware wrapper around the chart shell            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Wraps `ChartPanel` with the loading / empty / error+retry / last-updated
+ * states every chart needs (Phase 1 audit: MultiLineChart/CategoryBarChart/
+ * FunnelBars were pure presentational — a failed fetch just left the
+ * calling page's own skeleton spinning forever). The chart primitives
+ * themselves are untouched; this only decides what goes *inside*
+ * ChartPanel's body for a given `SectionState<T>`.
+ */
+export function ChartSection<T>({
+  title,
+  state,
+  height = 300,
+  isEmpty,
+  provider,
+  connectHref,
+  renderChart,
+}: {
+  title: string;
+  state: SectionState<T>;
+  height?: number;
+  /** Default: treats an array with length 0 as empty. */
+  isEmpty?: (data: T) => boolean;
+  provider?: string;
+  connectHref?: string;
+  renderChart: (data: T) => ReactNode;
+}) {
+  const empty = state.status === "data" && (isEmpty ? isEmpty(state.data) : Array.isArray(state.data) && state.data.length === 0);
+
+  const action =
+    state.status === "data" ? <LastUpdated at={state.lastUpdatedAt} refreshing={state.isRefreshing} /> : null;
+
+  let body: ReactNode;
+  if (state.status === "loading") {
+    body = <div className="h-full w-full animate-pulse rounded-sm bg-muted/40" />;
+  } else if (state.status === "data" && !empty) {
+    body = <ResponsiveContainer width="100%" height="100%">{renderChart(state.data) as never}</ResponsiveContainer>;
+  } else {
+    const notice: NonDataSectionState =
+      state.status === "data"
+        ? { status: "empty", lastUpdatedAt: state.lastUpdatedAt, isRefreshing: state.isRefreshing, retry: state.retry }
+        : state;
+    body = <SectionNotice state={notice} height="h-full" provider={provider} connectHref={connectHref} />;
+  }
+
+  return (
+    <Panel className="p-5 sm:p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-display rule-accent text-lg">{title}</h3>
+        {action}
+      </div>
+      <div style={{ height }} className="flex w-full flex-col">
+        {body}
       </div>
     </Panel>
   );

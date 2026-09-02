@@ -16,14 +16,31 @@ import type {
   AIInsight,
   AIInsightType,
   AIKpi,
+  AIProviderInfo,
+  AIProviderPreference,
+  AIProviderQuota,
   AIRecommendation,
+  AIRoutingStrategy,
+  AIUsageByAgent,
+  AIUsageByProvider,
+  AIUsageTotals,
   BusinessHealth,
+  Campaign,
+  GoogleIntegrationStatus,
+  ImpactRecord,
   PriorityItem,
   SearchConsoleSummary,
   CroFunnelSummary,
 } from "@/lib/ai/types";
 import { agentMeta } from "@/lib/ai/agent-catalog";
 
+/**
+ * Single source of truth for every AI Marketing query key. Phase 1 audit:
+ * a handful of pages (Settings, Seo's Google card) built their own inline
+ * `["ai", "providers"]`-style keys next to this factory instead of using
+ * it — same cache entry by accident, easy to typo apart by design. New
+ * code should always read a key from here, never write one inline.
+ */
 export const aiKeys = {
   health: ["ai", "dashboard", "health"] as const,
   kpis: ["ai", "dashboard", "kpis"] as const,
@@ -36,6 +53,17 @@ export const aiKeys = {
   activity: (agent?: AIAgentId | "all") => ["ai", "activity", agent ?? "all"] as const,
   searchConsole: (days: number) => ["ai", "seo", "search-console", days] as const,
   croFunnel: () => ["ai", "cro", "funnel"] as const,
+  campaigns: ["ai", "campaigns"] as const,
+  campaign: (id: string) => ["ai", "campaigns", id] as const,
+  providers: ["ai", "providers"] as const,
+  providerQuota: ["ai", "providers", "quota"] as const,
+  providerPreference: ["ai", "providers", "preference"] as const,
+  routingStrategy: ["ai", "routing-strategy"] as const,
+  usageTotals: ["ai", "usage", "totals"] as const,
+  usageByAgent: ["ai", "usage", "by-agent"] as const,
+  usageByProvider: ["ai", "usage", "by-provider"] as const,
+  impact: ["ai", "impact"] as const,
+  googleStatus: ["ai", "integrations", "google", "status"] as const,
 };
 
 const STALE = 60_000;
@@ -131,6 +159,141 @@ export function useRecommendations(status?: AIApprovalStatus) {
     queryKey: aiKeys.recommendations(status),
     queryFn: () => aiServices.recommendations.list(status ? { status } : undefined),
     staleTime: STALE,
+  });
+}
+
+/** GET /ai/campaigns — dipakai halaman Campaigns dan panel "Campaign Performance" di Overview. */
+export function useCampaigns() {
+  return useQuery<Campaign[]>({
+    queryKey: aiKeys.campaigns,
+    queryFn: () => aiServices.campaigns.list(),
+    staleTime: STALE,
+  });
+}
+
+/** Satu campaign by id — dipakai AiMarketingCampaignDetail. */
+export function useCampaign(id?: string) {
+  return useQuery<Campaign | undefined>({
+    queryKey: aiKeys.campaign(id ?? "none"),
+    queryFn: () => aiServices.campaigns.getById(id as string),
+    enabled: Boolean(id),
+    staleTime: STALE,
+  });
+}
+
+export function useProviders() {
+  return useQuery<AIProviderInfo[]>({
+    queryKey: aiKeys.providers,
+    queryFn: () => aiServices.providers.list(),
+    staleTime: STALE,
+  });
+}
+
+export function useProviderQuota() {
+  return useQuery<AIProviderQuota[]>({
+    queryKey: aiKeys.providerQuota,
+    queryFn: () => aiServices.providers.getQuota(),
+    staleTime: 30_000,
+  });
+}
+
+export function useProviderPreference() {
+  return useQuery<AIProviderPreference>({
+    queryKey: aiKeys.providerPreference,
+    queryFn: () => aiServices.providers.getPreference(),
+    staleTime: STALE,
+  });
+}
+
+export function useRoutingStrategy() {
+  return useQuery<AIRoutingStrategy>({
+    queryKey: aiKeys.routingStrategy,
+    queryFn: () => aiServices.providers.getRoutingStrategy(),
+    staleTime: STALE,
+  });
+}
+
+/** Ganti provider preference, lalu invalidasi kartu preference + provider list. */
+export function useSetProviderPreference() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (provider: string | null) => aiServices.providers.setPreference(provider),
+    onSuccess: (updated) => {
+      qc.setQueryData(aiKeys.providerPreference, updated);
+      qc.invalidateQueries({ queryKey: aiKeys.providers });
+    },
+  });
+}
+
+export function useUsageTotals() {
+  return useQuery<AIUsageTotals>({
+    queryKey: aiKeys.usageTotals,
+    queryFn: () => aiServices.usage.getTotals(),
+    staleTime: STALE,
+  });
+}
+
+export function useUsageByAgent() {
+  return useQuery<AIUsageByAgent[]>({
+    queryKey: aiKeys.usageByAgent,
+    queryFn: () => aiServices.usage.getByAgent(),
+    staleTime: STALE,
+  });
+}
+
+export function useUsageByProvider() {
+  return useQuery<AIUsageByProvider[]>({
+    queryKey: aiKeys.usageByProvider,
+    queryFn: () => aiServices.usage.getByProvider(),
+    staleTime: STALE,
+  });
+}
+
+/** GET /ai/impact — dipakai halaman Impact. */
+export function useImpact() {
+  return useQuery<ImpactRecord[]>({
+    queryKey: aiKeys.impact,
+    queryFn: () => aiServices.impact.list(),
+    staleTime: STALE,
+  });
+}
+
+/**
+ * Status koneksi Google (Search Console). Dipakai Settings dan kartu
+ * integrasi di halaman Seo — sebelumnya masing-masing punya implementasi
+ * sendiri (Settings lewat `googleIntegration.ts` yang selalu memanggil API
+ * asli, Seo lewat `useEffect` manual ke `aiServices` langsung), jadi
+ * status bisa berbeda antara dua halaman dan salah satunya tidak ikut
+ * saklar mock/live `VITE_AI_BACKEND`. Sekarang keduanya lewat sini.
+ */
+export function useGoogleIntegrationStatus() {
+  return useQuery<GoogleIntegrationStatus>({
+    queryKey: aiKeys.googleStatus,
+    queryFn: () => aiServices.integrations.getGoogleStatus(),
+    staleTime: 30_000,
+  });
+}
+
+export function useGoogleDisconnect() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => aiServices.integrations.disconnectGoogle(),
+    onSuccess: (status) => {
+      qc.setQueryData(aiKeys.googleStatus, status);
+      qc.invalidateQueries({ queryKey: aiKeys.agents });
+    },
+  });
+}
+
+/** Ambil authorize URL lalu redirect browser ke consent screen Google. */
+export function useGoogleAuthorize() {
+  return useMutation({
+    mutationFn: async () => {
+      const url = await aiServices.integrations.getGoogleAuthorizeUrl();
+      if (!url) throw new Error("Backend tidak mengembalikan authorize URL.");
+      window.location.href = url;
+      return url;
+    },
   });
 }
 

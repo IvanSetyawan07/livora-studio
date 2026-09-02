@@ -1,13 +1,13 @@
 import { Link } from "react-router-dom";
-import { ArrowUpRight, Instagram, KeyRound, Megaphone, Sparkles, type LucideIcon } from "lucide-react";
+import { ArrowUpRight, Instagram, Megaphone, Sparkles, type LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
-import { OfflinePanel, PlatformRow } from "@/components/ai/offline";
+import { OfflinePanel, PlatformRow, TableShell } from "@/components/ai/offline";
 import { ActivityStream } from "@/components/ai/activity-stream";
 import { AgentRail } from "@/components/ai/agent-rail";
 import { KpiCard } from "@/components/ai/kpi-card";
 import { PriorityList } from "@/components/ai/priority-list";
 import { RecommendationCard } from "@/components/ai/recommendation-card";
-import { Panel, Pill, Reveal, SectionHeading, StatusDot } from "@/components/ai/primitives";
+import { Panel, Pill, Reveal, SectionHeading, Sparkline, StatusDot } from "@/components/ai/primitives";
 import { SectionNotice } from "@/components/ai/section-state";
 import { typeMeta } from "@/components/ai/insight-card";
 import { usePageContext } from "@/context/AiMarketingContext";
@@ -16,12 +16,28 @@ import {
   useAiActivity,
   useAiAgents,
   useAiInsights,
+  useCampaigns,
   useOverviewKpis,
   usePriorities,
   useRecommendations,
 } from "@/hooks/useAiDashboard";
 import { notConnectedState } from "@/lib/ai/section-state";
-import type { AIInsight, AIKpi } from "@/lib/ai/types";
+import type { AIInsight, AIKpi, Campaign, CampaignHealth } from "@/lib/ai/types";
+
+const healthTone: Record<CampaignHealth, "success" | "warning" | "danger"> = {
+  Good: "success",
+  Fair: "warning",
+  "Needs Attention": "danger",
+};
+
+/** Channel string dari backend bebas teks — cocokkan ke 2 platform ads yang
+ *  panel ini peduli. Campaign lain (organic/email/dll) tidak masuk sini,
+ *  itu ranahnya bukan "Campaign Performance (Ads)". */
+function matchesAdPlatform(channel: string, platform: "meta" | "google"): boolean {
+  const c = channel.toLowerCase();
+  if (platform === "meta") return c.includes("meta") || c.includes("facebook") || c.includes("instagram");
+  return c.includes("google");
+}
 
 const kpiTones = ["success", "info", "warning", "ai"] as const;
 
@@ -81,6 +97,46 @@ function InsightRow({ insight }: { insight: AIInsight }) {
   );
 }
 
+/** Satu baris platform ads di panel "Campaign Performance" — dipakai kalau
+ *  ada minimal satu AiCampaign yang channel-nya cocok. Menampilkan metric
+ *  ASLI dari campaign tsb (metric.value/deltaLabel/spark dari backend),
+ *  bukan spend/ROAS hasil hitungan sendiri — backend belum punya angka itu. */
+function AdPlatformRow({ platform, campaigns }: { platform: string; campaigns: Campaign[] }) {
+  if (campaigns.length === 0) {
+    return <PlatformRow icon={Megaphone} label={platform} />;
+  }
+  // Kalau lebih dari satu campaign match, tampilkan yang health-nya paling butuh perhatian.
+  const rank: Record<CampaignHealth, number> = { "Needs Attention": 0, Fair: 1, Good: 2 };
+  const lead = [...campaigns].sort((a, b) => rank[a.health] - rank[b.health])[0];
+  return (
+    <Link
+      to="/admin/ai-marketing/campaigns"
+      className="flex items-center gap-3 rounded-sm border border-border px-3.5 py-3 transition-colors hover:bg-accent/40"
+    >
+      <Megaphone className="size-4 shrink-0 text-muted-foreground" />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="text-sm">{platform}</span>
+          <Pill tone={healthTone[lead.health]} className="shrink-0">
+            {lead.health}
+          </Pill>
+        </div>
+        <p className="truncate text-[11px] text-muted-foreground">
+          {campaigns.length} campaign{campaigns.length > 1 ? "s" : ""} · {lead.metric.label}: {lead.metric.value}
+          {lead.budgetDaily ? ` · ${lead.budgetDaily}` : ""}
+        </p>
+      </div>
+      {lead.spark.length > 1 ? (
+        <Sparkline
+          points={lead.spark}
+          tone={lead.metric.deltaDirection === "down" ? "danger" : "success"}
+          className="w-16 shrink-0"
+        />
+      ) : null}
+    </Link>
+  );
+}
+
 const socialPlatforms: { label: string; icon: LucideIcon }[] = [
   { label: "Instagram", icon: Instagram },
   { label: "TikTok", icon: Megaphone },
@@ -98,8 +154,11 @@ export default function AiMarketingOverview() {
   const pendingRecs = useRecommendations("pending");
   const insights = useAiInsights();
   const activity = useAiActivity();
+  const campaigns = useCampaigns();
 
   const topInsights = (insights.data ?? []).slice(0, 4);
+  const metaCampaigns = (campaigns.data ?? []).filter((c) => matchesAdPlatform(c.channel, "meta"));
+  const googleCampaigns = (campaigns.data ?? []).filter((c) => matchesAdPlatform(c.channel, "google"));
 
   const topRecommendations = [...(pendingRecs.data ?? [])]
     .sort((a, b) => {
@@ -206,16 +265,7 @@ export default function AiMarketingOverview() {
           </div>
           <div className="flex-1 space-y-2.5">
             {socialPlatforms.map((p) => (
-              <div
-                key={p.label}
-                className="flex items-center gap-3 rounded-sm border border-dashed border-border-strong px-3.5 py-3"
-              >
-                <p.icon className="size-4 shrink-0 text-muted-foreground" />
-                <span className="flex-1 text-sm">{p.label}</span>
-                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                  Not connected
-                </span>
-              </div>
+              <PlatformRow key={p.label} icon={p.icon} label={p.label} />
             ))}
           </div>
           <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
@@ -223,40 +273,48 @@ export default function AiMarketingOverview() {
           </p>
         </Panel>
 
-        <Panel className="flex h-full flex-col p-5 sm:p-6">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h3 className="text-display rule-accent text-lg">Content Queue</h3>
+        <TableShell
+          title="Content Queue"
+          action={
             <Link
               to="/admin/ai-marketing/content"
               className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
               View all <ArrowUpRight className="size-3" />
             </Link>
-          </div>
-          <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-sm border border-dashed border-border-strong bg-muted/20 px-6 py-10 text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-sm border border-dashed border-border-strong px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-              <KeyRound className="size-3" /> Not connected
-            </span>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              Antrian konten terjadwal butuh koneksi platform sosial (Meta / TikTok / YouTube).
-            </p>
-          </div>
-        </Panel>
+          }
+          columns={["Draft", "Channel", "Scheduled", "Status", "Action"]}
+          emptyTitle="Not connected"
+          emptyDescription="Antrian konten terjadwal butuh koneksi platform sosial (Meta / TikTok / YouTube) dan endpoint Content Agent belum tersedia di backend."
+          rows={3}
+        />
 
-        <OfflinePanel
-          title="Campaign Performance (30 Days)"
-          provider="Meta Ads + Google Ads"
-          message="Donut spend per platform aktif setelah META_ADS_* dan GOOGLE_ADS_* terisi. Tidak ada angka contoh yang ditampilkan."
-          height="h-full min-h-40"
-          action={
+        <Panel className="flex h-full flex-col p-5 sm:p-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-display rule-accent text-lg">Campaign Performance (30 Days)</h3>
             <Link
               to="/admin/ai-marketing/ads"
               className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
               View report <ArrowUpRight className="size-3" />
             </Link>
-          }
-        />
+          </div>
+          <Block
+            loading={campaigns.isLoading}
+            error={campaigns.error}
+            height="h-full min-h-40"
+          >
+            <div className="flex-1 space-y-2.5">
+              <AdPlatformRow platform="Meta Ads" campaigns={metaCampaigns} />
+              <AdPlatformRow platform="Google Ads" campaigns={googleCampaigns} />
+            </div>
+            <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+              {metaCampaigns.length + googleCampaigns.length > 0
+                ? "Metric per platform diambil dari AI campaign yang sudah dibuat agent. Spend/ROAS asli tampil setelah akun iklan tersambung."
+                : "Belum ada AI campaign untuk Meta Ads atau Google Ads. Baris akan terisi begitu agent membuat rencana untuk platform tsb."}
+            </p>
+          </Block>
+        </Panel>
       </div>
 
       {/* Today's Top Priorities — LIVE */}
