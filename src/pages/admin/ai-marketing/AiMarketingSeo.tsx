@@ -197,7 +197,7 @@ function KpiCard({
 }
 
 function SeoKpiCards() {
-  const { data, isLoading, isError } = useSearchConsoleSummary(28);
+  const { data, isLoading, isError } = useSearchConsoleSummary();
 
   // Catatan "kenapa": kita TIDAK menampilkan angka apapun kalau datanya tidak
   // ada. Lebih baik kartu kosong dengan alasan yang jelas daripada angka nol
