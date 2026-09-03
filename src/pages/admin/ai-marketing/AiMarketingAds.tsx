@@ -1,6 +1,8 @@
+import { Megaphone, Target } from "lucide-react";
 import { AgentPageShell } from "@/components/ai/agent-page";
 import { InsightCard } from "@/components/ai/insight-card";
 import { IntegrationRequired } from "@/components/ai/integration-required";
+import { LockedKpiCard, OfflinePanel, PlatformRow, TableShell } from "@/components/ai/offline";
 import { NotConnected, Reveal, SectionHeading } from "@/components/ai/primitives";
 import { useAgent, useAiInsights } from "@/hooks/useAiDashboard";
 import { usePageContext } from "@/context/AiMarketingContext";
@@ -15,7 +17,64 @@ export default function AdsAgentPage() {
       <section className="mt-10">
         <SectionHeading
           title="Ads — campaign performance"
-          description="Spend, leads, cost per lead dan ROAS. Angka hanya akan tampil setelah akun iklan tersambung — tidak ada data contoh di halaman ini."
+          description="Spend, leads, cost per lead dan ROAS. Kerangka dashboard tetap tampil; angka baru terisi setelah akun iklan tersambung — tidak ada data contoh."
+        />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <LockedKpiCard label="Total Spend" provider="Meta / Google Ads" index={0} />
+          <LockedKpiCard label="Leads from Ads" provider="Meta / Google Ads" index={1} />
+          <LockedKpiCard label="Cost per Lead" provider="Meta / Google Ads" index={2} />
+          <LockedKpiCard label="ROAS" provider="Meta / Google Ads" index={3} />
+        </div>
+      </section>
+
+      <section className="mt-6 grid gap-4 xl:grid-cols-[1.6fr_1fr]">
+        <OfflinePanel
+          title="Spend & Leads Trend (30 Days)"
+          provider="Meta Ads + Google Ads API"
+          message="Grafik harian spend vs leads aktif setelah META_ADS_ACCESS_TOKEN atau GOOGLE_ADS_REFRESH_TOKEN dipasang di backend/.env."
+          legend={[
+            { label: "Spend", className: "bg-warning" },
+            { label: "Leads", className: "bg-success" },
+            { label: "CPL", className: "bg-info" },
+          ]}
+        />
+        <OfflinePanel
+          title="Budget Split"
+          provider="Meta Ads + Google Ads API"
+          message="Donut alokasi budget per platform muncul setelah minimal satu akun iklan tersambung."
+          height="h-56"
+        />
+      </section>
+
+      <section className="mt-6">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="space-y-2.5">
+            <PlatformRow icon={Megaphone} label="Meta Ads" note="Facebook & Instagram — ads_read" />
+            <PlatformRow icon={Target} label="Google Ads" note="Search & Performance Max" />
+          </div>
+          <OfflinePanel
+            title="Audience & Creative Health"
+            provider="Meta Ads Insights"
+            message="Frequency, CTR dan creative fatigue dihitung dari Insights API setelah token terpasang."
+            height="h-40"
+          />
+        </div>
+      </section>
+
+      <section className="mt-6">
+        <TableShell
+          title="Active Campaigns"
+          columns={["Campaign", "Platform", "Spend", "Leads", "CPL", "Status"]}
+          emptyTitle="Belum ada campaign tersinkron"
+          emptyDescription="Daftar campaign ditarik langsung dari akun iklan. Tidak ada campaign contoh yang ditampilkan di sini."
+          rows={4}
+        />
+      </section>
+
+      <section className="mt-10">
+        <SectionHeading
+          title="Kredensial yang dibutuhkan"
+          description="Isi di backend/.env lalu jalankan php artisan config:clear."
         />
         <div className="grid gap-4 lg:grid-cols-2">
           <IntegrationRequired
