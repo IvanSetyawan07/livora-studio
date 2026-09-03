@@ -35,9 +35,9 @@ import type {
 } from "../types";
 
 export interface AIDashboardService {
-  getBusinessHealth(): Promise<BusinessHealth>;
+  getBusinessHealth(params?: import("../types").AIDateRangeParams): Promise<BusinessHealth>;
   getPriorities(): Promise<PriorityItem[]>;
-  getOverviewKpis(): Promise<AIKpi[]>;
+  getOverviewKpis(params?: import("../types").AIDateRangeParams): Promise<AIKpi[]>;
   getAgents(): Promise<AIAgent[]>;
 }
 
@@ -60,9 +60,9 @@ export interface AIChatService {
 }
 
 export interface AIUsageService {
-  getTotals(): Promise<AIUsageTotals>;
-  getByAgent(): Promise<AIUsageByAgent[]>;
-  getByProvider(): Promise<AIUsageByProvider[]>;
+  getTotals(params?: import("../types").AIDateRangeParams): Promise<AIUsageTotals>;
+  getByAgent(params?: import("../types").AIDateRangeParams): Promise<AIUsageByAgent[]>;
+  getByProvider(params?: import("../types").AIDateRangeParams): Promise<AIUsageByProvider[]>;
 }
 
 export interface AIProviderService {
@@ -75,7 +75,7 @@ export interface AIProviderService {
 }
 
 export interface AICampaignService {
-  list(): Promise<Campaign[]>;
+  list(params?: import("../types").AIDateRangeParams): Promise<Campaign[]>;
   getById(id: string): Promise<Campaign | undefined>;
 }
 

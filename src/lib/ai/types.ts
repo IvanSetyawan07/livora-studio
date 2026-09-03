@@ -222,6 +222,17 @@ export interface TimeseriesPoint {
 }
 
 /* ------------------------------------------------------------------ */
+/* Date range params shared across dashboard sections                  */
+/* ------------------------------------------------------------------ */
+
+export interface AIDateRangeParams {
+  range?: "7d" | "28d" | "90d" | "custom";
+  startDate?: string;
+  endDate?: string;
+  days?: number;
+}
+
+/* ------------------------------------------------------------------ */
 /* Overview — Business Health & Today's Priorities                     */
 /* ------------------------------------------------------------------ */
 

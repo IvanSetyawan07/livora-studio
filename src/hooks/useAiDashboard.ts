@@ -82,10 +82,13 @@ const retryPolicy = (count: number, err: unknown) => {
 };
 
 export function useBusinessHealth() {
+  const { dateRange } = useAiMarketingContext();
   return useQuery<BusinessHealth>({
-    queryKey: aiKeys.health,
-    queryFn: () => aiServices.dashboard.getBusinessHealth(),
+    queryKey: aiKeys.health(dateRange),
+    queryFn: () => aiServices.dashboard.getBusinessHealth(rangeParams(dateRange)),
     staleTime: STALE,
+    retry: retryPolicy,
+    placeholderData: (prev) => prev,
   });
 }
 export function useSearchConsoleSummary() {
