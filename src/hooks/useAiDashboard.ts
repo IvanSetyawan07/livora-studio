@@ -285,8 +285,9 @@ export function useUsageByProvider() {
 
 /** GET /ai/impact — dipakai halaman Impact. */
 export function useImpact() {
+  const { dateRange } = useAiMarketingContext();
   return useQuery<ImpactRecord[]>({
-    queryKey: aiKeys.impact,
+    queryKey: aiKeys.impact(dateRange),
     queryFn: () => aiServices.impact.list(),
     staleTime: STALE,
   });
