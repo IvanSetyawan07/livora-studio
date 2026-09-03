@@ -492,23 +492,15 @@ export const Navbar = () => {
                         </Link>
                       )}
                       {authUser.role === "admin" && (
-  <Link
-    to="/admin/ai-marketing"
-    onClick={() => setProfileOpen(false)}
-    className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60 border-t border-border"
-  >
-    <Sparkles size={16} /> AI Marketing
-  </Link>
-)}
-{authUser.role === "admin" && (
-  <Link
-    to="/admin"
-    onClick={() => setProfileOpen(false)}
-    className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60"
-  >
-    <Shield size={16} /> Admin Panel
-  </Link>
-)}
+                        <Link
+                          to="/admin/ai-marketing"
+                          onClick={() => setProfileOpen(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60  "
+                        >
+                          <Sparkles size={16} /> AI Marketing
+                        </Link>
+                      )}
+
                       <button
                         onClick={handleLogout}
                         className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60 border-t border-border text-red-600"
