@@ -37,6 +37,7 @@ use App\Http\Controllers\Api\Ai\ImpactController as AiImpactController;
 use App\Http\Controllers\Api\Ai\InsightController as AiInsightController;
 use App\Http\Controllers\Api\Ai\ActivityController as AiActivityController;
 use App\Http\Controllers\Api\Ai\GoogleIntegrationController;
+use App\Http\Controllers\Api\Ai\MetaIntegrationController;
 /**
  * Media proxy — melayani file dari storage lewat route API supaya selalu
  * membawa header CORS. Dipakai generator PDF (canvas/fetch) yang butuh
@@ -335,5 +336,11 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::get('/integrations/google/authorize-url', [GoogleIntegrationController::class, 'authorizeUrl']);
         Route::get('/integrations/google/status', [GoogleIntegrationController::class, 'status']);
         Route::post('/integrations/google/disconnect', [GoogleIntegrationController::class, 'disconnect']);
+
+        // Meta Graph API (Facebook Page + Instagram Business) — read-only,
+        // dipakai kartu "Instagram & Facebook" di Content Agent.
+        Route::get('/content/meta/status', [MetaIntegrationController::class, 'status']);
+        Route::get('/content/meta/facebook', [MetaIntegrationController::class, 'facebook']);
+        Route::get('/content/meta/instagram', [MetaIntegrationController::class, 'instagram']);
     });
 });

@@ -1,3 +1,4 @@
+// path: src/lib/ai/services/laravel.ts
 /**
  * Laravel adapter — talks to the real AI orchestration API.
  *
@@ -32,11 +33,11 @@ import type {
   CroFunnelSummary,
   GoogleIntegrationStatus,
   ImpactRecord,
+  MetaIntegrationStatus,
   PriorityItem,
   SearchConsoleSummary,
   AiChatMessage,
 } from "../types";
-import type { AIServiceBundle } from "./types";
 
 type Envelope<T> = T | { data: T };
 
@@ -58,7 +59,7 @@ function unwrapList<T>(payload: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
-export const laravelServices: AIServiceBundle = {
+export const laravelServices = {
   dashboard: {
     getBusinessHealth: (p) =>
       api.get("/ai/dashboard/health", { params: p }).then((r) => unwrap<BusinessHealth>(r.data)),
@@ -138,6 +139,14 @@ export const laravelServices: AIServiceBundle = {
       api
         .post("/ai/integrations/google/disconnect")
         .then((r) => unwrap<GoogleIntegrationStatus>(r.data)),
+    // Read-only status Meta Graph API (Facebook Page + Instagram Business)
+    // untuk kartu "Instagram & Facebook" di Content Agent. Token tidak
+    // pernah ada di response ini — backend (MetaIntegrationController) yang
+    // menahannya.
+    getMetaStatus: () =>
+      api
+        .get("/ai/content/meta/status")
+        .then((r) => unwrap<MetaIntegrationStatus>(r.data)),
   },
   cro: {
     getFunnelSummary: () =>

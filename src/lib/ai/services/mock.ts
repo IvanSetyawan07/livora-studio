@@ -1,3 +1,4 @@
+// path: src/lib/ai/services/mock.ts
 // src/lib/ai/services/mock.ts
 /**
  * Mock adapter — the default implementation until the Laravel AI
@@ -18,7 +19,7 @@ import {
 
 import { campaigns as campaignsFixture, impactRecords as impactFixture } from "../workspace-data";
 import { providers as providersFixture, routingStrategy, usageByAgent, usageByProvider, usageTotals } from "../system-data";
-import type { AICroService, AIApproval, AIRecommendation, AISeoService, AiChatContextKey, AiChatMessage, GoogleIntegrationStatus } from "../types";
+import type { AICroService, AIApproval, AIRecommendation, AISeoService, AiChatContextKey, AiChatMessage, GoogleIntegrationStatus, MetaIntegrationStatus } from "../types";
 import type {
   AIActionService,
   AIActivityService,
@@ -247,6 +248,16 @@ let googleIntegrationState: GoogleIntegrationStatus = {
   connectedAt: null,
 };
 
+// Honest-empty: mode mock tidak punya token Meta Graph beneran, jadi selalu
+// balikin not_configured — bukan nama Page/username Instagram karangan.
+const metaIntegrationStatusFixture: MetaIntegrationStatus = {
+  connected: false,
+  status: "not_configured",
+  lastCheckedAt: null,
+  facebook: { connected: false, status: "not_configured", page_id: null, name: null },
+  instagram: { connected: false, status: "not_configured", account_id: null, username: null },
+};
+
 const integrations: AIIntegrationsService = {
   async getGoogleStatus() {
     await delay(200);
@@ -268,6 +279,10 @@ const integrations: AIIntegrationsService = {
     await delay(200);
     googleIntegrationState = { connected: false, email: null, scope: null, connectedAt: null };
     return googleIntegrationState;
+  },
+  async getMetaStatus() {
+    await delay(200);
+    return metaIntegrationStatusFixture;
   },
 };
 

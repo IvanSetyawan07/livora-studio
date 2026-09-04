@@ -1,3 +1,4 @@
+// path: src/hooks/useAiDashboard.ts
 /**
  * React Query hooks untuk AI Marketing.
  *
@@ -32,6 +33,7 @@ import type {
   Campaign,
   GoogleIntegrationStatus,
   ImpactRecord,
+  MetaIntegrationStatus,
   PriorityItem,
   SearchConsoleSummary,
   CroFunnelSummary,
@@ -71,6 +73,7 @@ export const aiKeys = {
   usageByProvider: (r: AiDateRange) => ["ai", "usage", "by-provider", rangeKey(r)] as const,
   impact: (r: AiDateRange) => ["ai", "impact", rangeKey(r)] as const,
   googleStatus: ["ai", "integrations", "google", "status"] as const,
+  metaStatus: ["ai", "integrations", "meta", "status"] as const,
 };
 
 const STALE = 60_000;
@@ -332,6 +335,22 @@ export function useGoogleAuthorize() {
       window.location.href = url;
       return url;
     },
+  });
+}
+
+/**
+ * Status koneksi Meta Graph API (Facebook Page + Instagram Business) untuk
+ * kartu "Instagram & Facebook" di Content Agent. Backend selalu balas 200
+ * dengan status dibawa di payload (ok / not_configured / invalid_token /
+ * permission_required / api_error) — bukan lewat HTTP error — jadi cukup
+ * dibaca dari `data`, tidak perlu lewat `toSectionState`.
+ */
+export function useMetaIntegrationStatus() {
+  return useQuery<MetaIntegrationStatus>({
+    queryKey: aiKeys.metaStatus,
+    queryFn: () => aiServices.integrations.getMetaStatus(),
+    staleTime: 30_000,
+    retry: retryPolicy,
   });
 }
 

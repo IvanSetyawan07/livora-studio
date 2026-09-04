@@ -440,3 +440,37 @@ export interface GoogleIntegrationStatus {
   scope: string | null;
   connectedAt: string | null;
 }
+
+/**
+ * Status koneksi Meta Graph API (Facebook Page + Instagram Business) untuk
+ * kartu "Instagram & Facebook" di Content Agent. Dicocokkan 1:1 dengan
+ * MetaIntegrationController — read-only, tidak ada token di sini.
+ */
+export type MetaConnectionState =
+  | "ok"
+  | "not_configured"
+  | "invalid_token"
+  | "permission_required"
+  | "api_error";
+
+export interface MetaFacebookStatus {
+  connected: boolean;
+  status: MetaConnectionState;
+  page_id: string | null;
+  name: string | null;
+}
+
+export interface MetaInstagramStatus {
+  connected: boolean;
+  status: MetaConnectionState;
+  account_id: string | null;
+  username: string | null;
+}
+
+export interface MetaIntegrationStatus {
+  connected: boolean;
+  status: MetaConnectionState;
+  lastCheckedAt: string | null;
+  facebook: MetaFacebookStatus;
+  instagram: MetaInstagramStatus;
+}
