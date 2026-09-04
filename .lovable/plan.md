@@ -1,92 +1,31 @@
 
-# My Consultation — 10-Stage Flow
+# AI Marketing — Empty Charts That Become Live
 
-Rework the current 8-status timeline into the exact 10-stage journey requested. Each stage stays clickable so users and admin can revisit past detail (notes, files, meeting info, payments, signatures, progress snapshots).
+## Temuan audit
 
-## 10 Stages
+Klaim sebelumnya bahwa cukup memasukkan kredensial lalu semua panel otomatis hidup **belum benar**. Saat ini banyak halaman memakai `OfflinePanel`, `LockedKpiCard`, dan `TableShell` statis. Komponen tersebut tidak mengambil data dan tidak dapat berubah menjadi grafik real. Backend juga baru memiliki integrasi live untuk Search Console dan data internal CRO; collector/API untuk GA4, Ads, Social, Local SEO, serta email stats belum tersedia.
 
-1. **Inquiry Submitted** — auto on form submit
-2. **Under Review** — admin decides: **Approve** → stage 3, **Reject** → terminal with reason
-3. **Contacted** — chat room opens between user & admin
-4. **Meeting Scheduled** — date/time/link/location captured
-5. **Consultation in Progress** — meeting happening; no user review needed
-6. **Follow-up: DP Payment** — admin uploads invoice/QRIS; user marks paid + uploads proof
-7. **Sold / Project Paid** — admin uploads project agreement PDF; user signs (typed signature + timestamp) and re-uploads
-8. **Project Running** — admin posts progress updates 0–100 % (percentage + note + photos)
-9. **Completed** — compact summary card showing every prior stage collapsed but expandable
-10. **Cancelled** (parallel terminal) — user or admin, with reason
+## Hasil yang dibangun
 
-## Clickable History
-Every stage node in the timeline is a button. Clicking opens a side sheet showing that stage's stored payload: admin note, files, meeting info, payment proof, signature, progress snapshot. Powered by `consultation_status_histories` (already exists) plus a new `consultation_stage_data` JSON blob per stage.
+- Semua grafik, KPI, donut, platform row, dan tabel lama tetap terlihat saat belum tersambung.
+- Nilai kosong ditampilkan sebagai `—`; grafik mempertahankan sumbu, legend, dan empty plot; tabel mempertahankan header dengan body kosong.
+- Setiap bagian mempunyai state konsisten: loading, not connected, connected-no-data, error, dan real data.
+- Setelah kredensial valid dipasang dan cache konfigurasi dibersihkan, refresh/sync akan mengisi UI dengan data API asli tanpa perubahan frontend dan tanpa fixture.
 
-## Backend Changes
+## Tahapan implementasi
 
-### Migration `extend_consultations_for_10_stage_flow`
-- `consultations`: add `rejection_reason`, `dp_amount`, `dp_paid_at`, `agreement_signed_at`, `agreement_signature_name`, `project_progress` (tinyint 0–100).
-- New table **`consultation_stage_files`**: `id, consultation_id, stage (string), kind (invoice|payment_proof|agreement|signed_agreement|progress_photo|other), file_path, note, uploaded_by, created_at`. Files stored in Supabase-equivalent local disk `storage/app/public/consultations/{id}/`.
-- New table **`consultation_progress_updates`**: `id, consultation_id, percentage, note, created_by, created_at` + `hasMany` files via `consultation_stage_files`.
-- Update `Consultation::STATUSES` constants:
-  ```
-  new_inquiry, under_review, contacted, meeting_scheduled,
-  in_progress, dp_pending, project_paid, project_running,
-  completed, cancelled, rejected
-  ```
+1. **Kontrak bersama** — definisikan status integrasi dan payload nullable untuk KPI, time series, breakdown, serta rows; tambahkan endpoint status/sync.
+2. **Komponen visual** — ubah shell statis menjadi komponen state-aware yang selalu merender bentuk grafik/tabel, bukan menghapus isinya.
+3. **Overview / GA4** — tarik traffic, engagement, conversions, dan time series real; gabungkan aman dengan KPI internal.
+4. **Ads** — implement collector Meta Ads dan Google Ads untuk spend, leads, CPL, ROAS, budget split, creative health, dan campaign rows.
+5. **Content / Social** — implement collector Meta Graph, TikTok, dan YouTube untuk follower, reach, engagement, cadence, serta trend per platform.
+6. **Local SEO** — implement Google Business Profile untuk views, directions, calls, rating, reviews, dan performance trend.
+7. **Leads / email** — isi funnel dari database internal; statistik delivery/open/click hanya dari provider email yang benar-benar terhubung.
+8. **Verifikasi** — uji keadaan tanpa kredensial, kredensial parsial, connected-no-data, API error, dan data real; jalankan test terkait serta typecheck/build otomatis.
 
-### Controllers
-- `Api/ConsultationController` (user):
-  - `POST /consultations/{id}/dp-proof` upload
-  - `POST /consultations/{id}/sign-agreement` (name + accept)
-  - `GET  /consultations/{id}/stage/{stage}` returns files + snapshot
-- `Api/Admin/AdminConsultationController`:
-  - `POST /admin/consultations/{id}/approve` → under_review→contacted
-  - `POST /admin/consultations/{id}/reject` (reason)
-  - `POST /admin/consultations/{id}/schedule-meeting`
-  - `POST /admin/consultations/{id}/start-meeting` (→in_progress)
-  - `POST /admin/consultations/{id}/request-dp` (amount + invoice file)
-  - `POST /admin/consultations/{id}/mark-paid`
-  - `POST /admin/consultations/{id}/upload-agreement`
-  - `POST /admin/consultations/{id}/progress` (percentage + note + photos)
-  - `POST /admin/consultations/{id}/complete`
+## Catatan teknis
 
-## Frontend Changes
-
-### `src/lib/consultations.ts`
-Add types for stages, stage files, progress updates, and API helpers for every endpoint above.
-
-### `src/components/livora/ConsultationTimeline.tsx` (new)
-- Vertical timeline on desktop, horizontal scroll pill on mobile.
-- Each node = button → opens `ConsultationStageSheet` (Radix Sheet).
-- Node states: `done`, `current`, `upcoming`, `blocked` (for rejected/cancelled branches).
-- Compact mode when status = `completed`: collapses all done stages into an accordion "View full journey".
-
-### `src/components/livora/ConsultationStageSheet.tsx` (new)
-Renders per-stage content:
-- Stage 2: rejection reason (if rejected).
-- Stage 3: link to chat.
-- Stage 4: meeting card (date/time/link, Add-to-calendar).
-- Stage 6: invoice download + upload payment proof (if user & pending).
-- Stage 7: agreement download + signature form (typed full name + checkbox).
-- Stage 8: list of progress updates with % bar and photo gallery.
-- Stage 9: compact recap of every stage.
-
-### `src/pages/Profile.tsx`
-Replace inline `TIMELINE_STEPS` block with `<ConsultationTimeline consultation={c} onStageClick={…} />`. Remove the current linear checklist.
-
-### `src/pages/admin/AdminConsultationDetail.tsx`
-Add an "Actions" rail with contextual buttons matching current status (Approve / Reject / Schedule / Start Meeting / Request DP / Mark Paid / Upload Agreement / Post Progress / Complete). Show status history + files uploaded per stage.
-
-## Out of Scope (kept as-is)
-- Chat itself (already exists, unchanged).
-- Real payment gateway integration — DP flow is manual proof-of-transfer.
-- Legally-binding e-signature — typed name + timestamp only. Note in UI: "Digital acknowledgement, not a qualified e-signature".
-
-## Deliverables Order
-1. Migration + model updates.
-2. Admin controller endpoints.
-3. User controller endpoints + storage.
-4. `consultations.ts` API wrapper.
-5. `ConsultationTimeline` + `ConsultationStageSheet` components.
-6. Wire into `Profile.tsx` and `AdminConsultationDetail.tsx`.
-7. Typecheck & smoke test.
-
-Confirm and I'll build it end-to-end in this order.
+- Kredensial tetap server-side; tidak pernah dikirim ke browser.
+- Integrasi parsial menghidupkan hanya seri/panel yang sumbernya tersedia.
+- Tidak ada angka nol palsu: `0` hanya ditampilkan jika API benar-benar mengembalikan nol.
+- Pekerjaan dilakukan per integrasi agar setiap checkpoint dapat diaudit sebelum lanjut.
