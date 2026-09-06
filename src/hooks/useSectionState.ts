@@ -23,8 +23,18 @@ import type {
   SectionStateRateLimited,
 } from "@/lib/ai/section-state";
 
+/**
+ * Distributive Omit — `Omit<Union, K>` biasa TIDAK distribusi lewat anggota
+ * union (Pick/Omit dievaluasi sekali atas gabungan `keyof` semua anggota),
+ * jadi field yang cuma dipunyai sebagian anggota (mis. `provider`,
+ * `connectHref`, `label`, `retryAfterSeconds`, `retriable`) hilang dari
+ * hasilnya. Membungkus T dengan `T extends any` memaksa TypeScript
+ * mendistribusikan Omit ke tiap anggota union secara terpisah.
+ */
+type DistributiveOmit<T, K extends keyof any> = T extends any ? Omit<T, K> : never;
+
 /** Apa yang `deriveStatus` perlu kembalikan — status-nya saja, tanpa field dasar (retry/lastUpdatedAt/isRefreshing) yang selalu diisi hook ini sendiri. */
-export type DerivedNonDataStatus = Omit<NonDataSectionState, keyof SectionStateBase>;
+export type DerivedNonDataStatus = DistributiveOmit<NonDataSectionState, keyof SectionStateBase>;
 
 export interface UseSectionStateOptions<T> {
   /** Tentukan "kosong" dari payload. Default: array length 0, atau null/undefined. */

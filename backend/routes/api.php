@@ -38,6 +38,9 @@ use App\Http\Controllers\Api\Ai\InsightController as AiInsightController;
 use App\Http\Controllers\Api\Ai\ActivityController as AiActivityController;
 use App\Http\Controllers\Api\Ai\GoogleIntegrationController;
 use App\Http\Controllers\Api\Ai\MetaIntegrationController;
+use App\Http\Controllers\Api\Ai\AnalyticsController as AiAnalyticsController;
+use App\Http\Controllers\Api\Ai\AdsController as AiAdsController;
+use App\Http\Controllers\Api\Ai\ContentController as AiContentController;
 /**
  * Media proxy — melayani file dari storage lewat route API supaya selalu
  * membawa header CORS. Dipakai generator PDF (canvas/fetch) yang butuh
@@ -342,5 +345,8 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::get('/content/meta/status', [MetaIntegrationController::class, 'status']);
         Route::get('/content/meta/facebook', [MetaIntegrationController::class, 'facebook']);
         Route::get('/content/meta/instagram', [MetaIntegrationController::class, 'instagram']);
+        Route::get('/analytics/overview', [AiAnalyticsController::class, 'overview']);
+        Route::get('/ads/summary', [AiAdsController::class, 'summary']);
+        Route::get('/content/summary', [AiContentController::class, 'summary']);
     });
 });

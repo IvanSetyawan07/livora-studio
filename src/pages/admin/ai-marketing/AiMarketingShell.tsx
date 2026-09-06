@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { rememberIntendedPath } from "@/lib/authGuard";
+import { AI_DATE_RANGE_PRESETS, formatRangeLabel } from "@/lib/ai/date-range"
 import {
   Activity,
   Bell,
@@ -195,14 +196,14 @@ function NavGroupBlock({
   );
 }
 
-const dateRangeOptions = ["Last 7 days", "Last 14 days", "Last 30 days", "This month"];
-
 function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) {
-  const { openAsk } = useAiMarketingContext();
-  const [dateRange, setDateRange] = useState(dateRangeOptions[0]);
-  const { data: activityData } = useAiActivity();
-  const recentActivity = (activityData ?? []).slice(0, 4);
-
+  const { openAsk, dateRange, setDateRangePreset, setCustomDateRange } = useAiMarketingContext();
+  const { data: recentActivity = [] } = useAiActivity();
+  const thisMonth = () => {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1);
+    setCustomDateRange(from.toISOString().slice(0, 10), now.toISOString().slice(0, 10));
+  };
   return (
     <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-background/85 px-4 py-3 backdrop-blur-md sm:px-6">
       <button className="lg:hidden" onClick={onOpenNav} aria-label="Open navigation">
@@ -224,17 +225,18 @@ function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) 
         <DropdownMenu>
           <DropdownMenuTrigger className="hidden items-center gap-1.5 rounded-sm border border-border px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:flex">
             <CalendarDays className="size-3.5" />
-            {dateRange}
+            {dateRange.key === "custom" ? `${dateRange.from} → ${dateRange.to}` : `Last ${dateRange.days} days`}
             <ChevronDown className="size-3" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Date range</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {dateRangeOptions.map((opt) => (
-              <DropdownMenuItem key={opt} onClick={() => setDateRange(opt)}>
-                {opt}
+            {AI_DATE_RANGE_PRESETS.map((p) => (
+              <DropdownMenuItem key={p.key} onClick={() => setDateRangePreset(p.key)}>
+                Last {p.days} days {formatRangeLabel(dateRange) === p.label ? "✓" : ""}
               </DropdownMenuItem>
             ))}
+            <DropdownMenuItem onClick={thisMonth}>This month</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 

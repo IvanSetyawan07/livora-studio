@@ -12,6 +12,7 @@ import { SectionNotice } from "@/components/ai/section-state";
 import { typeMeta } from "@/components/ai/insight-card";
 import { usePageContext } from "@/context/AiMarketingContext";
 import { useSectionState } from "@/hooks/useSectionState";
+import { PerformanceOverviewPanel, SocialPerformanceRows, BudgetSplitPanel } from "@/components/ai/marketing-panels";
 import {
   useAiActivity,
   useAiAgents,
@@ -214,22 +215,7 @@ export default function AiMarketingOverview() {
 
       {/* Performance chart + AI Insights */}
       <div className="mt-6 grid gap-4 xl:grid-cols-[1.6fr_1fr]">
-        <OfflinePanel
-          title="Performance Overview (30 Days)"
-          provider="Google Analytics 4"
-          message="Grafik multi-metrik (traffic, leads, engagement, conversions) aktif setelah GA4_PROPERTY_ID dan GA4_SERVICE_ACCOUNT_JSON dipasang di backend/.env."
-          legend={[
-            { label: "Traffic", className: "bg-info" },
-            { label: "Leads", className: "bg-success" },
-            { label: "Engagement", className: "bg-ai" },
-            { label: "Conversions", className: "bg-warning" },
-          ]}
-          action={
-            <span className="rounded-sm border border-border px-2.5 py-1 text-[11px] text-muted-foreground">
-              30 Days
-            </span>
-          }
-        />
+        <PerformanceOverviewPanel />
 
         <Panel className="flex h-full flex-col p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
@@ -260,7 +246,7 @@ export default function AiMarketingOverview() {
       <div className="mt-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <Panel className="flex h-full flex-col p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <h3 className="text-display rule-accent text-lg">Social Media Performance</h3>
+            <div className="flex-1"><SocialPerformanceRows /></div>
             <span className="text-[11px] text-muted-foreground">(30 Days)</span>
           </div>
           <div className="flex-1 space-y-2.5">

@@ -37,6 +37,9 @@ import type {
   PriorityItem,
   SearchConsoleSummary,
   AiChatMessage,
+  AnalyticsOverview, 
+  AdsSummary, 
+  ContentSummary,
 } from "../types";
 
 type Envelope<T> = T | { data: T };
@@ -157,5 +160,13 @@ export const laravelServices = {
       api
         .get("/ai/seo/search-console-summary", { params: { days } })
         .then((r) => unwrap<SearchConsoleSummary>(r.data)),
+  },
+  marketing: {
+    getAnalyticsOverview: (p) =>
+      api.get("/ai/analytics/overview", { params: p }).then((r) => unwrap<AnalyticsOverview>(r.data)),
+    getAdsSummary: (p) =>
+      api.get("/ai/ads/summary", { params: p }).then((r) => unwrap<AdsSummary>(r.data)),
+    getContentSummary: (p) =>
+      api.get("/ai/content/summary", { params: p }).then((r) => unwrap<ContentSummary>(r.data)),
   },
 };

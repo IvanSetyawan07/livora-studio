@@ -11,6 +11,8 @@ use App\Models\AiRecommendation;
 use App\Services\AI\AIProviderManager;
 use App\Services\Google\GoogleOAuthTokenStore;
 use Illuminate\Http\Request;
+use App\Services\Marketing\MarketingPeriod;
+use App\Services\Marketing\MarketingSnapshot;
 
 /**
  * Ask Livora (AI Marketing). Jawaban di-grounding ke data NYATA dari
@@ -34,6 +36,7 @@ class ChatController extends Controller
     public function __construct(
         protected AIProviderManager $manager,
         protected GoogleOAuthTokenStore $tokens,
+        protected MarketingSnapshot $snapshot,
     ) {
     }
 
@@ -45,7 +48,8 @@ class ChatController extends Controller
         ]);
 
         $context = $validated['context'] ?? 'general';
-        $systemPrompt = $this->systemPromptFor($context).$this->groundingBlock($context);
+        $period = MarketingPeriod::fromRequest($request, 30);
+        $systemPrompt = $this->systemPromptFor($context).$this->groundingBlock($context, $period);
 
         try {
             $result = $this->manager->ask($systemPrompt, $validated['message'], 'chat');
@@ -126,7 +130,7 @@ class ChatController extends Controller
      * secara eksplisit bilang kosong — itu penting supaya model tidak
      * mengisi celahnya sendiri.
      */
-    protected function groundingBlock(string $context): string
+    protected function groundingBlock(string $context, MarketingPeriod $period): string
     {
         // SENGAJA tidak difilter berdasarkan halaman aktif ($context). User bisa
         // menanyakan topik apa saja dari halaman manapun — kalau data di sini
@@ -163,8 +167,11 @@ class ChatController extends Controller
             'Google Business Profile' => filled(config('services.google_business.location_id')) ? 'tersambung' : 'BELUM tersambung',
         ])->map(fn ($state, $name) => "- {$name}: {$state}")->implode("\n");
 
+        $marketing = $this->snapshot->lines($period);
+
         return "\n\n=== DATA (satu-satunya sumber fakta yang boleh kamu pakai) ===\n"
             ."Halaman aktif: {$context}\n\n"
+            ."ANGKA PLATFORM (GA4 / Ads / Sosial):\n{$marketing}\n\n"
             ."AGENT:\n".($agents ?: '- (belum ada agent terdaftar)')."\n\n"
             ."INSIGHT TERBARU:\n".($insights ?: '- (belum ada insight)')."\n\n"
             ."REKOMENDASI PENDING:\n".($recs ?: '- (belum ada rekomendasi pending)')."\n\n"

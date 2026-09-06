@@ -40,7 +40,16 @@ import type {
   ImpactRecord,
   MetaIntegrationStatus,
   PriorityItem,
+  AnalyticsOverview, 
+  AdsSummary, 
+  ContentSummary, 
 } from "../types";
+
+export interface AIMarketingService {
+  getAnalyticsOverview: (p: { from: string; to: string; days: number }) => Promise<AnalyticsOverview>;
+  getAdsSummary: (p: { from: string; to: string; days: number }) => Promise<AdsSummary>;
+  getContentSummary: (p: { from: string; to: string; days: number }) => Promise<ContentSummary>;
+}
 
 export interface AIDashboardService {
   getBusinessHealth(params?: AIDateRangeParams): Promise<BusinessHealth>;
@@ -112,6 +121,7 @@ export interface AIIntegrationsService {
 }
 
 export interface AIServiceBundle {
+  marketing: AIMarketingService;
   dashboard: AIDashboardService;
   recommendations: AIRecommendationService;
   actions: AIActionService;

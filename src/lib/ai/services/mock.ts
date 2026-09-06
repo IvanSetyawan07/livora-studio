@@ -33,6 +33,7 @@ import type {
   AIRecommendationService,
   AIUsageService,
   AIServiceBundle,
+  AIMarketingService,
 } from "./types";
 
 const delay = (ms = 380) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -285,7 +286,24 @@ const integrations: AIIntegrationsService = {
     return metaIntegrationStatusFixture;
   },
 };
+const notConfigured = (p: { from: string; to: string; days: number }) => ({
+  status: "not_configured" as const, period: p, generatedAt: new Date().toISOString(),
+});
 
+const marketing: AIMarketingService = {
+  async getAnalyticsOverview(p) { await delay(200); return notConfigured(p); },
+  async getAdsSummary(p) {
+    await delay(200);
+    return { ...notConfigured(p), kpis: { spend: 0, leads: 0, cpl: null, roas: null, ctr: null }, series: [], budgetSplit: [], campaigns: [],
+      platforms: { meta: { status: "not_configured" }, google: { status: "not_configured" } } };
+  },
+  async getContentSummary(p) {
+    await delay(200);
+    const s = { status: "not_configured" as const };
+    return { ...notConfigured(p), kpis: { followers: 0, engagementRate: null, postsPerWeek: null, reach: 0 }, engagementSeries: [],
+      platforms: { instagram: s, facebook: s, tiktok: s, youtube: s } };
+  },
+};
 // Honest-empty: belum ada koneksi Search Console beneran di mode mock,
 // jadi selalu balikin status disconnected/no-data (bukan angka fiktif).
 const seo: AISeoService = {
@@ -330,4 +348,5 @@ export const mockServices: AIServiceBundle = {
   integrations,
   seo,
   cro,
+  marketing,
 };

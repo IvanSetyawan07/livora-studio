@@ -7,6 +7,7 @@ import { LockedKpiCard, OfflinePanel, PlatformRow, TableShell } from "@/componen
 import { NotConnected, Panel, Pill, SectionHeading, StatusDot, type Tone } from "@/components/ai/primitives";
 import { useAgent, useMetaIntegrationStatus } from "@/hooks/useAiDashboard";
 import { usePageContext } from "@/context/AiMarketingContext";
+import { ContentKpiGrid, EngagementTrendPanel, SocialPerformanceRows } from "@/components/ai/marketing-panels";
 import type { MetaConnectionState } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
 
@@ -140,10 +141,7 @@ export default function ContentAgentPage() {
           description="Follower, cadence dan engagement per platform. Kerangka tetap tampil, angka kosong sampai akun sosial tersambung — tidak ada angka ilustratif."
         />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <LockedKpiCard label="Total Followers" provider="Meta Graph API" index={0} />
-          <LockedKpiCard label="Avg Engagement" provider="Meta Graph API" index={1} />
-          <LockedKpiCard label="Posts / Week" provider="Meta / TikTok / YouTube" index={2} />
-          <LockedKpiCard label="Reach (30d)" provider="Meta Graph API" index={3} />
+          <ContentKpiGrid />
         </div>
       </section>
 
@@ -153,24 +151,9 @@ export default function ContentAgentPage() {
             <h3 className="text-display rule-accent text-lg">Platforms</h3>
             <span className="text-[11px] text-muted-foreground">(30 Days)</span>
           </div>
-          <div className="flex-1 space-y-2.5">
-            <PlatformRow icon={Instagram} label="Instagram" note="instagram_basic + insights" />
-            <PlatformRow icon={Facebook} label="Facebook Page" note="pages_read_engagement" />
-            <PlatformRow icon={Music2} label="TikTok" note="TikTok Business API" />
-            <PlatformRow icon={Youtube} label="YouTube" note="YouTube Data API v3" />
-          </div>
+          <div className="flex-1"><SocialPerformanceRows /></div>
         </Panel>
-        <OfflinePanel
-          title="Engagement Trend (30 Days)"
-          provider="Meta Graph / TikTok / YouTube"
-          message="Grafik engagement per platform aktif setelah token masing-masing platform dipasang di backend/.env."
-          legend={[
-            { label: "Instagram", className: "bg-ai" },
-            { label: "Facebook", className: "bg-info" },
-            { label: "TikTok", className: "bg-warning" },
-            { label: "YouTube", className: "bg-danger" },
-          ]}
-        />
+        <EngagementTrendPanel />
       </section>
 
       <section className="mt-6">

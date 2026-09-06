@@ -474,3 +474,47 @@ export interface MetaIntegrationStatus {
   facebook: MetaFacebookStatus;
   instagram: MetaInstagramStatus;
 }
+
+export type MarketingStatus =
+  | "ok" | "not_configured" | "invalid_credentials" | "permission_required" | "rate_limited" | "api_error";
+
+export interface MarketingPeriodInfo { from: string; to: string; days: number }
+
+export interface AnalyticsOverview {
+  status: MarketingStatus;
+  message?: string;
+  period: MarketingPeriodInfo;
+  generatedAt: string;
+  propertyId?: string | null;
+  series?: { date: string; sessions: number; users: number; pageviews: number; engagementRate: number; conversions: number }[];
+  channels?: { label: string; sessions: number; conversions: number }[];
+  totals?: { sessions: number; users: number; pageviews: number; engagementRate: number; conversions: number };
+  deltas?: Record<"sessions" | "users" | "pageviews" | "engagementRate" | "conversions", number | null>;
+}
+
+export interface AdsPlatformStatus { status: MarketingStatus; message?: string; label?: string; accountId?: string | null }
+
+export interface AdsSummary {
+  status: MarketingStatus;
+  period: MarketingPeriodInfo;
+  generatedAt: string;
+  kpis: { spend: number; leads: number; cpl: number | null; roas: number | null; ctr: number | null };
+  series: { date: string; spend: number; leads: number; clicks: number; impressions: number; revenue: number; cpl: number | null }[];
+  budgetSplit: { platform: "meta" | "google"; label: string; spend: number }[];
+  campaigns: { id: string; name: string; platform: "meta" | "google"; spend: number; leads: number; cpl: number | null; status: string; impressions: number; clicks: number; revenue: number }[];
+  platforms: { meta: AdsPlatformStatus; google: AdsPlatformStatus };
+}
+
+export type ContentPlatformKey = "instagram" | "facebook" | "tiktok" | "youtube";
+export interface ContentPlatform {
+  status: MarketingStatus; message?: string; label?: string; handle?: string | null;
+  followers?: number; reach?: number; engagements?: number; posts?: number | null; seriesAvailable?: boolean;
+}
+export interface ContentSummary {
+  status: MarketingStatus;
+  period: MarketingPeriodInfo;
+  generatedAt: string;
+  kpis: { followers: number; engagementRate: number | null; postsPerWeek: number | null; reach: number };
+  engagementSeries: ({ date: string } & Partial<Record<ContentPlatformKey, number>>)[];
+  platforms: Record<ContentPlatformKey, ContentPlatform>;
+}
