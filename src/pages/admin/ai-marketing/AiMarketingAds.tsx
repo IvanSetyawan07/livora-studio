@@ -2,7 +2,7 @@ import { Megaphone, Target } from "lucide-react";
 import { AgentPageShell } from "@/components/ai/agent-page";
 import { InsightCard } from "@/components/ai/insight-card";
 import { IntegrationRequired } from "@/components/ai/integration-required";
-import { LockedKpiCard, OfflinePanel, PlatformRow, TableShell } from "@/components/ai/offline";
+
 import { NotConnected, Reveal, SectionHeading } from "@/components/ai/primitives";
 import { useAgent, useAiInsights } from "@/hooks/useAiDashboard";
 import { useAdsSummary } from "@/hooks/useMarketing";
