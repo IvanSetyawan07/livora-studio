@@ -11,6 +11,7 @@ export const marketingKeys = {
   analytics: (k: string) => ["ai", "marketing", "analytics", k] as const,
   ads: (k: string) => ["ai", "marketing", "ads", k] as const,
   content: (k: string) => ["ai", "marketing", "content", k] as const,
+  leads: (k: string) => ["ai", "marketing", "leads", k] as const,
 };
 
 /** Terjemahkan status envelope backend → status panel UI. */
