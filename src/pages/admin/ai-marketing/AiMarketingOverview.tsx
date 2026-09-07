@@ -12,7 +12,7 @@ import { SectionNotice } from "@/components/ai/section-state";
 import { typeMeta } from "@/components/ai/insight-card";
 import { usePageContext } from "@/context/AiMarketingContext";
 import { useSectionState } from "@/hooks/useSectionState";
-import { PerformanceOverviewPanel, SocialPerformanceRows, BudgetSplitPanel } from "@/components/ai/marketing-panels";
+import { AdRoasKpiCard, AvgEngagementKpiCard, PerformanceOverviewPanel, SocialPerformanceRows } from "@/components/ai/marketing-panels";
 import {
   useAiActivity,
   useAiAgents,

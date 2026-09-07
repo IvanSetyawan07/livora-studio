@@ -9,7 +9,7 @@ import { useAdsSummary } from "@/hooks/useMarketing";
 import { CheckCircle2 } from "lucide-react";
 import { Panel } from "@/components/ai/primitives";
 import { usePageContext } from "@/context/AiMarketingContext";
-import { ActiveCampaignsTable, AdsKpiGrid, AdsPlatformRows, BudgetSplitPanel, SpendLeadsTrendPanel } from "@/components/ai/marketing-panels";
+import { ActiveCampaignsTable, AdsKpiGrid, AdsPlatformRows, BudgetSplitPanel, CtrImpressionsPanel, SpendLeadsTrendPanel } from "@/components/ai/marketing-panels";
 
 function ConnectedCredentialCard({ provider, accountId }: { provider: string; accountId?: string | null }) {
   return (
