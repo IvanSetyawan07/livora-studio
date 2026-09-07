@@ -2,25 +2,27 @@
 
 namespace App\Services\Marketing;
 
-use Illuminate\Support\Facades\Cache;
+use App\Services\Google\GoogleOAuthTokenStore;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Google Analytics 4 — Data API v1beta lewat service account.
+ * Google Analytics 4 — Data API v1beta.
+ *
+ * Autentikasi memakai koneksi OAuth Google yang sama dengan Search Console
+ * (lihat GoogleOAuthTokenStore). Tidak lagi memakai service account key,
+ * karena organization policy Google Cloud memblokir pembuatan key tersebut.
  *
  * Kredensial (backend/.env):
- *   GA4_PROPERTY_ID         → angka property, mis. 412345678
- *   GA4_SERVICE_ACCOUNT_JSON→ path absolut ke file JSON service account,
- *                             ATAU isi JSON-nya langsung (satu baris).
+ *   GA4_PROPERTY_ID → angka property, mis. 412345678
  *
- * Tidak ada fallback data contoh: kalau kredensial kosong atau ditolak
- * Google, method di sini melempar MarketingApiException dan controller
- * meneruskan statusnya apa adanya ke UI.
+ * Scope yang dibutuhkan: https://www.googleapis.com/auth/analytics.readonly
+ * (sudah termasuk saat user connect Google lewat menu integrasi).
  */
 class Ga4Client
 {
-    private const TOKEN_URL = 'https://oauth2.googleapis.com/token';
-    private const SCOPE = 'https://www.googleapis.com/auth/analytics.readonly';
+    public function __construct(private GoogleOAuthTokenStore $tokens)
+    {
+    }
 
     public function propertyId(): ?string
     {
@@ -31,84 +33,23 @@ class Ga4Client
 
     public function isConfigured(): bool
     {
-        return filled($this->propertyId()) && $this->credentials() !== null;
+        return filled($this->propertyId()) && $this->tokens->getValidAccessToken() !== null;
     }
 
-    /** Isi service account sebagai array, atau null kalau belum diisi/tidak valid. */
-    private function credentials(): ?array
-    {
-        $raw = config('services.ga4.service_account_json');
-        if (! filled($raw)) {
-            return null;
-        }
-
-        $raw = (string) $raw;
-
-        if (! str_starts_with(ltrim($raw), '{')) {
-            $path = str_starts_with($raw, '/') ? $raw : base_path($raw);
-            if (! is_readable($path)) {
-                return null;
-            }
-            $raw = (string) file_get_contents($path);
-        }
-
-        $decoded = json_decode($raw, true);
-
-        return is_array($decoded) && isset($decoded['client_email'], $decoded['private_key']) ? $decoded : null;
-    }
-
-    /** Access token OAuth2 hasil JWT bearer flow. Di-cache 50 menit (token berlaku 60). */
+    /** Access token dari koneksi OAuth Google bersama. */
     private function accessToken(): string
     {
-        $creds = $this->credentials();
-        if ($creds === null) {
+        $token = $this->tokens->getValidAccessToken();
+
+        if ($token === null) {
             throw MarketingApiException::notConfigured(
-                'GA4 belum dikonfigurasi. Isi GA4_PROPERTY_ID dan GA4_SERVICE_ACCOUNT_JSON di backend/.env.'
+                'Google belum terhubung. Silakan connect ulang lewat menu integrasi.'
             );
         }
 
-        return Cache::remember('ga4:access_token:'.md5($creds['client_email']), 3000, function () use ($creds) {
-            $now = time();
-            $claim = [
-                'iss' => $creds['client_email'],
-                'scope' => self::SCOPE,
-                'aud' => self::TOKEN_URL,
-                'iat' => $now,
-                'exp' => $now + 3600,
-            ];
-
-            $segments = [
-                $this->base64Url(json_encode(['alg' => 'RS256', 'typ' => 'JWT'])),
-                $this->base64Url(json_encode($claim)),
-            ];
-
-            $signature = '';
-            $ok = openssl_sign(implode('.', $segments), $signature, $creds['private_key'], OPENSSL_ALGO_SHA256);
-            if (! $ok) {
-                throw new MarketingApiException(
-                    'Private key GA4_SERVICE_ACCOUNT_JSON tidak bisa dipakai menandatangani token.',
-                    'invalid_credentials'
-                );
-            }
-            $segments[] = $this->base64Url($signature);
-
-            $response = Http::asForm()->timeout(20)->post(self::TOKEN_URL, [
-                'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-                'assertion' => implode('.', $segments),
-            ]);
-
-            if (! $response->successful()) {
-                throw MarketingApiException::fromHttp('GA4 (token)', $response->status(), $response->body());
-            }
-
-            return (string) $response->json('access_token');
-        });
+        return $token;
     }
 
-    private function base64Url(string $value): string
-    {
-        return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
-    }
 
     /**
      * Panggilan mentah runReport.
