@@ -307,6 +307,20 @@ const marketing: AIMarketingService = {
 // Honest-empty: belum ada koneksi Search Console beneran di mode mock,
 // jadi selalu balikin status disconnected/no-data (bukan angka fiktif).
 const seo: AISeoService = {
+  async getLocalSummary() {
+    await delay(200);
+    return {
+      connected: false,
+      hasData: false,
+      message: "Google Business Profile belum terhubung.",
+      period: null,
+      listing: null,
+      totals: null,
+      series: [],
+      reviews: [],
+      unavailable: [],
+    };
+  },
   async getSearchConsoleSummary() {
     await delay(250);
     return {
