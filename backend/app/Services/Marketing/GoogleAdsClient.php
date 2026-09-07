@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Http;
  */
 class GoogleAdsClient
 {
-    private const VERSION = 'v18';
+    private const VERSION = 'v21';
     private const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
     public function customerId(): ?string
