@@ -12,9 +12,11 @@ class GoogleIntegrationController extends Controller
 {
     private const SCOPES = [
         'https://www.googleapis.com/auth/webmasters.readonly',
+        'https://www.googleapis.com/auth/analytics.readonly',
         'openid',
         'email',
     ];
+
 
     public function __construct(private GoogleOAuthTokenStore $tokens)
     {
