@@ -3,7 +3,7 @@ import { useAiMarketingContext } from "@/context/AiMarketingContext";
 import { useSectionState, type DerivedNonDataStatus } from "@/hooks/useSectionState";
 import { aiServices } from "@/lib/ai/services";
 import { rangeKey, rangeParams } from "@/lib/ai/date-range";
-import type { AdsSummary, AnalyticsOverview, ContentSummary, MarketingStatus } from "@/lib/ai/types";
+import type { AdsSummary, AnalyticsOverview, ContentSummary, LeadsFunnel, MarketingStatus } from "@/lib/ai/types";
 
 const STALE = 5 * 60_000;
 
@@ -69,6 +69,23 @@ export function useContentSummary() {
     provider: "Meta / TikTok / YouTube",
     deriveStatus: (d) => deriveMarketingStatus(d.status, undefined, "Meta / TikTok / YouTube"),
     isEmpty: (d) => Object.values(d.platforms).every((p) => p.status !== "ok"),
+  });
+  return { query: q, state };
+}
+
+/** Funnel leads dari data internal (konsultasi + wishlist) — selalu live,
+ *  tidak menunggu kredensial apa pun. */
+export function useLeadsFunnel() {
+  const { dateRange } = useAiMarketingContext();
+  const q = useQuery<LeadsFunnel>({
+    queryKey: marketingKeys.leads(rangeKey(dateRange)),
+    queryFn: () => aiServices.marketing.getLeadsFunnel(rangeParams(dateRange)),
+    staleTime: STALE,
+  });
+  const state = useSectionState(q, {
+    provider: "Database Livora (konsultasi & wishlist)",
+    deriveStatus: (d) => deriveMarketingStatus(d.status, undefined, "Database Livora"),
+    isEmpty: (d) => d.series.every((r) => r.leads === 0 && r.wishlistAdds === 0),
   });
   return { query: q, state };
 }
