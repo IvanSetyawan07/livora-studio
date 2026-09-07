@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
-import { ArrowUpRight, Instagram, Megaphone, Sparkles, type LucideIcon } from "lucide-react";
+import { ArrowUpRight, Megaphone, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
-import { OfflinePanel, PlatformRow, TableShell } from "@/components/ai/offline";
+import { PlatformRow, TableShell } from "@/components/ai/offline";
 import { ActivityStream } from "@/components/ai/activity-stream";
 import { AgentRail } from "@/components/ai/agent-rail";
 import { KpiCard } from "@/components/ai/kpi-card";
@@ -12,7 +12,7 @@ import { SectionNotice } from "@/components/ai/section-state";
 import { typeMeta } from "@/components/ai/insight-card";
 import { usePageContext } from "@/context/AiMarketingContext";
 import { useSectionState } from "@/hooks/useSectionState";
-import { PerformanceOverviewPanel, SocialPerformanceRows, BudgetSplitPanel } from "@/components/ai/marketing-panels";
+import { AdRoasKpiCard, AvgEngagementKpiCard, PerformanceOverviewPanel, SocialPerformanceRows } from "@/components/ai/marketing-panels";
 import {
   useAiActivity,
   useAiAgents,
@@ -22,7 +22,7 @@ import {
   usePriorities,
   useRecommendations,
 } from "@/hooks/useAiDashboard";
-import { notConnectedState } from "@/lib/ai/section-state";
+
 import type { AIInsight, AIKpi, Campaign, CampaignHealth } from "@/lib/ai/types";
 
 const healthTone: Record<CampaignHealth, "success" | "warning" | "danger"> = {
@@ -138,12 +138,6 @@ function AdPlatformRow({ platform, campaigns }: { platform: string; campaigns: C
   );
 }
 
-const socialPlatforms: { label: string; icon: LucideIcon }[] = [
-  { label: "Instagram", icon: Instagram },
-  { label: "TikTok", icon: Megaphone },
-  { label: "Facebook", icon: Megaphone },
-  { label: "YouTube", icon: Megaphone },
-];
 
 export default function AiMarketingOverview() {
   usePageContext("overview");
@@ -193,18 +187,8 @@ export default function AiMarketingOverview() {
                 state={{ ...kpiSection, data: k }}
               />
             ))}
-            <KpiCard
-              label="Avg Engagement"
-              index={4}
-              provider="GA4 Data API"
-              state={notConnectedState("GA4 Data API")}
-            />
-            <KpiCard
-              label="Ad ROAS"
-              index={5}
-              provider="Meta / Google Ads"
-              state={notConnectedState("Meta / Google Ads")}
-            />
+            <AvgEngagementKpiCard index={4} />
+            <AdRoasKpiCard index={5} />
           </>
         ) : (
           <Panel className="col-span-full">
@@ -246,14 +230,10 @@ export default function AiMarketingOverview() {
       <div className="mt-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <Panel className="flex h-full flex-col p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <div className="flex-1"><SocialPerformanceRows /></div>
+            <h3 className="text-display rule-accent text-lg">Social Performance</h3>
             <span className="text-[11px] text-muted-foreground">(30 Days)</span>
           </div>
-          <div className="flex-1 space-y-2.5">
-            {socialPlatforms.map((p) => (
-              <PlatformRow key={p.label} icon={p.icon} label={p.label} />
-            ))}
-          </div>
+          <div className="flex-1"><SocialPerformanceRows /></div>
           <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
             Engagement per platform aktif setelah kredensial Meta / TikTok / YouTube dipasang.
           </p>

@@ -303,6 +303,13 @@ const marketing: AIMarketingService = {
     return { ...notConfigured(p), kpis: { followers: 0, engagementRate: null, postsPerWeek: null, reach: 0 }, engagementSeries: [],
       platforms: { instagram: s, facebook: s, tiktok: s, youtube: s } };
   },
+  // Honest-empty: funnel leads di mode mock tidak membaca DB apa pun,
+  // jadi selalu kosong — bukan angka ilustratif.
+  async getLeadsFunnel(p) {
+    await delay(200);
+    return { ...notConfigured(p), kpis: { leads: 0, wishlistAdds: 0, responded: 0, responseRate: null },
+      deltas: { leads: null, wishlistAdds: null, responseRate: null }, series: [], byStatus: [] };
+  },
 };
 // Honest-empty: belum ada koneksi Search Console beneran di mode mock,
 // jadi selalu balikin status disconnected/no-data (bukan angka fiktif).

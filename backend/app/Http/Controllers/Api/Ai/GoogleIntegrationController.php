@@ -47,12 +47,20 @@ class GoogleIntegrationController extends Controller
     public function status()
     {
         $info = $this->tokens->connectionInfo();
+        $scope = (string) ($info['scope'] ?? '');
+
+        // Scope GA4 ditambahkan belakangan — koneksi lama belum tentu memilikinya.
+        $hasAnalytics = str_contains($scope, 'analytics.readonly');
 
         return response()->json([
             'connected' => $info !== null,
             'email' => $info['email'] ?? null,
             'scope' => $info['scope'] ?? null,
             'connectedAt' => $info['connectedAt'] ?? null,
+            'hasAnalyticsScope' => $hasAnalytics,
+            'message' => $info !== null && ! $hasAnalytics
+                ? 'Koneksi Google ini dibuat sebelum dukungan Google Analytics. Disconnect lalu Connect ulang sekali agar data Analytics ikut aktif.'
+                : null,
         ]);
     }
 

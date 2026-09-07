@@ -6,7 +6,9 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Google Ads API (REST, v18) — customers/{id}/googleAds:search.
+ * Google Ads API (REST) — customers/{id}/googleAds:search.
+ * Versi API dibaca dari GOOGLE_ADS_API_VERSION (default v22); Google rutin
+ * menghapus versi lama, jadi jangan di-hardcode di URL.
  *
  * .env: GOOGLE_ADS_DEVELOPER_TOKEN, GOOGLE_ADS_CUSTOMER_ID (tanpa "-"),
  *       GOOGLE_ADS_REFRESH_TOKEN, opsional GOOGLE_ADS_LOGIN_CUSTOMER_ID (akun manager).
@@ -14,8 +16,12 @@ use Illuminate\Support\Facades\Http;
  */
 class GoogleAdsClient
 {
-    private const VERSION = 'v21';
     private const TOKEN_URL = 'https://oauth2.googleapis.com/token';
+
+    private function version(): string
+    {
+        return (string) (config('services.google_ads.api_version') ?: 'v22');
+    }
 
     public function customerId(): ?string
     {
@@ -84,7 +90,7 @@ class GoogleAdsClient
         $pageToken = null;
         do {
             $res = Http::withHeaders($headers)->timeout(30)->post(
-                'https://googleads.googleapis.com/'.self::VERSION."/customers/{$cid}/googleAds:search",
+                'https://googleads.googleapis.com/'.$this->version()."/customers/{$cid}/googleAds:search",
                 array_filter(['query' => $gaql, 'pageSize' => 1000, 'pageToken' => $pageToken]),
             );
 

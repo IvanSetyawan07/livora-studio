@@ -560,3 +560,15 @@ export interface ContentSummary {
   engagementSeries: ({ date: string } & Partial<Record<ContentPlatformKey, number>>)[];
   platforms: Record<ContentPlatformKey, ContentPlatform>;
 }
+
+/** Funnel Lead Intelligence — agregasi tabel konsultasi & wishlist (data
+ *  internal, tidak butuh kredensial). Cocok 1:1 dengan LeadsController@funnel. */
+export interface LeadsFunnel {
+  status: MarketingStatus;
+  period: MarketingPeriodInfo;
+  generatedAt: string;
+  kpis: { leads: number; wishlistAdds: number; responded: number; responseRate: number | null };
+  deltas: { leads: number | null; wishlistAdds: number | null; responseRate: number | null };
+  series: { date: string; leads: number; wishlistAdds: number; responded: number }[];
+  byStatus: { status: string; count: number }[];
+}
