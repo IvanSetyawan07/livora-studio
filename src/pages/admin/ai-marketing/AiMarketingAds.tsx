@@ -2,14 +2,14 @@ import { Megaphone, Target } from "lucide-react";
 import { AgentPageShell } from "@/components/ai/agent-page";
 import { InsightCard } from "@/components/ai/insight-card";
 import { IntegrationRequired } from "@/components/ai/integration-required";
-import { LockedKpiCard, OfflinePanel, PlatformRow, TableShell } from "@/components/ai/offline";
+
 import { NotConnected, Reveal, SectionHeading } from "@/components/ai/primitives";
 import { useAgent, useAiInsights } from "@/hooks/useAiDashboard";
 import { useAdsSummary } from "@/hooks/useMarketing";
 import { CheckCircle2 } from "lucide-react";
 import { Panel } from "@/components/ai/primitives";
 import { usePageContext } from "@/context/AiMarketingContext";
-import { ActiveCampaignsTable, AdsKpiGrid, AdsPlatformRows, BudgetSplitPanel, SpendLeadsTrendPanel } from "@/components/ai/marketing-panels";
+import { ActiveCampaignsTable, AdsKpiGrid, AdsPlatformRows, BudgetSplitPanel, CtrImpressionsPanel, SpendLeadsTrendPanel } from "@/components/ai/marketing-panels";
 
 function ConnectedCredentialCard({ provider, accountId }: { provider: string; accountId?: string | null }) {
   return (
@@ -96,12 +96,7 @@ export default function AdsAgentPage() {
           <div className="space-y-2.5">
              <AdsPlatformRows />
           </div>
-          <OfflinePanel
-            title="Audience & Creative Health"
-            provider="Meta Ads Insights"
-            message="Frequency, CTR dan creative fatigue dihitung dari Insights API setelah token terpasang."
-            height="h-40"
-          />
+          <CtrImpressionsPanel />
         </div>
       </section>
 

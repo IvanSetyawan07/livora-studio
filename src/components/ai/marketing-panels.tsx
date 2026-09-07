@@ -1,11 +1,12 @@
 import { Facebook, Instagram, Megaphone, Music2, Target, Youtube, type LucideIcon } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, Tooltip, XAxis, YAxis } from "recharts";
 import { ChartSection, StatCard, type StatKpi } from "@/components/ai/dashboard-charts";
+import { KpiCard } from "@/components/ai/kpi-card";
 import { Panel, Pill, StatusDot } from "@/components/ai/primitives";
 import { SectionNotice } from "@/components/ai/section-state";
-import { useAdsSummary, useAnalyticsOverview, useContentSummary } from "@/hooks/useMarketing";
-import type { NonDataSectionState } from "@/lib/ai/section-state";
-import type { AdsSummary, ContentPlatform, ContentPlatformKey, ContentSummary, MarketingStatus } from "@/lib/ai/types";
+import { useAdsSummary, useAnalyticsOverview, useContentSummary, useLeadsFunnel } from "@/hooks/useMarketing";
+import { notConnectedState, type NonDataSectionState, type SectionState } from "@/lib/ai/section-state";
+import type { AdsSummary, AIKpi, ContentPlatform, ContentPlatformKey, ContentSummary, MarketingStatus } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
 
 /** Skeleton kecil dipakai slot KPI/table selagi query "loading" — SectionNotice sendiri tidak menerima status "loading" (lihat NonDataSectionState). */
@@ -281,5 +282,144 @@ export function contentSummaryNote(d?: ContentSummary) {
   return d?.platforms.youtube?.status === "ok"
     ? "YouTube: deret harian butuh YouTube Analytics (OAuth) — hanya agregat periode yang ditampilkan."
     : undefined;
+}
+
+/* ---------------- Slot KPI Overview yang menunggu integrasi ----------------
+ * Kartu ini tampil "—/Not connected" selama kredensial belum ada, dan
+ * LANGSUNG terisi angka asli begitu GA4 / akun iklan tersambung — tanpa
+ * perlu ubah apa pun di halaman Overview. */
+
+function deltaLabel(d: number | null | undefined): Pick<AIKpi, "deltaLabel" | "deltaDirection"> {
+  if (d == null) return {};
+  return { deltaLabel: `${d > 0 ? "+" : ""}${d}% vs periode sebelumnya`, deltaDirection: d >= 0 ? "up" : "down" };
+}
+
+export function AvgEngagementKpiCard({ index = 4 }: { index?: number }) {
+  const { state } = useAnalyticsOverview();
+  if (state.status !== "data" || !state.data.totals) {
+    return <KpiCard label="Avg Engagement" index={index} provider="GA4 Data API" state={state.status === "loading" ? state : notConnectedState("GA4 Data API")} />;
+  }
+  const t = state.data.totals;
+  const kpi: AIKpi = {
+    id: "ga4-engagement",
+    label: "Avg Engagement",
+    value: t.engagementRate,
+    decimals: 1,
+    suffix: "%",
+    spark: (state.data.series ?? []).map((r) => r.engagementRate),
+    footnote: "GA4 · engagement rate",
+    live: true,
+    ...deltaLabel(state.data.deltas?.engagementRate),
+  };
+  return <KpiCard label="Avg Engagement" index={index} state={{ ...state, data: kpi }} href="/admin/ai-marketing/analytics" />;
+}
+
+export function AdRoasKpiCard({ index = 5 }: { index?: number }) {
+  const { state } = useAdsSummary();
+  if (state.status !== "data" || state.data.kpis.roas == null) {
+    return <KpiCard label="Ad ROAS" index={index} provider="Meta / Google Ads" state={state.status === "loading" ? state : notConnectedState("Meta / Google Ads")} />;
+  }
+  const k = state.data.kpis;
+  const kpi: AIKpi = {
+    id: "ads-roas",
+    label: "Ad ROAS",
+    value: k.roas ?? 0,
+    decimals: 2,
+    suffix: "x",
+    spark: state.data.series.map((r) => (r.spend > 0 ? r.revenue / r.spend : 0)),
+    footnote: `Spend ${money(k.spend)} · ${fmt(k.leads, 1)} leads`,
+    live: true,
+  };
+  return <KpiCard label="Ad ROAS" index={index} state={{ ...state, data: kpi }} href="/admin/ai-marketing/ads" />;
+}
+
+/* ---------------- Ads: CTR & Impressions (dari series yang sudah ada) ------ */
+export function CtrImpressionsPanel() {
+  const { state } = useAdsSummary();
+  return (
+    <ChartSection
+      title="CTR & Impressions" state={state} provider="Meta Ads / Google Ads" connectHref="/admin/ai-marketing/settings"
+      isEmpty={(d) => d.series.length === 0}
+      renderChart={(d) => (
+        <LineChart
+          data={d.series.map((r) => ({ ...r, label: shortDate(r.date), ctr: r.impressions > 0 ? +((r.clicks / r.impressions) * 100).toFixed(2) : null }))}
+          margin={{ top: 8, right: 12, bottom: 0, left: -16 }}
+        >
+          <CartesianGrid stroke="hsl(var(--border))" vertical={false} />
+          <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={28} tick={tick} />
+          <YAxis yAxisId="l" tickLine={false} axisLine={false} width={56} tick={tick} />
+          <YAxis yAxisId="r" orientation="right" tickLine={false} axisLine={false} width={40} tick={tick} unit="%" />
+          <Tooltip {...tooltip} />
+          <Legend verticalAlign="bottom" height={28} iconType="plainline" wrapperStyle={{ fontSize: 11 }} />
+          <Line yAxisId="l" type="monotone" dataKey="impressions" name="Impressions" stroke="hsl(var(--info))" strokeWidth={2} dot={false} />
+          <Line yAxisId="l" type="monotone" dataKey="clicks" name="Clicks" stroke="hsl(var(--success))" strokeWidth={2} dot={false} />
+          <Line yAxisId="r" type="monotone" dataKey="ctr" name="CTR %" stroke="hsl(var(--warning))" strokeWidth={2} dot={false} connectNulls />
+        </LineChart>
+      )}
+    />
+  );
+}
+
+/* ---------------- Leads: funnel internal (konsultasi + wishlist) ----------- */
+export function LeadsKpiGrid() {
+  const { state } = useLeadsFunnel();
+  if (state.status === "loading") {
+    return <Panel className="col-span-full"><LoadingBlock /></Panel>;
+  }
+  if (state.status !== "data") {
+    return <Panel className="col-span-full"><SectionNotice state={state} title="Leads KPI" height="h-28" provider="Database Livora" /></Panel>;
+  }
+  const k = state.data.kpis;
+  const dl = state.data.deltas;
+  const kpis: StatKpi[] = [
+    { label: "New Leads", value: fmt(k.leads), ...deltaOf(dl.leads) },
+    { label: "Wishlist Adds", value: fmt(k.wishlistAdds), ...deltaOf(dl.wishlistAdds) },
+    { label: "Response Rate", value: k.responseRate == null ? "—" : `${k.responseRate}%`, ...deltaOf(dl.responseRate) },
+    { label: "Followed Up", value: fmt(k.responded) },
+  ];
+  return <>{kpis.map((kpi, i) => <StatCard key={kpi.label} kpi={kpi} index={i} />)}</>;
+}
+
+export function LeadsFunnelPanel() {
+  const { state } = useLeadsFunnel();
+  const days = state.status === "data" ? state.data.period.days : null;
+  return (
+    <ChartSection
+      title={`Lead Funnel${days ? ` (${days} Days)` : ""}`} state={state} provider="Database Livora"
+      isEmpty={(d) => d.series.every((r) => r.leads === 0 && r.wishlistAdds === 0)}
+      renderChart={(d) => (
+        <LineChart data={d.series.map((r) => ({ ...r, label: shortDate(r.date) }))} margin={{ top: 8, right: 12, bottom: 0, left: -16 }}>
+          <CartesianGrid stroke="hsl(var(--border))" vertical={false} />
+          <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={28} tick={tick} />
+          <YAxis tickLine={false} axisLine={false} width={40} tick={tick} allowDecimals={false} />
+          <Tooltip {...tooltip} />
+          <Legend verticalAlign="bottom" height={28} iconType="plainline" wrapperStyle={{ fontSize: 11 }} />
+          <Line type="monotone" dataKey="wishlistAdds" name="Wishlist Adds" stroke="hsl(var(--info))" strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="leads" name="Leads (konsultasi)" stroke="hsl(var(--success))" strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="responded" name="Followed Up" stroke="hsl(var(--ai))" strokeWidth={2} dot={false} />
+        </LineChart>
+      )}
+    />
+  );
+}
+
+/** Agregat status konsultasi periode ini — di samping funnel harian. */
+export function LeadsByStatusPanel() {
+  const { state } = useLeadsFunnel();
+  return (
+    <ChartSection
+      title="Leads by Stage" state={state} provider="Database Livora"
+      isEmpty={(d) => d.byStatus.length === 0}
+      renderChart={(d) => (
+        <BarChart data={d.byStatus} layout="vertical" margin={{ top: 4, right: 12, bottom: 0, left: 8 }}>
+          <CartesianGrid stroke="hsl(var(--border))" horizontal={false} />
+          <XAxis type="number" tickLine={false} axisLine={false} tick={tick} allowDecimals={false} />
+          <YAxis type="category" dataKey="status" tickLine={false} axisLine={false} width={110} tick={{ ...tick, fontSize: 10 }} />
+          <Tooltip {...tooltip} />
+          <Bar dataKey="count" name="Leads" fill="hsl(var(--brass))" radius={[0, 2, 2, 0]} />
+        </BarChart>
+      )}
+    />
+  );
 }
 export type { AdsSummary };

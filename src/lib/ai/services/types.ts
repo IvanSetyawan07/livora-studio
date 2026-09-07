@@ -40,15 +40,17 @@ import type {
   ImpactRecord,
   MetaIntegrationStatus,
   PriorityItem,
-  AnalyticsOverview, 
-  AdsSummary, 
-  ContentSummary, 
+  AnalyticsOverview,
+  AdsSummary,
+  ContentSummary,
+  LeadsFunnel,
 } from "../types";
 
 export interface AIMarketingService {
   getAnalyticsOverview: (p: { from: string; to: string; days: number }) => Promise<AnalyticsOverview>;
   getAdsSummary: (p: { from: string; to: string; days: number }) => Promise<AdsSummary>;
   getContentSummary: (p: { from: string; to: string; days: number }) => Promise<ContentSummary>;
+  getLeadsFunnel: (p: { from: string; to: string; days: number }) => Promise<LeadsFunnel>;
 }
 
 export interface AIDashboardService {

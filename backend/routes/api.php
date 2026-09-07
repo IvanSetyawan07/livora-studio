@@ -41,6 +41,7 @@ use App\Http\Controllers\Api\Ai\MetaIntegrationController;
 use App\Http\Controllers\Api\Ai\AnalyticsController as AiAnalyticsController;
 use App\Http\Controllers\Api\Ai\AdsController as AiAdsController;
 use App\Http\Controllers\Api\Ai\ContentController as AiContentController;
+use App\Http\Controllers\Api\Ai\LeadsController;
 /**
  * Media proxy — melayani file dari storage lewat route API supaya selalu
  * membawa header CORS. Dipakai generator PDF (canvas/fetch) yang butuh
@@ -349,5 +350,6 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::get('/analytics/overview', [AiAnalyticsController::class, 'overview']);
         Route::get('/ads/summary', [AiAdsController::class, 'summary']);
         Route::get('/content/summary', [AiContentController::class, 'summary']);
+        Route::get('/leads/funnel', [LeadsController::class, 'funnel']);
     });
 });

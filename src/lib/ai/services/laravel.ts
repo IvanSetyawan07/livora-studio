@@ -39,9 +39,10 @@ import type {
   SearchConsoleSummary,
   LocalSeoSummary,
   AiChatMessage,
-  AnalyticsOverview, 
-  AdsSummary, 
+  AnalyticsOverview,
+  AdsSummary,
   ContentSummary,
+  LeadsFunnel,
 } from "../types";
 
 type Envelope<T> = T | { data: T };
@@ -174,5 +175,7 @@ export const laravelServices: AIServiceBundle = {
       api.get("/ai/ads/summary", { params: p }).then((r) => unwrap<AdsSummary>(r.data)),
     getContentSummary: (p) =>
       api.get("/ai/content/summary", { params: p }).then((r) => unwrap<ContentSummary>(r.data)),
+    getLeadsFunnel: (p) =>
+      api.get("/ai/leads/funnel", { params: p }).then((r) => unwrap<LeadsFunnel>(r.data)),
   },
 };
