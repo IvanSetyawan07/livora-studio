@@ -193,18 +193,8 @@ export default function AiMarketingOverview() {
                 state={{ ...kpiSection, data: k }}
               />
             ))}
-            <KpiCard
-              label="Avg Engagement"
-              index={4}
-              provider="GA4 Data API"
-              state={notConnectedState("GA4 Data API")}
-            />
-            <KpiCard
-              label="Ad ROAS"
-              index={5}
-              provider="Meta / Google Ads"
-              state={notConnectedState("Meta / Google Ads")}
-            />
+            <AvgEngagementKpiCard index={4} />
+            <AdRoasKpiCard index={5} />
           </>
         ) : (
           <Panel className="col-span-full">
@@ -246,14 +236,10 @@ export default function AiMarketingOverview() {
       <div className="mt-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <Panel className="flex h-full flex-col p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <div className="flex-1"><SocialPerformanceRows /></div>
+            <h3 className="text-display rule-accent text-lg">Social Performance</h3>
             <span className="text-[11px] text-muted-foreground">(30 Days)</span>
           </div>
-          <div className="flex-1 space-y-2.5">
-            {socialPlatforms.map((p) => (
-              <PlatformRow key={p.label} icon={p.icon} label={p.label} />
-            ))}
-          </div>
+          <div className="flex-1"><SocialPerformanceRows /></div>
           <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
             Engagement per platform aktif setelah kredensial Meta / TikTok / YouTube dipasang.
           </p>

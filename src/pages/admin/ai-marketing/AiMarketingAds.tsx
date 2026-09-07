@@ -96,12 +96,7 @@ export default function AdsAgentPage() {
           <div className="space-y-2.5">
              <AdsPlatformRows />
           </div>
-          <OfflinePanel
-            title="Audience & Creative Health"
-            provider="Meta Ads Insights"
-            message="Frequency, CTR dan creative fatigue dihitung dari Insights API setelah token terpasang."
-            height="h-40"
-          />
+          <CtrImpressionsPanel />
         </div>
       </section>
 
