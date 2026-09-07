@@ -130,26 +130,34 @@ function GoogleSearchConsoleCard() {
           <Loader2 className="size-4 animate-spin" /> Checking Google connection…
         </Panel>
       ) : status?.connected ? (
-        <Panel className="flex flex-wrap items-center justify-between gap-4 p-5">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="size-5 text-success" />
-            <div>
-              <p className="text-sm font-medium">Google Search Console connected</p>
-              <p className="text-xs text-muted-foreground">
-                {status.email ?? "Unknown account"}
-                {status.connectedAt ? ` · since ${new Date(status.connectedAt).toLocaleDateString()}` : ""}
-              </p>
+        <Panel className="space-y-3 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="size-5 text-success" />
+              <div>
+                <p className="text-sm font-medium">Google Search Console connected</p>
+                <p className="text-xs text-muted-foreground">
+                  {status.email ?? "Unknown account"}
+                  {status.connectedAt ? ` · since ${new Date(status.connectedAt).toLocaleDateString()}` : ""}
+                </p>
+              </div>
             </div>
+            <button
+              onClick={handleDisconnect}
+              disabled={busy}
+              className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive disabled:opacity-50"
+            >
+              {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Unlink className="size-3.5" />}
+              Disconnect
+            </button>
           </div>
-          <button
-            onClick={handleDisconnect}
-            disabled={busy}
-            className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive disabled:opacity-50"
-          >
-            {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Unlink className="size-3.5" />}
-            Disconnect
-          </button>
+          <p className="rounded-md border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground">
+            Koneksi Google ini sekarang juga dipakai untuk Google Analytics 4 (scope{" "}
+            <span className="font-mono">analytics.readonly</span>). Kalau angka GA4 masih kosong, klik{" "}
+            <span className="font-medium">Disconnect</span> lalu connect ulang sekali supaya scope barunya ikut ter-grant.
+          </p>
         </Panel>
+
       ) : (
         <NotConnected
           title="Google Search Console is not connected"
