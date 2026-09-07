@@ -14,6 +14,7 @@
  * konkret (bukan unknown) dan cocok dengan kontrak di ./types.
  */
 import { api } from "@/lib/api";
+import type { AIServiceBundle } from "./types";
 import type {
   AIActivity,
   AIAgent,
@@ -36,6 +37,7 @@ import type {
   MetaIntegrationStatus,
   PriorityItem,
   SearchConsoleSummary,
+  LocalSeoSummary,
   AiChatMessage,
   AnalyticsOverview, 
   AdsSummary, 
@@ -62,7 +64,7 @@ function unwrapList<T>(payload: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
-export const laravelServices = {
+export const laravelServices: AIServiceBundle = {
   dashboard: {
     getBusinessHealth: (p) =>
       api.get("/ai/dashboard/health", { params: p }).then((r) => unwrap<BusinessHealth>(r.data)),
@@ -156,6 +158,10 @@ export const laravelServices = {
       api.get("/ai/cro/funnel-summary").then((r) => unwrap<CroFunnelSummary>(r.data)),
   },
   seo: {
+    getLocalSummary: (days = 30) =>
+      api
+        .get("/ai/seo/local-summary", { params: { days } })
+        .then((r) => unwrap<LocalSeoSummary>(r.data)),
     getSearchConsoleSummary: (days = 28) =>
       api
         .get("/ai/seo/search-console-summary", { params: { days } })
