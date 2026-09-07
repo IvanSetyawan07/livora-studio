@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
-import { ArrowUpRight, Instagram, Megaphone, Sparkles, type LucideIcon } from "lucide-react";
+import { ArrowUpRight, Megaphone, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
-import { OfflinePanel, PlatformRow, TableShell } from "@/components/ai/offline";
+import { PlatformRow, TableShell } from "@/components/ai/offline";
 import { ActivityStream } from "@/components/ai/activity-stream";
 import { AgentRail } from "@/components/ai/agent-rail";
 import { KpiCard } from "@/components/ai/kpi-card";
@@ -22,7 +22,7 @@ import {
   usePriorities,
   useRecommendations,
 } from "@/hooks/useAiDashboard";
-import { notConnectedState } from "@/lib/ai/section-state";
+
 import type { AIInsight, AIKpi, Campaign, CampaignHealth } from "@/lib/ai/types";
 
 const healthTone: Record<CampaignHealth, "success" | "warning" | "danger"> = {
@@ -138,12 +138,6 @@ function AdPlatformRow({ platform, campaigns }: { platform: string; campaigns: C
   );
 }
 
-const socialPlatforms: { label: string; icon: LucideIcon }[] = [
-  { label: "Instagram", icon: Instagram },
-  { label: "TikTok", icon: Megaphone },
-  { label: "Facebook", icon: Megaphone },
-  { label: "YouTube", icon: Megaphone },
-];
 
 export default function AiMarketingOverview() {
   usePageContext("overview");
