@@ -1,11 +1,12 @@
 import { Facebook, Instagram, Megaphone, Music2, Target, Youtube, type LucideIcon } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, Tooltip, XAxis, YAxis } from "recharts";
 import { ChartSection, StatCard, type StatKpi } from "@/components/ai/dashboard-charts";
+import { KpiCard } from "@/components/ai/kpi-card";
 import { Panel, Pill, StatusDot } from "@/components/ai/primitives";
 import { SectionNotice } from "@/components/ai/section-state";
-import { useAdsSummary, useAnalyticsOverview, useContentSummary } from "@/hooks/useMarketing";
-import type { NonDataSectionState } from "@/lib/ai/section-state";
-import type { AdsSummary, ContentPlatform, ContentPlatformKey, ContentSummary, MarketingStatus } from "@/lib/ai/types";
+import { useAdsSummary, useAnalyticsOverview, useContentSummary, useLeadsFunnel } from "@/hooks/useMarketing";
+import { notConnectedState, type NonDataSectionState, type SectionState } from "@/lib/ai/section-state";
+import type { AdsSummary, AIKpi, ContentPlatform, ContentPlatformKey, ContentSummary, MarketingStatus } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
 
 /** Skeleton kecil dipakai slot KPI/table selagi query "loading" — SectionNotice sendiri tidak menerima status "loading" (lihat NonDataSectionState). */
