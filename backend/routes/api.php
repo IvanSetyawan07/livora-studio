@@ -301,6 +301,7 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
     Route::middleware('admin')->prefix('ai')->group(function () {
         Route::get('/cro/funnel-summary', [\App\Http\Controllers\Api\Ai\CroController::class, 'funnelSummary']);
         Route::get('/seo/search-console-summary', [\App\Http\Controllers\Api\Ai\SeoController::class, 'searchConsoleSummary']);
+        Route::get('/seo/local-summary', [\App\Http\Controllers\Api\Ai\BusinessProfileController::class, 'localSummary']);
         Route::get('/dashboard/health', [AiDashboardController::class, 'health']);
         Route::get('/dashboard/priorities', [AiDashboardController::class, 'priorities']);
         Route::get('/dashboard/kpis', [AiDashboardController::class, 'kpis']);

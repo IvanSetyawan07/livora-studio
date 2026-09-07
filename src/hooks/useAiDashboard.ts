@@ -36,6 +36,7 @@ import type {
   MetaIntegrationStatus,
   PriorityItem,
   SearchConsoleSummary,
+  LocalSeoSummary,
   CroFunnelSummary,
 } from "@/lib/ai/types";
 import { agentMeta } from "@/lib/ai/agent-catalog";
@@ -60,6 +61,7 @@ export const aiKeys = {
   insights: (type?: string, agent?: string) => ["ai", "insights", type ?? "all", agent ?? "all"] as const,
   activity: (agent?: string) => ["ai", "activity", agent ?? "all"] as const,
   searchConsole: (r: AiDateRange) => ["ai", "seo", "search-console", rangeKey(r)] as const,
+  localSeo: (r: AiDateRange) => ["ai", "seo", "local", rangeKey(r)] as const,
   croFunnel: (r: AiDateRange) => ["ai", "cro", "funnel", rangeKey(r)] as const,
   campaigns: (r: AiDateRange, platform?: string) =>
     ["ai", "campaigns", rangeKey(r), platform ?? "all"] as const,
@@ -110,6 +112,26 @@ export function useSearchConsoleSummary() {
       connectHref: "/admin/ai-marketing/settings",
       selectionLabel: "Search Console property",
       emptyMessage: "Tidak ada data pada rentang tanggal ini.",
+    }),
+  };
+}
+
+/** Local SEO (Google Business Profile) — angka mentah listing, bukan LLM. */
+export function useLocalSeoSummary() {
+  const { dateRange } = useAiMarketingContext();
+  const q = useQuery<LocalSeoSummary>({
+    queryKey: aiKeys.localSeo(dateRange),
+    queryFn: () => aiServices.seo.getLocalSummary(dateRange.days),
+    staleTime: 10 * 60_000,
+    retry: retryPolicy,
+    placeholderData: (prev) => prev,
+  });
+  return {
+    ...q,
+    section: toSectionState(q, {
+      provider: "Google Business Profile",
+      connectHref: "/admin/ai-marketing/settings",
+      emptyMessage: "Belum ada aktivitas listing pada rentang tanggal ini.",
     }),
   };
 }

@@ -201,7 +201,49 @@ export interface AICroService {
   getFunnelSummary(): Promise<CroFunnelSummary>;
 }
 
-export interface AISeoService { getSearchConsoleSummary(days?: number): Promise<SearchConsoleSummary>; }
+export interface LocalSeoReview {
+  id: string;
+  reviewer: string | null;
+  rating: number | null;
+  comment: string | null;
+  replied: boolean;
+  createdAt: string | null;
+}
+
+export interface LocalSeoSeriesPoint {
+  date: string;
+  mapViews: number;
+  directionRequests: number;
+  calls: number;
+}
+
+export interface LocalSeoSummary {
+  connected: boolean;
+  hasData: boolean;
+  message: string | null;
+  period: { start: string; end: string; days: number } | null;
+  listing: {
+    name: string | null;
+    address: string | null;
+    primaryCategory: string | null;
+    mapsUri: string | null;
+  } | null;
+  totals: {
+    mapViews: number;
+    directionRequests: number;
+    calls: number;
+    averageRating: number | null;
+    totalReviewCount: number | null;
+  } | null;
+  series: LocalSeoSeriesPoint[];
+  reviews: LocalSeoReview[];
+  unavailable: { metric: string; reason: string }[];
+}
+
+export interface AISeoService {
+  getSearchConsoleSummary(days?: number): Promise<SearchConsoleSummary>;
+  getLocalSummary(days?: number): Promise<LocalSeoSummary>;
+}
 
 export interface SeoOpportunity {
   id: string;
