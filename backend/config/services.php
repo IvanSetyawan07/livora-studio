@@ -76,6 +76,9 @@ return [
         'login_customer_id' => env('GOOGLE_ADS_LOGIN_CUSTOMER_ID'),
         'client_id' => env('GOOGLE_ADS_CLIENT_ID'),
         'client_secret' => env('GOOGLE_ADS_CLIENT_SECRET'),
+        // Versi REST API Google Ads. Google menghapus versi lama (~3 rilis/tahun);
+        // kalau dashboard tiba-tiba 404, naikkan nilainya di sini/.env.
+        'api_version' => env('GOOGLE_ADS_API_VERSION', 'v22'),
     ],
 
     'ga4' => [
