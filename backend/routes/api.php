@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\Ai\AnalyticsController as AiAnalyticsController;
 use App\Http\Controllers\Api\Ai\AdsController as AiAdsController;
 use App\Http\Controllers\Api\Ai\ContentController as AiContentController;
 use App\Http\Controllers\Api\Ai\LeadsController;
+use App\Http\Controllers\Api\Admin\TranslationController;
 /**
  * Media proxy — melayani file dari storage lewat route API supaya selalu
  * membawa header CORS. Dipakai generator PDF (canvas/fetch) yang butuh
