@@ -1,4 +1,5 @@
 // components/admin/CatalogFormAdmin.tsx
+import TranslationPanel from "@/components/admin/TranslationPanel";
 // UPDATED: Dynamic scenes (CRUD) replacing fixed scene-1/scene-2
 
 import { useEffect, useRef, useState } from "react";
