@@ -248,20 +248,11 @@ class GoogleBusinessProfileClient
         $response = Http::withToken($token)->timeout(20)->acceptJson()->get($url, $query);
 
         if ($response->failed()) {
-            $body = $response->json('error.message') ?? $response->body();
-            $status = $response->status();
-
-            $hint = match ($status) {
-                401 => ' Token Google kedaluwarsa atau dicabut — connect ulang akun Google di kartu di atas.',
-                403 => ' Akun Google yang terhubung tidak punya izin '.$apiLabel
-                    .' (pastikan scope business.manage disetujui dan API-nya aktif di Google Cloud project).',
-                404 => ' Listing tidak ditemukan — cek GOOGLE_BUSINESS_ACCOUNT_ID / GOOGLE_BUSINESS_LOCATION_ID di backend/.env.',
-                429 => ' Kuota '.$apiLabel.' habis untuk hari ini, coba lagi nanti.',
-                default => '',
-            };
-
-            throw new RuntimeException($apiLabel.' gagal ('.$status.'): '.$body.$hint);
+            throw new RuntimeException(
+                self::humanError($apiLabel, $response->status(), (string) ($response->json('error.message') ?? $response->body()))
+            );
         }
+
 
         $json = $response->json();
 
