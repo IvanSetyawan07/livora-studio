@@ -37,6 +37,11 @@ export function OurStyle() {
           pin: true,
           anticipatePin: 1,
           invalidateOnRefresh: true,
+          // Bagian ini berada di ATAS "Our Projects" di halaman, jadi ia wajib
+          // dihitung ulang lebih dulu. Tanpa ini, tinggi pin-spacing-nya belum
+          // final saat Projects mengukur diri → Projects bisa "loncat" ke area
+          // Our Style. Motion/desain tidak berubah, hanya urutan pengukuran.
+          refreshPriority: 10,
         },
       });
 
@@ -85,7 +90,16 @@ export function OurStyle() {
       });
     }, root);
 
-    return () => ctx.revert();
+    // Gambar panel dimuat lazy; begitu ada yang selesai dimuat, tinggi/lebar
+    // track berubah dan semua posisi pin harus dihitung ulang.
+    const imgs = Array.from(root.current?.querySelectorAll("img") ?? []);
+    const onImgLoad = () => ScrollTrigger.refresh();
+    imgs.forEach((img) => img.addEventListener("load", onImgLoad));
+
+    return () => {
+      imgs.forEach((img) => img.removeEventListener("load", onImgLoad));
+      ctx.revert();
+    };
   }, []);
 
   return (

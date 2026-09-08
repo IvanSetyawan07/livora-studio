@@ -178,6 +178,9 @@ setScaleY: gsap.quickSetter(card, "scaleY"),
           animation: tween,
           invalidateOnRefresh: true,
           anticipatePin: 1,
+          // Berada di BAWAH "Our Style" yang juga pinned → harus dihitung
+          // belakangan supaya start-nya memakai tinggi final section di atasnya.
+          refreshPriority: -10,
         });
 
         // 2) Ticker-driven Continuous Interpolation Loop (Smooth Up/Down, No Hard Popping)
