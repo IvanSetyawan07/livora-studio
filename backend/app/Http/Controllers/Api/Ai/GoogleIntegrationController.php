@@ -12,7 +12,11 @@ class GoogleIntegrationController extends Controller
 {
     private const SCOPES = [
         'https://www.googleapis.com/auth/webmasters.readonly',
+
+        'https://www.googleapis.com/auth/business.manage',
+
         'https://www.googleapis.com/auth/analytics.readonly',
+
         'openid',
         'email',
     ];
