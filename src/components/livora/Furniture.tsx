@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { Gem, Leaf, Infinity } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -113,6 +114,7 @@ const cardVariants: Variants = {
 
 // Premium Floating Card for Furniture Collection
 const FurnitureCollectionCard = () => {
+  const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -187,7 +189,7 @@ const FurnitureCollectionCard = () => {
                 className="inline-block w-6 h-px bg-current mr-3"
                 style={{ display: "inline-block", verticalAlign: "middle" }}
               />
-              Furniture Collection
+              {t("furniture.eyebrow")}
             </motion.p>
 
             {/* Heading */}
@@ -196,9 +198,9 @@ const FurnitureCollectionCard = () => {
               variants={itemVariants}
               className="serif text-3xl md:text-5xl font-light leading-[1.1]"
             >
-              A wide variety of{" "}
+              {t("furniture.title")}{" "}
               <em className="italic font-light not-italic">
-                textures, forms and tones.
+                {t("furniture.title_em")}
               </em>
             </motion.h2>
 
@@ -208,9 +210,7 @@ const FurnitureCollectionCard = () => {
               variants={itemVariants}
               className="text-foreground/75 leading-relaxed font-light text-base md:text-base max-w-sm"
             >
-              From high-quality suppliers, our collection
-              is curated for the balance between premium craftsmanship and
-              considered value.
+              {t("furniture.desc")}
             </motion.p>
 
             {/* Divider */}
@@ -231,17 +231,17 @@ const FurnitureCollectionCard = () => {
                 {
                   Icon: Gem,
                   label: "Premium",
-                  description: "Suppliers",
+                  description: t("furniture.suppliers"),
                 },
                 {
                   Icon: Leaf,
                   label: "Curated",
-                  description: "Collections",
+                  description: t("furniture.collections"),
                 },
                 {
                   Icon: Infinity,
                   label: "Endless",
-                  description: "Possibilities",
+                  description: t("furniture.possibilities"),
                 },
               ].map((feature, i) => (
                 <motion.div
@@ -281,6 +281,7 @@ const FurnitureCollectionCard = () => {
 
 // What Are You Looking For Section
 const WhatAreYouLookingForSection = () => {
+  const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -315,7 +316,7 @@ const WhatAreYouLookingForSection = () => {
             variants={titleVariants}
             className="serif text-4xl md:text-5xl font-light text-foreground"
           >
-            What are you looking for?
+            {t("furniture.looking_for")}
           </motion.h3>
           <motion.div
             variants={titleVariants}
