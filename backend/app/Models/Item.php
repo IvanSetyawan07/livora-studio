@@ -1,7 +1,10 @@
 <?php
 namespace App\Models;
+use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 class Item extends Model {
+    use HasTranslations;
+    public array $translatable = ['title','description','texture','finish','material_detail'];
     protected $fillable = ['type_id','collection_id','title','slug','code','texture','finish','availability','image','description',
         'stock','price','weight_kg','width_cm','depth_cm','height_cm','material_detail','warehouse_note'];
     protected $casts = [
