@@ -37,6 +37,11 @@ export function OurStyle() {
           pin: true,
           anticipatePin: 1,
           invalidateOnRefresh: true,
+          // Bagian ini berada di ATAS "Our Projects" di halaman, jadi ia wajib
+          // dihitung ulang lebih dulu. Tanpa ini, tinggi pin-spacing-nya belum
+          // final saat Projects mengukur diri → Projects bisa "loncat" ke area
+          // Our Style. Motion/desain tidak berubah, hanya urutan pengukuran.
+          refreshPriority: 10,
         },
       });
 
