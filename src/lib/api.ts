@@ -25,6 +25,13 @@ export const api = axios.create({
 
 // Sisipkan token otomatis ke setiap request
 api.interceptors.request.use((config) => {
+  // Bahasa aktif ikut dikirim, supaya backend mengembalikan konten versi
+  // bahasa yang sedang dipilih user (lihat middleware SetLocale di Laravel).
+  const lang = localStorage.getItem("language") || "en";
+  if (config.headers) {
+    (config.headers as unknown as Record<string, string>)["X-Locale"] = lang;
+  }
+
   const token = localStorage.getItem("token");
   if (token && config.headers) {
     (config.headers as unknown as Record<string, string>)["Authorization"] =

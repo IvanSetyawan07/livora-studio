@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import european from "@/assets/style-european.jpg";
@@ -16,6 +17,8 @@ const STYLES = [
 ];
 
 export function OurStyle() {
+  const { t } = useTranslation();
+  const panelsCopy = t("style.panels", { returnObjects: true }) as { words: string[] }[];
   const root = useRef<HTMLDivElement>(null);
   const track = useRef<HTMLDivElement>(null);
 
@@ -109,12 +112,12 @@ export function OurStyle() {
       className="relative h-screen overflow-hidden bg-foreground text-background"
     >
       <div className="style-intro pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center px-6 text-center">
-        <span className="text-[11px] uppercase tracking-[0.4em] text-background/50">Chapter 02</span>
+        <span className="text-[11px] uppercase tracking-[0.4em] text-background/50">{t("style.chapter")}</span>
         <h2 className="serif mt-4 text-[16vw] font-light leading-[0.85] text-background sm:text-[9vw]">
-          Our Style
+          {t("style.heading")}
         </h2>
         <p className="mt-6 max-w-md text-sm font-light text-background/60">
-          Five languages of space. One standard of craft.
+          {t("style.subtitle")}
         </p>
       </div>
 
@@ -138,7 +141,7 @@ export function OurStyle() {
               <span className="mb-6 text-[11px] uppercase tracking-[0.4em] text-background/50">
                 {String(i + 1).padStart(2, "0")}
               </span>
-              {s.words.map((w) => (
+              {((Array.isArray(panelsCopy) && panelsCopy[i]?.words) || s.words).map((w) => (
                 <span key={w} className="block overflow-hidden">
                   <span className="style-word serif block text-[11vw] font-light leading-[0.95] text-background sm:text-[4.6vw]">
                     {w}

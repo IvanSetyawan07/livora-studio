@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import TranslationPanel from "@/components/admin/TranslationPanel";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
@@ -172,6 +173,8 @@ export default function AdminItemDetail() {
           </div>
         </div>
       </div>
+
+      {item?.id ? <TranslationPanel type="item" id={item.id} className="mt-8" /> : null}
 
       <div className="mt-10">
         <div className="flex items-center gap-2 mb-3">

@@ -54,7 +54,47 @@
     "desc": "Inspired by European elegance, refined details and the balance between beauty and function. Our spaces speak softly, but with conviction.",
     "tag1": "Refined",
     "tag2": "Balanced",
-    "tag3": "Timeless"
+    "tag3": "Timeless",
+    "chapter": "Chapter 02",
+    "heading": "Our Style",
+    "subtitle": "Five languages of space. One standard of craft.",
+    "panels": [
+      {
+        "words": [
+          "Modern.",
+          "Quiet.",
+          "European."
+        ]
+      },
+      {
+        "words": [
+          "Lush.",
+          "Warm.",
+          "Tropical Modern"
+        ]
+      },
+      {
+        "words": [
+          "Raw.",
+          "Bold.",
+          "Industrial."
+        ]
+      },
+      {
+        "words": [
+          "Warm.",
+          "Minimal.",
+          "Japandi."
+        ]
+      },
+      {
+        "words": [
+          "Light.",
+          "Soft.",
+          "Scandinavian."
+        ]
+      }
+    ]
   },
   "scope": {
     "eyebrow": "Scope of Work",
@@ -130,7 +170,12 @@
   },
   "footer": {
     "rights": "All rights reserved",
-    "tagline": "Imagine. Create. Realize."
+    "tagline": "Imagine. Create. Realize.",
+    "catalog": "Catalog",
+    "company": "Company",
+    "contact": "Contact",
+    "city": "Jakarta, Indonesia",
+    "company_desc": "A single point of contact for interior design, custom furniture supply, and construction."
   },
   "cart": {
     "title": "Your Cart",
@@ -214,6 +259,9 @@
     "material": "Material",
     "location": "LOCATION",
     "year": "YEAR",
-    "scope_label": "SCOPE"
+    "scope_label": "SCOPE",
+    "info": "Info",
+    "learn_more": "Learn More",
+    "see_all_projects": "See All Projects"
   }
 }

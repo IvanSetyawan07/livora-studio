@@ -3,6 +3,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 class Collection extends Model {
+    use \App\Models\Concerns\HasTranslations;
+    public array $translatable = ['name','description','short_description','seo_title','seo_description','cta_text'];
     protected $fillable = [
         'name','slug','description','short_description',
         'hero_banner','card_banner','featured_image',

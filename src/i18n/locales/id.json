@@ -54,7 +54,47 @@
     "desc": "Terinspirasi dari keeleganan Eropa, detail yang halus, dan keseimbangan antara keindahan dan fungsi. Ruang kami berbicara pelan, namun penuh keyakinan.",
     "tag1": "Halus",
     "tag2": "Seimbang",
-    "tag3": "Abadi"
+    "tag3": "Abadi",
+    "chapter": "Bab 02",
+    "heading": "Gaya Kami",
+    "subtitle": "Lima bahasa ruang. Satu standar kriya.",
+    "panels": [
+      {
+        "words": [
+          "Modern.",
+          "Tenang.",
+          "Eropa."
+        ]
+      },
+      {
+        "words": [
+          "Rimbun.",
+          "Hangat.",
+          "Tropis Modern"
+        ]
+      },
+      {
+        "words": [
+          "Mentah.",
+          "Berani.",
+          "Industrial."
+        ]
+      },
+      {
+        "words": [
+          "Hangat.",
+          "Minimal.",
+          "Japandi."
+        ]
+      },
+      {
+        "words": [
+          "Terang.",
+          "Lembut.",
+          "Skandinavia."
+        ]
+      }
+    ]
   },
   "scope": {
     "eyebrow": "Lingkup Kerja",
@@ -130,7 +170,12 @@
   },
   "footer": {
     "rights": "Hak cipta dilindungi",
-    "tagline": "Bayangkan. Ciptakan. Wujudkan."
+    "tagline": "Bayangkan. Ciptakan. Wujudkan.",
+    "catalog": "Katalog",
+    "company": "Perusahaan",
+    "contact": "Kontak",
+    "city": "Jakarta, Indonesia",
+    "company_desc": "Satu titik kontak untuk desain interior, pengadaan furnitur custom, dan konstruksi."
   },
   "cart": {
     "title": "Keranjang Anda",
@@ -214,6 +259,9 @@
     "material": "Material",
     "location": "LOKASI",
     "year": "TAHUN",
-    "scope_label": "LINGKUP"
+    "scope_label": "LINGKUP",
+    "info": "Info",
+    "learn_more": "Selengkapnya",
+    "see_all_projects": "Lihat Semua Proyek"
   }
 }
