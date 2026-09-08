@@ -1,9 +1,11 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, authStorage } from "@/lib/api";
 import { toast } from "sonner";
 
 export default function Register() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -56,10 +58,10 @@ export default function Register() {
         onSubmit={handleRegister}
         className="w-full max-w-sm bg-card border border-border rounded-lg p-8 space-y-5"
       >
-        <h1 className="serif text-2xl text-center tracking-wide">Create Account</h1>
+        <h1 className="serif text-2xl text-center tracking-wide">{t("register.title")}</h1>
         <input
           type="text"
-          placeholder="Full Name"
+          placeholder={t("register.name")}
           value={name}
           onChange={(e) => setName(e.target.value)}
           className="w-full border border-border bg-background rounded px-3 py-2 text-sm"
@@ -68,7 +70,7 @@ export default function Register() {
         <div>
           <input
             type="email"
-            placeholder="Email"
+            placeholder={t("register.email")}
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);
@@ -104,7 +106,7 @@ export default function Register() {
         />
         <input
           type="password"
-          placeholder="Password (min 6)"
+          placeholder={t("register.password")}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="w-full border border-border bg-background rounded px-3 py-2 text-sm"
@@ -116,10 +118,10 @@ export default function Register() {
           disabled={loading || emailStatus === "exists" || emailStatus === "checking"}
           className="w-full bg-foreground text-background py-2 rounded text-sm uppercase tracking-[0.2em] disabled:opacity-60"
         >
-          {loading ? "Loading..." : "Register"}
+          {loading ? t("register.loading") : t("register.submit")}
         </button>
         <p className="text-center text-xs text-muted-foreground">
-          Sudah punya akun?{" "}
+          {t("register.have_account")}{" "}
           <Link to="/login" className="underline">
             Login
           </Link>
