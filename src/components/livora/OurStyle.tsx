@@ -90,7 +90,16 @@ export function OurStyle() {
       });
     }, root);
 
-    return () => ctx.revert();
+    // Gambar panel dimuat lazy; begitu ada yang selesai dimuat, tinggi/lebar
+    // track berubah dan semua posisi pin harus dihitung ulang.
+    const imgs = Array.from(root.current?.querySelectorAll("img") ?? []);
+    const onImgLoad = () => ScrollTrigger.refresh();
+    imgs.forEach((img) => img.addEventListener("load", onImgLoad));
+
+    return () => {
+      imgs.forEach((img) => img.removeEventListener("load", onImgLoad));
+      ctx.revert();
+    };
   }, []);
 
   return (
