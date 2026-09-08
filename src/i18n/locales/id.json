@@ -130,7 +130,12 @@
   },
   "footer": {
     "rights": "Hak cipta dilindungi",
-    "tagline": "Bayangkan. Ciptakan. Wujudkan."
+    "tagline": "Bayangkan. Ciptakan. Wujudkan.",
+    "catalog": "Katalog",
+    "company": "Perusahaan",
+    "contact": "Kontak",
+    "city": "Jakarta, Indonesia",
+    "company_desc": "Satu titik kontak untuk desain interior, pengadaan furnitur custom, dan konstruksi."
   },
   "cart": {
     "title": "Keranjang Anda",

@@ -130,7 +130,12 @@
   },
   "footer": {
     "rights": "All rights reserved",
-    "tagline": "Imagine. Create. Realize."
+    "tagline": "Imagine. Create. Realize.",
+    "catalog": "Catalog",
+    "company": "Company",
+    "contact": "Contact",
+    "city": "Jakarta, Indonesia",
+    "company_desc": "A single point of contact for interior design, custom furniture supply, and construction."
   },
   "cart": {
     "title": "Your Cart",
