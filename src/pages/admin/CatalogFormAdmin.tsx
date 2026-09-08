@@ -1,4 +1,5 @@
 // components/admin/CatalogFormAdmin.tsx
+import TranslationPanel from "@/components/admin/TranslationPanel";
 // UPDATED: Dynamic scenes (CRUD) replacing fixed scene-1/scene-2
 
 import { useEffect, useRef, useState } from "react";
@@ -333,6 +334,7 @@ export default function CatalogFormAdmin() {
 
         {activeTab === "basic" && (
           <div className="space-y-6">
+            {catalogId ? <TranslationPanel type="catalog" id={catalogId} /> : null}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">Title *</label>

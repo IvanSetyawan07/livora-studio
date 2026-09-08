@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useMemo, useState, useEffect, useRef, useLayoutEffect } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -14,6 +15,7 @@ import {
 import { useHighlightProjects, useAllProjects } from "@/lib/projectsApi";
 
 export const Projects = () => {
+  const { t } = useTranslation();
   const highlights = useHighlightProjects();
   const all = useAllProjects();
   const [filter, setFilter] = useState("All");
@@ -372,7 +374,7 @@ data.setScaleY(scale);
               </p>
             )}
             <span className="mt-5 inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-[#C9A97A] transition-all duration-700 delay-150 lg:opacity-0 lg:translate-y-2 lg:group-hover:opacity-100 lg:group-hover:translate-y-0">
-              View Project ↗
+              {t("projects.view")}
             </span>
           </div>
         </div>
@@ -400,10 +402,10 @@ data.setScaleY(scale);
     <>
       <p className="text-[10px] md:text-xs uppercase tracking-[0.45em] text-foreground/60 mb-5">
         <span className="divider-line" />
-        Our Projects
+        {t("projects.eyebrow")}
       </p>
       <h2 className="serif text-4xl md:text-6xl lg:text-7xl font-light leading-[1.05] text-balance">
-        Selected works, <em className="italic text-[#C9A97A]">crafted to last.</em>
+        {t("projects.title")} <em className="italic text-[#C9A97A]">{t("projects.title_em")}</em>
       </h2>
       <p className="mt-5 text-sm text-foreground/60 max-w-[52ch]">
         Scroll sideways to walk through the architecture's&rsquo;s most recent rooms.
@@ -474,14 +476,14 @@ data.setScaleY(scale);
                 <div data-intro-eyebrow>
                   <p className="text-[10px] md:text-xs uppercase tracking-[0.45em] text-foreground/60 mb-5">
                     <span className="divider-line" />
-                    Our Projects
+                    {t("projects.eyebrow")}
                   </p>
                 </div>
                 <h2
                   ref={headlineRef}
                   className="serif text-4xl md:text-6xl lg:text-7xl font-light leading-[1.05] text-balance"
                 >
-                  Selected works, <em className="italic text-[#C9A97A]">crafted to last.</em>
+                  {t("projects.title")} <em className="italic text-[#C9A97A]">{t("projects.title_em")}</em>
                 </h2>
                 <p data-intro-item className="mt-5 text-sm text-foreground/60 max-w-[52ch]">
                   Scroll sideways to walk through the architecture&rsquo;s most recent rooms.

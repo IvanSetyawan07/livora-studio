@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import TranslationPanel from "@/components/admin/TranslationPanel";
 import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
 import { useRef } from "react";
@@ -232,6 +233,7 @@ function ProjectForm({ project, scopes, onClose, onSaved }: any) {
             </div>
           </div>
         )}
+        {project?.id ? <TranslationPanel type="project" id={project.id} /> : null}
         <div className="flex gap-2 pt-2">
           <button type="button" onClick={onClose} className="px-4 py-2 border border-border rounded text-sm">Cancel</button>
           <button disabled={saving} className="ml-auto px-5 py-2 bg-foreground text-background rounded text-sm uppercase tracking-[0.2em] disabled:opacity-60">

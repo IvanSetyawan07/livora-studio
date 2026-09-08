@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,7 @@ import { formatRupiah } from "@/data/furniture";
 import { toast } from "sonner";
 
 export const CartDrawer = () => {
+  const { t } = useTranslation();
   const { items, count, total, open, setOpen, remove, setQty, clear } = useCart();
 
   if (!open) return null;
@@ -22,7 +24,7 @@ export const CartDrawer = () => {
         <div className="flex items-center justify-between px-6 py-5 border-b border-border">
           <div className="flex items-center gap-3">
             <ShoppingBag className="w-5 h-5 text-foreground/70" strokeWidth={1.5} />
-            <h2 className="serif text-xl font-light">Your Cart</h2>
+            <h2 className="serif text-xl font-light">{t("cart.title")}</h2>
           </div>
           <button
             onClick={() => setOpen(false)}
@@ -38,8 +40,8 @@ export const CartDrawer = () => {
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <ShoppingBag className="w-12 h-12 text-foreground/25 mb-4" strokeWidth={1} />
-              <p className="text-foreground/60 font-light">Your cart is empty.</p>
-              <p className="text-sm text-foreground/40 mt-1">Start exploring our collection.</p>
+              <p className="text-foreground/60 font-light">{t("cart.empty")}</p>
+              <p className="text-sm text-foreground/40 mt-1">{t("cart.empty_sub")}</p>
             </div>
           ) : (
             items.map((item) => (
@@ -89,7 +91,7 @@ export const CartDrawer = () => {
         {items.length > 0 && (
           <div className="px-6 py-5 border-t border-border space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-foreground/70">Subtotal</span>
+              <span className="text-sm text-foreground/70">{t("cart.subtotal")}</span>
               <span className="serif text-lg font-light">{formatRupiah(total)}</span>
             </div>
             <Button
@@ -100,13 +102,13 @@ export const CartDrawer = () => {
                 setOpen(false);
               }}
             >
-              Send Inquiry
+              {t("cart.send_inquiry")}
             </Button>
             <button
               onClick={clear}
               className="w-full text-center text-xs uppercase tracking-[0.25em] text-foreground/50 hover:text-foreground transition-colors py-2"
             >
-              Clear Cart
+              {t("cart.clear")}
             </button>
           </div>
         )}

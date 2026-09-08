@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
@@ -21,6 +22,7 @@ const TIMELINE_STEPS = [
 ];
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [consultations, setConsultations] = useState<Consultation[]>([]);
@@ -62,13 +64,13 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-10">
           <div>
             <h1 className="serif text-3xl mb-1">Dashboard</h1>
-            <p className="text-sm text-muted-foreground">Hello, {user?.name ?? "..."}!</p>
+            <p className="text-sm text-muted-foreground">{t("dashboard.hello")} {user?.name ?? "..."}!</p>
           </div>
           <button
             onClick={logout}
             className="bg-foreground text-background px-4 py-2 rounded text-sm uppercase tracking-[0.2em]"
           >
-            Logout
+            {t("dashboard.logout")}
           </button>
         </div>
 

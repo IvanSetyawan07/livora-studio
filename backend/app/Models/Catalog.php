@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Catalog extends Model
 {
     use SoftDeletes;
+    use \App\Models\Concerns\HasTranslations;
+
+    public array $translatable = ['title', 'tagline', 'about_title', 'description'];
 
     protected $fillable = [
         'title',

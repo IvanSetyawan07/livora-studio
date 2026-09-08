@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\Ai\AnalyticsController as AiAnalyticsController;
 use App\Http\Controllers\Api\Ai\AdsController as AiAdsController;
 use App\Http\Controllers\Api\Ai\ContentController as AiContentController;
 use App\Http\Controllers\Api\Ai\LeadsController;
+use App\Http\Controllers\Api\Admin\TranslationController;
 /**
  * Media proxy — melayani file dari storage lewat route API supaya selalu
  * membawa header CORS. Dipakai generator PDF (canvas/fetch) yang butuh
@@ -132,7 +133,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/items/lookup/{slug}', [ItemController::class, 'adminShow']);
 });
     Route::middleware('admin')->prefix('admin')->group(function () {
+        // Konten dwibahasa (ID/EN) untuk item, koleksi, katalog, proyek, taksonomi
+        Route::get('/translations/{type}/{id}', [TranslationController::class, 'show']);
+        Route::post('/translations/{type}/{id}', [TranslationController::class, 'store']);
+        Route::post('/translations/{type}/{id}/auto', [TranslationController::class, 'autoTranslate']);
+
         // Variants (sebelumnya publik — kini wajib admin)
+
             Route::prefix('items/{itemId}/variants')->group(function () {
             Route::get('/', [VariantController::class, 'index']);
             Route::post('/', [VariantController::class, 'store']);

@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ArrowUpRight } from "lucide-react";
 import { gsap, ScrollTrigger, registerGsap, prefersReducedMotion } from "@/lib/motionTokens";
 import { scopeItems } from "@/data/scopeOfWork";
@@ -12,6 +13,9 @@ const C = {
 };
 
 export const Scope = () => {
+  const { t } = useTranslation();
+  const slides = t("scope.slides", { returnObjects: true }) as { title: string; text: string }[];
+  const tr = (i: number) => (Array.isArray(slides) ? slides[i] : undefined);
   const root = useRef<HTMLElement | null>(null);
 
   useLayoutEffect(() => {
@@ -80,7 +84,7 @@ export const Scope = () => {
     <section id="scope" ref={root} className="relative" style={{ backgroundColor: C.bg, color: "#fff" }}>
       <div className="container-livora pt-20 md:pt-32 pb-6 md:pb-10">
         <div className="flex items-end justify-between gap-6">
-          <h2 className="text-lg md:text-xl font-medium tracking-tight">Scope of Work</h2>
+          <h2 className="text-lg md:text-xl font-medium tracking-tight">{t("scope.eyebrow")}</h2>
           <p className="text-xs uppercase tracking-widest" style={{ color: C.muted }}>
             Livora Architechture
           </p>
@@ -106,7 +110,7 @@ export const Scope = () => {
               <div className="md:hidden flex items-baseline gap-4">
                 <span className="scope-number text-3xl font-normal tracking-tight">{item.number}</span>
                 <h3 className="scope-title text-2xl font-medium tracking-tight leading-[1.1]">
-                  {item.title}
+                  {tr(index)?.title ?? item.title}
                 </h3>
               </div>
 
@@ -121,7 +125,7 @@ export const Scope = () => {
                 >
                   <img
                     src={item.image}
-                    alt={item.title}
+                    alt={tr(index)?.title ?? item.title}
                     loading="lazy"
                     decoding="async"
                     onLoad={() => ScrollTrigger.refresh()}
@@ -133,22 +137,22 @@ export const Scope = () => {
               {/* Right column */}
               <div className="md:col-span-7 lg:col-span-8">
                 <h3 className="scope-title hidden md:block text-3xl md:text-5xl lg:text-6xl font-medium tracking-tight leading-[1.05]">
-                  {item.title}
+                  {tr(index)?.title ?? item.title}
                 </h3>
 
                 <div className="mt-2 md:mt-14 grid grid-cols-1 md:grid-cols-[140px_1fr] gap-3 md:gap-8">
                   <p className="scope-info-label text-xs uppercase tracking-widest" style={{ color: C.muted }}>
-                    Info
+                    {t("common.info", "Info")}
                   </p>
                   <div className="max-w-[420px]">
                     <p className="scope-description text-sm md:text-base leading-relaxed" style={{ color: C.body }}>
-                      {item.description}
+                      {tr(index)?.text ?? item.description}
                     </p>
                     <Link
                       to={item.href ?? "/projects"}
                       className="scope-learnmore inline-block mt-4 md:mt-6 text-sm md:text-base font-medium underline underline-offset-4 transition-colors duration-300 hover:text-white/70"
                     >
-                      Learn More
+                      {t("common.learn_more", "Learn More")}
                     </Link>
 
                     {item.featured && (
@@ -157,7 +161,7 @@ export const Scope = () => {
                           to="/projects"
                           className="scope-cta text-sm md:text-base font-medium underline underline-offset-4 transition-colors duration-300 hover:text-white/70"
                         >
-                          {item.ctaLabel ?? "See All Projects"}
+                          {t("common.see_all_projects", item.ctaLabel ?? "See All Projects")}
                         </Link>
                         <span className="hidden sm:block h-4 w-px" style={{ backgroundColor: C.line }} />
                         <Link
