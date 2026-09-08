@@ -133,7 +133,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/items/lookup/{slug}', [ItemController::class, 'adminShow']);
 });
     Route::middleware('admin')->prefix('admin')->group(function () {
+        // Konten dwibahasa (ID/EN) untuk item, koleksi, katalog, proyek, taksonomi
+        Route::get('/translations/{type}/{id}', [TranslationController::class, 'show']);
+        Route::post('/translations/{type}/{id}', [TranslationController::class, 'store']);
+        Route::post('/translations/{type}/{id}/auto', [TranslationController::class, 'autoTranslate']);
+
         // Variants (sebelumnya publik — kini wajib admin)
+
             Route::prefix('items/{itemId}/variants')->group(function () {
             Route::get('/', [VariantController::class, 'index']);
             Route::post('/', [VariantController::class, 'store']);
