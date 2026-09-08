@@ -70,14 +70,19 @@ class BusinessProfileController extends Controller
             ]);
         }
 
-        $payload = Cache::remember(
-            "ai:seo:local-summary:{$days}",
-            self::CACHE_TTL_SECONDS,
-            fn () => $this->fetchSummary($days)
-        );
+        $key = "ai:seo:local-summary:{$days}";
+        $payload = Cache::get($key);
+
+        if (! is_array($payload)) {
+            $payload = $this->fetchSummary($days);
+            // Hasil sukses di-cache lama (hemat kuota), hasil gagal cuma 1 menit
+            // supaya setelah user membetulkan izin/API, data langsung muncul.
+            Cache::put($key, $payload, $payload['hasData'] ? self::CACHE_TTL_SECONDS : 60);
+        }
 
         return response()->json($payload);
     }
+
 
     /** @return array<string, mixed> */
     private function fetchSummary(int $days): array
