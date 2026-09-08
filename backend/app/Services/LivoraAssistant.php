@@ -142,7 +142,7 @@ terpercaya untuk menjaga standar material dengan harga yang wajar.
 Showroom & kontak:
 - Alamat: Jl. Bangka Raya No. 45, RT.11/RW.11, Pela Mampang, Kec. Mampang Prapatan, Kota Jakarta
   Selatan, DKI Jakarta 12720.
-- Telp/WhatsApp: +62 812-1860-2045.
+- Telp/WhatsApp: +62 821-2043-307.
 - Instagram: @livoraid.
 
 Cara kerja / alur project:

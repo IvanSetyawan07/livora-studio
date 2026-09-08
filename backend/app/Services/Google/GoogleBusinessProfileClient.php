@@ -248,23 +248,42 @@ class GoogleBusinessProfileClient
         $response = Http::withToken($token)->timeout(20)->acceptJson()->get($url, $query);
 
         if ($response->failed()) {
-            $body = $response->json('error.message') ?? $response->body();
-            $status = $response->status();
-
-            $hint = match ($status) {
-                401 => ' Token Google kedaluwarsa atau dicabut — connect ulang akun Google di kartu di atas.',
-                403 => ' Akun Google yang terhubung tidak punya izin '.$apiLabel
-                    .' (pastikan scope business.manage disetujui dan API-nya aktif di Google Cloud project).',
-                404 => ' Listing tidak ditemukan — cek GOOGLE_BUSINESS_ACCOUNT_ID / GOOGLE_BUSINESS_LOCATION_ID di backend/.env.',
-                429 => ' Kuota '.$apiLabel.' habis untuk hari ini, coba lagi nanti.',
-                default => '',
-            };
-
-            throw new RuntimeException($apiLabel.' gagal ('.$status.'): '.$body.$hint);
+            throw new RuntimeException(
+                self::humanError($apiLabel, $response->status(), (string) ($response->json('error.message') ?? $response->body()))
+            );
         }
+
 
         $json = $response->json();
 
         return is_array($json) ? $json : [];
     }
+
+    /**
+     * Ubah error mentah Google jadi satu kalimat instruksi yang bisa
+     * langsung dikerjakan pemilik akun — bukan dump JSON panjang.
+     */
+    private static function humanError(string $apiLabel, int $status, string $raw): string
+    {
+        // "X API has not been used in project 123 before or it is disabled."
+        if (preg_match('/project (\d+)/', $raw, $m) && str_contains($raw, 'has not been used in project')) {
+            $service = 'API';
+            if (preg_match('/apis\/api\/([a-z0-9.\-]+)\/overview/i', $raw, $s)) {
+                $service = $s[1];
+            }
+
+            return $apiLabel.' belum diaktifkan di Google Cloud project '.$m[1]
+                .'. Buka Google Cloud Console → APIs & Services → Library, aktifkan "'.$service
+                .'", tunggu 2-3 menit, lalu muat ulang halaman ini.';
+        }
+
+        return match ($status) {
+            401 => $apiLabel.': koneksi Google kedaluwarsa. Klik Disconnect lalu Connect ulang akun Google di kartu di atas.',
+            403 => $apiLabel.': akun Google yang terhubung tidak punya izin ke listing ini. Pastikan akun tsb. Owner/Manager di Google Business Profile dan API-nya sudah aktif di Google Cloud project.',
+            404 => $apiLabel.': listing tidak ditemukan. Cek GOOGLE_BUSINESS_ACCOUNT_ID dan GOOGLE_BUSINESS_LOCATION_ID di backend/.env.',
+            429 => $apiLabel.': kuota Google untuk hari ini habis. Data akan muncul lagi otomatis setelah kuota reset (biasanya beberapa menit sampai 1 hari).',
+            default => $apiLabel.' gagal ('.$status.'): '.mb_substr(trim($raw), 0, 200),
+        };
+    }
 }
+

@@ -160,7 +160,7 @@ const ItemCard = ({ item }: { item: Item }) => (
     </div>
     <div className="mt-4 px-1">
       <h3 className="text-sm font-normal text-foreground leading-snug">{item.name}</h3>
-      <p className="text-xs text-foreground/60 mt-1.5">Material · {item.specs.material}</p>
+      
       <p className="text-[11px] uppercase tracking-[0.15em] text-foreground/50 mt-1">{item.code}</p>
     </div>
   </Link>

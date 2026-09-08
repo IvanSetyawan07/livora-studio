@@ -24,16 +24,41 @@ class MarketingApiException extends \RuntimeException
         return new self($message, 'not_configured');
     }
 
-    /** Petakan HTTP status jadi status yang bisa dimengerti UI. */
     public static function fromHttp(string $platform, int $httpStatus, string $body): self
     {
-        $short = mb_substr(trim($body), 0, 400);
+        $raw = trim($body);
+
+        // Google Cloud: API-nya belum diaktifkan di project.
+        if (preg_match('/project (\d+)/', $raw, $m) && str_contains($raw, 'has not been used in project')) {
+            return new self(
+                $platform.' belum diaktifkan di Google Cloud project '.$m[1]
+                .'. Buka Google Cloud Console → APIs & Services → Library, aktifkan API-nya, tunggu 2-3 menit, lalu muat ulang.',
+                'permission_required'
+            );
+        }
+
+        if (str_contains($raw, 'USER_PERMISSION_DENIED')) {
+            return new self(
+                $platform.': akun Google yang dipakai belum punya akses ke customer ID ini. Pastikan akun itu diundang sebagai user di akun Google Ads, dan GOOGLE_ADS_CUSTOMER_ID diisi tanpa tanda hubung. Kalau akunnya di bawah manager (MCC), isi juga login customer ID manager-nya.',
+                'permission_required'
+            );
+        }
+
+        if (str_contains($raw, 'DEVELOPER_TOKEN')) {
+            return new self(
+                $platform.': developer token belum disetujui atau salah. Cek statusnya di Google Ads → Tools → API Center (butuh status Basic/Standard access).',
+                'invalid_credentials'
+            );
+        }
+
+        $short = mb_substr($raw, 0, 200);
 
         return match (true) {
-            $httpStatus === 401 => new self("$platform menolak kredensial (401). $short", 'invalid_credentials'),
-            $httpStatus === 403 => new self("$platform menolak akses (403) — scope/permission kurang. $short", 'permission_required'),
-            $httpStatus === 429 => new self("$platform membatasi jumlah request (429). Coba lagi nanti.", 'rate_limited'),
+            $httpStatus === 401 => new self("$platform menolak kredensial (401) — token salah atau kedaluwarsa. Buat ulang token lalu isi kembali di backend/.env.", 'invalid_credentials'),
+            $httpStatus === 403 => new self("$platform menolak akses (403) — izin/scope kurang. $short", 'permission_required'),
+            $httpStatus === 429 => new self("$platform membatasi jumlah request (429). Kuota akan pulih sendiri, coba lagi nanti.", 'rate_limited'),
             default => new self("$platform gagal merespons ($httpStatus). $short", 'api_error'),
         };
     }
+
 }

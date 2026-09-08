@@ -674,7 +674,7 @@ export default function Appointment() {
 
               <Field label="Project Type" required>
                 <Select value={form.project_type} onChange={(v) => upd("project_type", v)}
-                  options={["Residential", "Apartment", "Villa", "Hospitality", "Office", "Retail", "Other"]}
+                  options={["Residential/Housing", "Apartment", "Villa", "Hospitality", "Office", "Retail", "Other"]}
                   placeholder="Select an option" />
                 {form.project_type === "Other" && (
                   <div className="mt-3">
