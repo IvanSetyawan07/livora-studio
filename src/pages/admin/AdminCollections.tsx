@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import TranslationPanel from "@/components/admin/TranslationPanel";
 import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
 import { Pencil, Trash2, Plus, X, Upload } from "lucide-react";
@@ -183,6 +184,9 @@ export default function AdminCollections() {
                     setEditing(c);
                   }}
                 />
+              )}
+              {editing && tab === "details" && (
+                <TranslationPanel type="collection" id={editing.id} className="mt-6" />
               )}
               {editing && tab === "story" && (
                 <StoryForm
