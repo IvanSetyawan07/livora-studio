@@ -1,17 +1,16 @@
 <?php
-
 namespace App\Http\Middleware;
-
 use Illuminate\Auth\Middleware\Authenticate as Middleware;
 use Illuminate\Http\Request;
-
 class Authenticate extends Middleware
 {
     /**
-     * Get the path the user should be redirected to when they are not authenticated.
+     * Backend ini API-only, tidak ada halaman login web sama sekali,
+     * jadi jangan pernah coba redirect ke route bernama "login" —
+     * selalu biarkan Laravel balas 401 JSON standar.
      */
     protected function redirectTo(Request $request): ?string
     {
-        return $request->expectsJson() ? null : route('login');
+        return null;
     }
 }

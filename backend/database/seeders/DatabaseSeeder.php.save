@@ -15,8 +15,8 @@ class DatabaseSeeder extends Seeder
             ['email' => 'admin.adit@gmail.com', 'name' => 'Admin 6', 'password' => 'adminadit6'],
             ['email' => 'admin.cinde@gmail.com', 'name' => 'Admin 1', 'password' => 'admincinde1'],
             ['email' => 'admin.christie@gmail.com', 'name' => 'Admin 2', 'password' => 'adminchristie2'],
-	    ['email' => 'admin.denty@gmail.com', 'name' => 'Admin 7', 'password' => 'admindenty7'],
-        ];
+	    ['email' = ]        
+];
 
         foreach ($admins as $admin) {
             \App\Models\User::updateOrCreate(
