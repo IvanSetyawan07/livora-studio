@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Sparkles, ArrowUp, X, CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -46,6 +47,7 @@ const suggestedQuestions: Record<AiChatContextKey, string[]> = {
 
 export function AskAIDrawer() {
   const { askOpen, closeAsk, context } = useAiMarketingContext();
+  const queryClient = useQueryClient();
   const [messages, setMessages] = useState<AiChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
@@ -70,6 +72,11 @@ export function AskAIDrawer() {
     try {
       const reply = await aiServices.chat.ask(trimmed, context);
       setMessages((prev) => [...prev, reply]);
+      // Chat bisa menghasilkan recommendation baru di backend — segarkan
+      // Recommendations/Actions/Overview supaya langsung terlihat.
+      if (reply.recommendation) {
+        queryClient.invalidateQueries({ queryKey: ["ai"] });
+      }
     } finally {
       setPending(false);
     }

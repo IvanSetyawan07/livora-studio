@@ -10,6 +10,14 @@ const kindTone = {
   system: "neutral",
 } as const;
 
+/** Backend mengirim ISO string; UI menampilkan jam lokal, sama seperti Shell. */
+function formatTime(value: string) {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime())
+    ? value
+    : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
 export function ActivityStream({
   items,
   compact = false,
@@ -31,7 +39,7 @@ export function ActivityStream({
           <Reveal key={a.id} delay={i * 60}>
             <li className="group relative flex gap-4 py-3">
               <span className="num w-10 shrink-0 pt-0.5 text-[11px] text-muted-foreground">
-                {a.time}
+                {formatTime(a.time)}
               </span>
               <span className="relative flex w-3 shrink-0 justify-center">
                 <span className="absolute top-1.5 bottom-[-1.25rem] w-px bg-border group-last:hidden" />

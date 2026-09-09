@@ -2,7 +2,11 @@
 
 namespace App\Services\Marketing;
 
+use App\Http\Controllers\Api\Ai\BusinessProfileController;
+use App\Http\Controllers\Api\Ai\SeoController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Throwable;
 
 /**
  * Ringkasan angka platform untuk grounding chat. HANYA membaca cache yang sudah
@@ -43,6 +47,79 @@ class MarketingSnapshot
                 : "- {$key}: tidak ada data (belum tersambung atau belum dimuat)";
         }
 
+        $out[] = $this->searchConsoleLine($period);
+        $out[] = $this->localSeoLine($period);
+
         return implode("\n", $out);
+    }
+
+    /**
+     * Search Console dan Business Profile punya cache sendiri (dikelola
+     * SeoController/BusinessProfileController). Kita panggil controller-nya
+     * lewat container supaya cache & TTL-nya dipakai ulang — chat tidak
+     * pernah menembak API Google sendiri di luar jalur itu.
+     */
+    private function summaryVia(string $controller, string $method, int $days): ?array
+    {
+        try {
+            $response = app($controller)->{$method}(Request::create('/', 'GET', ['days' => $days]));
+            $data = json_decode($response->getContent(), true);
+
+            return is_array($data) ? $data : null;
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    private function searchConsoleLine(MarketingPeriod $period): string
+    {
+        $days = max(7, min($period->days(), 90));
+        $data = $this->summaryVia(SeoController::class, 'searchConsoleSummary', $days);
+
+        if (! is_array($data) || ! ($data['connected'] ?? false)) {
+            return '- Search Console (SEO): belum tersambung ke akun Google';
+        }
+        if (! ($data['hasData'] ?? false) || ! is_array($data['totals'] ?? null)) {
+            return '- Search Console (SEO): tersambung, tapi belum ada data ('.($data['message'] ?? 'tidak ada detail').')';
+        }
+
+        $t = $data['totals'];
+
+        return sprintf(
+            '- Search Console (SEO, %d hari, %s): clicks=%d, impressions=%d, CTR=%s%%, posisi rata-rata=%s',
+            $days,
+            $data['siteUrl'] ?? 'property tidak diketahui',
+            (int) $t['clicks'],
+            (int) $t['impressions'],
+            $t['ctr'],
+            $t['position']
+        );
+    }
+
+    private function localSeoLine(MarketingPeriod $period): string
+    {
+        $days = max(7, min($period->days(), 90));
+        $data = $this->summaryVia(BusinessProfileController::class, 'localSummary', $days);
+
+        if (! is_array($data) || ! ($data['connected'] ?? false)) {
+            return '- Google Business Profile (Local SEO): belum tersambung';
+        }
+        if (! ($data['hasData'] ?? false) || ! is_array($data['totals'] ?? null)) {
+            return '- Google Business Profile (Local SEO): tersambung, tapi belum ada data ('.($data['message'] ?? 'tidak ada detail').')';
+        }
+
+        $t = $data['totals'];
+        $listing = is_array($data['listing'] ?? null) ? ($data['listing']['title'] ?? null) : null;
+
+        return sprintf(
+            '- Google Business Profile (Local SEO, %d hari%s): map views=%d, permintaan rute=%d, telepon=%d, rating=%s, jumlah review=%s',
+            $days,
+            $listing ? ', listing '.$listing : '',
+            (int) $t['mapViews'],
+            (int) $t['directionRequests'],
+            (int) $t['calls'],
+            $t['averageRating'] ?? 'n/a',
+            $t['totalReviewCount'] ?? 'n/a'
+        );
     }
 }

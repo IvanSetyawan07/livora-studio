@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Panel, Pill } from "@/components/ai/primitives";
+import { QueryError } from "@/components/ai/query-error";
 import { usePageContext } from "@/context/AiMarketingContext";
-import { aiServices } from "@/lib/ai/services";
-import { useAiAgents } from "@/hooks/useAiDashboard";
-import type { ImpactPeriod, ImpactRecord, ImpactResult } from "@/lib/ai/types";
+import { useAiAgents, useImpact } from "@/hooks/useAiDashboard";
+import type { ImpactPeriod, ImpactResult } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
 
 const periods: ImpactPeriod[] = [7, 14, 30];
@@ -25,13 +25,9 @@ const resultLabel: Record<ImpactResult, string> = {
 
 export default function AiMarketingImpact() {
   usePageContext("impact");
-  const [records, setRecords] = useState<ImpactRecord[] | null>(null);
   const [period, setPeriod] = useState<ImpactPeriod>(14);
   const { data: agents } = useAiAgents();
-
-  useEffect(() => {
-    aiServices.impact.list().then(setRecords);
-  }, []);
+  const { data: records, isLoading, isError, refetch } = useImpact();
 
   function agentName(key: string) {
     return agents?.find((a) => a.id === key)?.name ?? key;
@@ -61,19 +57,21 @@ export default function AiMarketingImpact() {
         ))}
       </div>
 
-      {!records ? (
+      {isError ? (
+        <QueryError message="Data impact tidak bisa dimuat dari server." onRetry={() => refetch()} />
+      ) : isLoading ? (
         <div className="space-y-3">
           {[0, 1].map((i) => (
             <div key={i} className="skeleton-shimmer h-40 rounded-lg" />
           ))}
         </div>
-      ) : records.length === 0 ? (
+      ) : (records?.length ?? 0) === 0 ? (
         <Panel className="p-10 text-center text-sm text-muted-foreground">
           No approved recommendations to measure yet — approve one in Actions to start tracking impact.
         </Panel>
       ) : (
         <div className="space-y-3">
-          {records.map((r) => {
+          {(records ?? []).map((r) => {
             const after = r.after[period];
             const changePct = r.changePct[period];
             const effectiveResult: ImpactResult = after ? r.result : "monitoring";

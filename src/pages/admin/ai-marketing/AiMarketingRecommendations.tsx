@@ -1,50 +1,44 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Panel } from "@/components/ai/primitives";
 import { RecommendationCard } from "@/components/ai/recommendation-card";
+import { QueryError } from "@/components/ai/query-error";
 import { usePageContext } from "@/context/AiMarketingContext";
-import { aiServices } from "@/lib/ai/services";
-import type { AIApprovalStatus, AIRecommendation } from "@/lib/ai/types";
+import { useRecommendationDecision, useRecommendations } from "@/hooks/useAiDashboard";
+import type { AIApprovalStatus } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
 
 const filters: (AIApprovalStatus | "all")[] = ["all", "pending", "approved", "executed", "rejected"];
 
 export default function AiMarketingRecommendations() {
   usePageContext("recommendations");
-  const [items, setItems] = useState<AIRecommendation[] | null>(null);
   const [filter, setFilter] = useState<AIApprovalStatus | "all">("all");
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const { data: items, isLoading, isError, refetch } = useRecommendations();
+  // Mutation ini sudah meng-invalidate seluruh cache ["ai"], jadi Overview dan
+  // Actions langsung ikut terbarui tanpa reload manual.
+  const { approve: approveMutation, reject: rejectMutation } = useRecommendationDecision();
 
-  async function refresh() {
-    const data = await aiServices.recommendations.list();
-    setItems(data);
+  function approve(id: string) {
+    setPendingId(id);
+    approveMutation.mutate(id, {
+      onSuccess: (rec) =>
+        toast.success("Recommendation approved", { description: `${rec.title} moved to Actions.` }),
+      onError: (e: unknown) =>
+        toast.error(e instanceof Error ? e.message : "Gagal menyetujui recommendation."),
+      onSettled: () => setPendingId(null),
+    });
   }
 
-  useEffect(() => {
-    refresh();
-  }, []);
-
-  async function approve(id: string) {
+  function reject(id: string) {
     setPendingId(id);
-    try {
-      const rec = await aiServices.recommendations.approve(id);
-      toast.success("Recommendation approved", { description: `${rec.title} moved to Actions.` });
-      await refresh();
-    } finally {
-      setPendingId(null);
-    }
-  }
-
-  async function reject(id: string) {
-    setPendingId(id);
-    try {
-      const rec = await aiServices.recommendations.reject(id);
-      toast("Recommendation rejected", { description: rec.title });
-      await refresh();
-    } finally {
-      setPendingId(null);
-    }
+    rejectMutation.mutate(id, {
+      onSuccess: (rec) => toast("Recommendation rejected", { description: rec.title }),
+      onError: (e: unknown) =>
+        toast.error(e instanceof Error ? e.message : "Gagal menolak recommendation."),
+      onSettled: () => setPendingId(null),
+    });
   }
 
   const visible = (items ?? []).filter((r) => filter === "all" || r.status === filter);
@@ -77,7 +71,9 @@ export default function AiMarketingRecommendations() {
         ))}
       </div>
 
-      {!items ? (
+      {isError ? (
+        <QueryError message="Recommendations tidak bisa dimuat dari server." onRetry={() => refetch()} />
+      ) : isLoading ? (
         <div className="grid gap-4 lg:grid-cols-2">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="skeleton-shimmer h-56 rounded-lg" />

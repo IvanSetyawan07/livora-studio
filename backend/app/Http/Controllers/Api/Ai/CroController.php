@@ -84,7 +84,7 @@ class CroController extends Controller
         return [
             [
                 'metric' => 'CTA click rate',
-                'reason' => 'Butuh web analytics (GA4 Data API) — belum tersambung.',
+                'reason' => 'Butuh event klik CTA yang dikirim ke GA4. GA4 sudah tersambung, tapi event CTA-nya belum dipasang di frontend.',
             ],
             [
                 'metric' => 'Session-level behaviour / scroll depth',

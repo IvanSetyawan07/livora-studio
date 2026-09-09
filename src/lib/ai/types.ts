@@ -371,6 +371,9 @@ export interface AIUsageTotals {
   outputTokens: number;
   costToday: number;
   costMonth: number;
+  /** Panggilan yang harga modelnya belum terdaftar (cost null di backend). */
+  untrackedToday?: number;
+  untrackedMonth?: number;
   requestsDeltaLabel: string;
 }
 
@@ -379,12 +382,14 @@ export interface AIUsageByAgent {
   cost: number;
   requests: number;
   tokens: number;
+  untracked?: number;
 }
 
 export interface AIUsageByProvider {
   provider: string;
   cost: number;
   share: number;
+  untracked?: number;
 }
 
 export type AIProviderStatus = "connected" | "not_connected" | "degraded";
@@ -396,6 +401,8 @@ export interface AIProviderInfo {
   status: AIProviderStatus;
   usageShare: number;
   cost: number;
+  /** Jumlah request dengan harga model yang belum terdaftar. */
+  untrackedRequests?: number;
   latencyMs: number;
   successRate: number;
 }

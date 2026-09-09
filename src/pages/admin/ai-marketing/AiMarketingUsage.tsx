@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { CategoryBarChart, StatGrid, type StatKpi } from "@/components/ai/dashboard-charts";
 import { Panel } from "@/components/ai/primitives";
+import { QueryError } from "@/components/ai/query-error";
 import { usePageContext } from "@/context/AiMarketingContext";
-import { aiServices } from "@/lib/ai/services";
-import { useAiAgents } from "@/hooks/useAiDashboard";
-import type { AIUsageByAgent, AIUsageByProvider, AIUsageTotals } from "@/lib/ai/types";
+import {
+  useAiAgents,
+  useUsageByAgent,
+  useUsageByProvider,
+  useUsageTotals,
+} from "@/hooks/useAiDashboard";
 
 const chartColors = [
   "hsl(var(--chart-1))",
@@ -23,16 +26,28 @@ function formatTokens(n: number) {
 
 export default function AiMarketingUsage() {
   usePageContext("usage");
-  const [totals, setTotals] = useState<AIUsageTotals | null>(null);
-  const [byAgent, setByAgent] = useState<AIUsageByAgent[] | null>(null);
-  const [byProvider, setByProvider] = useState<AIUsageByProvider[] | null>(null);
   const { data: agents } = useAiAgents();
+  const totalsQuery = useUsageTotals();
+  const byAgentQuery = useUsageByAgent();
+  const byProviderQuery = useUsageByProvider();
+  const totals = totalsQuery.data ?? null;
+  const byAgent = byAgentQuery.data ?? null;
+  const byProvider = byProviderQuery.data ?? null;
+  const isError = totalsQuery.isError || byAgentQuery.isError || byProviderQuery.isError;
 
-  useEffect(() => {
-    aiServices.usage.getTotals().then(setTotals);
-    aiServices.usage.getByAgent().then(setByAgent);
-    aiServices.usage.getByProvider().then(setByProvider);
-  }, []);
+  function retryAll() {
+    totalsQuery.refetch();
+    byAgentQuery.refetch();
+    byProviderQuery.refetch();
+  }
+
+  /**
+   * Biaya hanya ditampilkan kalau semua request-nya punya harga model yang
+   * terdaftar. Kalau ada yang belum, jangan pura-pura "$0" — sebut apa adanya.
+   */
+  function costLabel(cost: number, untracked?: number) {
+    return untracked && untracked > 0 ? "not tracked yet" : `$${cost.toFixed(2)}`;
+  }
 
   function agentName(key: string) {
     return agents?.find((a) => a.id === key)?.name ?? key;
@@ -46,8 +61,8 @@ export default function AiMarketingUsage() {
           value: formatTokens(totals.inputTokens + totals.outputTokens),
           delta: `${formatTokens(totals.inputTokens)} in · ${formatTokens(totals.outputTokens)} out`,
         },
-        { label: "Cost Today", value: `$${totals.costToday.toFixed(2)}` },
-        { label: "Cost This Month", value: `$${totals.costMonth.toFixed(2)}` },
+        { label: "Cost Today", value: costLabel(totals.costToday, totals.untrackedToday) },
+        { label: "Cost This Month", value: costLabel(totals.costMonth, totals.untrackedMonth) },
       ]
     : null;
 
@@ -59,7 +74,9 @@ export default function AiMarketingUsage() {
         description="Simple enough to check at a glance, detailed enough to audit."
       />
 
-      {!stats ? (
+      {isError ? (
+        <QueryError message="Data usage tidak bisa dimuat dari server." onRetry={retryAll} />
+      ) : !stats ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="skeleton-shimmer h-32 rounded-lg" />
@@ -109,7 +126,7 @@ export default function AiMarketingUsage() {
                 <span className="flex items-center gap-4 text-xs text-muted-foreground">
                   <span className="num">{u.requests.toLocaleString()} req</span>
                   <span className="num">{formatTokens(u.tokens)} tok</span>
-                  <span className="num text-foreground">${u.cost.toFixed(2)}</span>
+                  <span className="num text-foreground">{costLabel(u.cost, u.untracked)}</span>
                 </span>
               </div>
             ))}
