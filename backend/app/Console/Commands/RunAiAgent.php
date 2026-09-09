@@ -81,13 +81,12 @@ class RunAiAgent extends Command
                 continue;
             }
 
-            match ($result['status']) {
-                'ok' => $this->reportSuccess($result),
-                'empty' => $this->reportEmpty($result),
-                default => $this->reportError($result) && false,
-            };
-
-            if (! in_array($result['status'], ['ok', 'empty'], true)) {
+            if ($result['status'] === 'ok') {
+                $this->reportSuccess($result);
+            } elseif ($result['status'] === 'empty') {
+                $this->reportEmpty($result);
+            } else {
+                $this->reportError($result);
                 $failed++;
             }
         }
