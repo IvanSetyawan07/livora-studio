@@ -18,9 +18,12 @@ use Illuminate\Support\Facades\DB;
  */
 class DashboardMetricsService
 {
-    public function businessHealth(): array
+    public function businessHealth(?Carbon $from = null, ?Carbon $to = null): array
     {
-        $total = Consultation::count();
+        [$from, $to] = $this->normalizeRange($from, $to);
+        $rangeLabel = $from->toDateString().' → '.$to->toDateString();
+
+        $total = Consultation::whereBetween('created_at', [$from, $to])->count();
         $pendingRecommendations = AiRecommendation::where('status', 'pending')->count();
 
         if ($total === 0) {
@@ -29,17 +32,20 @@ class DashboardMetricsService
                 'status' => 'Needs Attention',
                 'deltaLabel' => 'Not enough data yet',
                 'deltaDirection' => 'flat',
-                'summary' => "Business health can't be scored yet — no consultations have come "
-                    ."through the funnel so far.",
+                'summary' => "Business health can't be scored yet — no consultations came through "
+                    ."the funnel between {$rangeLabel}.",
                 'areasNeedingAttention' => $pendingRecommendations,
+                'rangeLabel' => $rangeLabel,
             ];
         }
 
-        $completed = Consultation::where('status', Consultation::STATUS_COMPLETED)->count();
-        $lost = Consultation::whereIn('status', [
-            Consultation::STATUS_CANCELLED,
-            Consultation::STATUS_REJECTED,
-        ])->count();
+        $completed = Consultation::whereBetween('created_at', [$from, $to])
+            ->where('status', Consultation::STATUS_COMPLETED)->count();
+        $lost = Consultation::whereBetween('created_at', [$from, $to])
+            ->whereIn('status', [
+                Consultation::STATUS_CANCELLED,
+                Consultation::STATUS_REJECTED,
+            ])->count();
         $active = $total - $lost;
 
         // Retention (masih di funnel / selesai, tidak cancel/reject) dibobot lebih
@@ -63,10 +69,25 @@ class DashboardMetricsService
             // Belum ada snapshot historis skor mingguan — jujur, bukan dikarang.
             'deltaLabel' => 'Not enough history yet to compare vs last week',
             'deltaDirection' => 'flat',
-            'summary' => "From {$total} consultations, {$completed} completed and {$lost} were "
-                ."cancelled or rejected. {$pendingRecommendations} AI recommendation(s) awaiting review.",
+            'summary' => "From {$total} consultations between {$rangeLabel}, {$completed} completed "
+                ."and {$lost} were cancelled or rejected. {$pendingRecommendations} AI "
+                ."recommendation(s) awaiting review.",
             'areasNeedingAttention' => $pendingRecommendations,
+            'rangeLabel' => $rangeLabel,
         ];
+    }
+
+    /** Normalisasi range; default 30 hari terakhir kalau caller tidak mengirim apa-apa. */
+    protected function normalizeRange(?Carbon $from, ?Carbon $to): array
+    {
+        $end = ($to ? $to->copy() : now())->endOfDay();
+        $start = ($from ? $from->copy() : $end->copy()->subDays(29))->startOfDay();
+
+        if ($start->gt($end)) {
+            [$start, $end] = [$end->copy()->startOfDay(), $start->copy()->endOfDay()];
+        }
+
+        return [$start, $end];
     }
 
     public function priorities(): array
@@ -90,13 +111,14 @@ class DashboardMetricsService
         ])->values()->all();
     }
 
-    public function overviewKpis(): array
+    public function overviewKpis(?Carbon $from = null, ?Carbon $to = null): array
     {
-        $now = now();
-        $periodEnd = $now->copy();
-        $periodStart = $now->copy()->subDays(30);
-        $prevStart = $periodStart->copy()->subDays(30);
-        $prevEnd = $periodStart->copy();
+        [$periodStart, $periodEnd] = $this->normalizeRange($from, $to);
+        $lengthDays = max(1, $periodStart->diffInDays($periodEnd) + 1);
+        $prevEnd = $periodStart->copy()->subSecond();
+        $prevStart = $prevEnd->copy()->subDays($lengthDays - 1)->startOfDay();
+        $rangeLabel = $lengthDays === 1 ? 'today' : "last {$lengthDays} days";
+        $sparkDays = min(30, $lengthDays);
 
         $clicksNow = DB::table('item_clicks')
             ->whereBetween('clicked_at', [$periodStart, $periodEnd])->count();
@@ -114,20 +136,20 @@ class DashboardMetricsService
                 'id' => 'site_engagement',
                 'label' => 'Site Engagement',
                 'value' => $clicksNow,
-                'deltaLabel' => $this->pctDeltaLabel($clicksNow, $clicksPrev),
+                'deltaLabel' => $this->pctDeltaLabel($clicksNow, $clicksPrev, $lengthDays),
                 'deltaDirection' => $this->pctDeltaDirection($clicksNow, $clicksPrev),
-                'footnote' => 'Item & project clicks, last 30 days',
-                'spark' => $this->dailyCounts('item_clicks', 'clicked_at', 8),
+                'footnote' => "Item & project clicks, {$rangeLabel}",
+                'spark' => $this->dailyCounts('item_clicks', 'clicked_at', $sparkDays, $periodEnd),
                 'live' => true,
             ],
             [
                 'id' => 'new_leads',
                 'label' => 'New Leads',
                 'value' => $leadsNow,
-                'deltaLabel' => $this->pctDeltaLabel($leadsNow, $leadsPrev),
+                'deltaLabel' => $this->pctDeltaLabel($leadsNow, $leadsPrev, $lengthDays),
                 'deltaDirection' => $this->pctDeltaDirection($leadsNow, $leadsPrev),
-                'footnote' => 'New consultations, last 30 days',
-                'spark' => $this->dailyCounts('consultations', 'created_at', 8),
+                'footnote' => "New consultations, {$rangeLabel}",
+                'spark' => $this->dailyCounts('consultations', 'created_at', $sparkDays, $periodEnd),
                 'live' => true,
             ],
             [
@@ -152,7 +174,7 @@ class DashboardMetricsService
     }
 
     /** Persentase perubahan periode sekarang vs periode sebelumnya, dibungkus label siap-tampil. */
-    protected function pctDeltaLabel(int $current, int $previous): string
+    protected function pctDeltaLabel(int $current, int $previous, int $lengthDays = 30): string
     {
         if ($previous === 0) {
             return $current > 0 ? 'New this period' : 'No change';
@@ -161,7 +183,7 @@ class DashboardMetricsService
         $pct = round((($current - $previous) / $previous) * 100, 1);
         $sign = $pct > 0 ? '+' : '';
 
-        return "{$sign}{$pct}% vs previous 30 days";
+        return "{$sign}{$pct}% vs previous {$lengthDays} days";
     }
 
     protected function pctDeltaDirection(int $current, int $previous): string
@@ -174,9 +196,9 @@ class DashboardMetricsService
     }
 
     /** Hitungan harian dari sebuah tabel/kolom tanggal, untuk `spark` — generik dipakai di beberapa KPI. */
-    protected function dailyCounts(string $table, string $column, int $days): array
+    protected function dailyCounts(string $table, string $column, int $days, ?Carbon $end = null): array
     {
-        $end = now()->endOfDay();
+        $end = ($end ? $end->copy() : now())->endOfDay();
         $start = $end->copy()->subDays($days - 1)->startOfDay();
 
         $rows = DB::table($table)

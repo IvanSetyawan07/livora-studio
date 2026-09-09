@@ -287,6 +287,8 @@ export interface BusinessHealth {
   /** One or two short sentences — never a wall of text. */
   summary: string;
   areasNeedingAttention: number;
+  /** Rentang tanggal yang benar-benar dipakai backend, mis. "2026-08-13 → 2026-09-09". */
+  rangeLabel?: string;
 }
 
 export interface PriorityItem {
