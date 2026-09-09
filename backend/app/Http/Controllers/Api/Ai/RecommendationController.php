@@ -43,12 +43,25 @@ class RecommendationController extends Controller
         return new AiRecommendationResource($recommendation);
     }
 
+    /**
+     * State machine: pending -> approved. Transisi lain ditolak eksplisit
+     * (409) supaya tidak ada "sukses diam-diam" pada baris yang sudah
+     * diputuskan / sudah dieksekusi.
+     */
     public function approve(AiRecommendation $recommendation)
     {
+        if ($recommendation->status !== 'pending') {
+            return response()->json([
+                'message' => "Recommendation sudah berstatus \"{$recommendation->status}\" dan tidak bisa di-approve lagi.",
+                'status' => $recommendation->status,
+            ], 409);
+        }
+
         DB::transaction(function () use ($recommendation) {
             $recommendation->update(['status' => 'approved']);
 
-            AiApproval::where('recommendation_id', $recommendation->id)->update([
+            $approval = AiApproval::ensureForRecommendation($recommendation);
+            $approval->update([
                 'status' => 'approved',
                 'decided_by' => auth()->user()->name ?? 'You',
                 'decided_at' => now(),
@@ -58,12 +71,21 @@ class RecommendationController extends Controller
         return new AiRecommendationResource($recommendation->fresh());
     }
 
+    /** pending|approved -> rejected. */
     public function reject(AiRecommendation $recommendation)
     {
+        if (!in_array($recommendation->status, ['pending', 'approved'], true)) {
+            return response()->json([
+                'message' => "Recommendation berstatus \"{$recommendation->status}\" tidak bisa ditolak.",
+                'status' => $recommendation->status,
+            ], 409);
+        }
+
         DB::transaction(function () use ($recommendation) {
             $recommendation->update(['status' => 'rejected']);
 
-            AiApproval::where('recommendation_id', $recommendation->id)->update([
+            $approval = AiApproval::ensureForRecommendation($recommendation);
+            $approval->update([
                 'status' => 'rejected',
                 'decided_by' => auth()->user()->name ?? 'You',
                 'decided_at' => now(),
