@@ -4,6 +4,7 @@ namespace App\Services\AI;
 
 use App\Models\AiActivityLog;
 use App\Models\AiAgent;
+use App\Models\AiApproval;
 use App\Models\AiInsight;
 use App\Models\AiRecommendation;
 use App\Models\Consultation;
@@ -137,6 +138,7 @@ class CroAgentService
                     'suggested_action' => $recData['suggested_action'] ?? null,
                 ]);
 
+                AiApproval::ensureForRecommendation($recommendation);
                 $insight->update(['recommendation_id' => $recommendation->id]);
                 $recommendationsCreated++;
             }

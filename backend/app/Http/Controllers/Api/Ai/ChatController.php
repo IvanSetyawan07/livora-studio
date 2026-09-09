@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Ai\AiRecommendationResource;
 use App\Models\AiActivityLog;
 use App\Models\AiAgent;
+use App\Models\AiApproval;
 use App\Models\AiInsight;
 use App\Models\AiRecommendation;
 use App\Services\AI\AIProviderManager;
@@ -250,6 +251,8 @@ class ChatController extends Controller
             'why' => $rec['why'] ?? null,
             'suggested_action' => $rec['suggested_action'] ?? null,
         ]);
+
+        AiApproval::ensureForRecommendation($recommendation);
 
         AiActivityLog::create([
             'actor' => 'AI',
