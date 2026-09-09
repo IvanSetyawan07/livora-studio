@@ -89,6 +89,10 @@ class AIProviderManager
     protected function recordUsage(string $provider, ?string $agentKey, string $model, int $in, int $out, ?int $durationMs, string $status, ?string $error = null): void
     {
         AiUsageLog::create([
+            // Biaya dihitung dari harga per model. null (bukan 0) kalau harga
+            // model itu belum terdaftar — supaya UI bisa bilang "not tracked yet"
+            // alih-alih menampilkan $0 yang menyesatkan.
+            'cost' => AiPricing::costFor($provider, $model, $in, $out),
             'agent_key' => $agentKey,
             'provider' => $provider,
             'model' => $model,

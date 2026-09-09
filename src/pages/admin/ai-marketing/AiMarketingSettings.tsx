@@ -1,10 +1,12 @@
-import { useState } from "react";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Panel, Pill, SectionHeading, StatusDot } from "@/components/ai/primitives";
-import { useAiAgents } from "@/hooks/useAiDashboard";
-import { aiServices } from "@/lib/ai/services";
-import { googleIntegration, startGoogleOAuth } from "@/lib/ai/googleIntegration";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useAiAgents,
+  useGoogleAuthorize,
+  useGoogleDisconnect,
+  useGoogleIntegrationStatus,
+  useProviders,
+} from "@/hooks/useAiDashboard";
 import { toast } from "sonner";
 import type { AIProviderInfo, ConnectionState } from "@/lib/ai/types";
 
@@ -29,25 +31,17 @@ const providerTone: Record<AIProviderInfo["status"], "success" | "neutral" | "wa
 /** Dependency name di tabel ai_agents yang punya alur OAuth sendiri. */
 const GOOGLE_SEARCH_CONSOLE = "Google Search Console";
 
+/**
+ * Satu jalur untuk status Google: hook react-query bersama. Hook-nya sudah
+ * meng-invalidate aiKeys.googleStatus + aiKeys.agents, jadi badge di halaman
+ * SEO/Overview ikut segar tanpa refresh manual.
+ */
 function ConnectionAction({ name }: { name: string }) {
-  const queryClient = useQueryClient();
-  const [redirecting, setRedirecting] = useState(false);
+  const { data: status } = useGoogleIntegrationStatus();
 
-  const { data: status } = useQuery({
-    queryKey: ["ai", "integrations", "google", "status"],
-    queryFn: () => googleIntegration.status(),
-    staleTime: 30_000,
-  });
-
-  const disconnect = useMutation({
-    mutationFn: () => googleIntegration.disconnect(),
-    onSuccess: () => {
-      toast.success("Google Search Console disconnected.");
-      queryClient.invalidateQueries({ queryKey: ["ai", "integrations", "google", "status"] });
-      queryClient.invalidateQueries({ queryKey: ["ai", "agents"] });
-    },
-    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Gagal disconnect."),
-  });
+  const disconnect = useGoogleDisconnect();
+  const authorize = useGoogleAuthorize();
+  const redirecting = authorize.isPending;
 
   if (name !== GOOGLE_SEARCH_CONSOLE) return null;
 
@@ -59,7 +53,13 @@ function ConnectionAction({ name }: { name: string }) {
         ) : null}
         <button
           type="button"
-          onClick={() => disconnect.mutate()}
+          onClick={() =>
+            disconnect.mutate(undefined, {
+              onSuccess: () => toast.success("Google Search Console disconnected."),
+              onError: (e: unknown) =>
+                toast.error(e instanceof Error ? e.message : "Gagal disconnect."),
+            })
+          }
           disabled={disconnect.isPending}
           className="rounded-sm border border-border px-2.5 py-1 font-mono text-[10px] tracking-[0.14em] uppercase text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
         >
@@ -73,15 +73,12 @@ function ConnectionAction({ name }: { name: string }) {
     <button
       type="button"
       disabled={redirecting}
-      onClick={async () => {
-        setRedirecting(true);
-        try {
-          await startGoogleOAuth();
-        } catch (e) {
-          setRedirecting(false);
-          toast.error(e instanceof Error ? e.message : "Gagal mengambil authorize URL.");
-        }
-      }}
+      onClick={() =>
+        authorize.mutate(undefined, {
+          onError: (e: unknown) =>
+            toast.error(e instanceof Error ? e.message : "Gagal mengambil authorize URL."),
+        })
+      }
       className="rounded-sm border border-primary/40 bg-primary/10 px-2.5 py-1 font-mono text-[10px] tracking-[0.14em] uppercase text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
     >
       {redirecting ? "Redirecting…" : "Connect"}
@@ -91,11 +88,7 @@ function ConnectionAction({ name }: { name: string }) {
 
 export default function SettingsPage() {
   const { data: agents, isLoading: agentsLoading } = useAiAgents();
-  const { data: providers, isLoading: providersLoading } = useQuery<AIProviderInfo[]>({
-    queryKey: ["ai", "providers"],
-    queryFn: () => aiServices.providers.list(),
-    staleTime: 60_000,
-  });
+  const { data: providers, isLoading: providersLoading } = useProviders();
 
   const integrations = new Map<string, ConnectionState>();
   for (const agent of agents ?? []) {

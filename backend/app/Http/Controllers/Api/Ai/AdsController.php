@@ -59,7 +59,9 @@ class AdsController extends Controller
                 $campaigns[] = $c + [
                     'platform' => $key,
                     'cpl' => $c['leads'] > 0 ? round($c['spend'] / $c['leads'], 2) : null,
-                    'status' => $c['status'] ?? 'active',
+                    // Status asli dari platform. 'unknown' kalau platform tidak
+                    // mengembalikannya — jangan pura-pura semuanya 'active'.
+                    'status' => $c['status'] ?? 'unknown',
                 ];
             }
         }

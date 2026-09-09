@@ -1,13 +1,12 @@
-import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Check, CircleDashed, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Panel, Pill, SectionHeading, Sparkline } from "@/components/ai/primitives";
 import { RecommendationCard } from "@/components/ai/recommendation-card";
+import { QueryError } from "@/components/ai/query-error";
 import { usePageContext } from "@/context/AiMarketingContext";
-import { aiServices } from "@/lib/ai/services";
-import { useRecommendations } from "@/hooks/useAiDashboard";
-import type { Campaign, CampaignHealth } from "@/lib/ai/types";
+import { useCampaign, useRecommendations } from "@/hooks/useAiDashboard";
+import type { CampaignHealth } from "@/lib/ai/types";
 
 const healthTone: Record<CampaignHealth, "success" | "warning" | "danger"> = {
   Good: "success",
@@ -18,18 +17,16 @@ const healthTone: Record<CampaignHealth, "success" | "warning" | "danger"> = {
 export default function AiMarketingCampaignDetail() {
   usePageContext("campaigns");
   const { id } = useParams();
-  const [campaign, setCampaign] = useState<Campaign | null | undefined>(undefined);
+  const { data: campaign, isLoading, isError, refetch } = useCampaign(id);
   const { data: recommendations } = useRecommendations();
 
-  useEffect(() => {
-    if (!id) return;
-    aiServices.campaigns.getById(id).then((c) => setCampaign(c ?? null));
-  }, [id]);
-
-  if (campaign === undefined) {
+  if (isError) {
+    return <QueryError message="Campaign tidak bisa dimuat dari server." onRetry={() => refetch()} />;
+  }
+  if (isLoading) {
     return <div className="skeleton-shimmer h-64 rounded-lg" />;
   }
-  if (campaign === null) {
+  if (!campaign) {
     return (
       <Panel className="p-10 text-center text-sm text-muted-foreground">
         Campaign not found.{" "}

@@ -18,12 +18,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useAgent } from "@/hooks/useAiDashboard";
-import { aiServices } from "@/lib/ai/services";
-import { useAiInsights, useSearchConsoleSummary } from "@/hooks/useAiDashboard";
+import {
+  useAgent,
+  useAiInsights,
+  useGoogleAuthorize,
+  useGoogleDisconnect,
+  useGoogleIntegrationStatus,
+  useSearchConsoleSummary,
+} from "@/hooks/useAiDashboard";
 import { LocalSeoSection } from "./AiMarketingSeoLocal";
 import { usePageContext } from "@/context/AiMarketingContext";
-import type { AIInsight, AISeverity, GoogleIntegrationStatus } from "@/lib/ai/types";
+import type { AIInsight, AISeverity } from "@/lib/ai/types";
 
 /**
  * Fase 7 — halaman SEO Agent disambungkan ke data asli.
@@ -35,9 +40,9 @@ import type { AIInsight, AISeverity, GoogleIntegrationStatus } from "@/lib/ai/ty
  *  - AI opportunities → hasil `php artisan ai:run-agent seo` yang tersimpan di
  *                   tabel ai_insights (agent_key = 'seo').
  *
- * Section Local SEO menampilkan blok "belum tersambung": sumbernya
- * Google Business Profile API yang belum diintegrasikan sama sekali. Jangan
- * isi dengan angka contoh sebelum integrasinya benar-benar ada.
+ * Section Local SEO membaca Google Business Profile lewat LocalSeoSection —
+ * angka listing asli, dengan keadaan "belum tersambung" / "belum ada data"
+ * dinyatakan eksplisit. Tidak ada angka contoh di halaman ini.
  */
 
 const severityTone: Record<AISeverity, "brass" | "info" | "neutral" | "danger"> = {
@@ -55,24 +60,21 @@ const googleCallbackMessage: Record<string, { tone: "success" | "danger"; text: 
   exchange_failed: { tone: "danger", text: "Google rejected the token exchange — please try again." },
 };
 
+/**
+ * Status koneksi Google memakai hook react-query bersama (aiKeys.googleStatus),
+ * sama seperti halaman Settings. Connect/disconnect dari sini otomatis
+ * menyegarkan badge status di Settings dan Overview — sebelumnya kartu ini
+ * punya useState/useEffect sendiri sehingga halaman lain jadi basi.
+ */
 function GoogleSearchConsoleCard() {
-  const [status, setStatus] = useState<GoogleIntegrationStatus | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const callbackResult = searchParams.get("google");
-
-  const refreshStatus = async () => {
-    setLoading(true);
-    try {
-      setStatus(await aiServices.integrations.getGoogleStatus());
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: status, isLoading: loading } = useGoogleIntegrationStatus();
+  const disconnect = useGoogleDisconnect();
+  const authorize = useGoogleAuthorize();
+  const busy = disconnect.isPending || authorize.isPending;
 
   useEffect(() => {
-    refreshStatus();
     // Bersihkan query param ?google=... dari URL setelah dibaca, supaya
     // refresh halaman tidak menampilkan pesan callback lama berulang-ulang.
     if (callbackResult) {
@@ -83,30 +85,8 @@ function GoogleSearchConsoleCard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleConnect = async () => {
-    setBusy(true);
-    try {
-      const url = await aiServices.integrations.getGoogleAuthorizeUrl();
-      if (url.startsWith("#")) {
-        // Mode demo (mock backend) — tidak ada consent screen asli.
-        await refreshStatus();
-        setBusy(false);
-        return;
-      }
-      window.location.href = url;
-    } catch {
-      setBusy(false);
-    }
-  };
-
-  const handleDisconnect = async () => {
-    setBusy(true);
-    try {
-      setStatus(await aiServices.integrations.disconnectGoogle());
-    } finally {
-      setBusy(false);
-    }
-  };
+  const handleConnect = () => authorize.mutate();
+  const handleDisconnect = () => disconnect.mutate();
 
   return (
     <>
@@ -257,7 +237,7 @@ export default function SeoAgentPage() {
         <SeoKpiCards />
       </section>
 
-      {/* Local SEO: integrasi Google Business Profile belum ada. */}
+      {/* Local SEO: data asli Google Business Profile. */}
       <LocalSeoSection />
 
       <section className="mt-10">

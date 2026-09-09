@@ -62,11 +62,16 @@ class SeoController extends Controller
             ]);
         }
 
-        $payload = Cache::remember(
-            "ai:seo:search-console-summary:{$days}",
-            self::CACHE_TTL_SECONDS,
-            fn () => $this->fetchSummary($days)
-        );
+        $key = "ai:seo:search-console-summary:{$days}";
+        $payload = Cache::get($key);
+
+        if (! is_array($payload)) {
+            $payload = $this->fetchSummary($days);
+            // Hasil sukses di-cache lama (hemat kuota API), hasil gagal/ambigu
+            // hanya 1 menit supaya admin yang baru membetulkan setting tidak
+            // perlu menunggu 20 menit atau flush cache manual.
+            Cache::put($key, $payload, ($payload['hasData'] ?? false) ? self::CACHE_TTL_SECONDS : 60);
+        }
 
         return response()->json($payload);
     }
