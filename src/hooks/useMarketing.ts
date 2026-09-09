@@ -21,8 +21,8 @@ export function deriveMarketingStatus(
   switch (status) {
     case "ok": return null;
     case "not_configured": return { status: "not_connected", provider, message, connectHref };
-    case "invalid_credentials": return { status: "permission_required", provider, message: message ?? "Kredensial ditolak. Periksa token di Settings." };
-    case "permission_required": return { status: "permission_required", provider, message };
+    case "invalid_credentials": return { status: "permission_required", provider, connectHref, message: message ?? "Kredensial ditolak. Periksa token di Settings." };
+    case "permission_required": return { status: "permission_required", provider, connectHref, message };
     case "rate_limited": return { status: "rate_limited" };
     default: return { status: "error", message: message ?? `${provider} tidak merespons.`, retriable: true };
   }
