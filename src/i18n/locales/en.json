@@ -5,7 +5,19 @@
     "scope": "Scope",
     "projects": "Projects",
     "furniture": "FURNITURE",
-    "contact": "Contact"
+    "contact": "Contact",
+    "catalog": "CATALOG",
+  "collection": "COLLECTION",
+  "appointment": "MAKE AN APPOINTMENT",
+  "appointment_full": "Make an Appointment",
+  "catalog_items": {
+    "living_rooms": "Living Rooms",
+    "dining_rooms": "Dining Rooms",
+    "bedrooms": "Bedrooms",
+    "outdoor_spaces": "Outdoor Spaces",
+    "office_spaces": "Office Spaces",
+    "public_spaces": "Public Spaces"
+  }
   },
   "hero": {
     "company": "PT. LANGGENG CIPTA RUANG",

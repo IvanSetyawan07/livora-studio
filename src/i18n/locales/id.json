@@ -1,12 +1,24 @@
 {
   "nav": {
-    "about": "Tentang",
-    "style": "Gaya",
-    "scope": "Layanan",
-    "projects": "Proyek",
-    "furniture": "FURNITUR",
-    "contact": "Kontak"
-  },
+  "about": "Tentang",
+  "style": "Gaya",
+  "scope": "Layanan",
+  "projects": "Proyek",
+  "furniture": "FURNITUR",
+  "contact": "Kontak",
+  "catalog": "KATALOG",
+  "collection": "KOLEKSI",
+  "appointment": "BUAT JANJI TEMU",
+  "appointment_full": "Buat Janji Temu",
+  "catalog_items": {
+    "living_rooms": "Ruang Tamu",
+    "dining_rooms": "Ruang Makan",
+    "bedrooms": "Kamar Tidur",
+    "outdoor_spaces": "Ruang Luar",
+    "office_spaces": "Ruang Kantor",
+    "public_spaces": "Ruang Publik"
+  }
+},
   "hero": {
     "company": "PT. LANGGENG CIPTA RUANG",
     "line1": "Bayangkan.",

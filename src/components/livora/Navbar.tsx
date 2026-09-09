@@ -41,23 +41,23 @@ export const Navbar = () => {
 
   // Links shown inside the hamburger overlay (both desktop & mobile).
   const menuLinks: NavLink[] = [
-    { key: "furniture", label: t("nav.furniture"), to: "/furniture" },
-    { key: "projects", label: t("nav.projects"), to: "/projects" },
-    {
-      key: "catalog",
-      label: "CATALOG",
-      dropdown: [
-        { label: "Living Rooms", to: "/catalog/living-rooms" },
-        { label: "Dining Rooms", to: "/catalog/dining-rooms" },
-        { label: "Bedrooms", to: "/catalog/bedrooms" },
-        { label: "Outdoor Spaces", to: "/catalog/outdoor-spaces" },
-        { label: "Office Spaces", to: "/catalog/office-spaces" },
-        { label: "Public Spaces", to: "/catalog/public-spaces" },
-      ],
-    },
-    { key: "collection", label: "COLLECTION", to: "/collection" },
-    { key: "appointment", label: "MAKE AN APPOINTMENT", to: "/appointment" },
-  ];
+  { key: "furniture", label: t("nav.furniture"), to: "/furniture" },
+  { key: "projects", label: t("nav.projects"), to: "/projects" },
+  {
+    key: "catalog",
+    label: t("nav.catalog"),
+    dropdown: [
+      { label: t("nav.catalog_items.living_rooms"), to: "/catalog/living-rooms" },
+      { label: t("nav.catalog_items.dining_rooms"), to: "/catalog/dining-rooms" },
+      { label: t("nav.catalog_items.bedrooms"), to: "/catalog/bedrooms" },
+      { label: t("nav.catalog_items.outdoor_spaces"), to: "/catalog/outdoor-spaces" },
+      { label: t("nav.catalog_items.office_spaces"), to: "/catalog/office-spaces" },
+      { label: t("nav.catalog_items.public_spaces"), to: "/catalog/public-spaces" },
+    ],
+  },
+  { key: "collection", label: t("nav.collection"), to: "/collection" },
+  { key: "appointment", label: t("nav.appointment"), to: "/appointment" },
+];
 
   // Quick links always visible on desktop header.
   const desktopQuickLinks: NavLink[] = [
@@ -378,7 +378,7 @@ export const Navbar = () => {
                 }`}
                 style={lightText ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined}
               >
-                Make an Appointment
+                {t("nav.appointment_full")}
               </Link>
             </li>
           </ul>
