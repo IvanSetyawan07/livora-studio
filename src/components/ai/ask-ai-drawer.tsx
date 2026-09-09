@@ -98,13 +98,13 @@ export function AskAIDrawer() {
               <p className="label-eyebrow mt-1">Context: {contextLabel[context]}</p>
             </div>
           </div>
-          <button
+          {/* <button
             onClick={closeAsk}
             className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             aria-label="Close"
           >
             <X className="size-4" />
-          </button>
+          </button> */}
         </div>
 
         <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
