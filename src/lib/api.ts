@@ -27,10 +27,11 @@ export const api = axios.create({
 api.interceptors.request.use((config) => {
   // Bahasa aktif ikut dikirim, supaya backend mengembalikan konten versi
   // bahasa yang sedang dipilih user (lihat middleware SetLocale di Laravel).
+  // Dikirim sebagai query param (?lang=) supaya tidak memicu preflight CORS
+  // pada server yang belum mengizinkan header kustom.
   const lang = localStorage.getItem("language") || "en";
-  if (config.headers) {
-    (config.headers as unknown as Record<string, string>)["X-Locale"] = lang;
-  }
+  config.params = { ...(config.params ?? {}), lang };
+
 
   const token = localStorage.getItem("token");
   if (token && config.headers) {
