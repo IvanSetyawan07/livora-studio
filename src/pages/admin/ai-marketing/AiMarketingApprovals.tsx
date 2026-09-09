@@ -210,7 +210,9 @@ export default function ApprovalsPage() {
                   <p className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
                     Decided by {selected.decidedBy}
                   </p>
-                ) : (
+                ) : null}
+
+                {selected.status === "pending" || selected.status === "approved" ? (
                   <div className="flex flex-wrap gap-2">
                     <button
                       disabled={busy}
@@ -218,7 +220,7 @@ export default function ApprovalsPage() {
                       className="inline-flex items-center gap-1.5 rounded-sm bg-brass px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
                     >
                       {approveAndExecute.isPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                      Approve &amp; execute
+                      {selected.status === "approved" ? "Execute" : "Approve & execute"}
                     </button>
                     <button
                       disabled={busy}
@@ -229,7 +231,7 @@ export default function ApprovalsPage() {
                       Reject
                     </button>
                   </div>
-                )}
+                ) : null}
               </div>
             </>
           ) : null}
