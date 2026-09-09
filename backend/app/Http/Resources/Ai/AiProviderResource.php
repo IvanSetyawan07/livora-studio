@@ -22,6 +22,8 @@ class AiProviderResource extends JsonResource
             'status' => $this->status,
             'usageShare' => $totalCost > 0 ? round(($providerCost / $totalCost) * 100, 1) : 0,
             'cost' => $providerCost,
+            // Jumlah panggilan yang harganya belum diketahui (cost null).
+            'untrackedRequests' => (int) AiUsageLog::where('provider', $this->provider)->whereNull('cost')->count(),
             'latencyMs' => $this->latency_ms ?? 0,
             'successRate' => (float) ($this->success_rate ?? 0),
         ];

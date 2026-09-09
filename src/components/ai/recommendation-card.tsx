@@ -2,8 +2,26 @@ import { Link } from "react-router-dom";
 import { Check, X } from "lucide-react";
 import type { AIRecommendation } from "@/lib/ai/types";
 import { agentMeta } from "@/lib/ai/agent-catalog";
-import { AnimatedBar, Panel, Pill, priorityTone, riskTone } from "./primitives";
+import { AnimatedBar, Panel, Pill, riskTone } from "./primitives";
 import { cn } from "@/lib/utils";
+
+/**
+ * Kelas warna ditulis LENGKAP dan statis. Sebelumnya dibangun dinamis
+ * lewat template string yang untuk priority "high" menghasilkan
+ * "bg-danger" — class yang tidak pernah didefinisikan, jadi justru prioritas
+ * tertinggi yang tampil tanpa warna.
+ */
+const priorityDotClass: Record<NonNullable<AIRecommendation["priority"]>, string> = {
+  high: "bg-destructive",
+  medium: "bg-warning",
+  low: "bg-success",
+};
+
+const priorityTextClass: Record<NonNullable<AIRecommendation["priority"]>, string> = {
+  high: "text-destructive",
+  medium: "text-warning",
+  low: "text-success",
+};
 
 const impactLabel: Record<NonNullable<AIRecommendation["priority"]>, string> = {
   high: "High Impact",
@@ -30,10 +48,10 @@ export function RecommendationCard({
   return (
     <Panel hover className="p-4 sm:p-5">
       <div className="flex items-start gap-3">
-        <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", `bg-${priorityTone[priority]}`)} />
+        <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", priorityDotClass[priority])} />
         <div className="min-w-0 flex-1 space-y-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className={cn("text-[11px] font-semibold tracking-wide uppercase", `text-${priorityTone[priority]}`)}>
+            <span className={cn("text-[11px] font-semibold tracking-wide uppercase", priorityTextClass[priority])}>
               {impactLabel[priority]}
             </span>
             {rec.status !== "pending" ? (

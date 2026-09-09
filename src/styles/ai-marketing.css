@@ -119,6 +119,7 @@
 .ai-marketing-scope .bg-info { background-color: hsl(var(--info)); }
 .ai-marketing-scope .bg-info\/12 { background-color: hsl(var(--info) / 0.12); }
 .ai-marketing-scope .text-destructive { color: hsl(var(--destructive)); }
+.ai-marketing-scope .bg-destructive { background-color: hsl(var(--destructive)); }
 .ai-marketing-scope .bg-destructive\/14 { background-color: hsl(var(--destructive) / 0.14); }
 .ai-marketing-scope .border-destructive\/25 { border-color: hsl(var(--destructive) / 0.25); }
 .ai-marketing-scope .bg-muted-foreground\/12 { background-color: hsl(var(--muted-foreground) / 0.12); }

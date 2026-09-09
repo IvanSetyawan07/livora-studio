@@ -110,10 +110,12 @@ class MetaAdsClient
     /**
      * Daftar campaign aktif + metrik per campaign.
      *
-     * @return list<array{id: string, name: string, spend: float, leads: float, impressions: int, clicks: int, revenue: float}>
+     * @return list<array{id: string, name: string, status: string, spend: float, leads: float, impressions: int, clicks: int, revenue: float}>
      */
     public function campaigns(MarketingPeriod $period): array
     {
+        $statuses = $this->campaignStatuses();
+
         $payload = $this->get('/'.$this->accountId().'/insights', [
             'level' => 'campaign',
             'time_range' => json_encode(['since' => $period->fromDate(), 'until' => $period->toDate()]),
@@ -126,6 +128,7 @@ class MetaAdsClient
             $rows[] = [
                 'id' => (string) ($row['campaign_id'] ?? ''),
                 'name' => (string) ($row['campaign_name'] ?? 'Untitled campaign'),
+                'status' => $statuses[(string) ($row['campaign_id'] ?? '')] ?? 'unknown',
                 'spend' => round((float) ($row['spend'] ?? 0), 2),
                 'leads' => self::actionValue($row, self::LEAD_ACTIONS),
                 'impressions' => (int) ($row['impressions'] ?? 0),
@@ -135,5 +138,36 @@ class MetaAdsClient
         }
 
         return $rows;
+    }
+
+    /**
+     * Endpoint /insights tidak pernah mengembalikan status campaign, jadi status
+     * asli (ACTIVE/PAUSED/ARCHIVED/...) diambil dari edge /campaigns lalu
+     * dipetakan ke nilai lowercase yang dipakai UI. Tanpa ini AdsController
+     * terpaksa menebak "active" untuk semua campaign Meta.
+     *
+     * @return array<string, string>
+     */
+    private function campaignStatuses(): array
+    {
+        try {
+            $payload = $this->get('/'.$this->accountId().'/campaigns', [
+                'fields' => 'id,effective_status,status',
+                'limit' => 200,
+            ]);
+        } catch (MarketingApiException) {
+            return [];
+        }
+
+        $map = [];
+        foreach ($payload['data'] ?? [] as $row) {
+            $raw = (string) ($row['effective_status'] ?? $row['status'] ?? '');
+            if ($raw === '') {
+                continue;
+            }
+            $map[(string) $row['id']] = strtolower($raw);
+        }
+
+        return $map;
     }
 }

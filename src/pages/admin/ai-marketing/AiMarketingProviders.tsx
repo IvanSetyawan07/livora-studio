@@ -1,16 +1,16 @@
-import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { AnimatedBar, Panel, Pill, SectionHeading, StatusDot } from "@/components/ai/primitives";
+import { QueryError } from "@/components/ai/query-error";
 import { usePageContext } from "@/context/AiMarketingContext";
-import { aiServices } from "@/lib/ai/services";
-import type {
-  AIProviderInfo,
-  AIProviderPreference,
-  AIProviderQuota,
-  AIProviderStatus,
-  AIRoutingStrategy,
-} from "@/lib/ai/types";
+import {
+  useProviderPreference,
+  useProviderQuota,
+  useProviders,
+  useRoutingStrategy,
+  useSetProviderPreference,
+} from "@/hooks/useAiDashboard";
+import type { AIProviderStatus } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
 
 const statusTone: Record<AIProviderStatus, "success" | "warning" | "neutral"> = {
@@ -43,32 +43,37 @@ function formatResetIn(iso: string | null): string | null {
 
 export default function AiMarketingProviders() {
   usePageContext("providers");
-  const [providers, setProviders] = useState<AIProviderInfo[] | null>(null);
-  const [routing, setRouting] = useState<AIRoutingStrategy | null>(null);
-  const [quota, setQuota] = useState<AIProviderQuota[] | null>(null);
-  const [preference, setPreference] = useState<AIProviderPreference | null>(null);
-  const [savingPreference, setSavingPreference] = useState(false);
+  const providersQuery = useProviders();
+  const routingQuery = useRoutingStrategy();
+  const quotaQuery = useProviderQuota();
+  const preferenceQuery = useProviderPreference();
+  const setPreferenceMutation = useSetProviderPreference();
 
-  useEffect(() => {
-    aiServices.providers.list().then(setProviders);
-    aiServices.providers.getRoutingStrategy().then(setRouting);
-    aiServices.providers.getQuota().then(setQuota);
-    aiServices.providers.getPreference().then(setPreference);
-  }, []);
+  const providers = providersQuery.data ?? null;
+  const routing = routingQuery.data ?? null;
+  const quota = quotaQuery.data ?? null;
+  const preference = preferenceQuery.data ?? null;
+  const savingPreference = setPreferenceMutation.isPending;
+  const isError =
+    providersQuery.isError || routingQuery.isError || quotaQuery.isError || preferenceQuery.isError;
 
-  async function choosePreferred(provider: string | null) {
-    setSavingPreference(true);
-    try {
-      const updated = await aiServices.providers.setPreference(provider);
-      setPreference(updated);
-      toast.success(
-        provider ? `${providerDisplayName[provider] ?? provider} set as preferred provider` : "Back to automatic fallback order",
-      );
-    } catch {
-      toast.error("Failed to update provider preference");
-    } finally {
-      setSavingPreference(false);
-    }
+  function retryAll() {
+    providersQuery.refetch();
+    routingQuery.refetch();
+    quotaQuery.refetch();
+    preferenceQuery.refetch();
+  }
+
+  function choosePreferred(provider: string | null) {
+    setPreferenceMutation.mutate(provider, {
+      onSuccess: () =>
+        toast.success(
+          provider
+            ? `${providerDisplayName[provider] ?? provider} set as preferred provider`
+            : "Back to automatic fallback order",
+        ),
+      onError: () => toast.error("Failed to update provider preference"),
+    });
   }
 
   const configuredProviders = providers?.map((p) => p.provider) ?? [];
@@ -80,6 +85,12 @@ export default function AiMarketingProviders() {
         title="Providers & Routing"
         description="Livora's AI infrastructure isn't locked to one provider — routing chooses the right model for each task."
       />
+
+      {isError ? (
+        <div className="mb-6">
+          <QueryError message="Data provider tidak bisa dimuat dari server." onRetry={retryAll} />
+        </div>
+      ) : null}
 
       <section>
         <SectionHeading
@@ -189,7 +200,11 @@ export default function AiMarketingProviders() {
 
                   <div className="mt-4 grid grid-cols-3 gap-2 border-t border-border pt-3 text-center">
                     <div>
-                      <p className="num text-sm text-foreground">${p.cost.toFixed(0)}</p>
+                      <p className="num text-sm text-foreground">
+                        {p.untrackedRequests && p.untrackedRequests > 0
+                          ? "Not tracked yet"
+                          : `$${p.cost.toFixed(0)}`}
+                      </p>
                       <p className="label-eyebrow mt-0.5">Cost</p>
                     </div>
                     <div>
