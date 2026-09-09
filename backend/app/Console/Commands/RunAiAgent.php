@@ -2,7 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Services\AI\AdsAgentService;
+use App\Services\AI\ContentAgentService;
 use App\Services\AI\CroAgentService;
+use App\Services\AI\LeadsAgentService;
 use App\Services\AI\SeoAgentService;
 use Illuminate\Console\Command;
 
@@ -19,23 +22,39 @@ use Illuminate\Console\Command;
  */
 class RunAiAgent extends Command
 {
-    protected $signature = 'ai:run-agent {key : Agent key, mis. cro atau seo} {--limit=5 : Maksimal insight per run}';
+    protected $signature = 'ai:run-agent {key : Agent key: seo, cro, content, ads, leads, atau all} {--limit=5 : Maksimal insight per run}';
 
     protected $description = 'Jalankan satu siklus analisis AI untuk agent tertentu (Fase 6)';
 
-    public function handle(CroAgentService $croAgent, SeoAgentService $seoAgent): int
-    {
+    public function handle(
+        CroAgentService $croAgent,
+        SeoAgentService $seoAgent,
+        ContentAgentService $contentAgent,
+        AdsAgentService $adsAgent,
+        LeadsAgentService $leadsAgent,
+    ): int {
         $key = strtolower($this->argument('key'));
         $limit = max(1, (int) $this->option('limit'));
 
-        $result = match ($key) {
-            'cro' => $croAgent->run($limit),
-            'seo' => $seoAgent->run($limit),
-            default => [
+        $agents = [
+            'cro' => $croAgent,
+            'seo' => $seoAgent,
+            'content' => $contentAgent,
+            'ads' => $adsAgent,
+            'leads' => $leadsAgent,
+        ];
+
+        if ($key === 'all') {
+            return $this->runAll($agents, $limit);
+        }
+
+        $result = isset($agents[$key])
+            ? $agents[$key]->run($limit)
+            : [
                 'status' => 'not_implemented',
-                'message' => "Agent '{$key}' belum diimplementasikan di Fase 6. Baru 'cro' dan 'seo' yang siap.",
-            ],
-        };
+                'message' => "Agent '{$key}' tidak dikenal. Yang tersedia: "
+                    .implode(', ', array_keys($agents)).', atau all.',
+            ];
 
         return match ($result['status']) {
             'ok' => $this->reportSuccess($result),
@@ -43,6 +62,37 @@ class RunAiAgent extends Command
             'not_implemented' => $this->reportNotImplemented($result),
             default => $this->reportError($result),
         };
+    }
+
+    /** Siklus AI reguler: semua agent dijalankan berurutan, satu agent gagal tidak menghentikan sisanya. */
+    private function runAll(array $agents, int $limit): int
+    {
+        $failed = 0;
+
+        foreach ($agents as $agentKey => $agent) {
+            $this->line('');
+            $this->line("== {$agentKey} ==");
+
+            try {
+                $result = $agent->run($limit);
+            } catch (\Throwable $e) {
+                $this->error("Agent '{$agentKey}' melempar exception: ".$e->getMessage());
+                $failed++;
+                continue;
+            }
+
+            match ($result['status']) {
+                'ok' => $this->reportSuccess($result),
+                'empty' => $this->reportEmpty($result),
+                default => $this->reportError($result) && false,
+            };
+
+            if (! in_array($result['status'], ['ok', 'empty'], true)) {
+                $failed++;
+            }
+        }
+
+        return $failed > 0 ? self::FAILURE : self::SUCCESS;
     }
 
     private function reportSuccess(array $result): int
