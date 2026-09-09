@@ -51,6 +51,17 @@ class MarketingApiException extends \RuntimeException
             );
         }
 
+        // Token Google lama: disetujui sebelum scope Analytics ditambahkan,
+        // jadi 403 "insufficient authentication scopes". Yang perlu dilakukan
+        // user bukan "hubungi admin", tapi menyambung ulang akun Google.
+        if (str_contains($raw, 'insufficient authentication scopes') || str_contains($raw, 'ACCESS_TOKEN_SCOPE_INSUFFICIENT')) {
+            return new self(
+                'Akun Google yang tersambung belum memberi izin baca '.$platform
+                .'. Buka Settings → Google, klik Disconnect lalu Connect lagi, dan pastikan centang izin Analytics ikut disetujui.',
+                'permission_required'
+            );
+        }
+
         $short = mb_substr($raw, 0, 200);
 
         return match (true) {
