@@ -71,6 +71,8 @@ export interface SectionStatePermissionRequired extends SectionStateBase {
   status: "permission_required";
   provider?: string;
   message?: string;
+  /** Ke mana tombol "Reconnect" mengarah kalau izinnya bisa diperbaiki dengan menyambung ulang. */
+  connectHref?: string;
 }
 
 export interface SectionStateSelectionRequired extends SectionStateBase {

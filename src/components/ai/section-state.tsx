@@ -95,7 +95,11 @@ export function SectionNotice({
   const meta = NOTICE_META[state.status];
   const Icon = meta.icon;
   const description = describeNonDataState(state, { provider });
-  const resolvedConnectHref = state.status === "not_connected" ? state.connectHref ?? connectHref : undefined;
+  const resolvedConnectHref =
+    state.status === "not_connected" || state.status === "permission_required"
+      ? state.connectHref ?? connectHref
+      : undefined;
+  const resolvedConnectLabel = state.status === "permission_required" ? "Reconnect" : connectLabel;
   const canRetry = state.status === "error" ? state.retriable : state.status === "rate_limited";
 
   return (
@@ -118,7 +122,7 @@ export function SectionNotice({
               to={resolvedConnectHref}
               className="inline-flex items-center gap-1.5 rounded-sm border border-border-strong px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.1em] text-foreground transition-colors hover:bg-accent/40"
             >
-              {connectLabel}
+              {resolvedConnectLabel}
             </Link>
           ) : null}
           {canRetry ? (

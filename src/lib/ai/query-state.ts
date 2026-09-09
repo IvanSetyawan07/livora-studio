@@ -35,7 +35,13 @@ export function toSectionState<T>(
     if (kind === "not_connected" || (!isApiConfigured && kind === "network"))
       return { ...base, status: "not_connected", provider: opts.provider, connectHref: opts.connectHref, message: e.message };
     if (kind === "permission_required" || kind === "unauthenticated" || kind === "invalid_credentials")
-      return { ...base, status: "permission_required", provider: opts.provider, message: e.message };
+      return {
+        ...base,
+        status: "permission_required",
+        provider: opts.provider,
+        connectHref: opts.connectHref,
+        message: e.message,
+      };
     if (kind === "selection_required")
       return { ...base, status: "selection_required", label: opts.selectionLabel ?? "akun/properti", message: e.message };
     if (kind === "rate_limited")
