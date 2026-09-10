@@ -73,4 +73,70 @@ class TikTokClient
             'daily' => $daily,
         ];
     }
+
+    /**
+     * Daftar video milik akun sendiri + metriknya (/business/video/list/).
+     * TikTok TIDAK menyediakan pencarian video publik lewat token Business ini,
+     * jadi inspirasi lintas-kreator hanya bisa dari YouTube — di sini kita cuma
+     * membaca performa video Livora sendiri, apa adanya.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function videos(int $max = 20): array
+    {
+        if (! $this->isConfigured()) {
+            throw MarketingApiException::notConfigured('TikTok belum dikonfigurasi. Isi TIKTOK_ACCESS_TOKEN dan TIKTOK_BUSINESS_ID di backend/.env.');
+        }
+
+        $res = Http::withHeaders(['Access-Token' => (string) config('services.tiktok.access_token')])
+            ->timeout(20)
+            ->get(self::BASE.'/business/video/list/', [
+                'business_id' => (string) config('services.tiktok.business_id'),
+                'max_count' => max(1, min($max, 20)),
+                'fields' => json_encode([
+                    'item_id', 'create_time', 'thumbnail_url', 'share_url', 'caption',
+                    'video_views', 'likes', 'comments', 'shares', 'reach', 'full_video_watched_rate',
+                ]),
+            ]);
+
+        if ($res->failed()) {
+            throw MarketingApiException::fromHttp('TikTok', $res->status(), $res->body());
+        }
+
+        $json = $res->json();
+        $code = (int) ($json['code'] ?? 0);
+        if ($code !== 0) {
+            $msg = (string) ($json['message'] ?? 'TikTok API error');
+            throw new MarketingApiException("TikTok: {$msg} (code {$code})", match (true) {
+                in_array($code, [40100, 40101, 40102, 40104, 40105], true) => 'invalid_credentials',
+                $code === 40103 => 'permission_required',
+                default => 'api_error',
+            });
+        }
+
+        $out = [];
+        foreach ($json['data']['videos'] ?? [] as $v) {
+            $views = (int) ($v['video_views'] ?? 0);
+            $eng = (int) ($v['likes'] ?? 0) + (int) ($v['comments'] ?? 0) + (int) ($v['shares'] ?? 0);
+            $ts = $v['create_time'] ?? null;
+            $out[] = [
+                'platform' => 'tiktok',
+                'id' => (string) ($v['item_id'] ?? ''),
+                'title' => (string) ($v['caption'] ?? ''),
+                'thumbnail' => (string) ($v['thumbnail_url'] ?? ''),
+                'url' => (string) ($v['share_url'] ?? ''),
+                'publishedAt' => is_numeric($ts) ? date(DATE_ATOM, (int) $ts) : null,
+                'views' => $views,
+                'likes' => (int) ($v['likes'] ?? 0),
+                'comments' => (int) ($v['comments'] ?? 0),
+                'shares' => (int) ($v['shares'] ?? 0),
+                'engagementRate' => $views > 0 ? round($eng / $views * 100, 2) : null,
+                'completionRate' => isset($v['full_video_watched_rate']) ? round(((float) $v['full_video_watched_rate']) * 100, 2) : null,
+            ];
+        }
+
+        usort($out, fn ($a, $b) => $b['views'] <=> $a['views']);
+
+        return $out;
+    }
 }
