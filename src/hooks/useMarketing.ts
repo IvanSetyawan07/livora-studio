@@ -98,3 +98,20 @@ export function useLeadsFunnel() {
   });
   return { query: q, state };
 }
+/**
+ * Content Inspiration — video milik Livora sendiri (YouTube + TikTok) sebagai
+ * titik awal, lalu pembanding video sejenis dari YouTube.
+ */
+export function useInspirationLibrary() {
+  return useQuery<InspirationLibrary>({
+    queryKey: ["ai", "marketing", "inspiration", "library"],
+    queryFn: () => aiServices.marketing.getInspirationLibrary(),
+    staleTime: STALE,
+  });
+}
+
+export function useInspirationAnalysis() {
+  return useMutation<InspirationAnalysis, Error, InspirationAnalysisRequest>({
+    mutationFn: (payload) => aiServices.marketing.analyzeInspiration(payload),
+  });
+}
