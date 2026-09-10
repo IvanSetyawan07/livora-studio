@@ -44,6 +44,9 @@ import type {
   AdsSummary,
   ContentSummary,
   LeadsFunnel,
+  InspirationLibrary,
+  InspirationAnalysis,
+  InspirationAnalysisRequest,
 } from "../types";
 
 export interface AIMarketingService {
@@ -51,6 +54,8 @@ export interface AIMarketingService {
   getAdsSummary: (p: { from: string; to: string; days: number }) => Promise<AdsSummary>;
   getContentSummary: (p: { from: string; to: string; days: number }) => Promise<ContentSummary>;
   getLeadsFunnel: (p: { from: string; to: string; days: number }) => Promise<LeadsFunnel>;
+  getInspirationLibrary: () => Promise<InspirationLibrary>;
+  analyzeInspiration: (p: InspirationAnalysisRequest) => Promise<InspirationAnalysis>;
 }
 
 export interface AIDashboardService {

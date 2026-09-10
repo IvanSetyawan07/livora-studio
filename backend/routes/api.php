@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\Ai\AgentController as AiAgentController;
 use App\Http\Controllers\Api\Ai\RecommendationController as AiRecommendationController;
 use App\Http\Controllers\Api\Ai\ActionController as AiActionController;
 use App\Http\Controllers\Api\Ai\ChatController as AiChatController;
+use App\Http\Controllers\Api\Ai\ContentInspirationController as AiContentInspirationController;
 use App\Http\Controllers\Api\Ai\UsageController as AiUsageController;
 use App\Http\Controllers\Api\Ai\ProviderController as AiProviderController;
 use App\Http\Controllers\Api\Ai\CampaignController as AiCampaignController;
@@ -357,6 +358,8 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::get('/analytics/overview', [AiAnalyticsController::class, 'overview']);
         Route::get('/ads/summary', [AiAdsController::class, 'summary']);
         Route::get('/content/summary', [AiContentController::class, 'summary']);
+        Route::get('/content/inspiration/library', [AiContentInspirationController::class, 'library']);
+        Route::post('/content/inspiration/analyze', [AiContentInspirationController::class, 'analyze']);
         Route::get('/leads/funnel', [LeadsController::class, 'funnel']);
     });
 });

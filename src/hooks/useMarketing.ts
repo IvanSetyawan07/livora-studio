@@ -1,9 +1,18 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAiMarketingContext } from "@/context/AiMarketingContext";
 import { useSectionState, type DerivedNonDataStatus } from "@/hooks/useSectionState";
 import { aiServices } from "@/lib/ai/services";
 import { rangeKey, rangeParams } from "@/lib/ai/date-range";
-import type { AdsSummary, AnalyticsOverview, ContentSummary, LeadsFunnel, MarketingStatus } from "@/lib/ai/types";
+import type {
+  AdsSummary,
+  AnalyticsOverview,
+  ContentSummary,
+  InspirationAnalysis,
+  InspirationAnalysisRequest,
+  InspirationLibrary,
+  LeadsFunnel,
+  MarketingStatus,
+} from "@/lib/ai/types";
 
 const STALE = 5 * 60_000;
 
@@ -88,4 +97,21 @@ export function useLeadsFunnel() {
     isEmpty: (d) => d.series.every((r) => r.leads === 0 && r.wishlistAdds === 0),
   });
   return { query: q, state };
+}
+/**
+ * Content Inspiration — video milik Livora sendiri (YouTube + TikTok) sebagai
+ * titik awal, lalu pembanding video sejenis dari YouTube.
+ */
+export function useInspirationLibrary() {
+  return useQuery<InspirationLibrary>({
+    queryKey: ["ai", "marketing", "inspiration", "library"],
+    queryFn: () => aiServices.marketing.getInspirationLibrary(),
+    staleTime: STALE,
+  });
+}
+
+export function useInspirationAnalysis() {
+  return useMutation<InspirationAnalysis, Error, InspirationAnalysisRequest>({
+    mutationFn: (payload) => aiServices.marketing.analyzeInspiration(payload),
+  });
 }
