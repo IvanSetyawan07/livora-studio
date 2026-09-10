@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -24,11 +24,6 @@ type CloudItem = {
 };
 
 const CLOUDS: CloudItem[] = [
-  /**
-   * 1. cloud5
-   * Long bright cloud on the LEFT side.
-   * This is the most visible left foreground cloud.
-   */
   {
     id: 1,
     src: cloud5,
@@ -41,12 +36,6 @@ const CLOUDS: CloudItem[] = [
     zIndex: 12,
     imageTransform: "rotate(-8deg)",
   },
-
-  /**
-   * 2. cloud6
-   * Thin/faint cloud in the UPPER MID area, pushed to the back.
-   * This should feel like a background cloud, not a focal one.
-   */
   {
     id: 2,
     src: cloud6,
@@ -59,12 +48,6 @@ const CLOUDS: CloudItem[] = [
     zIndex: 5,
     imageTransform: "rotate(10deg) scaleY(0.92)",
   },
-
-  /**
-   * 3. cloud4
-   * Soft cloud in the CENTER area, behind the title.
-   * Keep it subtle and not too heavy.
-   */
   {
     id: 3,
     src: cloud4,
@@ -77,12 +60,6 @@ const CLOUDS: CloudItem[] = [
     zIndex: 6,
     imageTransform: "rotate(8deg)",
   },
-
-  /**
-   * 4. cloud1
-   * Main bright cloud at TOP RIGHT.
-   * This one is closer to the sunlight, so it needs to look stronger/brighter.
-   */
   {
     id: 4,
     src: cloud1,
@@ -95,12 +72,6 @@ const CLOUDS: CloudItem[] = [
     zIndex: 13,
     imageTransform: "rotate(-10deg)",
   },
-
-  /**
-   * 5. cloud2
-   * Mid-right cloud, thinner than the top-right one.
-   * It sits behind/around the title area but should not overpower.
-   */
   {
     id: 5,
     src: cloud2,
@@ -113,12 +84,6 @@ const CLOUDS: CloudItem[] = [
     zIndex: 8,
     imageTransform: "rotate(-15deg) scaleY(0.88)",
   },
-
-  /**
-   * 6. cloud3
-   * Small faint cloud on the upper-left / upper-mid region.
-   * This is a BACK cloud and should stay subtle.
-   */
   {
     id: 6,
     src: cloud3,
@@ -133,14 +98,20 @@ const CLOUDS: CloudItem[] = [
   },
 ];
 
-/**
- * Cinematic hero:
- * 1. Livora title over a blue sky framed by clouds
- * 2. On scroll the clouds part, the title leaves, and the sky pans down to the house
- * 3. Copy fades in over the house
- */
 export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
   const root = useRef<HTMLDivElement>(null);
+  const [assetsReady, setAssetsReady] = useState(false);
+
+  useEffect(() => {
+    const img = new Image();
+    img.src = skyToHouse;
+    if (img.complete) {
+      setAssetsReady(true);
+    } else {
+      img.onload = () => setAssetsReady(true);
+      img.onerror = () => setAssetsReady(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (!ready) return;
@@ -172,7 +143,6 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
           "-=0.5"
         );
 
-      // Super subtle idle movement so the initial composition remains close
       gsap.to(".drift-front", {
         xPercent: 0.8,
         yPercent: -0.35,
@@ -205,7 +175,12 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
   }, [ready]);
 
   useEffect(() => {
+    if (!assetsReady) return;
+
     gsap.registerPlugin(ScrollTrigger);
+
+    // Abaikan resize palsu dari address bar mobile — jangan dihapus.
+    ScrollTrigger.config({ ignoreMobileResize: true });
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduced) return;
@@ -217,42 +192,38 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
           start: "top top",
           end: "bottom bottom",
           scrub: 1.05,
-          invalidateOnRefresh: true,
+          // invalidateOnRefresh DIHAPUS — semua value tween di sini statis
+          // (angka literal, bukan function), jadi tidak butuh dihitung ulang
+          // tiap refresh. Flag ini yang menyebabkan urutan reveal
+          // .interior-line jadi kacau saat browser resize.
         },
       });
 
-      // Clouds move away
       tl.to(".cloud-1", { xPercent: -92, yPercent: -28, opacity: 0, ease: "power2.in" }, 0)
         .to(".cloud-2", { xPercent: 10, yPercent: -50, opacity: 0, ease: "power2.in" }, 0.02)
         .to(".cloud-3", { xPercent: -8, yPercent: 18, opacity: 0, ease: "power2.in" }, 0.04)
         .to(".cloud-4", { xPercent: 72, yPercent: -30, opacity: 0, ease: "power2.in" }, 0)
         .to(".cloud-5", { xPercent: 44, yPercent: -14, opacity: 0, ease: "power2.in" }, 0.03)
         .to(".cloud-6", { xPercent: -28, yPercent: -10, opacity: 0, ease: "power2.in" }, 0.02)
-
-        // Title leaves
         .to(
-  ".hero-title",
-  {
-    yPercent: -60,
-    scaleX: 1.35,
-    scaleY: 1.35,
-    opacity: 0,
-    filter: "blur(6px)",
-    ease: "power2.in",
-  },
-  0
-)
+          ".hero-title",
+          {
+            yPercent: -60,
+            scaleX: 1.35,
+            scaleY: 1.35,
+            opacity: 0,
+            filter: "blur(6px)",
+            ease: "power2.in",
+          },
+          0
+        )
         .to(".hero-scroll", { opacity: 0, y: -30, ease: "power2.in" }, 0)
-
-        // Sky to house pan (transform based so it works on every screen ratio)
         .fromTo(
           ".scene-img",
           { yPercent: 0 },
           { yPercent: -50, ease: "none", duration: 1.6 },
           0
         )
-
-        // House overlay content
         .fromTo(
           ".house-overlay",
           { opacity: 0 },
@@ -279,13 +250,14 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
         );
     }, root);
 
+    requestAnimationFrame(() => ScrollTrigger.refresh());
+
     return () => ctx.revert();
-  }, []);
+  }, [assetsReady]);
 
   return (
     <section id="top" ref={root} className="relative h-[380vh]">
       <div className="sticky top-0 h-screen overflow-hidden bg-[#8CC0E8]">
-        {/* Continuous sky -> house image */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="scene-img absolute left-0 top-0 h-[200%] w-full will-change-transform">
             <img
@@ -293,12 +265,13 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
               alt=""
               aria-hidden
               draggable={false}
+              width={1920}
+              height={2160}
               className="h-full w-full select-none object-cover"
             />
           </div>
         </div>
 
-        {/* Clouds */}
         <div className="pointer-events-none absolute inset-0 z-[8] overflow-hidden">
           {CLOUDS.map((cloud) => (
             <div
@@ -311,7 +284,6 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
                 zIndex: cloud.zIndex,
               }}
             >
-              {/* anchor by center */}
               <div className="-translate-x-1/2 -translate-y-1/2">
                 <div className={cloud.layer}>
                   <img
@@ -332,7 +304,6 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
           ))}
         </div>
 
-        {/* Title */}
         <div className="hero-title absolute inset-0 z-20 flex flex-col items-center justify-center px-6">
           <h1 className="serif flex overflow-hidden text-[22vw] font-light leading-[0.85] text-background sm:text-[14vw]">
             {"Livora".split("").map((c, i) => (
@@ -351,7 +322,6 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
           Scroll
         </div>
 
-        {/* Copy over house image */}
         <div className="house-overlay absolute inset-0 z-30 opacity-0">
           <div className="absolute inset-0 bg-gradient-to-r from-foreground/90 via-foreground/45 to-transparent" />
           <div className="absolute inset-0 flex items-center">
