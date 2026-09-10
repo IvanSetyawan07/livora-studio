@@ -581,3 +581,55 @@ export interface LeadsFunnel {
   series: { date: string; leads: number; wishlistAdds: number; responded: number }[];
   byStatus: { status: string; count: number }[];
 }
+
+/** Content Inspiration — video nyata dari YouTube/TikTok, tanpa angka rekaan. */
+export interface InspirationVideo {
+  platform: "youtube" | "tiktok";
+  id: string;
+  title: string;
+  channel?: string;
+  channelId?: string;
+  thumbnail: string;
+  url: string;
+  publishedAt: string | null;
+  durationSeconds?: number | null;
+  views: number;
+  likes: number;
+  comments: number;
+  shares?: number;
+  engagementRate: number | null;
+  completionRate?: number | null;
+}
+
+export interface InspirationLibrarySection {
+  status: MarketingStatus;
+  message?: string;
+  videos?: InspirationVideo[];
+}
+
+export interface InspirationLibrary {
+  status: MarketingStatus;
+  generatedAt: string;
+  youtube: InspirationLibrarySection;
+  tiktok: InspirationLibrarySection;
+  tiktokDiscoveryAvailable: boolean;
+  tiktokDiscoveryNote: string;
+}
+
+export interface InspirationAnalysisRequest {
+  query: string;
+  sourceTitle?: string;
+  sourcePlatform?: "youtube" | "tiktok";
+  sourceViews?: number;
+  sourceEngagementRate?: number;
+}
+
+export interface InspirationAnalysis {
+  status: MarketingStatus | "empty";
+  message?: string;
+  query: string;
+  generatedAt?: string;
+  references: InspirationVideo[];
+  analysis: { text: string; provider: string; model: string } | null;
+  analysisError?: string | null;
+}
