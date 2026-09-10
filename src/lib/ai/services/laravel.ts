@@ -43,6 +43,8 @@ import type {
   AdsSummary,
   ContentSummary,
   LeadsFunnel,
+  InspirationLibrary,
+  InspirationAnalysis,
 } from "../types";
 
 type Envelope<T> = T | { data: T };
