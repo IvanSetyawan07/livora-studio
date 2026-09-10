@@ -8,6 +8,7 @@ import { NotConnected, Panel, Pill, SectionHeading, StatusDot, type Tone } from 
 import { useAgent, useMetaIntegrationStatus } from "@/hooks/useAiDashboard";
 import { usePageContext } from "@/context/AiMarketingContext";
 import { ContentKpiGrid, EngagementTrendPanel, SocialPerformanceRows } from "@/components/ai/marketing-panels";
+import { ContentInspirationPanel } from "@/components/ai/content-inspiration";
 import type { MetaConnectionState } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
 
@@ -165,6 +166,8 @@ export default function ContentAgentPage() {
           rows={4}
         />
       </section>
+
+      <ContentInspirationPanel />
 
       <section className="mt-10">
         <SectionHeading
