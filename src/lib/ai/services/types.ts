@@ -44,6 +44,9 @@ import type {
   AdsSummary,
   ContentSummary,
   LeadsFunnel,
+  InspirationLibrary,
+  InspirationAnalysis,
+  InspirationAnalysisRequest,
 } from "../types";
 
 export interface AIMarketingService {

@@ -310,6 +310,23 @@ const marketing: AIMarketingService = {
     return { ...notConfigured(p), kpis: { leads: 0, wishlistAdds: 0, responded: 0, responseRate: null },
       deltas: { leads: null, wishlistAdds: null, responseRate: null }, series: [], byStatus: [] };
   },
+  // Content Inspiration butuh API YouTube/TikTok nyata — mode mock tidak
+  // pernah mengarang video atau metrik.
+  async getInspirationLibrary() {
+    await delay(200);
+    return {
+      status: "not_configured" as const,
+      generatedAt: new Date().toISOString(),
+      youtube: { status: "not_configured" as const },
+      tiktok: { status: "not_configured" as const },
+      tiktokDiscoveryAvailable: false,
+      tiktokDiscoveryNote: "Mode mock: tidak ada data platform.",
+    };
+  },
+  async analyzeInspiration(p) {
+    await delay(200);
+    return { status: "not_configured" as const, query: p.query, references: [], analysis: null };
+  },
 };
 // Honest-empty: belum ada koneksi Search Console beneran di mode mock,
 // jadi selalu balikin status disconnected/no-data (bukan angka fiktif).

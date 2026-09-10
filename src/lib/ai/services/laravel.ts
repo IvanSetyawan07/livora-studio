@@ -177,5 +177,9 @@ export const laravelServices: AIServiceBundle = {
       api.get("/ai/content/summary", { params: p }).then((r) => unwrap<ContentSummary>(r.data)),
     getLeadsFunnel: (p) =>
       api.get("/ai/leads/funnel", { params: p }).then((r) => unwrap<LeadsFunnel>(r.data)),
+    getInspirationLibrary: () =>
+      api.get("/ai/content/inspiration/library").then((r) => unwrap<InspirationLibrary>(r.data)),
+    analyzeInspiration: (p) =>
+      api.post("/ai/content/inspiration/analyze", p).then((r) => unwrap<InspirationAnalysis>(r.data)),
   },
 };
