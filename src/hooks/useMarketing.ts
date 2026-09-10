@@ -1,9 +1,18 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAiMarketingContext } from "@/context/AiMarketingContext";
 import { useSectionState, type DerivedNonDataStatus } from "@/hooks/useSectionState";
 import { aiServices } from "@/lib/ai/services";
 import { rangeKey, rangeParams } from "@/lib/ai/date-range";
-import type { AdsSummary, AnalyticsOverview, ContentSummary, LeadsFunnel, MarketingStatus } from "@/lib/ai/types";
+import type {
+  AdsSummary,
+  AnalyticsOverview,
+  ContentSummary,
+  InspirationAnalysis,
+  InspirationAnalysisRequest,
+  InspirationLibrary,
+  LeadsFunnel,
+  MarketingStatus,
+} from "@/lib/ai/types";
 
 const STALE = 5 * 60_000;
 
