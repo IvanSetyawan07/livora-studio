@@ -102,6 +102,7 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
   const root = useRef<HTMLDivElement>(null);
   const [assetsReady, setAssetsReady] = useState(false);
 
+  // ── Tunggu gambar utama benar-benar loaded sebelum ScrollTrigger dibuat ──
   useEffect(() => {
     const img = new Image();
     img.src = skyToHouse;
@@ -113,6 +114,7 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
     }
   }, []);
 
+  // ── Entrance: "Livora" letters + subtitle ──
   useEffect(() => {
     if (!ready) return;
 
@@ -174,16 +176,29 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
     return () => ctx.revert();
   }, [ready]);
 
+  // ── Scroll-scrubbed cinematic timeline ──
   useEffect(() => {
     if (!assetsReady) return;
 
     gsap.registerPlugin(ScrollTrigger);
 
-    // Abaikan resize palsu dari address bar mobile — jangan dihapus.
+    // Abaikan resize palsu dari address bar mobile saat scroll
     ScrollTrigger.config({ ignoreMobileResize: true });
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) return;
+
+    if (reduced) {
+      // Jangan skip total — tetap tampilkan konten akhir tanpa animasi,
+      // supaya user dengan macOS Reduce Motion tetap bisa lihat
+      // "Imagine. Create. Realize." dan bukan layar kosong/statis di awal.
+      gsap.set(".cloud-1, .cloud-2, .cloud-3, .cloud-4, .cloud-5, .cloud-6", { opacity: 0 });
+      gsap.set(".hero-title, .hero-scroll", { opacity: 0 });
+      gsap.set(".scene-img", { yPercent: -50 });
+      gsap.set(".house-overlay", { opacity: 1 });
+      gsap.set(".interior-line", { opacity: 1, yPercent: 0 });
+      gsap.set(".interior-body", { opacity: 1, y: 0 });
+      return;
+    }
 
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({
@@ -192,10 +207,6 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
           start: "top top",
           end: "bottom bottom",
           scrub: 1.05,
-          // invalidateOnRefresh DIHAPUS — semua value tween di sini statis
-          // (angka literal, bukan function), jadi tidak butuh dihitung ulang
-          // tiap refresh. Flag ini yang menyebabkan urutan reveal
-          // .interior-line jadi kacau saat browser resize.
         },
       });
 
@@ -254,6 +265,8 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
 
     return () => ctx.revert();
   }, [assetsReady]);
+
+  // ── Typewriter tidak ada di file ini (itu ada di Hero.tsx yang lain) ──
 
   return (
     <section id="top" ref={root} className="relative h-[380vh]">
