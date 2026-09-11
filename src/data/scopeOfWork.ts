@@ -21,10 +21,10 @@ export const scopeItems: ScopeItem[] = [
     description:
       "Every room has a story waiting to be told. We craft interior concepts that transform bare walls and empty floors into spaces that breathe — designed around your life, your taste, and your vision.",
     image: decorative,
-    href: "/projects",
-    featured: true,
-    ctaLabel: "See All Projects",
-    ctaUrl: "livora.architechture/interior",
+    // href: "/projects",
+    // featured: true,
+    // ctaLabel: "See All Projects",
+    // ctaUrl: "livora.architechture/interior",
   },
   {
     number: "02",
