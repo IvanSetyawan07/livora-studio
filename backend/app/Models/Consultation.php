@@ -84,12 +84,29 @@ class Consultation extends Model
         'meeting_time',
         'meeting_location',
         'meeting_link',
+        'meeting_type',
         'follow_up_date',
         'rejection_reason',
         'dp_amount',
         'dp_paid_at',
+        'final_payment_amount',
+        'final_payment_requested_at',
+        'final_payment_paid_at',
         'agreement_signed_at',
         'agreement_signature_name',
+        'agreement_signature_path',
+        'agreement_document_path',
+        'agreement_document_hash',
+        'agreement_signer_ip',
+        'agreement_signer_device',
+        'livora_countersigned_at',
+        'livora_countersigner_name',
+        'livora_signature_path',
+        'final_agreement_path',
+        'meterai_status',
+        'meterai_reference',
+        'meterai_error',
+        'meterai_completed_at',
         'project_progress',
     ];
 
@@ -98,8 +115,13 @@ class Consultation extends Model
         'meeting_date'        => 'date',
         'follow_up_date'      => 'date',
         'dp_paid_at'          => 'datetime',
+        'final_payment_requested_at' => 'datetime',
+        'final_payment_paid_at' => 'datetime',
         'agreement_signed_at' => 'datetime',
+        'livora_countersigned_at' => 'datetime',
+        'meterai_completed_at' => 'datetime',
         'dp_amount'           => 'decimal:2',
+        'final_payment_amount' => 'decimal:2',
         'project_progress'    => 'integer',
     ];
 
@@ -131,6 +153,21 @@ class Consultation extends Model
     public function progressUpdates()
     {
         return $this->hasMany(ConsultationProgressUpdate::class)->orderByDesc('created_at');
+    }
+
+    public function activities()
+    {
+        return $this->hasMany(ConsultationActivity::class)->orderByDesc('created_at');
+    }
+
+    public function progressComments()
+    {
+        return $this->hasMany(ConsultationProgressComment::class)->orderBy('created_at');
+    }
+
+    public function finalAgreementReady(): bool
+    {
+        return $this->agreement_signed_at !== null && $this->livora_countersigned_at !== null;
     }
 
     public function statusLabel(): string
