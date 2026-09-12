@@ -170,6 +170,24 @@ class Consultation extends Model
         return $this->agreement_signed_at !== null && $this->livora_countersigned_at !== null;
     }
 
+    public function recordActivity(
+        string $type,
+        string $title,
+        ?string $body = null,
+        string $audience = 'both',
+        ?int $actorId = null,
+        array $data = [],
+    ): ConsultationActivity {
+        return $this->activities()->create([
+            'audience' => $audience,
+            'type' => $type,
+            'title' => $title,
+            'body' => $body,
+            'actor_id' => $actorId,
+            'data' => $data ?: null,
+        ]);
+    }
+
     public function statusLabel(): string
     {
         return self::STATUS_LABELS[$this->status] ?? $this->status;
@@ -189,5 +207,13 @@ class Consultation extends Model
             'changed_by'      => $changedBy,
             'note'            => $note,
         ]);
+        $this->recordActivity(
+            'status_changed',
+            $this->statusLabel(),
+            $note,
+            'both',
+            $changedBy,
+            ['previous_status' => $previous, 'new_status' => $newStatus],
+        );
     }
 }
