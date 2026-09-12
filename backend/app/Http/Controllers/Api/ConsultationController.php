@@ -12,6 +12,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ConsultationController extends Controller
 {
@@ -76,6 +78,13 @@ class ConsultationController extends Controller
             'changed_by'      => $userId,
             'note'            => 'Inquiry submitted by customer.',
         ]);
+        $consultation->recordActivity(
+            'inquiry_created',
+            'Consultation submitted',
+            'Your consultation request has been received.',
+            'both',
+            $userId,
+        );
 
         // Auto-move to Under Review so it visibly enters the admin queue.
         $consultation->changeStatus(
@@ -126,6 +135,8 @@ class ConsultationController extends Controller
             'statusHistory.changedByUser:id,name',
             'stageFiles.uploader:id,name',
             'progressUpdates.creator:id,name',
+            'progressUpdates.comments.author:id,name',
+            'activities.actor:id,name',
         ]);
         $arr = $consultation->toArray();
         $arr['status_label'] = $consultation->statusLabel();
@@ -223,7 +234,37 @@ class ConsultationController extends Controller
             ->where('sender_type', 'admin')
             ->whereNull('read_at')
             ->count();
-        return response()->json(['unread' => $count]);
+        $activityCount = \App\Models\ConsultationActivity::whereHas('consultation', function ($q) use ($request) {
+                $q->where('user_id', $request->user()->id);
+            })
+            ->whereIn('audience', ['user', 'both'])
+            ->whereNull('user_read_at')
+            ->count();
+        return response()->json(['unread' => $count + $activityCount, 'messages' => $count, 'activities' => $activityCount]);
+    }
+
+    public function activities(Request $request)
+    {
+        return \App\Models\ConsultationActivity::whereHas('consultation', function ($q) use ($request) {
+                $q->where('user_id', $request->user()->id);
+            })
+            ->whereIn('audience', ['user', 'both'])
+            ->with(['consultation:id,first_name,last_name,status', 'actor:id,name'])
+            ->orderByDesc('created_at')
+            ->limit(100)
+            ->get();
+    }
+
+    public function markActivitiesRead(Request $request)
+    {
+        \App\Models\ConsultationActivity::whereHas('consultation', function ($q) use ($request) {
+                $q->where('user_id', $request->user()->id);
+            })
+            ->whereIn('audience', ['user', 'both'])
+            ->whereNull('user_read_at')
+            ->update(['user_read_at' => now()]);
+
+        return response()->json(['ok' => true]);
     }
 
     // ─── User workflow actions (stages 6 & 7) ────────────────────────
@@ -246,6 +287,7 @@ class ConsultationController extends Controller
             'file_path'       => $path,
             'note'            => $data['note'] ?? null,
             'uploaded_by'     => $request->user()->id,
+            'review_status'   => 'pending',
         ]);
         $consultation->statusHistory()->create([
             'previous_status' => $consultation->status,
@@ -253,6 +295,30 @@ class ConsultationController extends Controller
             'changed_by'      => $request->user()->id,
             'note'            => 'Customer uploaded DP payment proof.',
         ]);
+        $consultation->recordActivity('payment_proof_uploaded', 'DP proof uploaded', 'Waiting for Livora verification.', 'both', $request->user()->id);
+        return $this->show($request, $consultation->fresh());
+    }
+
+    public function uploadFinalPaymentProof(Request $request, Consultation $consultation)
+    {
+        if ($consultation->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+        $data = $request->validate(['proof' => 'required|file', 'note' => 'nullable|string|max:2000']);
+        if ($consultation->final_payment_requested_at === null) {
+            return response()->json(['message' => 'Final payment has not been requested.'], 422);
+        }
+        $path = '/storage/' . $request->file('proof')->store('consultations', 'public');
+        ConsultationStageFile::create([
+            'consultation_id' => $consultation->id,
+            'stage' => Consultation::STATUS_PROJECT_RUNNING,
+            'kind' => 'final_payment_proof',
+            'file_path' => $path,
+            'note' => $data['note'] ?? null,
+            'uploaded_by' => $request->user()->id,
+            'review_status' => 'pending',
+        ]);
+        $consultation->recordActivity('final_payment_proof_uploaded', 'Final payment proof uploaded', 'Waiting for Livora verification.', 'both', $request->user()->id);
         return $this->show($request, $consultation->fresh());
     }
 
@@ -265,10 +331,37 @@ class ConsultationController extends Controller
         $data = $request->validate([
             'signature_name' => 'required|string|max:150',
             'accept'         => 'required|boolean|accepted',
+            'signature_data' => 'nullable|string|max:2000000',
         ]);
-        $consultation->agreement_signature_name = $data['signature_name'];
-        $consultation->agreement_signed_at = now();
-        $consultation->save();
+        $agreement = $consultation->stageFiles()->where('kind', 'agreement')->latest('created_at')->first();
+        if (!$agreement) {
+            return response()->json(['message' => 'Agreement is not available yet.'], 422);
+        }
+        $signaturePath = null;
+        if (!empty($data['signature_data'])) {
+            if (!preg_match('/^data:image\/png;base64,(.+)$/', $data['signature_data'], $matches)) {
+                return response()->json(['message' => 'Invalid signature image.'], 422);
+            }
+            $binary = base64_decode($matches[1], true);
+            if ($binary === false || strlen($binary) > 1500000) {
+                return response()->json(['message' => 'Invalid signature image.'], 422);
+            }
+            $relative = 'consultations/signatures/customer-' . $consultation->id . '-' . now()->timestamp . '.png';
+            Storage::disk('public')->put($relative, $binary);
+            $signaturePath = '/storage/' . $relative;
+        }
+
+        DB::transaction(function () use ($request, $consultation, $data, $agreement, $signaturePath) {
+            $consultation->agreement_signature_name = $data['signature_name'];
+            $consultation->agreement_signature_path = $signaturePath;
+            $consultation->agreement_document_path = $agreement->file_path;
+            $consultation->agreement_document_hash = hash_file('sha256', Storage::disk('public')->path(str_replace('/storage/', '', $agreement->file_path)));
+            $consultation->agreement_signer_ip = $request->ip();
+            $consultation->agreement_signer_device = substr((string) $request->userAgent(), 0, 1000);
+            $consultation->agreement_signed_at = now();
+            $consultation->save();
+            $consultation->recordActivity('agreement_signed', 'Agreement signed by customer', null, 'both', $request->user()->id);
+        });
 
         $consultation->statusHistory()->create([
             'previous_status' => $consultation->status,
@@ -277,5 +370,21 @@ class ConsultationController extends Controller
             'note'            => 'Customer signed the agreement as "' . $data['signature_name'] . '".',
         ]);
         return $this->show($request, $consultation->fresh());
+    }
+
+    public function commentOnProgress(Request $request, Consultation $consultation, \App\Models\ConsultationProgressUpdate $progress)
+    {
+        if ($consultation->user_id !== $request->user()->id || $progress->consultation_id !== $consultation->id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+        $data = $request->validate(['body' => 'required|string|max:3000']);
+        $comment = $progress->comments()->create([
+            'consultation_id' => $consultation->id,
+            'user_id' => $request->user()->id,
+            'author_type' => 'user',
+            'body' => $data['body'],
+        ]);
+        $consultation->recordActivity('progress_comment', 'New progress comment', $data['body'], 'admin', $request->user()->id, ['progress_update_id' => $progress->id]);
+        return response()->json($comment->load('author:id,name'), 201);
     }
 }

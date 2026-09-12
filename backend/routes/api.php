@@ -108,12 +108,16 @@ Route::post('/track/view',  [TrackingController::class, 'view']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/my/consultations', [ConsultationController::class, 'mine']);
     Route::get('/my/consultations/unread', [ConsultationController::class, 'unreadCount']);
+    Route::get('/my/consultations/activities', [ConsultationController::class, 'activities']);
+    Route::post('/my/consultations/activities/read', [ConsultationController::class, 'markActivitiesRead']);
     Route::get('/consultations/{consultation}', [ConsultationController::class, 'show']);
     Route::post('/consultations/{consultation}/cancel', [ConsultationController::class, 'cancel']);
     Route::get('/consultations/{consultation}/messages', [ConsultationController::class, 'messagesIndex']);
     Route::post('/consultations/{consultation}/messages', [ConsultationController::class, 'messagesStore']);
     Route::post('/consultations/{consultation}/dp-proof', [ConsultationController::class, 'uploadDpProof']);
+    Route::post('/consultations/{consultation}/final-payment-proof', [ConsultationController::class, 'uploadFinalPaymentProof']);
     Route::post('/consultations/{consultation}/sign-agreement', [ConsultationController::class, 'signAgreement']);
+    Route::post('/consultations/{consultation}/progress/{progress}/comments', [ConsultationController::class, 'commentOnProgress']);
 
     Route::patch('/user/language', [UserLanguageController::class, 'update']);
     Route::get('/me', [AuthController::class, 'me']);

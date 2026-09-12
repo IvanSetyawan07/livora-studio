@@ -30,4 +30,9 @@ class ConsultationProgressUpdate extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    public function comments()
+    {
+        return $this->hasMany(ConsultationProgressComment::class, 'progress_update_id')->orderBy('created_at');
+    }
 }
