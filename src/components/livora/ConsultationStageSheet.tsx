@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   Calendar,
@@ -13,6 +13,9 @@ import {
   Image as ImageIcon,
   MessageCircle,
   XCircle,
+  Download,
+  ShieldCheck,
+  AlertTriangle,
 } from "lucide-react";
 import {
   type Consultation,
@@ -21,7 +24,7 @@ import {
   uploadDpProof,
   uploadFinalPaymentProof,
   commentOnProgress,
-  signAgreement,
+  signAgreementWithSignature,
   stageIndex,
   fileUrl,
   CONSULTATION_STAGES,
@@ -32,6 +35,7 @@ import {
   rejectProof,
   requestFinalPayment,
   adminCommentOnProgress,
+  countersignAgreement,
 } from "@/lib/adminConsultations";
 import { WHATSAPP_NUMBER } from "./WhatsAppButton";
 
@@ -520,20 +524,162 @@ function PaymentPanel({
   );
 }
 
+/** Small canvas-based signature pad — shared by both the customer's
+ * signing flow and the admin countersign flow. Mouse + touch supported. */
+function SignatureCanvas({
+  value,
+  onChange,
+  height = 160,
+}: {
+  value: string | null;
+  onChange: (dataUrl: string | null) => void;
+  height?: number;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const drawingRef = useRef(false);
+  const lastPointRef = useRef<{ x: number; y: number } | null>(null);
+  const hasDrawnRef = useRef(false);
+
+  const getPos = (e: React.MouseEvent | React.TouchEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    const src = "touches" in e ? e.touches[0] || e.changedTouches[0] : e;
+    if (!src) return null;
+    return {
+      x: ((src.clientX - rect.left) / rect.width) * canvas.width,
+      y: ((src.clientY - rect.top) / rect.height) * canvas.height,
+    };
+  };
+
+  const start = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    const pos = getPos(e);
+    if (!pos) return;
+    drawingRef.current = true;
+    lastPointRef.current = pos;
+  };
+
+  const move = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!drawingRef.current) return;
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    const pos = getPos(e);
+    if (!canvas || !ctx || !pos || !lastPointRef.current) return;
+    ctx.strokeStyle = "#111111";
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+    lastPointRef.current = pos;
+    hasDrawnRef.current = true;
+  };
+
+  const end = () => {
+    if (!drawingRef.current) return;
+    drawingRef.current = false;
+    lastPointRef.current = null;
+    const canvas = canvasRef.current;
+    if (canvas && hasDrawnRef.current) {
+      onChange(canvas.toDataURL("image/png"));
+    }
+  };
+
+  const clear = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    hasDrawnRef.current = false;
+    onChange(null);
+  };
+
+  return (
+    <div className="space-y-2">
+      <canvas
+        ref={canvasRef}
+        width={500}
+        height={height}
+        className="w-full rounded border border-border bg-white touch-none cursor-crosshair"
+        style={{ height }}
+        onMouseDown={start}
+        onMouseMove={move}
+        onMouseUp={end}
+        onMouseLeave={end}
+        onTouchStart={start}
+        onTouchMove={move}
+        onTouchEnd={end}
+      />
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] text-muted-foreground">
+          {value ? "Signature captured." : "Draw your signature above."}
+        </p>
+        <button
+          type="button"
+          onClick={clear}
+          className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground underline"
+        >
+          Clear Signature
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Status pill for the e-meterai (Indonesian stamp duty) lifecycle. */
+function MeteraiStatus({ consultation }: { consultation: Consultation }) {
+  const status = consultation.meterai_status;
+  if (!status || status === "not_requested") return null;
+
+  if (status === "completed") {
+    return (
+      <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 py-1 text-xs">
+        <ShieldCheck size={12} /> e-Meterai completed
+        {consultation.meterai_reference ? ` · ${consultation.meterai_reference}` : ""}
+      </div>
+    );
+  }
+  if (status === "failed") {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 text-red-700 p-3 text-xs">
+        <p className="font-medium uppercase tracking-wider mb-1 flex items-center gap-1.5">
+          <AlertTriangle size={12} /> e-Meterai failed
+        </p>
+        <p>{consultation.meterai_error || "Stamp duty could not be processed."}</p>
+      </div>
+    );
+  }
+  return (
+    <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1 text-xs">
+      <Clock size={12} /> e-Meterai pending
+    </div>
+  );
+}
+
 function AgreementPanel({
   consultation, role, files, onChanged,
 }: { consultation: Consultation; role: "user" | "admin"; files: ConsultationStageFile[]; onChanged?: (c: Consultation) => void }) {
   const agreement = files.find((f) => f.kind === "agreement");
-  const [name, setName] = useState("");
-  const [accept, setAccept] = useState(false);
-  const [saving, setSaving] = useState(false);
   const signed = !!consultation.agreement_signed_at;
+  const countersigned = !!consultation.livora_countersigned_at;
+  const finalReady = signed && countersigned && !!consultation.final_agreement_path;
+
+  const [name, setName] = useState("");
+  const [signatureData, setSignatureData] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const [adminName, setAdminName] = useState("");
+  const [adminSignatureData, setAdminSignatureData] = useState<string | null>(null);
+  const [counterSaving, setCounterSaving] = useState(false);
 
   const handleSign = async () => {
-    if (!name.trim() || !accept) return;
+    if (!name.trim() || !signatureData) return;
     setSaving(true);
     try {
-      const updated = await signAgreement(consultation.id, name.trim());
+      const updated = await signAgreementWithSignature(consultation.id, name.trim(), signatureData);
       onChanged?.(updated);
       toast.success("Terima kasih! Tanda tangan tercatat.");
     } catch {
@@ -543,28 +689,65 @@ function AgreementPanel({
     }
   };
 
+  const handleCountersign = async () => {
+    if (!adminName.trim() || !adminSignatureData) return;
+    setCounterSaving(true);
+    try {
+      const updated = await countersignAgreement(consultation.id, adminName.trim(), adminSignatureData);
+      onChanged?.(updated);
+      toast.success("Agreement countersigned.");
+    } catch {
+      toast.error("Failed to countersign the agreement.");
+    } finally {
+      setCounterSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-4 text-sm">
+      {/* Read-only viewer — no download affordance until fully executed. */}
       {agreement ? (
-        <a
-          href={agreement.file_path}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 rounded border border-border px-3 py-2 text-xs uppercase tracking-[0.2em] hover:bg-secondary"
-        >
-          <FileText size={14} /> Download Agreement
-        </a>
+        <div className="space-y-2">
+          <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Agreement Document</p>
+          <div className="rounded-lg border border-border overflow-hidden bg-secondary/30">
+            <iframe
+              src={fileUrl(agreement.file_path)}
+              title="Project Agreement"
+              className="w-full h-72"
+            />
+          </div>
+          <a
+            href={fileUrl(agreement.file_path)}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] underline text-muted-foreground"
+          >
+            <FileText size={12} /> Open Agreement in New Tab
+          </a>
+          <p className="text-[11px] text-muted-foreground">
+            View-only until the agreement is fully signed and countersigned.
+          </p>
+        </div>
       ) : (
         <p className="text-muted-foreground">Waiting for the project agreement to be uploaded.</p>
       )}
 
+      {/* Customer signature status / form */}
       {signed ? (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-800">
-          <p className="text-xs uppercase tracking-wider mb-1">Signed</p>
+          <p className="text-xs uppercase tracking-wider mb-1 flex items-center gap-1.5">
+            <Check size={12} /> Signed by Customer
+          </p>
           <p className="text-sm">
             <strong>{consultation.agreement_signature_name}</strong> · {new Date(consultation.agreement_signed_at!).toLocaleString("id-ID")}
           </p>
-          <p className="text-[11px] mt-1 opacity-80">Digital acknowledgement — not a qualified e-signature.</p>
+          {consultation.agreement_signature_path && (
+            <img
+              src={fileUrl(consultation.agreement_signature_path)}
+              alt="Customer signature"
+              className="mt-2 h-14 bg-white rounded border border-emerald-200 p-1"
+            />
+          )}
         </div>
       ) : role === "user" && agreement ? (
         <div className="space-y-3 border border-border rounded-lg p-3">
@@ -576,19 +759,75 @@ function AgreementPanel({
             placeholder="Full legal name"
             className="w-full border border-border rounded px-3 py-2 text-sm bg-background"
           />
-          <label className="flex items-start gap-2 text-xs text-muted-foreground">
-            <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} className="mt-0.5" />
-            I have read and agree to the terms of this project agreement.
-          </label>
+          <SignatureCanvas value={signatureData} onChange={setSignatureData} />
           <button
             onClick={handleSign}
-            disabled={saving || !name.trim() || !accept}
+            disabled={saving || !name.trim() || !signatureData}
             className="w-full rounded bg-foreground text-background py-2 text-xs uppercase tracking-[0.2em] disabled:opacity-50"
           >
             {saving ? "Signing…" : "Sign Agreement"}
           </button>
         </div>
+      ) : role === "admin" ? (
+        <p className="text-muted-foreground">Waiting for the customer to sign the agreement.</p>
       ) : null}
+
+      {/* Livora countersignature status / form */}
+      {signed && (
+        countersigned ? (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-800">
+            <p className="text-xs uppercase tracking-wider mb-1 flex items-center gap-1.5">
+              <Check size={12} /> Countersigned by Livora
+            </p>
+            <p className="text-sm">
+              <strong>{consultation.livora_countersigner_name}</strong> · {new Date(consultation.livora_countersigned_at!).toLocaleString("id-ID")}
+            </p>
+            {consultation.livora_signature_path && (
+              <img
+                src={fileUrl(consultation.livora_signature_path)}
+                alt="Livora signature"
+                className="mt-2 h-14 bg-white rounded border border-emerald-200 p-1"
+              />
+            )}
+          </div>
+        ) : role === "admin" ? (
+          <div className="space-y-3 border border-border rounded-lg p-3">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Countersign as Livora</p>
+            <input
+              type="text"
+              value={adminName}
+              onChange={(e) => setAdminName(e.target.value)}
+              placeholder="Admin full name"
+              className="w-full border border-border rounded px-3 py-2 text-sm bg-background"
+            />
+            <SignatureCanvas value={adminSignatureData} onChange={setAdminSignatureData} />
+            <button
+              onClick={handleCountersign}
+              disabled={counterSaving || !adminName.trim() || !adminSignatureData}
+              className="w-full rounded bg-foreground text-background py-2 text-xs uppercase tracking-[0.2em] disabled:opacity-50"
+            >
+              {counterSaving ? "Countersigning…" : "Countersign Agreement"}
+            </button>
+          </div>
+        ) : (
+          <p className="text-muted-foreground">Waiting for Livora to countersign.</p>
+        )
+      )}
+
+      {/* e-Meterai status — only relevant once the final document has been generated */}
+      {consultation.final_agreement_path && <MeteraiStatus consultation={consultation} />}
+
+      {/* Final download — only once the agreement is actually fully executed */}
+      {finalReady && (
+        <a
+          href={fileUrl(consultation.final_agreement_path)}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-2 rounded bg-foreground text-background px-4 py-2 text-xs uppercase tracking-[0.2em]"
+        >
+          <Download size={14} /> Download Final Agreement
+        </a>
+      )}
     </div>
   );
 }

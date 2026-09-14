@@ -117,13 +117,16 @@ export type Consultation = ConsultationPayload & {
   final_payment_amount?: string | number | null;
   final_payment_requested_at?: string | null;
   final_payment_paid_at?: string | null;
-  customer_signature_path?: string | null;
+  agreement_signature_path?: string | null;
   agreement_document_path?: string | null;
   livora_countersigned_at?: string | null;
   livora_countersigner_name?: string | null;
   livora_signature_path?: string | null;
   final_agreement_path?: string | null;
   meterai_status?: string | null;
+  meterai_reference?: string | null;
+  meterai_error?: string | null;
+  meterai_completed_at?: string | null;
   activities?: ConsultationActivity[];
   created_at: string;
   updated_at: string;

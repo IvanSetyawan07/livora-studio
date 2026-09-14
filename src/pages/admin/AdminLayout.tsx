@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { clearSession, rememberIntendedPath } from "@/lib/authGuard";
 import LanguageSwitcher from "@/components/livora/LanguageSwitcher";
-import NotificationBell from "@/components/livora/NotificationBell";
+import NotificationBell from "@/components/livora/NotificationBell.tsx";
 import {
   getAdminActivities,
   getAdminActivitiesUnread,

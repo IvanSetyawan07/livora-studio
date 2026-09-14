@@ -5,7 +5,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/livora/LanguageSwitcher";
 import SearchOverlay from "@/components/livora/SearchOverlay";
-import NotificationBell from "@/components/livora/NotificationBell";
+import NotificationBell from "@/components/livora/NotificationBell.tsx";
 import { getMyActivities, markMyActivitiesRead, type ConsultationActivity } from "@/lib/consultations";
 import { api, authStorage } from "@/lib/api";
 import { getAllThumbnails, subscribeThumbnails } from "@/lib/themeThumbnails";
