@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import type { Consultation } from "@/lib/consultations";
+import type { Consultation, ConsultationActivity } from "@/lib/consultations";
 import type { WishlistEntry } from "@/lib/wishlist";
 
 export type UpdateConsultationPayload = Partial<{
@@ -92,6 +92,57 @@ export const postProgress = (
 
 export const completeConsultation = (id: number, note?: string) =>
   api.post<Consultation>(`/admin/consultations/${id}/complete`, { note }).then((r) => r.data);
+
+export const requestFinalPayment = (
+  id: number,
+  amount: number,
+  note?: string,
+  invoice?: File,
+) => {
+  const form = new FormData();
+  form.append("final_payment_amount", String(amount));
+  if (note) form.append("note", note);
+  if (invoice) form.append("invoice", invoice);
+  return api
+    .post<Consultation>(`/admin/consultations/${id}/request-final-payment`, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    })
+    .then((r) => r.data);
+};
+
+export const countersignAgreement = (
+  id: number,
+  countersignerName: string,
+  signatureData?: string,
+) =>
+  api
+    .post<Consultation>(`/admin/consultations/${id}/countersign`, {
+      countersigner_name: countersignerName,
+      signature_data: signatureData,
+    })
+    .then((r) => r.data);
+
+export const approveProof = (id: number, fileId: number) =>
+  api.post<Consultation>(`/admin/consultations/${id}/stage-files/${fileId}/approve`).then((r) => r.data);
+
+export const rejectProof = (id: number, fileId: number, reason: string) =>
+  api
+    .post<Consultation>(`/admin/consultations/${id}/stage-files/${fileId}/reject`, { reason })
+    .then((r) => r.data);
+
+export const adminCommentOnProgress = (id: number, progressId: number, body: string) =>
+  api
+    .post<Consultation>(`/admin/consultations/${id}/progress/${progressId}/comments`, { body })
+    .then((r) => r.data);
+
+export const getAdminActivities = () =>
+  api.get<ConsultationActivity[]>("/admin/consultations/activities").then((r) => r.data);
+
+export const getAdminActivitiesUnread = () =>
+  api.get<{ unread: number }>("/admin/consultations/activities/unread").then((r) => r.data.unread);
+
+export const markAdminActivitiesRead = () =>
+  api.post("/admin/consultations/activities/read").then((r) => r.data);
 
 // ---- Admin wishlist ----
 

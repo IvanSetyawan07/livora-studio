@@ -1,4 +1,12 @@
-import { api } from "@/lib/api";
+import { api, API_BASE_URL } from "@/lib/api";
+
+const FILE_HOST = API_BASE_URL.replace(/\/api\/?$/, "");
+
+/** Resolve a stored `/storage/...` path into an absolute URL. */
+export const fileUrl = (path?: string | null): string => {
+  if (!path) return "";
+  return /^https?:\/\//i.test(path) ? path : `${FILE_HOST}${path.startsWith("/") ? "" : "/"}${path}`;
+};
 
 export type ConsultationPayload = {
   first_name: string;
@@ -30,6 +38,35 @@ export type ConsultationStageFile = {
   note: string | null;
   uploaded_by: number | null;
   uploader?: { id: number; name: string } | null;
+  review_status?: "pending" | "approved" | "rejected" | null;
+  reviewed_at?: string | null;
+  rejection_reason?: string | null;
+  reviewer?: { id: number; name: string } | null;
+  created_at: string;
+};
+
+export type ConsultationProgressComment = {
+  id: number;
+  progress_update_id: number;
+  consultation_id: number;
+  user_id: number | null;
+  author_type: "user" | "admin";
+  body: string;
+  author?: { id: number; name: string } | null;
+  created_at: string;
+};
+
+export type ConsultationActivity = {
+  id: number;
+  consultation_id: number;
+  audience: "user" | "admin" | "both";
+  type: string;
+  title: string;
+  body: string | null;
+  actor?: { id: number; name: string } | null;
+  consultation?: { id: number; first_name: string; last_name?: string | null; status: string } | null;
+  user_read_at: string | null;
+  admin_read_at: string | null;
   created_at: string;
 };
 
@@ -41,6 +78,7 @@ export type ConsultationProgressUpdate = {
   photos: string[] | null;
   created_by: number | null;
   creator?: { id: number; name: string } | null;
+  comments?: ConsultationProgressComment[];
   created_at: string;
 };
 
@@ -73,6 +111,18 @@ export type Consultation = ConsultationPayload & {
   agreement_signed_at: string | null;
   agreement_signature_name: string | null;
   project_progress: number;
+  meeting_type?: string | null;
+  final_payment_amount?: string | number | null;
+  final_payment_requested_at?: string | null;
+  final_payment_paid_at?: string | null;
+  customer_signature_path?: string | null;
+  agreement_document_path?: string | null;
+  livora_countersigned_at?: string | null;
+  livora_countersigner_name?: string | null;
+  livora_signature_path?: string | null;
+  final_agreement_path?: string | null;
+  meterai_status?: string | null;
+  activities?: ConsultationActivity[];
   created_at: string;
   updated_at: string;
   unread_messages_count?: number;
@@ -149,3 +199,38 @@ export const signAgreement = (id: number, signatureName: string) =>
       accept: true,
     })
     .then((r) => r.data);
+
+export const uploadFinalPaymentProof = (id: number, file: File, note?: string) => {
+  const form = new FormData();
+  form.append("proof", file);
+  if (note) form.append("note", note);
+  return api
+    .post<Consultation>(`/consultations/${id}/final-payment-proof`, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    })
+    .then((r) => r.data);
+};
+
+export const signAgreementWithSignature = (
+  id: number,
+  signatureName: string,
+  signatureData?: string,
+) =>
+  api
+    .post<Consultation>(`/consultations/${id}/sign-agreement`, {
+      signature_name: signatureName,
+      accept: true,
+      signature_data: signatureData,
+    })
+    .then((r) => r.data);
+
+export const commentOnProgress = (id: number, progressId: number, body: string) =>
+  api
+    .post<Consultation>(`/consultations/${id}/progress/${progressId}/comments`, { body })
+    .then((r) => r.data);
+
+export const getMyActivities = () =>
+  api.get<ConsultationActivity[]>("/my/consultations/activities").then((r) => r.data);
+
+export const markMyActivitiesRead = () =>
+  api.post("/my/consultations/activities/read").then((r) => r.data);
