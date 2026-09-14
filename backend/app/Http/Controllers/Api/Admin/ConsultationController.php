@@ -37,6 +37,8 @@ class ConsultationController extends Controller
             'messages.sender:id,name',
             'stageFiles.uploader:id,name',
             'progressUpdates.creator:id,name',
+            'progressUpdates.comments.author:id,name',
+            'activities.actor:id,name',
         ]);
         $arr = $consultation->toArray();
         $arr['status_label'] = $consultation->statusLabel();
@@ -55,6 +57,7 @@ class ConsultationController extends Controller
             'meeting_location'   => 'nullable|string|max:255',
             'meeting_link'       => 'nullable|string|max:500',
             'follow_up_date'     => 'nullable|date',
+            'meeting_type'       => 'nullable|string|in:online,offline,call',
             'note'               => 'nullable|string',
         ]);
 
@@ -204,6 +207,7 @@ class ConsultationController extends Controller
             'meeting_time'     => 'nullable',
             'meeting_location' => 'nullable|string|max:255',
             'meeting_link'     => 'nullable|string|max:500',
+            'meeting_type'     => 'nullable|string|in:online,offline,call',
             'note'             => 'nullable|string',
         ]);
         $consultation->fill($data)->save();
@@ -341,6 +345,9 @@ class ConsultationController extends Controller
 
     public function complete(Request $request, Consultation $consultation)
     {
+        if (!$request->boolean('force') && $consultation->final_payment_requested_at && !$consultation->final_payment_paid_at) {
+            return response()->json(['message' => 'Final payment has not been verified yet.'], 422);
+        }
         $consultation->project_progress = 100;
         $consultation->save();
         $consultation->changeStatus(
@@ -348,6 +355,185 @@ class ConsultationController extends Controller
             $request->user()->id,
             $request->input('note') ?: 'Project completed.',
         );
+        return $this->show($request, $consultation->fresh());
+    }
+
+    // ─── Activity feed (admin audience) ──────────────────────────────
+
+    private function adminActivityQuery()
+    {
+        return \App\Models\ConsultationActivity::whereIn('audience', ['admin', 'both']);
+    }
+
+    public function activitiesUnreadCount(Request $request)
+    {
+        $count = $this->adminActivityQuery()->whereNull('admin_read_at')->count();
+        return response()->json(['unread' => $count]);
+    }
+
+    public function activities(Request $request)
+    {
+        return $this->adminActivityQuery()
+            ->with(['consultation:id,first_name,last_name,status', 'actor:id,name'])
+            ->orderByDesc('created_at')
+            ->limit(100)
+            ->get();
+    }
+
+    public function markActivitiesRead(Request $request)
+    {
+        $this->adminActivityQuery()->whereNull('admin_read_at')->update(['admin_read_at' => now()]);
+        return response()->json(['ok' => true]);
+    }
+
+    // ─── Payment proof review ────────────────────────────────────────
+
+    public function approveProof(Request $request, Consultation $consultation, ConsultationStageFile $file)
+    {
+        if ($file->consultation_id !== $consultation->id) {
+            return response()->json(['message' => 'File does not belong to this consultation.'], 422);
+        }
+        $file->review_status = 'approved';
+        $file->reviewed_by = $request->user()->id;
+        $file->reviewed_at = now();
+        $file->rejection_reason = null;
+        $file->save();
+
+        if ($file->kind === 'payment_proof') {
+            $consultation->dp_paid_at = $consultation->dp_paid_at ?: now();
+            $consultation->save();
+            $consultation->recordActivity('payment_verified', 'DP payment verified', 'Your DP payment has been verified by Livora.', 'both', $request->user()->id);
+        } elseif ($file->kind === 'final_payment_proof') {
+            $consultation->final_payment_paid_at = $consultation->final_payment_paid_at ?: now();
+            $consultation->save();
+            $consultation->recordActivity('final_payment_verified', 'Final payment verified', 'Your final payment has been verified by Livora.', 'both', $request->user()->id);
+        }
+
+        return $this->show($request, $consultation->fresh());
+    }
+
+    public function rejectProof(Request $request, Consultation $consultation, ConsultationStageFile $file)
+    {
+        if ($file->consultation_id !== $consultation->id) {
+            return response()->json(['message' => 'File does not belong to this consultation.'], 422);
+        }
+        $data = $request->validate(['reason' => 'required|string|max:2000']);
+        $file->review_status = 'rejected';
+        $file->reviewed_by = $request->user()->id;
+        $file->reviewed_at = now();
+        $file->rejection_reason = $data['reason'];
+        $file->save();
+
+        $consultation->recordActivity('payment_proof_rejected', 'Payment proof needs revision', $data['reason'], 'both', $request->user()->id);
+        return $this->show($request, $consultation->fresh());
+    }
+
+    // ─── Final payment ───────────────────────────────────────────────
+
+    public function requestFinalPayment(Request $request, Consultation $consultation)
+    {
+        $data = $request->validate([
+            'final_payment_amount' => 'required|numeric|min:0',
+            'note'                 => 'nullable|string',
+            'invoice'              => 'nullable|file',
+        ]);
+
+        if ((int) $consultation->project_progress < 85) {
+            return response()->json(['message' => 'Progress must reach at least 85% before requesting the final payment.'], 422);
+        }
+
+        $consultation->final_payment_amount = $data['final_payment_amount'];
+        $consultation->final_payment_requested_at = now();
+        $consultation->save();
+
+        if ($request->hasFile('invoice')) {
+            ConsultationStageFile::create([
+                'consultation_id' => $consultation->id,
+                'stage'           => Consultation::STATUS_PROJECT_RUNNING,
+                'kind'            => 'final_invoice',
+                'file_path'       => '/storage/' . $request->file('invoice')->store('consultations', 'public'),
+                'note'            => $data['note'] ?? null,
+                'uploaded_by'     => $request->user()->id,
+            ]);
+        }
+
+        $consultation->recordActivity(
+            'final_payment_requested',
+            'Final payment requested',
+            'Rp ' . number_format((float) $data['final_payment_amount'], 0, ',', '.'),
+            'both',
+            $request->user()->id,
+        );
+
+        return $this->show($request, $consultation->fresh());
+    }
+
+    // ─── Agreement countersign ───────────────────────────────────────
+
+    public function countersignAgreement(Request $request, Consultation $consultation)
+    {
+        $data = $request->validate([
+            'countersigner_name' => 'required|string|max:150',
+            'signature_data'     => 'nullable|string|max:2000000',
+        ]);
+
+        if (!$consultation->agreement_signed_at) {
+            return response()->json(['message' => 'Customer has not signed the agreement yet.'], 422);
+        }
+
+        $signaturePath = null;
+        if (!empty($data['signature_data'])) {
+            if (!preg_match('/^data:image\/png;base64,(.+)$/', $data['signature_data'], $m)) {
+                return response()->json(['message' => 'Signature format must be a PNG data URL.'], 422);
+            }
+            $binary = base64_decode($m[1], true);
+            if ($binary === false) {
+                return response()->json(['message' => 'Signature could not be decoded.'], 422);
+            }
+            $relative = 'consultations/countersign-' . $consultation->id . '-' . time() . '.png';
+            \Illuminate\Support\Facades\Storage::disk('public')->put($relative, $binary);
+            $signaturePath = '/storage/' . $relative;
+        }
+
+        $consultation->livora_countersigned_at = now();
+        $consultation->livora_countersigner_name = $data['countersigner_name'];
+        if ($signaturePath) {
+            $consultation->livora_signature_path = $signaturePath;
+        }
+        if (!$consultation->final_agreement_path && $consultation->agreement_document_path) {
+            $consultation->final_agreement_path = $consultation->agreement_document_path;
+        }
+        $consultation->save();
+
+        $consultation->recordActivity(
+            'agreement_countersigned',
+            'Agreement countersigned by Livora',
+            'The agreement is now fully signed by both parties.',
+            'both',
+            $request->user()->id,
+        );
+
+        return $this->show($request, $consultation->fresh());
+    }
+
+    // ─── Progress comments (admin) ───────────────────────────────────
+
+    public function commentOnProgress(Request $request, Consultation $consultation, ConsultationProgressUpdate $progress)
+    {
+        if ($progress->consultation_id !== $consultation->id) {
+            return response()->json(['message' => 'Progress update does not belong to this consultation.'], 422);
+        }
+        $data = $request->validate(['body' => 'required|string|max:2000']);
+
+        \App\Models\ConsultationProgressComment::create([
+            'progress_update_id' => $progress->id,
+            'consultation_id'    => $consultation->id,
+            'user_id'            => $request->user()->id,
+            'author_type'        => 'admin',
+            'body'               => $data['body'],
+        ]);
+
+        $consultation->recordActivity('progress_comment', 'New comment on progress update', $data['body'], 'both', $request->user()->id);
         return $this->show($request, $consultation->fresh());
     }
 }

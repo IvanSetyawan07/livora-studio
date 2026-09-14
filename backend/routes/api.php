@@ -281,6 +281,9 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::post('/marketing/upload-image', [MarketingController::class, 'uploadImage']);
 
         // Consultations management
+        Route::get('/consultations/activities', [AdminConsultationController::class, 'activities']);
+        Route::get('/consultations/activities/unread', [AdminConsultationController::class, 'activitiesUnreadCount']);
+        Route::post('/consultations/activities/read', [AdminConsultationController::class, 'markActivitiesRead']);
         Route::get('/consultations', [AdminConsultationController::class, 'index']);
         Route::get('/consultations/{consultation}', [AdminConsultationController::class, 'show']);
         Route::put('/consultations/{consultation}', [AdminConsultationController::class, 'update']);
@@ -298,6 +301,11 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::post('/consultations/{consultation}/upload-agreement', [AdminConsultationController::class, 'uploadAgreement']);
         Route::post('/consultations/{consultation}/progress', [AdminConsultationController::class, 'postProgress']);
         Route::post('/consultations/{consultation}/complete', [AdminConsultationController::class, 'complete']);
+        Route::post('/consultations/{consultation}/request-final-payment', [AdminConsultationController::class, 'requestFinalPayment']);
+        Route::post('/consultations/{consultation}/countersign', [AdminConsultationController::class, 'countersignAgreement']);
+        Route::post('/consultations/{consultation}/stage-files/{file}/approve', [AdminConsultationController::class, 'approveProof']);
+        Route::post('/consultations/{consultation}/stage-files/{file}/reject', [AdminConsultationController::class, 'rejectProof']);
+        Route::post('/consultations/{consultation}/progress/{progress}/comments', [AdminConsultationController::class, 'commentOnProgress']);
 
         // Wishlist admin view
         Route::get('/wishlists', [WishlistController::class, 'adminIndex']);
