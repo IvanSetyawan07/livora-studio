@@ -7,10 +7,12 @@ use App\Mail\ConsultationConfirmed;
 use App\Models\Consultation;
 use App\Models\ConsultationProgressUpdate;
 use App\Models\ConsultationStageFile;
+use App\Services\AgreementPdfService;
+use App\Services\Meterai\MeteraiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-
+use Illuminate\Support\Facades\Storage;
 class ConsultationController extends Controller
 {
     public function index(Request $request)
@@ -478,7 +480,7 @@ class ConsultationController extends Controller
 
     // ─── Agreement countersign ───────────────────────────────────────
 
-    public function countersignAgreement(Request $request, Consultation $consultation)
+     public function countersignAgreement(Request $request, Consultation $consultation)
     {
         $data = $request->validate([
             'countersigner_name' => 'required|string|max:150',
@@ -508,10 +510,28 @@ class ConsultationController extends Controller
         if ($signaturePath) {
             $consultation->livora_signature_path = $signaturePath;
         }
-        if (!$consultation->final_agreement_path && $consultation->agreement_document_path) {
-            $consultation->final_agreement_path = $consultation->agreement_document_path;
-        }
         $consultation->save();
+
+        // Composite both signatures into an actual signed PDF — never just
+        // copy the unsigned source document.
+        try {
+            $finalPath = (new AgreementPdfService())->composeFinalAgreement($consultation);
+            $consultation->final_agreement_path = $finalPath;
+            $consultation->save();
+
+            $finalAbsolute = Storage::disk('public')->path(str_replace('/storage/', '', $finalPath));
+            MeteraiService::requestStamp($consultation, $finalAbsolute);
+        } catch (\Throwable $e) {
+            Log::error('Failed to compose final signed agreement PDF', [
+                'consultation_id' => $consultation->id,
+                'error' => $e->getMessage(),
+            ]);
+            // Do not fake completion: leave final_agreement_path unset and
+            // surface the failure via the meterai status fields the UI reads.
+            $consultation->meterai_status = 'failed';
+            $consultation->meterai_error = 'Final agreement PDF could not be generated: ' . $e->getMessage();
+            $consultation->save();
+        }
 
         $consultation->recordActivity(
             'agreement_countersigned',
@@ -520,6 +540,23 @@ class ConsultationController extends Controller
             'both',
             $request->user()->id,
         );
+
+        return $this->show($request, $consultation->fresh());
+    }
+
+    /** Retry the e-meterai stamp request against the already-generated final PDF. */
+    public function retryMeterai(Request $request, Consultation $consultation)
+    {
+        if (!$consultation->final_agreement_path) {
+            return response()->json(['message' => 'Final agreement has not been generated yet.'], 422);
+        }
+
+        $absolute = Storage::disk('public')->path(str_replace('/storage/', '', $consultation->final_agreement_path));
+        if (!is_file($absolute)) {
+            return response()->json(['message' => 'Final agreement file is missing on disk.'], 422);
+        }
+
+        MeteraiService::requestStamp($consultation, $absolute);
 
         return $this->show($request, $consultation->fresh());
     }

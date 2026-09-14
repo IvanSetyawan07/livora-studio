@@ -303,6 +303,7 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::post('/consultations/{consultation}/complete', [AdminConsultationController::class, 'complete']);
         Route::post('/consultations/{consultation}/request-final-payment', [AdminConsultationController::class, 'requestFinalPayment']);
         Route::post('/consultations/{consultation}/countersign', [AdminConsultationController::class, 'countersignAgreement']);
+        Route::post('/consultations/{consultation}/meterai/retry', [AdminConsultationController::class, 'retryMeterai']);
         Route::post('/consultations/{consultation}/stage-files/{file}/approve', [AdminConsultationController::class, 'approveProof']);
         Route::post('/consultations/{consultation}/stage-files/{file}/reject', [AdminConsultationController::class, 'rejectProof']);
         Route::post('/consultations/{consultation}/progress/{progress}/comments', [AdminConsultationController::class, 'commentOnProgress']);

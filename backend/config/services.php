@@ -100,4 +100,39 @@ return [
         'api_key' => env('YOUTUBE_API_KEY'),
         'channel_id' => env('YOUTUBE_CHANNEL_ID'),
     ],
+    'meterai' => [
+        // Leave 'provider' empty/unset to keep e-meterai disabled — the
+        // NullMeteraiProvider will be used and will always report a clear
+        // "failed" status instead of pretending a stamp was issued.
+        'provider' => env('METERAI_PROVIDER'),
+        'base_url' => env('METERAI_BASE_URL'),
+        'api_key' => env('METERAI_API_KEY'),
+        'client_id' => env('METERAI_CLIENT_ID'),
+    ],
+
+    // ---------------------------------------------------------------
+    // WhatsApp notifications (consultation approved / DP requested /
+    // progress update / project completed). Leave 'provider' empty to
+    // keep this disabled — WhatsAppNotifier will use the Null provider,
+    // which logs the missing config and never fakes a "sent" message.
+    // ---------------------------------------------------------------
+    'whatsapp' => [
+        'provider' => env('WHATSAPP_PROVIDER'), // fonnte | twilio | meta
+
+        'fonnte' => [
+            'token' => env('FONNTE_TOKEN'),
+        ],
+
+        'twilio' => [
+            'sid' => env('TWILIO_SID'),
+            'auth_token' => env('TWILIO_AUTH_TOKEN'),
+            'from' => env('TWILIO_WHATSAPP_FROM'), // e.g. whatsapp:+14155238886
+        ],
+
+        'meta' => [
+            'access_token' => env('META_WHATSAPP_ACCESS_TOKEN'),
+            'phone_number_id' => env('META_WHATSAPP_PHONE_NUMBER_ID'),
+            'api_version' => env('META_WHATSAPP_API_VERSION', 'v21.0'),
+        ],
+    ],
 ];
