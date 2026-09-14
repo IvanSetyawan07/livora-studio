@@ -1,17 +1,25 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { api, authStorage } from "@/lib/api";
-import { getMyConsultations, getConsultation, type Consultation } from "@/lib/consultations";
+import {
+  getMyConsultations,
+  getConsultation,
+  getMyActivities,
+  stageIndex,
+  isTerminal,
+  CONSULTATION_STAGES,
+  type Consultation,
+  type ConsultationActivity,
+} from "@/lib/consultations";
 import { updateProfile, changePassword } from "@/lib/profile";
 import { getWishlist, removeFromWishlist, type WishlistEntry } from "@/lib/wishlist";
 import { cancelConsultation } from "@/lib/consultationMessages";
-import ConsultationChat from "@/components/livora/ConsultationChat";
-import ConsultationTimeline from "@/components/livora/ConsultationTimeline";
+import ConsultationDetailSheet from "@/components/livora/ConsultationDetailSheet";
 import { toast } from "sonner";
 import { imgUrl } from "@/lib/adminApi";
 import {
   Bookmark, User as UserIcon,
-  ClipboardList, ArrowLeft, MessageCircle, XCircle,
+  ClipboardList, ArrowLeft, MessageCircle, XCircle, Check, Bell,
 } from "lucide-react";
 
 type User = { id: number; name: string; email: string; phone?: string | null; address?: string | null };
@@ -24,10 +32,20 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]["key"];
 
+// URL <-> tab mapping: /profile, /profile/consultations, /profile/saved
+const PATH_TO_TAB: Record<string, TabKey> = { consultations: "consultations", saved: "wishlist" };
+const TAB_TO_PATH: Record<TabKey, string> = {
+  profile: "/profile",
+  consultations: "/profile/consultations",
+  wishlist: "/profile/saved",
+};
+
 export default function Profile() {
   const navigate = useNavigate();
+  const { tab: tabParam } = useParams<{ tab?: string }>();
+  const activeTab: TabKey = tabParam ? (PATH_TO_TAB[tabParam] ?? "profile") : "profile";
   const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<TabKey>("profile");
+  const [activities, setActivities] = useState<ConsultationActivity[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -40,6 +58,12 @@ export default function Profile() {
       }
     })();
   }, [navigate]);
+
+  useEffect(() => {
+    getMyActivities().then(setActivities).catch(() => {});
+  }, []);
+
+  const unreadConsultationActivities = activities.filter((a) => !a.user_read_at).length;
 
   const logout = async () => {
     try {
@@ -87,10 +111,11 @@ export default function Profile() {
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.key;
+            const badge = tab.key === "consultations" ? unreadConsultationActivities : 0;
             return (
               <button
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
+                onClick={() => navigate(TAB_TO_PATH[tab.key])}
                 className={`flex items-center gap-2 px-4 py-3 text-xs uppercase tracking-[0.2em] border-b-2 transition-colors ${
                   active
                     ? "border-foreground text-foreground"
@@ -99,6 +124,11 @@ export default function Profile() {
               >
                 <Icon size={14} />
                 {tab.label}
+                {badge > 0 && (
+                  <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
+                    {badge > 9 ? "9+" : badge}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -334,12 +364,13 @@ function ConsultationCard({
   consultation: Consultation;
   onChanged: () => void;
 }) {
-  const [chatOpen, setChatOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [detail, setDetail] = useState<Consultation>(consultation);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetView, setSheetView] = useState<"timeline" | "chat">("timeline");
 
   useEffect(() => {
-    // Load full detail (with stage_files, progress_updates, status_history) once.
+    // Load full detail (with stage_files, progress_updates, status_history, activities) once.
     getConsultation(consultation.id).then(setDetail).catch(() => {});
   }, [consultation.id]);
 
@@ -375,61 +406,140 @@ function ConsultationCard({
     ? "bg-emerald-50 text-emerald-700"
     : "bg-secondary text-foreground";
 
+  const thumbnail = detail.attachments?.[0] ? imgUrl(detail.attachments[0]) : null;
+  const cardActivities = detail.activities ?? [];
+  const latestUpdate = [...cardActivities].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  )[0];
+  const hasUnread = cardActivities.some((a) => a.audience !== "admin" && !a.user_read_at);
+
+  const openDetails = () => { setSheetView("timeline"); setSheetOpen(true); };
+  const openChat = () => { setSheetView("chat"); setSheetOpen(true); };
+
   return (
-    <div className="bg-card border border-border rounded-lg p-6">
-      <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
-        <div>
+    <div className="bg-card border border-border rounded-lg overflow-hidden relative">
+      {hasUnread && (
+        <span
+          className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-card"
+          aria-label="Unread update"
+          title="Unread update"
+        />
+      )}
+      {/* Header */}
+      <div className="flex items-start gap-4 p-6 pb-4">
+        <div className="w-16 h-16 rounded-lg overflow-hidden bg-secondary shrink-0">
+          {thumbnail ? (
+            <img src={thumbnail} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-[9px] text-muted-foreground text-center px-1">
+              No image
+            </div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-1">
             {detail.service_type ?? "Design Consultation"}
           </p>
-          <h3 className="serif text-xl">{detail.project_type ?? "Consultation"} Request</h3>
+          <h3 className="serif text-xl truncate">{detail.project_type ?? "Consultation"} Request</h3>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            {new Date(detail.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+          </p>
         </div>
-        <span className={`text-xs px-3 py-1.5 rounded-full uppercase tracking-wider ${badgeClass}`}>
+        <span className={`shrink-0 text-xs px-3 py-1.5 rounded-full uppercase tracking-wider ${badgeClass}`}>
           {detail.status_label ?? detail.status}
         </span>
       </div>
 
-      <ConsultationTimeline
-        consultation={detail}
-        role="user"
-        onChanged={(c) => {
-          setDetail(c);
-          onChanged();
-        }}
-      />
-
-      {detail.message && (
-        <p className="text-xs text-muted-foreground mt-6 pt-5 border-t border-border leading-relaxed line-clamp-2">
-          "{detail.message}"
-        </p>
+      {/* 9-stage horizontal progress tracker */}
+      {!isCancelled && !isRejected && (
+        <div className="px-6 pb-4 -mx-1 overflow-x-auto no-scrollbar">
+          <StageDots status={detail.status} />
+        </div>
       )}
 
-      <div className="mt-5 pt-4 border-t border-border flex flex-wrap items-center gap-3">
+      {/* Latest update */}
+      {latestUpdate && (
+        <div className="mx-6 mb-4 rounded-lg bg-secondary/40 border border-border p-3 flex items-start gap-3">
+          <div className="w-7 h-7 rounded-full bg-[#C9974A]/15 text-[#C9974A] flex items-center justify-center shrink-0">
+            <Bell size={13} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium truncate">{latestUpdate.title}</p>
+            {latestUpdate.body && <p className="text-xs text-muted-foreground line-clamp-1">{latestUpdate.body}</p>}
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              {new Date(latestUpdate.created_at).toLocaleString("id-ID")}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="px-6 pb-6 pt-2 border-t border-border flex flex-wrap items-center gap-3">
         <button
-          onClick={() => setChatOpen((v) => !v)}
-          className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.2em] border border-border px-3 py-2 rounded hover:bg-secondary/50"
+          onClick={openDetails}
+          className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.2em] bg-foreground text-background px-4 py-2.5 rounded hover:opacity-90"
         >
-          <MessageCircle size={13} /> {chatOpen ? "Hide Chat" : "Open Chat"}
+          View Details
+        </button>
+        <button
+          onClick={openChat}
+          className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.2em] border border-border px-4 py-2.5 rounded hover:bg-secondary/50"
+        >
+          <MessageCircle size={13} /> Contact Us
         </button>
         {!isClosed && (
           <button
             onClick={handleCancel}
             disabled={cancelling}
-            className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.2em] border border-red-200 text-red-600 px-3 py-2 rounded hover:bg-red-50 disabled:opacity-60"
+            className="ml-auto inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.2em] text-red-600 hover:underline disabled:opacity-60"
           >
             <XCircle size={13} /> {cancelling ? "Cancelling…" : "Cancel Request"}
           </button>
         )}
-        <span className="text-[11px] text-muted-foreground ml-auto">
-          Requested {new Date(detail.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-        </span>
       </div>
 
-      {chatOpen && (
-        <div className="mt-4">
-          <ConsultationChat consultationId={detail.id} mode="user" locked={isClosed} />
-        </div>
-      )}
+      <ConsultationDetailSheet
+        consultation={detail}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        initialView={sheetView}
+        onChanged={setDetail}
+      />
+    </div>
+  );
+}
+
+/** Compact horizontal 9-stage tracker used on the consultation card. */
+function StageDots({ status }: { status: string }) {
+  const currentIdx = stageIndex(status);
+  const terminal = isTerminal(status);
+  return (
+    <div className="flex items-center gap-1.5 min-w-max py-1">
+      {CONSULTATION_STAGES.map((stage, i) => {
+        const done = currentIdx >= 0 && (i < currentIdx || (terminal && i === currentIdx));
+        const current = !terminal && i === currentIdx;
+        return (
+          <div key={stage.key} className="flex items-center gap-1.5" title={stage.label}>
+            <span
+              className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] shrink-0 ${
+                done || current ? "" : "bg-secondary text-muted-foreground"
+              }`}
+              style={
+                done
+                  ? { backgroundColor: "#C9974A", color: "white" }
+                  : current
+                  ? { border: "2px solid #C9974A", color: "#C9974A" }
+                  : undefined
+              }
+            >
+              {done ? <Check size={10} /> : i + 1}
+            </span>
+            {i < CONSULTATION_STAGES.length - 1 && (
+              <span className={`w-4 h-px shrink-0 ${i < currentIdx ? "" : "bg-border"}`} style={i < currentIdx ? { backgroundColor: "#C9974A" } : undefined} />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

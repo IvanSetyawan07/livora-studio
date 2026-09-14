@@ -41,7 +41,14 @@ export const rejectConsultation = (id: number, reason: string) =>
 
 export const scheduleMeeting = (
   id: number,
-  payload: { meeting_date: string; meeting_time?: string; meeting_location?: string; meeting_link?: string; note?: string },
+  payload: {
+    meeting_date: string;
+    meeting_time?: string;
+    meeting_location?: string;
+    meeting_link?: string;
+    meeting_type?: string;
+    note?: string;
+  },
 ) => api.post<Consultation>(`/admin/consultations/${id}/schedule-meeting`, payload).then((r) => r.data);
 
 export const startMeeting = (id: number, note?: string) =>

@@ -280,6 +280,7 @@ function ActionsRail({
     meeting_time: consultation.meeting_time ?? "",
     meeting_location: consultation.meeting_location ?? "",
     meeting_link: consultation.meeting_link ?? "",
+    meeting_type: consultation.meeting_type ?? "online",
   });
   const [dpAmount, setDpAmount] = useState<string>(consultation.dp_amount ? String(consultation.dp_amount) : "");
   const [dpNote, setDpNote] = useState("");
@@ -328,6 +329,14 @@ function ActionsRail({
               onChange={(e) => setMeeting({ ...meeting, meeting_time: e.target.value })}
               className="border border-border rounded px-2 py-1.5 text-xs bg-background" />
           </div>
+          <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground pt-1">Meeting Type</label>
+          <select value={meeting.meeting_type}
+            onChange={(e) => setMeeting({ ...meeting, meeting_type: e.target.value })}
+            className="w-full border border-border rounded px-2 py-1.5 text-xs bg-background">
+            <option value="online">Online</option>
+            <option value="call">Call</option>
+            <option value="offline">Offline</option>
+          </select>
           <input placeholder="Location (optional)" value={meeting.meeting_location}
             onChange={(e) => setMeeting({ ...meeting, meeting_location: e.target.value })}
             className="w-full border border-border rounded px-2 py-1.5 text-xs bg-background" />

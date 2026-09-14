@@ -291,6 +291,7 @@ class ConsultationController extends Controller
     }
 
     /** Post a progress update (moves to project_running if not there yet). */
+        /** Post a progress update (moves to project_running if not there yet). */
     public function postProgress(Request $request, Consultation $consultation)
     {
         $data = $request->validate([
@@ -299,6 +300,13 @@ class ConsultationController extends Controller
             'photos'     => 'nullable|array',
             'photos.*'   => 'file',
         ]);
+
+        if ((int) $data['percentage'] > 85 && $consultation->final_payment_paid_at === null) {
+            return response()->json([
+                'message' => 'Progress cannot exceed 85% until the final payment has been requested and verified for this consultation.',
+            ], 422);
+        }
+
         $paths = [];
         if ($request->hasFile('photos')) {
             foreach ($request->file('photos') as $file) {

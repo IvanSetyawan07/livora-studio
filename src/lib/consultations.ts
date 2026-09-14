@@ -30,6 +30,8 @@ export type ConsultationStageFile = {
   kind:
     | "invoice"
     | "payment_proof"
+    | "final_invoice"
+    | "final_payment_proof"
     | "agreement"
     | "signed_agreement"
     | "progress_photo"

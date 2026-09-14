@@ -5,6 +5,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/livora/LanguageSwitcher";
 import SearchOverlay from "@/components/livora/SearchOverlay";
+import NotificationBell from "@/components/livora/NotificationBell";
+import { getMyActivities, markMyActivitiesRead, type ConsultationActivity } from "@/lib/consultations";
 import { api, authStorage } from "@/lib/api";
 import { getAllThumbnails, subscribeThumbnails } from "@/lib/themeThumbnails";
 import { toast } from "sonner";
@@ -35,6 +37,7 @@ export const Navbar = () => {
   const [authUser, setAuthUser] = useState<{ name: string; email?: string; role?: string } | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [activities, setActivities] = useState<ConsultationActivity[]>([]);
   const profileRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -168,6 +171,31 @@ export const Navbar = () => {
     document.addEventListener("visibilitychange", onVis);
     return () => { cancelled = true; window.clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
   }, [authUser]);
+
+  // Poll consultation activities (existing activity system) for the notification bell
+  useEffect(() => {
+    if (!authUser) { setActivities([]); return; }
+    let cancelled = false;
+    const load = () => {
+      getMyActivities()
+        .then((data) => { if (!cancelled) setActivities(data); })
+        .catch(() => {});
+    };
+    load();
+    const id = window.setInterval(load, 25000);
+    const onVis = () => { if (document.visibilityState === "visible") load(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { cancelled = true; window.clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
+  }, [authUser]);
+
+  const activityUnreadCount = activities.filter((a) => !a.user_read_at).length;
+
+  const handleBellOpen = () => {
+    if (activityUnreadCount === 0) return;
+    markMyActivitiesRead()
+      .then(() => setActivities((prev) => prev.map((a) => ({ ...a, user_read_at: a.user_read_at ?? new Date().toISOString() }))))
+      .catch(() => {});
+  };
 
   // Close profile dropdown on outside click
   useEffect(() => {
@@ -394,6 +422,17 @@ export const Navbar = () => {
             >
               <Search size={20} />
             </button>
+            {authUser && (
+              <NotificationBell
+                activities={activities}
+                unreadCount={activityUnreadCount}
+                readField="user_read_at"
+                onOpen={handleBellOpen}
+                onItemClick={() => navigate("/profile/consultations")}
+                light={headerLight}
+                label="Notifications"
+              />
+            )}
             {authUser ? (() => {
               // Ambil nama depan dari user.name; kalau kosong / kebetulan berbentuk email, jatuhkan ke bagian sebelum "@".
               const rawName = (authUser.name || "").trim();

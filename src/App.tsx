@@ -104,6 +104,7 @@ function App() {
               <Route path="/login" element={<Auth />} />
               <Route path="/register" element={<Auth />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/profile/:tab" element={<Profile />} />
               <Route element={<RequireRole roles={["sales", "admin"]} />}>
                 <Route path="/sales/scan" element={<SalesScan />} />
                 <Route path="/sales/items/:slug" element={<SalesItemDetail />} />

@@ -6,6 +6,13 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { clearSession, rememberIntendedPath } from "@/lib/authGuard";
 import LanguageSwitcher from "@/components/livora/LanguageSwitcher";
+import NotificationBell from "@/components/livora/NotificationBell";
+import {
+  getAdminActivities,
+  getAdminActivitiesUnread,
+  markAdminActivitiesRead,
+} from "@/lib/adminConsultations";
+import type { ConsultationActivity } from "@/lib/consultations";
 import {
   LayoutDashboard,
   FolderKanban,
@@ -49,6 +56,8 @@ export default function AdminLayout() {
   const { t } = useTranslation();
   const [user, setUser] = useState<any>(null);
   const [open, setOpen] = useState(false);
+  const [activities, setActivities] = useState<ConsultationActivity[]>([]);
+  const [unreadActivities, setUnreadActivities] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -74,6 +83,35 @@ export default function AdminLayout() {
   useEffect(() => {
     setOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const load = () => {
+      Promise.all([getAdminActivities(), getAdminActivitiesUnread()])
+        .then(([acts, unread]) => {
+          if (cancelled) return;
+          setActivities(acts);
+          setUnreadActivities(unread);
+        })
+        .catch(() => {});
+    };
+    load();
+    const id = window.setInterval(load, 20000);
+    const onVis = () => { if (document.visibilityState === "visible") load(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { cancelled = true; window.clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
+  }, [user]);
+
+  const handleBellOpen = () => {
+    if (unreadActivities === 0) return;
+    markAdminActivitiesRead()
+      .then(() => {
+        setUnreadActivities(0);
+        setActivities((prev) => prev.map((a) => ({ ...a, admin_read_at: a.admin_read_at ?? new Date().toISOString() })));
+      })
+      .catch(() => {});
+  };
 
   const logout = async () => {
     try { await api.post("/logout"); } catch {}
@@ -151,7 +189,17 @@ export default function AdminLayout() {
           <Menu className="w-5 h-5" />
         </button>
         <p className="serif text-lg truncate">{t("admin.panel")}</p>
-        <LanguageSwitcher isLoggedIn />
+        <div className="flex items-center gap-1">
+          <NotificationBell
+            activities={activities}
+            unreadCount={unreadActivities}
+            readField="admin_read_at"
+            onOpen={handleBellOpen}
+            onItemClick={(a) => navigate(`/admin/consultations/${a.consultation_id}`)}
+            label="Notifications"
+          />
+          <LanguageSwitcher isLoggedIn />
+        </div>
       </header>
 
       {/* Mobile drawer */}
@@ -180,6 +228,16 @@ export default function AdminLayout() {
       </aside>
 
       <main className="flex-1 min-w-0 overflow-x-hidden">
+        <div className="hidden lg:flex justify-end px-6 pt-4">
+          <NotificationBell
+            activities={activities}
+            unreadCount={unreadActivities}
+            readField="admin_read_at"
+            onOpen={handleBellOpen}
+            onItemClick={(a) => navigate(`/admin/consultations/${a.consultation_id}`)}
+            label="Notifications"
+          />
+        </div>
         <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-10">
           <Outlet />
         </div>
