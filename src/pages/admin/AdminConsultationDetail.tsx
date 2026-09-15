@@ -72,14 +72,18 @@ export default function AdminConsultationDetail() {
   };
 
   const runAction = async (label: string, fn: () => Promise<Consultation>) => {
-    try {
-      const updated = await fn();
-      setC(updated);
-      toast.success(`${label} berhasil.`);
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message || `${label} gagal.`);
-    }
-  };
+  try {
+    const updated = await fn();
+    setC(updated);
+    toast.success(`${label} berhasil.`);
+  } catch (e: any) {
+    const errors = e?.response?.data?.errors;
+    const msg = errors
+      ? Object.values(errors).flat().join("\n")
+      : e?.response?.data?.message || `${label} gagal.`;
+    toast.error(msg);
+  }
+};
 
   const handleConfirm = async () => {
     if (!c) return;

@@ -865,10 +865,10 @@ function ProgressPanel({
               {u.photos && u.photos.length > 0 && (
                 <div className="mt-2 grid grid-cols-3 gap-2">
                   {u.photos.map((p, idx) => (
-                    <a key={idx} href={p} target="_blank" rel="noreferrer" className="block aspect-square bg-secondary rounded overflow-hidden">
-                      <img src={p} alt="progress" className="w-full h-full object-cover" />
-                    </a>
-                  ))}
+  <a key={idx} href={fileUrl(p)} target="_blank" rel="noreferrer" className="block aspect-square bg-secondary rounded overflow-hidden">
+    <img src={fileUrl(p)} alt="progress" className="w-full h-full object-cover" />
+  </a>
+))}
                 </div>
               )}
               <ProgressComments
