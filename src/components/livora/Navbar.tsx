@@ -494,14 +494,14 @@ export const Navbar = () => {
                         <User size={16} /> Profile Detail
                       </Link>
                       <Link
-                        to="/profile?tab=wishlist"
+                        to="/profile/saved"
                         onClick={() => setProfileOpen(false)}
                         className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60"
                       >
                         <Bookmark size={16} /> Saved Items
                       </Link>
                       <Link
-                        to="/profile?tab=consultations"
+                        to="/profile/consultations"
                         onClick={() => setProfileOpen(false)}
                         className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-secondary/60"
                       >

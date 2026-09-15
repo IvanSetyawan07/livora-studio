@@ -115,7 +115,7 @@ export default function Profile() {
             return (
               <button
                 key={tab.key}
-                onClick={() => navigate(TAB_TO_PATH[tab.key])}
+               onClick={() => navigate(TAB_TO_PATH[tab.key], { replace: true })}
                 className={`flex items-center gap-2 px-4 py-3 text-xs uppercase tracking-[0.2em] border-b-2 transition-colors ${
                   active
                     ? "border-foreground text-foreground"
