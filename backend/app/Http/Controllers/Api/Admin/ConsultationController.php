@@ -300,7 +300,7 @@ class ConsultationController extends Controller
             'percentage' => 'required|integer|min:0|max:100',
             'note'       => 'nullable|string',
             'photos'     => 'nullable|array',
-            'photos.*'   => 'file',
+            'photos.*'   => 'file|mimes:jpg,jpeg,png,webp|image|max:10240',
         ]);
 
         if ((int) $data['percentage'] > 85 && $consultation->final_payment_paid_at === null) {
