@@ -186,8 +186,10 @@ export default function Appointment() {
     project_type: "",
     project_type_other: "",
     message: "",
-    agree: false,
+    agree_terms: false,
+    agree_privacy: false,
   });
+  const [policyDoc, setPolicyDoc] = useState<PolicyDocument | null>(null);
 
   const upd = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -738,19 +740,49 @@ export default function Appointment() {
             </div>
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mt-10 pt-6 border-t border-[#e5e5e5]">
-              <label className="flex items-start gap-3 text-xs text-muted-foreground font-light max-w-sm">
-                <input
-                  type="checkbox"
-                  checked={form.agree}
-                  onChange={(e) => upd("agree", e.target.checked)}
-                  className="mt-1 accent-black"
-                />
-                <span>
-                  I agree to the{" "}
-                  <a className="underline" style={{ color: BLACK }} href="#">Terms of Service</a>{" "}and{" "}
-                  <a className="underline" style={{ color: BLACK }} href="#">Privacy Policy</a>.
-                </span>
-              </label>
+              <div className="space-y-3 max-w-md">
+                <label className="flex items-start gap-3 text-xs text-muted-foreground font-light">
+                  <input
+                    type="checkbox"
+                    checked={form.agree_terms}
+                    onChange={(e) => upd("agree_terms", e.target.checked)}
+                    className="mt-1 accent-black"
+                  />
+                  <span>
+                    Saya telah membaca dan menyetujui{" "}
+                    <button
+                      type="button"
+                      onClick={() => setPolicyDoc(TERMS_OF_SERVICE)}
+                      className="underline underline-offset-2"
+                      style={{ color: BLACK }}
+                    >
+                      Ketentuan Layanan
+                    </button>{" "}
+                    Livora.
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-3 text-xs text-muted-foreground font-light">
+                  <input
+                    type="checkbox"
+                    checked={form.agree_privacy}
+                    onChange={(e) => upd("agree_privacy", e.target.checked)}
+                    className="mt-1 accent-black"
+                  />
+                  <span>
+                    Saya telah membaca dan menyetujui{" "}
+                    <button
+                      type="button"
+                      onClick={() => setPolicyDoc(PRIVACY_POLICY)}
+                      className="underline underline-offset-2"
+                      style={{ color: BLACK }}
+                    >
+                      Kebijakan Privasi
+                    </button>{" "}
+                    Livora.
+                  </span>
+                </label>
+              </div>
 
               <button
                 type="submit"
