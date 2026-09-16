@@ -108,6 +108,11 @@ class Consultation extends Model
         'meterai_error',
         'meterai_completed_at',
         'project_progress',
+        'terms_accepted',
+        'privacy_accepted',
+        'terms_version',
+        'privacy_version',
+        'consent_accepted_at',
     ];
 
     protected $casts = [
@@ -123,6 +128,9 @@ class Consultation extends Model
         'dp_amount'           => 'decimal:2',
         'final_payment_amount' => 'decimal:2',
         'project_progress'    => 'integer',
+        'terms_accepted'      => 'boolean',
+        'privacy_accepted'    => 'boolean',
+        'consent_accepted_at' => 'datetime',
     ];
 
     public function user()

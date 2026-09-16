@@ -23,6 +23,14 @@ import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
 import { toast } from "sonner";
 import { submitConsultation } from "@/lib/consultations";
+import { PolicyDialog } from "@/components/livora/PolicyDialog";
+import {
+  TERMS_OF_SERVICE,
+  PRIVACY_POLICY,
+  TERMS_VERSION,
+  PRIVACY_VERSION,
+  type PolicyDocument,
+} from "@/content/legal/consultationPolicies";
 
 import hero from "@/assets/appointment/hero-consultation.jpg";
 import helpInspiration from "@/assets/appointment/help-inspiration.jpg";
@@ -186,8 +194,10 @@ export default function Appointment() {
     project_type: "",
     project_type_other: "",
     message: "",
-    agree: false,
+    agree_terms: false,
+    agree_privacy: false,
   });
+  const [policyDoc, setPolicyDoc] = useState<PolicyDocument | null>(null);
 
   const upd = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -206,7 +216,7 @@ export default function Appointment() {
     setForm({
       name: "", email: "", phone: "",
       contact_method: "", location: "", project_type: "", project_type_other: "",
-      message: "", agree: false,
+      message: "", agree_terms: false, agree_privacy: false,
     });
     setHelpChoice("");
     setHelpChoiceOther("");
@@ -219,8 +229,8 @@ export default function Appointment() {
       toast.error("Please fill in your name/company and email.");
       return;
     }
-    if (!form.agree) {
-      toast.error("Please agree to the Terms & Privacy Policy.");
+    if (!form.agree_terms || !form.agree_privacy) {
+      toast.error("Mohon setujui Ketentuan Layanan dan Kebijakan Privasi terlebih dahulu.");
       return;
     }
 
@@ -240,6 +250,10 @@ export default function Appointment() {
           service_type: resolvedServiceType || undefined,
           project_type: resolvedProjectType || undefined,
           message: form.message || undefined,
+          terms_accepted: true,
+          privacy_accepted: true,
+          terms_version: TERMS_VERSION,
+          privacy_version: PRIVACY_VERSION,
         },
         files
       );
@@ -738,19 +752,49 @@ export default function Appointment() {
             </div>
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mt-10 pt-6 border-t border-[#e5e5e5]">
-              <label className="flex items-start gap-3 text-xs text-muted-foreground font-light max-w-sm">
-                <input
-                  type="checkbox"
-                  checked={form.agree}
-                  onChange={(e) => upd("agree", e.target.checked)}
-                  className="mt-1 accent-black"
-                />
-                <span>
-                  I agree to the{" "}
-                  <a className="underline" style={{ color: BLACK }} href="#">Terms of Service</a>{" "}and{" "}
-                  <a className="underline" style={{ color: BLACK }} href="#">Privacy Policy</a>.
-                </span>
-              </label>
+              <div className="space-y-3 max-w-md">
+                <label className="flex items-start gap-3 text-xs text-muted-foreground font-light">
+                  <input
+                    type="checkbox"
+                    checked={form.agree_terms}
+                    onChange={(e) => upd("agree_terms", e.target.checked)}
+                    className="mt-1 accent-black"
+                  />
+                  <span>
+                    Saya telah membaca dan menyetujui{" "}
+                    <button
+                      type="button"
+                      onClick={() => setPolicyDoc(TERMS_OF_SERVICE)}
+                      className="underline underline-offset-2"
+                      style={{ color: BLACK }}
+                    >
+                      Ketentuan Layanan
+                    </button>{" "}
+                    Livora.
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-3 text-xs text-muted-foreground font-light">
+                  <input
+                    type="checkbox"
+                    checked={form.agree_privacy}
+                    onChange={(e) => upd("agree_privacy", e.target.checked)}
+                    className="mt-1 accent-black"
+                  />
+                  <span>
+                    Saya telah membaca dan menyetujui{" "}
+                    <button
+                      type="button"
+                      onClick={() => setPolicyDoc(PRIVACY_POLICY)}
+                      className="underline underline-offset-2"
+                      style={{ color: BLACK }}
+                    >
+                      Kebijakan Privasi
+                    </button>{" "}
+                    Livora.
+                  </span>
+                </label>
+              </div>
 
               <button
                 type="submit"
@@ -765,6 +809,12 @@ export default function Appointment() {
           </motion.form>
         </div>
       </section>
+
+      <PolicyDialog
+        doc={policyDoc}
+        open={policyDoc !== null}
+        onOpenChange={(o) => { if (!o) setPolicyDoc(null); }}
+      />
 
       <Footer />
     </div>
