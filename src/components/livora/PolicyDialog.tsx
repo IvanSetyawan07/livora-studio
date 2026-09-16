@@ -22,7 +22,8 @@ export function PolicyDialog({ doc, open, onOpenChange }: PolicyDialogProps) {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="overflow-y-auto px-6 sm:px-10 py-8 max-h-[calc(85vh-7rem)]">
+            {/* FIX: Tambahan data-lenis-prevent dan overscroll-contain agar scroll native jalan & tidak bocor ke background */}
+            <div data-lenis-prevent className="overflow-y-auto overscroll-contain px-6 sm:px-10 py-8 max-h-[calc(85vh-7rem)]">
               <h3 className="text-base sm:text-lg font-normal mb-4">{doc.title}</h3>
               {doc.intro.map((p, i) => (
                 <p key={i} className="text-sm leading-relaxed font-light text-muted-foreground mb-3">

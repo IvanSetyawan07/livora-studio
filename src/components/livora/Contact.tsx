@@ -15,9 +15,7 @@ export const Contact = () => {
         {t("contact.desc")}
       </p>
 
-
       <div className="grid md:grid-cols-2 gap-10 md:gap-16 mt-8">
-        {/* Left — Map */}
         <div className="reveal overflow-hidden rounded-2xl border border-border min-h-[420px] md:min-h-[520px]">
           <iframe
             title="Livora office location"
@@ -28,7 +26,6 @@ export const Contact = () => {
           />
         </div>
 
-        {/* Right — Info */}
         <div className="reveal flex flex-col justify-center bg-muted/40 rounded-2xl p-10 md:p-12">
           <div className="flex items-start gap-3 mb-5">
             <MapPin size={20} className="mt-1 shrink-0 text-foreground/70" />
@@ -46,7 +43,7 @@ export const Contact = () => {
 
           <ul className="space-y-5">
             <li>
-              <a href="tel:+628212043307" className="group flex items-center gap-4 text-foreground/80 hover:text-foreground transition-colors">
+              <a href="https://wa.me/628212043307" target="_blank" rel="noreferrer" className="group flex items-center gap-4 text-foreground/80 hover:text-foreground transition-colors">
                 <Phone size={18} className="shrink-0" />
                 <span className="text-[10px] uppercase tracking-[0.4em] text-foreground/50 w-14">{t("contact.call")}</span>
                 <span className="text-base md:text-lg font-light underline-grow">+62 821 2043 307</span>

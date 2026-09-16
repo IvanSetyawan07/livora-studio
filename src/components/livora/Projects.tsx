@@ -25,6 +25,10 @@ export const Projects = () => {
   const introRef = useRef<HTMLDivElement | null>(null);
   const headlineRef = useRef<HTMLHeadingElement | null>(null);
 
+  // FIX #2: flag dibagi antara measure() loop dan crossfade tween supaya
+  // keduanya tidak rebutan menulis property `opacity` di saat yang sama.
+  const crossfadeActiveRef = useRef(false);
+
   const categories = useMemo(
     () => ["All", ...Array.from(new Set(all.map((p) => p.category).filter(Boolean)))],
     [all],
@@ -111,14 +115,10 @@ export const Projects = () => {
 
       mm.add("(min-width: 1px)", () => {
         const getDistance = () => Math.max(0, track.scrollWidth - window.innerWidth);
-        // Sengaja hanya menargetkan `.project-card` — INTRO & ClosingPanel
-        // TIDAK boleh ikut sistem scale/opacity/rotation di bawah ini.
-        // Mereka hanya berpindah lewat translateX milik `track` (lihat tween di bawah).
         const cards = gsap.utils.toArray<HTMLElement>(".project-card", track);
 
         if (!cards.length) return;
 
-        // Inisialisasi setter & style dasar card (Zero Rotation, Clean Vertical Layout)
         const cardsData = cards.map((card) => {
           const media = card.querySelector<HTMLElement>(".card-media");
           gsap.set(card, {
@@ -131,9 +131,9 @@ export const Projects = () => {
             el: card,
             media,
             setScaleX: gsap.quickSetter(card, "scaleX"),
-setScaleY: gsap.quickSetter(card, "scaleY"),
+            setScaleY: gsap.quickSetter(card, "scaleY"),
             setOpacity: gsap.quickSetter(card, "opacity"),
-            setRotation: gsap.quickSetter(card, "rotation", "deg"), // Dikunci 0
+            setRotation: gsap.quickSetter(card, "rotation", "deg"),
             setY: gsap.quickSetter(card, "y", "px"),
             setX: gsap.quickSetter(card, "x", "px"),
             baseX: 0,
@@ -165,7 +165,7 @@ setScaleY: gsap.quickSetter(card, "scaleY"),
         ScrollTrigger.addEventListener("refreshInit", updateMetrics);
         updateMetrics();
 
-        // 1) Master Tween Horizontal (Intro ikut bergerak natural dalam satu track)
+        // 1) Master Tween Horizontal
         const tween = gsap.to(track, {
           x: () => -getDistance(),
           ease: "none",
@@ -180,15 +180,21 @@ setScaleY: gsap.quickSetter(card, "scaleY"),
           animation: tween,
           invalidateOnRefresh: true,
           anticipatePin: 1,
-          // Berada di BAWAH "Our Style" yang juga pinned → harus dihitung
-          // belakangan supaya start-nya memakai tinggi final section di atasnya.
           refreshPriority: -10,
         });
 
-        // 2) Ticker-driven Continuous Interpolation Loop (Smooth Up/Down, No Hard Popping)
+        // 2) Ticker-driven Continuous Interpolation Loop
         const FOCUS_RATIO = 0.55;
         const clamp01 = gsap.utils.clamp(0, 1);
         const easeFocus = gsap.parseEase("power2.out");
+
+        // FIX #1: sebelumnya `data.cur.f += (fTarget - data.cur.f) * 0.14`
+        // adalah smoothing per-FRAME, bukan per-WAKTU — jadi kecepatan
+        // "mengejar" target beda-beda tergantung refresh rate layar
+        // (60Hz vs 120Hz terasa beda kecepatan). Dinormalisasi ke basis
+        // 60fps pakai gsap.ticker.deltaRatio() supaya konsisten di semua
+        // device, berapa pun refresh rate-nya.
+        const LERP_BASE = 0.14;
 
         const measure = () => {
           const currentTrackX = gsap.getProperty(track, "x") as number;
@@ -196,9 +202,11 @@ setScaleY: gsap.quickSetter(card, "scaleY"),
           const focal = vw * FOCUS_RATIO;
           const span = (cards[0]?.offsetWidth || vw * 0.4) * 1.15;
 
-          // Secondary micro-interaction velocity energy
           const velocity = Math.abs(st.getVelocity()) || 0;
           const energy = clamp01(velocity / 2600);
+
+          const dr = gsap.ticker.deltaRatio(60);
+          const lerpAmount = 1 - Math.pow(1 - LERP_BASE, dr);
 
           let bestIdx = 0;
           let minAbsDist = Infinity;
@@ -218,24 +226,27 @@ setScaleY: gsap.quickSetter(card, "scaleY"),
             const dist = Math.abs(signed);
             const fTarget = easeFocus(clamp01(1 - dist));
 
-            // Lerp halus untuk mencegah snapping/jumping
-            data.cur.f += (fTarget - data.cur.f) * 0.14;
+            // FIX #1 diterapkan di sini — lerp sekarang frame-rate independent
+            data.cur.f += (fTarget - data.cur.f) * lerpAmount;
             const f = data.cur.f;
 
-            // Target Values: Scale (0.84 - 1.10), Lift Y (-28px), Opacity (0.82 - 1)
             const scale = gsap.utils.interpolate(0.84, 1.10, f) + energy * 0.01;
-            const liftY = gsap.utils.interpolate(16, -28, f); // Focused card naik -28px
-            const opacity = gsap.utils.interpolate(0.82, 1, f); // dulu 0.45 — kegelapan di foto gelap, sekarang lebih ringan
-            const subX = gsap.utils.clamp(-6, 6, signed * 6); // Subtle horizontal offset maks 6px
+            const liftY = gsap.utils.interpolate(16, -28, f);
+            const opacity = gsap.utils.interpolate(0.82, 1, f);
+            const subX = gsap.utils.clamp(-6, 6, signed * 6);
 
             data.setScaleX(scale);
-data.setScaleY(scale);
-            data.setOpacity(opacity);
+            data.setScaleY(scale);
+            // FIX #2 diterapkan di sini — skip nulis opacity kalau crossfade
+            // tween (efek ganti filter) sedang berjalan, supaya tidak
+            // rebutan/flicker dengan tween autoAlpha di effect satunya.
+            if (!crossfadeActiveRef.current) {
+              data.setOpacity(opacity);
+            }
             data.setY(liftY);
-            data.setRotation(0); // Sesuai instruksi: STRICTLY NO ROTATION
+            data.setRotation(0);
             data.setX(subX);
 
-            // Z-Index hierarchy
             data.el.style.zIndex = String(50 + Math.round(f * 50));
           }
         };
@@ -243,7 +254,7 @@ data.setScaleY(scale);
         gsap.ticker.add(measure);
         measure();
 
-        // 3) Cinematic Image Parallax di dalam card-photo
+        // 3) Cinematic Image Parallax
         cards.forEach((card) => {
           const img = card.querySelector<HTMLElement>(".card-photo");
           if (img) {
@@ -315,6 +326,10 @@ data.setScaleY(scale);
     const cards = track.querySelectorAll<HTMLElement>(".project-card");
     if (!cards.length) return;
 
+    // FIX #2: tandai crossfade sedang aktif supaya measure() loop
+    // berhenti sementara menulis opacity ke card yang sama.
+    crossfadeActiveRef.current = true;
+
     gsap.fromTo(
       cards,
       { autoAlpha: 0 },
@@ -323,12 +338,18 @@ data.setScaleY(scale);
         duration: DUR.card,
         ease: EASE.card,
         stagger: STAGGER.items,
-        onComplete: () => ScrollTrigger.refresh(),
+        onComplete: () => {
+          crossfadeActiveRef.current = false;
+          ScrollTrigger.refresh();
+        },
       },
     );
 
     const t = setTimeout(() => ScrollTrigger.refresh(), 120);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      crossfadeActiveRef.current = false;
+    };
   }, [filter]);
 
   const Card = ({ p, i }: { p: (typeof filtered)[number]; i: number }) => (
@@ -459,15 +480,6 @@ data.setScaleY(scale);
       >
         <div>
           <div ref={trackRef} className="flex w-max items-center lg:items-start gap-6 lg:gap-10 xl:gap-14 pl-6 lg:pl-[max(1.5rem,calc((100vw-1680px)/2+2rem))] pr-[18vw] lg:pr-[12vw] will-change-transform">
-              {/*
-                INTRO = "slide" pertama di dalam track horizontal yang sama dengan project cards.
-                WAJIB tetap flex child biasa dari `trackRef`.
-                DILARANG KERAS memberi position: sticky / fixed di sini atau di parent-nya —
-                pergerakannya harus 100% murni ikut translateX() milik `track` (lihat master
-                tween "1) Master Tween Horizontal" di atas). Intro juga sengaja TIDAK dimasukkan
-                ke `.project-card`, jadi ia tidak ikut sistem scale/opacity/rotation cinematic
-                focus — ukurannya tetap normal, hanya posisinya yang bergeser bersama track.
-              */}
               <div
                 ref={introRef}
                 className="hidden lg:flex shrink-0 w-[34vw] xl:w-[30vw] flex-col justify-center pr-10"

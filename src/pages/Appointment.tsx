@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { motion, useScroll, useTransform, useMotionTemplate, useMotionValueEvent } from "framer-motion";
+import { motion, useScroll, useTransform, useMotionTemplate } from "framer-motion";
 import {
   Lightbulb,
   Armchair,
@@ -47,10 +47,8 @@ import meetSpace from "@/assets/appointment/meet-space.jpg";
 import formSide from "@/assets/appointment/form-side.jpg";
 
 /* ────────── Design tokens (inline, konsisten Livora) ────────── */
-// Tidak ada gold/coklat sama sekali — hanya hitam, putih, dan netral abu-abu.
 const BLACK = "#000000";
 const WHITE = "#ffffff";
-// Overlay gambar pakai near-black netral (bukan warm-brown) supaya tetap tegas tanpa kesan coklat.
 const OVERLAY = "#141414";
 
 const fadeUp = {
@@ -72,11 +70,8 @@ const HELP_CARDS = [
 const STEPS = [ 
   { n: "01", title: "Meet Your Designer", desc: "We'll get to know you, your lifestyle, needs, and design goals.", img: stepDesigner },
   { n: "02", title: "Shape Your Vision", desc: "Explore materials, layouts, furniture, and the overall atmosphere.", img: stepVision },
-  
   { n: "03", title: "Bring Your Space to Life", desc: "From concept to final execution, we turn your vision into reality.", img: stepLife },
-
 ];
-
 
 const MEET_OPTIONS = [
   { icon: Store, title: "Visit Our Showroom", desc: "Explore materials, see our collection, and discuss your project in person.", img: meetShowroom, value: "showroom" },
@@ -91,42 +86,14 @@ const VALUES = [
   { icon: Palette, title: "From Concept to Completion", desc: "We take care of every detail so you can enjoy a beautiful, well-designed space." },
 ];
 
-// 34 provinsi Indonesia — dipakai untuk search Location/City (statis, tanpa API)
 const PROVINSI_INDONESIA = [
-  "Aceh",
-  "Sumatera Utara",
-  "Sumatera Barat",
-  "Riau",
-  "Kepulauan Riau",
-  "Jambi",
-  "Sumatera Selatan",
-  "Bangka Belitung",
-  "Bengkulu",
-  "Lampung",
-  "DKI Jakarta",
-  "Jawa Barat",
-  "Jawa Tengah",
-  "DI Yogyakarta",
-  "Jawa Timur",
-  "Banten",
-  "Bali",
-  "Nusa Tenggara Barat",
-  "Nusa Tenggara Timur",
-  "Kalimantan Barat",
-  "Kalimantan Tengah",
-  "Kalimantan Selatan",
-  "Kalimantan Timur",
-  "Kalimantan Utara",
-  "Sulawesi Utara",
-  "Sulawesi Tengah",
-  "Sulawesi Selatan",
-  "Sulawesi Tenggara",
-  "Gorontalo",
-  "Sulawesi Barat",
-  "Maluku",
-  "Maluku Utara",
-  "Papua",
-  "Papua Barat",
+  "Aceh", "Sumatera Utara", "Sumatera Barat", "Riau", "Kepulauan Riau", "Jambi", 
+  "Sumatera Selatan", "Bangka Belitung", "Bengkulu", "Lampung", "DKI Jakarta", 
+  "Jawa Barat", "Jawa Tengah", "DI Yogyakarta", "Jawa Timur", "Banten", "Bali", 
+  "Nusa Tenggara Barat", "Nusa Tenggara Timur", "Kalimantan Barat", "Kalimantan Tengah", 
+  "Kalimantan Selatan", "Kalimantan Timur", "Kalimantan Utara", "Sulawesi Utara", 
+  "Sulawesi Tengah", "Sulawesi Selatan", "Sulawesi Tenggara", "Gorontalo", 
+  "Sulawesi Barat", "Maluku", "Maluku Utara", "Papua", "Papua Barat",
 ];
 
 /* ────────── Small primitives ────────── */
@@ -151,7 +118,6 @@ export default function Appointment() {
   const [files, setFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Hero motion — entrance animation + subtle scroll parallax, selaras dengan CatalogHero
   const heroRef = useRef<HTMLElement>(null);
   const [heroMounted, setHeroMounted] = useState(false);
   const [heroHeight, setHeroHeight] = useState(800);
@@ -165,7 +131,6 @@ export default function Appointment() {
     return () => clearTimeout(t);
   }, []);
 
-  // Navbar fixed transparan di atas hero, jadi solid + blur setelah discroll melewati hero — sama seperti CatalogPage
   useEffect(() => {
     const measure = () => {
       if (heroRef.current) setHeroHeight(heroRef.current.clientHeight);
@@ -186,26 +151,32 @@ export default function Appointment() {
   const navbarBlur = useMotionTemplate`blur(${navbarBlurAmount}px)`;
 
   const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    contact_method: "",
-    location: "",
-    project_type: "",
-    project_type_other: "",
-    message: "",
-    agree_terms: false,
-    agree_privacy: false,
+    name: "", email: "", phone: "", contact_method: "", location: "", 
+    project_type: "", project_type_other: "", message: "", 
+    agree_terms: false, agree_privacy: false,
   });
   const [policyDoc, setPolicyDoc] = useState<PolicyDocument | null>(null);
+  // ════════════════════════════════════════════════════════════════════
+  // FIX LENIS: Hentikan smooth scroll saat PolicyDialog terbuka
+  // ════════════════════════════════════════════════════════════════════
+  useEffect(() => {
+    if (policyDoc) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [policyDoc]);
 
   const upd = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
   const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(e.target.files ?? []);
     if (!picked.length) return;
-    setFiles((prev) => [...prev, ...picked].slice(0, 6)); // batasi 6 file
-    e.target.value = ""; // supaya bisa pilih file yang sama lagi kalau perlu
+    setFiles((prev) => [...prev, ...picked].slice(0, 6)); 
+    e.target.value = ""; 
   };
 
   const removeFile = (idx: number) => {
@@ -214,9 +185,9 @@ export default function Appointment() {
 
   const resetForm = () => {
     setForm({
-      name: "", email: "", phone: "",
-      contact_method: "", location: "", project_type: "", project_type_other: "",
-      message: "", agree_terms: false, agree_privacy: false,
+      name: "", email: "", phone: "", contact_method: "", location: "", 
+      project_type: "", project_type_other: "", message: "", 
+      agree_terms: false, agree_privacy: false,
     });
     setHelpChoice("");
     setHelpChoiceOther("");
@@ -276,7 +247,6 @@ export default function Appointment() {
 
   return (
     <div className="bg-background text-foreground">
-      {/* Navbar fixed & transparan di atas hero — teks putih saat di posisi paling atas, lalu jadi solid + blur saat discroll */}
       <motion.div
         style={{ backgroundColor: navbarBg }}
         className="fixed top-0 left-0 right-0 z-50 border-b border-border/0 transition-colors duration-300"
@@ -302,7 +272,6 @@ export default function Appointment() {
           />
         </motion.div>
 
-        {/* Overlay dikurangi supaya foto hero tetap terlihat jelas, teks tetap terbaca */}
         <div
           className="absolute inset-0"
           style={{
@@ -756,8 +725,11 @@ export default function Appointment() {
                 <label className="flex items-start gap-3 text-xs text-muted-foreground font-light">
                   <input
                     type="checkbox"
-                    checked={form.agree_terms}
-                    onChange={(e) => upd("agree_terms", e.target.checked)}
+                    checked={form.agree_terms && form.agree_privacy}
+                    onChange={(e) => {
+                      upd("agree_terms", e.target.checked);
+                      upd("agree_privacy", e.target.checked);
+                    }}
                     className="mt-1 accent-black"
                   />
                   <span>
@@ -770,19 +742,7 @@ export default function Appointment() {
                     >
                       Ketentuan Layanan
                     </button>{" "}
-                    Livora.
-                  </span>
-                </label>
-
-                <label className="flex items-start gap-3 text-xs text-muted-foreground font-light">
-                  <input
-                    type="checkbox"
-                    checked={form.agree_privacy}
-                    onChange={(e) => upd("agree_privacy", e.target.checked)}
-                    className="mt-1 accent-black"
-                  />
-                  <span>
-                    Saya telah membaca dan menyetujui{" "}
+                    dan{" "}
                     <button
                       type="button"
                       onClick={() => setPolicyDoc(PRIVACY_POLICY)}
@@ -865,11 +825,6 @@ function Select({
   );
 }
 
-/**
- * Searchable location combobox — daftar 34 provinsi Indonesia (statis, tanpa API).
- * Kalau nilai yang diketik tidak cocok dengan daftar, nilai tetap tersimpan
- * apa adanya (isian manual fallback) — dropdown hanya membantu, tidak memaksa.
- */
 function LocationSearch({
   value, onChange, placeholder,
 }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
