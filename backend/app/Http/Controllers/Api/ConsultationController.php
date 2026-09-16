@@ -79,6 +79,11 @@ class ConsultationController extends Controller
             'message'            => $data['message'] ?? null,
             'attachments'        => $attachmentPaths,
             'status'             => Consultation::STATUS_NEW_INQUIRY,
+            'terms_accepted'     => true,
+            'privacy_accepted'   => true,
+            'terms_version'      => $data['terms_version'] ?? null,
+            'privacy_version'    => $data['privacy_version'] ?? null,
+            'consent_accepted_at' => now(),
         ]);
 
         $consultation->statusHistory()->create([
