@@ -21,6 +21,10 @@ export type ConsultationPayload = {
   estimated_area?: string;
   preferred_style?: string;
   message?: string;
+  terms_accepted?: boolean | string;
+  privacy_accepted?: boolean | string;
+  terms_version?: string;
+  privacy_version?: string;
 };
 
 export type ConsultationStageFile = {
