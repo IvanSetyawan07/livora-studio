@@ -810,6 +810,12 @@ export default function Appointment() {
         </div>
       </section>
 
+      <PolicyDialog
+        doc={policyDoc}
+        open={policyDoc !== null}
+        onOpenChange={(o) => { if (!o) setPolicyDoc(null); }}
+      />
+
       <Footer />
     </div>
   );
