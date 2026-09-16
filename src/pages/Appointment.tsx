@@ -23,6 +23,14 @@ import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
 import { toast } from "sonner";
 import { submitConsultation } from "@/lib/consultations";
+import { PolicyDialog } from "@/components/livora/PolicyDialog";
+import {
+  TERMS_OF_SERVICE,
+  PRIVACY_POLICY,
+  TERMS_VERSION,
+  PRIVACY_VERSION,
+  type PolicyDocument,
+} from "@/content/legal/consultationPolicies";
 
 import hero from "@/assets/appointment/hero-consultation.jpg";
 import helpInspiration from "@/assets/appointment/help-inspiration.jpg";
@@ -208,7 +216,7 @@ export default function Appointment() {
     setForm({
       name: "", email: "", phone: "",
       contact_method: "", location: "", project_type: "", project_type_other: "",
-      message: "", agree: false,
+      message: "", agree_terms: false, agree_privacy: false,
     });
     setHelpChoice("");
     setHelpChoiceOther("");
@@ -221,8 +229,8 @@ export default function Appointment() {
       toast.error("Please fill in your name/company and email.");
       return;
     }
-    if (!form.agree) {
-      toast.error("Please agree to the Terms & Privacy Policy.");
+    if (!form.agree_terms || !form.agree_privacy) {
+      toast.error("Mohon setujui Ketentuan Layanan dan Kebijakan Privasi terlebih dahulu.");
       return;
     }
 
@@ -242,6 +250,10 @@ export default function Appointment() {
           service_type: resolvedServiceType || undefined,
           project_type: resolvedProjectType || undefined,
           message: form.message || undefined,
+          terms_accepted: true,
+          privacy_accepted: true,
+          terms_version: TERMS_VERSION,
+          privacy_version: PRIVACY_VERSION,
         },
         files
       );
