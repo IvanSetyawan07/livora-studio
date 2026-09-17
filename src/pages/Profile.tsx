@@ -14,7 +14,6 @@ import {
 import { updateProfile, changePassword } from "@/lib/profile";
 import { getWishlist, removeFromWishlist, type WishlistEntry } from "@/lib/wishlist";
 import { cancelConsultation } from "@/lib/consultationMessages";
-import ConsultationDetailSheet from "@/components/livora/ConsultationDetailSheet";
 import { toast } from "sonner";
 import { imgUrl } from "@/lib/adminApi";
 import {
@@ -106,8 +105,8 @@ export default function Profile() {
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-8 border-b border-border">
+         {/* Tabs */}
+        <div className="flex flex-wrap gap-2 mb-8 bg-secondary/50 p-1.5 rounded-lg w-fit">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.key;
@@ -115,11 +114,11 @@ export default function Profile() {
             return (
               <button
                 key={tab.key}
-               onClick={() => navigate(TAB_TO_PATH[tab.key], { replace: true })}
-                className={`flex items-center gap-2 px-4 py-3 text-xs uppercase tracking-[0.2em] border-b-2 transition-colors ${
+                onClick={() => navigate(TAB_TO_PATH[tab.key], { replace: true })}
+                className={`relative flex items-center gap-2 px-4 py-2.5 rounded-md text-xs uppercase tracking-[0.2em] transition-colors ${
                   active
-                    ? "border-foreground text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
+                    ? "bg-foreground text-background shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-background/60"
                 }`}
               >
                 <Icon size={14} />
@@ -364,10 +363,9 @@ function ConsultationCard({
   consultation: Consultation;
   onChanged: () => void;
 }) {
+  const navigate = useNavigate();
   const [cancelling, setCancelling] = useState(false);
   const [detail, setDetail] = useState<Consultation>(consultation);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [sheetView, setSheetView] = useState<"timeline" | "chat">("timeline");
 
   useEffect(() => {
     // Load full detail (with stage_files, progress_updates, status_history, activities) once.
@@ -413,8 +411,8 @@ function ConsultationCard({
   )[0];
   const hasUnread = cardActivities.some((a) => a.audience !== "admin" && !a.user_read_at);
 
-  const openDetails = () => { setSheetView("timeline"); setSheetOpen(true); };
-  const openChat = () => { setSheetView("chat"); setSheetOpen(true); };
+    const openDetails = () => navigate(`/profile/consultations/${detail.id}`);
+  const openChat = () => navigate(`/profile/consultations/${detail.id}#notes`);
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden relative">
@@ -498,14 +496,7 @@ function ConsultationCard({
         )}
       </div>
 
-      <ConsultationDetailSheet
-        consultation={detail}
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        initialView={sheetView}
-        onChanged={setDetail}
-      />
-    </div>
+          </div>
   );
 }
 

@@ -47,6 +47,18 @@ type Props = {
 };
 
 export default function ConsultationStageSheet({ stage, consultation, role, onChanged }: Props) {
+  return (
+    <div className="space-y-6">
+      <ConsultationMiniTimeline consultation={consultation} />
+      <StageContent stage={stage} consultation={consultation} role={role} onChanged={onChanged} />
+    </div>
+  );
+}
+
+/** Status pill + panel + history + attachments untuk SATU stage — tanpa mini timeline.
+ * Diekspor supaya bisa dirender inline, selalu terbuka, tanpa klik / tanpa sheet
+ * (dipakai oleh ConsultationJourney). */
+export function StageContent({ stage, consultation, role, onChanged }: Props) {
   const files = (consultation.stage_files || consultation.stageFiles || []).filter((f) => f.stage === stage);
   const history = (consultation.status_history || consultation.statusHistory || []).filter(
     (h) => h.new_status === stage || h.previous_status === stage,
@@ -57,12 +69,9 @@ export default function ConsultationStageSheet({ stage, consultation, role, onCh
   const isCurrent = currentIdx === idx;
 
   return (
-    <div className="space-y-6">
-      <ConsultationMiniTimeline consultation={consultation} />
-
+    <div className="space-y-4">
       <StatusBadge stage={stage} isPast={isPast} isCurrent={isCurrent} />
 
-      {/* Stage-specific body */}
       {stage === "new_inquiry" && <InquiryPanel consultation={consultation} />}
       {stage === "under_review" && <ReviewPanel consultation={consultation} />}
       {stage === "contacted" && <ContactedPanel />}
@@ -79,7 +88,6 @@ export default function ConsultationStageSheet({ stage, consultation, role, onCh
       )}
       {stage === "completed" && <CompletedPanel consultation={consultation} />}
 
-      {/* History for this stage */}
       {history.length > 0 && (
         <div className="border-t border-border pt-4">
           <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground mb-2">History</p>
@@ -241,15 +249,30 @@ function ReviewPanel({ consultation }: { consultation: Consultation }) {
 }
 
 function ContactedPanel() {
+  const waHref = `https://wa.me/${WHATSAPP_NUMBER}`;
   return (
-    <div className="text-sm space-y-2">
-      <p className="text-muted-foreground">The chat room with your designer is now open.</p>
-      <div className="flex items-center gap-2 text-xs">
-        <MessageCircle size={14} /> Open the chat below to start the conversation.
+    <div className="text-sm space-y-3">
+      <p className="text-muted-foreground">
+        Our design team has reached out and the chat room is now open — see Consultation Notes below to
+        keep talking with your designer, or reach us directly on WhatsApp.
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <a
+          href={waHref}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-2 rounded bg-foreground text-background px-4 py-2 text-xs uppercase tracking-[0.2em]"
+        >
+          <Phone size={14} /> Chat on WhatsApp
+        </a>
+        <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <MessageCircle size={13} /> Or scroll to Consultation Notes
+        </span>
       </div>
     </div>
   );
 }
+
 
 function MeetingPanel({ consultation }: { consultation: Consultation }) {
   const waHref = `https://wa.me/${WHATSAPP_NUMBER}`;
@@ -311,7 +334,7 @@ function InProgressPanel() {
 }
 
 /** Reusable DP / Final-payment panel — covers: not requested, requested/unpaid,
- *  proof uploaded/pending, verified, rejected. Shared by both stages & both roles. */
+ * proof uploaded/pending, verified, rejected. Shared by both stages & both roles. */
 function PaymentPanel({
   consultation, role, kind, files, onChanged,
 }: {
