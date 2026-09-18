@@ -59,7 +59,12 @@ export default function ConsultationStageSheet({ stage, consultation, role, onCh
  * Diekspor supaya bisa dirender inline, selalu terbuka, tanpa klik / tanpa sheet
  * (dipakai oleh ConsultationJourney). */
 export function StageContent({ stage, consultation, role, onChanged }: Props) {
-  const files = (consultation.stage_files || consultation.stageFiles || []).filter((f) => f.stage === stage);
+  const allFiles = consultation.stage_files || consultation.stageFiles || [];
+  const agreementKinds = ["agreement", "signed_agreement"];
+  const files =
+    stage === "agreement_pending"
+      ? allFiles.filter((f) => f.stage === stage || agreementKinds.includes(f.kind))
+      : allFiles.filter((f) => f.stage === stage && !(stage === "project_paid" && agreementKinds.includes(f.kind)));
   const history = (consultation.status_history || consultation.statusHistory || []).filter(
     (h) => h.new_status === stage || h.previous_status === stage,
   );
@@ -77,11 +82,11 @@ export function StageContent({ stage, consultation, role, onChanged }: Props) {
       {stage === "contacted" && <ContactedPanel />}
       {stage === "meeting_scheduled" && <MeetingPanel consultation={consultation} />}
       {stage === "in_progress" && <InProgressPanel />}
-      {stage === "dp_pending" && (
-        <PaymentPanel consultation={consultation} role={role} kind="dp" files={files} onChanged={onChanged} />
-      )}
-      {stage === "project_paid" && (
+      {stage === "agreement_pending" && (
         <AgreementPanel consultation={consultation} role={role} files={files} onChanged={onChanged} />
+      )}
+      {(stage === "dp_pending" || stage === "project_paid") && (
+        <PaymentPanel consultation={consultation} role={role} kind="dp" files={files} onChanged={onChanged} />
       )}
       {stage === "project_running" && (
         <ProgressPanel consultation={consultation} role={role} files={files} onChanged={onChanged} />
@@ -1010,7 +1015,7 @@ function FileList({ files }: { files: ConsultationStageFile[] }) {
         return (
           <li key={f.id} className="flex items-center gap-3 text-xs">
             {isImage ? <ImageIcon size={14} /> : <FileText size={14} />}
-            <a href={f.file_path} target="_blank" rel="noreferrer" className="underline truncate flex-1">
+            <a href={fileUrl(f.file_path)} target="_blank" rel="noreferrer" className="underline truncate flex-1">
               {f.kind.replace("_", " ")} · {new Date(f.created_at).toLocaleDateString("id-ID")}
             </a>
           </li>
