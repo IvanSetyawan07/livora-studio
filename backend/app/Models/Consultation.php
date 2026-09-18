@@ -15,8 +15,9 @@ class Consultation extends Model
     public const STATUS_CONTACTED         = 'contacted';          // 3
     public const STATUS_MEETING_SCHEDULED = 'meeting_scheduled';  // 4
     public const STATUS_IN_PROGRESS       = 'in_progress';        // 5
-    public const STATUS_DP_PENDING        = 'dp_pending';         // 6 Follow-up: DP Payment
-    public const STATUS_PROJECT_PAID      = 'project_paid';       // 7 Sold / signed agreement
+    public const STATUS_AGREEMENT_PENDING = 'agreement_pending';  // 6 Agreement signing
+    public const STATUS_DP_PENDING        = 'dp_pending';         // 7 DP Payment
+    public const STATUS_PROJECT_PAID      = 'project_paid';       // 8 DP verified
     public const STATUS_PROJECT_RUNNING   = 'project_running';    // 8 Project on-going 0–100 %
     public const STATUS_COMPLETED         = 'completed';          // 9
 
@@ -36,6 +37,7 @@ class Consultation extends Model
         self::STATUS_CONTACTED,
         self::STATUS_MEETING_SCHEDULED,
         self::STATUS_IN_PROGRESS,
+        self::STATUS_AGREEMENT_PENDING,
         self::STATUS_DP_PENDING,
         self::STATUS_PROJECT_PAID,
         self::STATUS_PROJECT_RUNNING,
