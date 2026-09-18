@@ -77,11 +77,11 @@ export function StageContent({ stage, consultation, role, onChanged }: Props) {
       {stage === "contacted" && <ContactedPanel />}
       {stage === "meeting_scheduled" && <MeetingPanel consultation={consultation} />}
       {stage === "in_progress" && <InProgressPanel />}
-      {stage === "dp_pending" && (
-        <PaymentPanel consultation={consultation} role={role} kind="dp" files={files} onChanged={onChanged} />
-      )}
-      {stage === "project_paid" && (
+      {stage === "agreement_pending" && (
         <AgreementPanel consultation={consultation} role={role} files={files} onChanged={onChanged} />
+      )}
+      {(stage === "dp_pending" || stage === "project_paid") && (
+        <PaymentPanel consultation={consultation} role={role} kind="dp" files={files} onChanged={onChanged} />
       )}
       {stage === "project_running" && (
         <ProgressPanel consultation={consultation} role={role} files={files} onChanged={onChanged} />
