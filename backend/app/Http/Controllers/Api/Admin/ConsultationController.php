@@ -413,6 +413,9 @@ class ConsultationController extends Controller
             $consultation->dp_paid_at = $consultation->dp_paid_at ?: now();
             $consultation->save();
             $consultation->recordActivity('payment_verified', 'DP payment verified', 'Your DP payment has been verified by Livora.', 'both', $request->user()->id);
+            if ($consultation->status === Consultation::STATUS_DP_PENDING) {
+                $consultation->changeStatus(Consultation::STATUS_PROJECT_PAID, $request->user()->id, 'DP payment verified.');
+            }
         } elseif ($file->kind === 'final_payment_proof') {
             $consultation->final_payment_paid_at = $consultation->final_payment_paid_at ?: now();
             $consultation->save();

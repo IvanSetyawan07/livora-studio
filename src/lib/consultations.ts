@@ -150,6 +150,7 @@ export const CONSULTATION_STAGES = [
   { key: "contacted",         label: "Contacted" },
   { key: "meeting_scheduled", label: "Meeting Scheduled" },
   { key: "in_progress",       label: "Consultation in Progress" },
+  { key: "agreement_pending", label: "Agreement & Signature" },
   { key: "dp_pending",        label: "DP Payment" },
   { key: "project_paid",      label: "Project Paid" },
   { key: "project_running",   label: "Project Running" },
