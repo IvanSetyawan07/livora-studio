@@ -21,8 +21,9 @@ const NEXT_STEP_HINTS: Record<string, string> = {
   contacted: "A designer will reach out to you shortly.",
   meeting_scheduled: "Attend your scheduled discussion / meeting.",
   in_progress: "Discussion and proposal preparation.",
+  agreement_pending: "Review and sign the project agreement.",
   dp_pending: "Send DP payment once the invoice arrives.",
-  project_paid: "Waiting for the project agreement to be signed.",
+  project_paid: "DP verified — your project is being prepared.",
   project_running: "Your project is being worked on.",
   completed: "Nothing further — your project is complete.",
 };

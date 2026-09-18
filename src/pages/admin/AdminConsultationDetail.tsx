@@ -26,6 +26,7 @@ const STATUS_OPTIONS = [
   ["contacted", "Contacted"],
   ["meeting_scheduled", "Meeting Scheduled"],
   ["in_progress", "In Progress"],
+  ["agreement_pending", "Agreement & Signature"],
   ["dp_pending", "DP Payment"],
   ["project_paid", "Project Paid"],
   ["project_running", "Project Running"],
@@ -370,7 +371,31 @@ function ActionsRail({
 
       {status === "in_progress" && (
         <div className="space-y-2">
-          <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Request DP Payment</p>
+          <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Upload Agreement</p>
+          <input ref={agreementRef} type="file" className="text-xs" />
+          <button
+            onClick={() => {
+              const f = agreementRef.current?.files?.[0];
+              if (!f) return toast.error("Pilih file agreement dulu.");
+              onRun("Upload Agreement", () => uploadAgreement(consultation.id, f));
+            }}
+            className="w-full rounded bg-foreground text-background py-2 text-xs uppercase tracking-[0.2em]"
+          >
+            Upload & Move to Agreement
+          </button>
+        </div>
+      )}
+
+      {status === "agreement_pending" && (
+        <div className="space-y-2">
+          {consultation.agreement_signed_at ? (
+            <div className="rounded border border-emerald-200 bg-emerald-50 text-emerald-700 px-2 py-1.5 text-[11px]">
+              Customer signed as <strong>{consultation.agreement_signature_name}</strong>.
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Waiting for customer signature.</p>
+          )}
+          <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground pt-2">Request DP Payment</p>
           <input type="number" placeholder="Amount (IDR)" value={dpAmount}
             onChange={(e) => setDpAmount(e.target.value)}
             className="w-full border border-border rounded px-2 py-1.5 text-xs bg-background" />
