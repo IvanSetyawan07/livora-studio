@@ -59,7 +59,12 @@ export default function ConsultationStageSheet({ stage, consultation, role, onCh
  * Diekspor supaya bisa dirender inline, selalu terbuka, tanpa klik / tanpa sheet
  * (dipakai oleh ConsultationJourney). */
 export function StageContent({ stage, consultation, role, onChanged }: Props) {
-  const files = (consultation.stage_files || consultation.stageFiles || []).filter((f) => f.stage === stage);
+  const allFiles = consultation.stage_files || consultation.stageFiles || [];
+  const agreementKinds = ["agreement", "signed_agreement"];
+  const files =
+    stage === "agreement_pending"
+      ? allFiles.filter((f) => f.stage === stage || agreementKinds.includes(f.kind))
+      : allFiles.filter((f) => f.stage === stage && !(stage === "project_paid" && agreementKinds.includes(f.kind)));
   const history = (consultation.status_history || consultation.statusHistory || []).filter(
     (h) => h.new_status === stage || h.previous_status === stage,
   );
