@@ -278,14 +278,14 @@ class ConsultationController extends Controller
         $path = '/storage/' . $request->file('agreement')->store('consultations', 'public');
         ConsultationStageFile::create([
             'consultation_id' => $consultation->id,
-            'stage'           => Consultation::STATUS_PROJECT_PAID,
+            'stage'           => Consultation::STATUS_AGREEMENT_PENDING,
             'kind'            => 'agreement',
             'file_path'       => $path,
             'note'            => $data['note'] ?? null,
             'uploaded_by'     => $request->user()->id,
         ]);
         $consultation->changeStatus(
-            Consultation::STATUS_PROJECT_PAID,
+            Consultation::STATUS_AGREEMENT_PENDING,
             $request->user()->id,
             'Agreement uploaded. Awaiting customer signature.',
         );
