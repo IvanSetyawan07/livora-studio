@@ -1010,7 +1010,7 @@ function FileList({ files }: { files: ConsultationStageFile[] }) {
         return (
           <li key={f.id} className="flex items-center gap-3 text-xs">
             {isImage ? <ImageIcon size={14} /> : <FileText size={14} />}
-            <a href={f.file_path} target="_blank" rel="noreferrer" className="underline truncate flex-1">
+            <a href={fileUrl(f.file_path)} target="_blank" rel="noreferrer" className="underline truncate flex-1">
               {f.kind.replace("_", " ")} · {new Date(f.created_at).toLocaleDateString("id-ID")}
             </a>
           </li>

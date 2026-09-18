@@ -477,7 +477,7 @@ function ConsultationCard({
           onClick={openDetails}
           className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.2em] bg-foreground text-background px-4 py-2.5 rounded hover:opacity-90"
         >
-          View Details
+          {isClosed ? "View Details" : "On Progress"}
         </button>
         <button
           onClick={openChat}
