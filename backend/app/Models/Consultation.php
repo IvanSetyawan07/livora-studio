@@ -54,6 +54,7 @@ class Consultation extends Model
         self::STATUS_CONTACTED          => 'Contacted',
         self::STATUS_MEETING_SCHEDULED  => 'Meeting Scheduled',
         self::STATUS_IN_PROGRESS        => 'Consultation in Progress',
+        self::STATUS_AGREEMENT_PENDING  => 'Agreement & Signature',
         self::STATUS_DP_PENDING         => 'DP Payment',
         self::STATUS_PROJECT_PAID       => 'Project Paid',
         self::STATUS_PROJECT_RUNNING    => 'Project Running',
