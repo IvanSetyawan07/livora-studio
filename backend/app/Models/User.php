@@ -12,9 +12,17 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    protected static function booted()
+    {
+        static::created(function (User $user) {
+            \App\Models\Consultation::where('email', $user->email)
+                ->whereNull('user_id')
+                ->update(['user_id' => $user->id]);
+        });
+    }
+
     /**
-     * The attributes that are mass assignable.
-     *
+     * The attributes that are mass assignable.     *
      * @var array<int, string>
      */
     protected $fillable = [
@@ -53,5 +61,6 @@ class User extends Authenticatable
         'last_login_at' => 'datetime',
         'password' => 'hashed',
     ];
+    
 
 }

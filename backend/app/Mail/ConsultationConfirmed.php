@@ -17,6 +17,7 @@ class ConsultationConfirmed extends Mailable
         public Consultation $consultation,
         public ?string $customSubject = null,
         public ?string $customMessage = null,
+        public ?string $claimUrl = null,
     ) {}
 
     public function envelope(): Envelope
@@ -31,8 +32,9 @@ class ConsultationConfirmed extends Mailable
         return new Content(
             view: 'emails.consultation-confirmed',
             with: [
-                'c'       => $this->consultation,
-                'message' => $this->customMessage,
+                'c'        => $this->consultation,
+                'message'  => $this->customMessage,
+                'claimUrl' => $this->claimUrl,
             ],
         );
     }

@@ -17,6 +17,15 @@
 </div>
 @endif
 
+@if($claimUrl ?? null)
+<div style="margin:32px 0;text-align:center;">
+  <a href="{{ $claimUrl }}" style="display:inline-block;padding:14px 32px;background:#1c1c1c;color:#ffffff;text-decoration:none;font-family:Arial,sans-serif;font-size:12px;letter-spacing:.15em;text-transform:uppercase;">
+    View My Consultation
+  </a>
+</div>
+<p style="font-size:13px;color:#8a8072;">This link is valid for 14 days. Use it to access your profile and follow your consultation's progress on the Livora website.</p>
+@endif
+
 <p style="margin-top:32px;">If you need to reschedule or have any question, just reply to this email.</p>
 <p>Warm regards,<br><em>The Livora Team</em></p>
 @endcomponent

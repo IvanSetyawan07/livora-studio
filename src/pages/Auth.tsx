@@ -703,16 +703,21 @@ export default function Auth() {
   const navigate = useNavigate();
   const isLogin = location.pathname !== "/register";
 
+  // Prefill dari link claim consultation (?email=...&consultation=...)
+  const claimParams = new URLSearchParams(location.search);
+  const claimEmail = claimParams.get("email") || "";
+  const claimConsultationId = claimParams.get("consultation");
+
   const [loading, setLoading] = useState(false);
   const [applePlatform] = useState(isApplePlatform);
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(claimEmail);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
 
   const [name, setName] = useState("");
-  const [regEmail, setRegEmail] = useState("");
+  const [regEmail, setRegEmail] = useState(claimEmail);
   const [regCountryCode, setRegCountryCode] = useState("+62");
   const [regPhone, setRegPhone] = useState("");
   const [regPassword, setRegPassword] = useState("");
@@ -726,15 +731,31 @@ export default function Auth() {
     setLoading(true);
     try {
       const { data } = await api.post("/login", { email, password });
-      authStorage.setToken(data.token);
+       authStorage.setToken(data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
-      const intended = takeIntendedPath();
-      navigate(intended ?? homeForRole(data.user?.role));
+      redirectAfterAuth(data.user?.role);
     } catch {
       toast.error("Email atau password salah");
     } finally {
       setLoading(false);
     }
+  };
+    useEffect(() => {
+    if (claimConsultationId) {
+      sessionStorage.setItem("pending_consultation_claim", claimConsultationId);
+    }
+  }, [claimConsultationId]);
+
+  // Ganti path ini sesuai router My Consultation detail yang sebenarnya.
+  const redirectAfterAuth = (role?: string) => {
+    const pending = sessionStorage.getItem("pending_consultation_claim");
+    if (pending) {
+      sessionStorage.removeItem("pending_consultation_claim");
+      navigate(`/profile/consultations/${pending}`);
+      return;
+    }
+    const intended = takeIntendedPath();
+    navigate(intended ?? homeForRole(role));
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -754,7 +775,7 @@ export default function Auth() {
         password: regPassword,
       });
       toast.success("Register berhasil! Silakan login.");
-      navigate("/login");
+      navigate(`/login?email=${encodeURIComponent(regEmail)}`);
     } catch (error: any) {
       const msg =
         error?.response?.data?.message ||
@@ -794,10 +815,9 @@ export default function Auth() {
       const { data } = await api.post("/auth/google/callback", {
         id_token: response.credential,
       });
-      authStorage.setToken(data.token);
+       authStorage.setToken(data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
-      const intended = takeIntendedPath();
-      navigate(intended ?? homeForRole(data.user?.role));
+      redirectAfterAuth(data.user?.role);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Google login gagal");
     } finally {

@@ -13,6 +13,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
+
 class ConsultationController extends Controller
 {
     public function index(Request $request)
@@ -92,11 +94,18 @@ class ConsultationController extends Controller
             'message' => 'nullable|string',
         ]);
 
+        $claimUrl = URL::temporarySignedRoute(
+            'consultations.claim',
+            now()->addDays(14),
+            ['consultation' => $consultation->id],
+        );
+
         try {
             Mail::to($consultation->email)->send(new ConsultationConfirmed(
                 $consultation,
                 $data['subject'] ?? null,
                 $data['message'] ?? null,
+                $claimUrl,
             ));
         } catch (\Throwable $e) {
             Log::error('Failed to send ConsultationConfirmed email: ' . $e->getMessage());

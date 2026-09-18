@@ -104,7 +104,10 @@ Route::get('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cla
 // Public tracking
 Route::post('/track/click', [TrackingController::class, 'click']);
 Route::post('/track/view',  [TrackingController::class, 'view']);
-
+Route::get('/consultations/{consultation}/claim', [\App\Http\Controllers\Api\ConsultationClaimController::class, 'claim'])
+    ->name('consultations.claim')
+    ->middleware('signed');
+    
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/my/consultations', [ConsultationController::class, 'mine']);
     Route::get('/my/consultations/unread', [ConsultationController::class, 'unreadCount']);
