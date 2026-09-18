@@ -150,6 +150,7 @@ export const CONSULTATION_STAGES = [
   { key: "contacted",         label: "Contacted" },
   { key: "meeting_scheduled", label: "Meeting Scheduled" },
   { key: "in_progress",       label: "Consultation in Progress" },
+  { key: "agreement_pending", label: "Agreement & Signature" },
   { key: "dp_pending",        label: "DP Payment" },
   { key: "project_paid",      label: "Project Paid" },
   { key: "project_running",   label: "Project Running" },
@@ -161,7 +162,7 @@ export type ConsultationStageKey = (typeof CONSULTATION_STAGES)[number]["key"];
 export const stageIndex = (status: string): number => {
   // Legacy aliases still floating around in old records.
   if (status === "follow_up_required") return CONSULTATION_STAGES.findIndex((s) => s.key === "in_progress");
-  if (status === "proposal_sent")      return CONSULTATION_STAGES.findIndex((s) => s.key === "project_paid");
+  if (status === "proposal_sent")      return CONSULTATION_STAGES.findIndex((s) => s.key === "agreement_pending");
   return CONSULTATION_STAGES.findIndex((s) => s.key === status);
 };
 
