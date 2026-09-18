@@ -431,30 +431,14 @@ function ActionsRail({
               Mark DP as Paid
             </button>
           )}
-          <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground pt-2">Upload Agreement</p>
-          <input ref={agreementRef} type="file" className="text-xs" />
-          <button
-            onClick={() => {
-              const f = agreementRef.current?.files?.[0];
-              if (!f) return toast.error("Pilih file agreement dulu.");
-              onRun("Upload Agreement", () => uploadAgreement(consultation.id, f));
-            }}
-            className="w-full rounded border border-border py-2 text-xs uppercase tracking-[0.2em] hover:bg-secondary"
-          >
-            Upload & Move to Project Paid
-          </button>
+          <p className="text-[11px] text-muted-foreground pt-1">
+            Verifikasi bukti transfer pelanggan pada panel dokumen untuk melanjutkan ke Project Paid.
+          </p>
         </div>
       )}
 
       {status === "project_paid" && (
         <div className="space-y-2">
-          {consultation.agreement_signed_at ? (
-            <div className="rounded border border-emerald-200 bg-emerald-50 text-emerald-700 px-2 py-1.5 text-[11px]">
-              Customer signed as <strong>{consultation.agreement_signature_name}</strong>.
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">Waiting for customer signature.</p>
-          )}
           <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground pt-2">Post First Progress</p>
           <ProgressForm
             percentage={percentage}
