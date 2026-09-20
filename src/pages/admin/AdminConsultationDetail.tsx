@@ -1,274 +1,156 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  getAdminConsultation,
-  updateAdminConsultation,
-  confirmConsultationEmail,
-  approveConsultation,
-  rejectConsultation,
-  scheduleMeeting as apiScheduleMeeting,
-  startMeeting,
-  requestDp,
-  markDpPaid,
-  uploadAgreement,
-  postProgress,
-  completeConsultation,
+  ArrowLeft, CheckCircle2, ChevronRight, CircleDollarSign, Clock3, FileText,
+  FolderOpen, History, LayoutDashboard, MessageCircle, MessagesSquare, TrendingUp, UserRound,
+} from "lucide-react";
+import {
+  getAdminConsultation, updateAdminConsultation, approveConsultation, rejectConsultation,
+  scheduleMeeting as apiScheduleMeeting, startMeeting, requestDp, markDpPaid,
+  uploadAgreement, postProgress, completeConsultation,
 } from "@/lib/adminConsultations";
-import type { Consultation } from "@/lib/consultations";
+import {
+  fileUrl, type Consultation, type ConsultationActivity, type ConsultationProgressComment,
+  type ConsultationProgressUpdate, type ConsultationStageFile, type ConsultationStatusHistoryEntry,
+} from "@/lib/consultations";
 import ConsultationChat from "@/components/livora/ConsultationChat";
 import ConsultationTimeline from "@/components/livora/ConsultationTimeline";
-import { imgUrl } from "@/lib/adminApi";
+import ConsultationStageSheet from "@/components/livora/ConsultationStageSheet";
+import { Button } from "@/components/ui/button";
 
-const STATUS_OPTIONS = [
-  ["new_inquiry", "New Inquiry"],
-  ["under_review", "Under Review"],
-  ["contacted", "Contacted"],
-  ["meeting_scheduled", "Meeting Scheduled"],
-  ["in_progress", "In Progress"],
-  ["agreement_pending", "Agreement & Signature"],
-  ["dp_pending", "DP Payment"],
-  ["project_paid", "Project Paid"],
-  ["project_running", "Project Running"],
-  ["completed", "Completed"],
-  ["cancelled", "Cancelled"],
-  ["rejected", "Rejected"],
+const STATUS_LABELS: Record<string, string> = {
+  new_inquiry: "Permintaan baru", under_review: "Dalam peninjauan", contacted: "Sudah dihubungi",
+  meeting_scheduled: "Pertemuan terjadwal", in_progress: "Konsultasi berjalan",
+  agreement_pending: "Menunggu perjanjian", dp_pending: "Menunggu uang muka",
+  project_paid: "Uang muka diterima", project_running: "Proyek berjalan", completed: "Selesai",
+  cancelled: "Dibatalkan", rejected: "Ditolak",
+};
+const TABS = [
+  ["summary", "Ringkasan", LayoutDashboard], ["action", "Tindakan Berikutnya", ChevronRight],
+  ["payment", "Pembayaran", CircleDollarSign], ["documents", "Dokumen", FolderOpen],
+  ["progress", "Progres", TrendingUp], ["questions", "Pertanyaan Pelanggan", MessagesSquare],
+  ["chat", "Percakapan", MessageCircle], ["history", "Riwayat", History],
 ] as const;
+type TabKey = (typeof TABS)[number][0];
 
 export default function AdminConsultationDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [c, setC] = useState<Consultation | null>(null);
+  const [consultation, setConsultation] = useState<Consultation | null>(null);
   const [loading, setLoading] = useState(true);
-  const [emailSubject, setEmailSubject] = useState("");
-  const [emailMessage, setEmailMessage] = useState("");
-  const [sending, setSending] = useState(false);
+  const [tab, setTab] = useState<TabKey>("summary");
 
-  const load = async () => {
+  const load = async (silent = false) => {
     if (!id) return;
-    setLoading(true);
-    try {
-      setC(await getAdminConsultation(Number(id)));
-    } catch {
-      toast.error("Gagal memuat consultation");
-    } finally {
-      setLoading(false);
-    }
+    if (!silent) setLoading(true);
+    try { setConsultation(await getAdminConsultation(Number(id))); }
+    catch { if (!silent) toast.error("Gagal memuat konsultasi."); }
+    finally { if (!silent) setLoading(false); }
   };
+  useEffect(() => { load(); }, [id]);
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
-
-  const patch = async (payload: any) => {
-    if (!c) return;
-    try {
-      const updated = await updateAdminConsultation(c.id, payload);
-      setC(updated);
-      toast.success("Tersimpan");
-    } catch {
-      toast.error("Gagal update");
-    }
+  const patch = async (payload: Record<string, unknown>) => {
+    if (!consultation) return;
+    try { setConsultation(await updateAdminConsultation(consultation.id, payload)); toast.success("Perubahan tersimpan."); }
+    catch { toast.error("Perubahan gagal disimpan."); }
   };
-
   const runAction = async (label: string, fn: () => Promise<Consultation>) => {
-  try {
-    const updated = await fn();
-    setC(updated);
-    toast.success(`${label} berhasil.`);
-  } catch (e: any) {
-    const errors = e?.response?.data?.errors;
-    const msg = errors
-      ? Object.values(errors).flat().join("\n")
-      : e?.response?.data?.message || `${label} gagal.`;
-    toast.error(msg);
-  }
-};
-
-  const handleConfirm = async () => {
-    if (!c) return;
-    setSending(true);
-    try {
-      await confirmConsultationEmail(c.id, {
-        subject: emailSubject || undefined,
-        message: emailMessage || undefined,
-      });
-      toast.success("Email konfirmasi terkirim.");
-      setEmailSubject("");
-      setEmailMessage("");
-      load();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Gagal kirim email");
-    } finally {
-      setSending(false);
+    try { setConsultation(await fn()); toast.success(`${label} berhasil.`); }
+    catch (error: unknown) {
+      const response = (error as { response?: { data?: { message?: string } } })?.response;
+      toast.error(response?.data?.message || `${label} gagal.`);
     }
   };
 
-  if (loading) return <div className="p-10 text-sm text-muted-foreground">Loading…</div>;
-  if (!c) return <div className="p-10">Not found</div>;
-
-  const history: any[] = (c as any).status_history || (c as any).statusHistory || [];
+  if (loading) return <DetailSkeleton />;
+  if (!consultation) return <div className="py-16 text-center">Konsultasi tidak ditemukan.</div>;
+  const c = consultation;
+  const files = (c.stage_files || c.stageFiles || []) as ConsultationStageFile[];
+  const updates = (c.progress_updates || c.progressUpdates || []) as ConsultationProgressUpdate[];
+  const activities = c.activities || [];
+  const history = (c.status_history || c.statusHistory || []) as ConsultationStatusHistoryEntry[];
+  const customerQuestions = updates.flatMap((update) => (update.comments || []).filter((comment) => comment.author_type === "user").map((comment) => ({ update, comment })));
 
   return (
-    <div className="min-h-screen bg-background p-6 md:p-10">
-      <div className="max-w-6xl mx-auto space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2">
-              Consultation #{c.id}
-            </p>
-            <h1 className="serif text-3xl">
-              {c.first_name} {c.last_name}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {c.email} · {c.phone ?? "no phone"}
-            </p>
+    <div className="min-h-screen bg-background pb-10">
+      <header className="border-b border-border pb-5">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/admin/consultations")} className="mb-4 -ml-3"><ArrowLeft /> Semua konsultasi</Button>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span>Konsultasi #{c.id}</span><StatusBadge status={c.status} /></div>
+            <h1 className="serif truncate text-3xl sm:text-4xl">{c.first_name} {c.last_name}</h1>
+            <p className="mt-2 text-sm text-muted-foreground">{c.email} · {c.phone || "Nomor belum tersedia"}</p>
           </div>
-          <button
-            onClick={() => navigate("/admin/consultations")}
-            className="text-sm underline text-muted-foreground"
-          >
-            ← Back
-          </button>
-        </div>
-
-        <div className="grid lg:grid-cols-[1fr_360px] gap-6">
-          <div className="space-y-6">
-            <div className="bg-card border border-border rounded-lg p-6">
-              <h2 className="serif text-xl mb-4">Journey Timeline</h2>
-              <ConsultationTimeline consultation={c} role="admin" onChanged={setC} />
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="bg-card border border-border rounded-lg p-6 space-y-3 text-sm">
-                <h2 className="serif text-xl mb-2">Request Detail</h2>
-                <Row label="Service" value={c.service_type} />
-                <Row label="Project" value={c.project_type} />
-                <Row label="Meeting Type" value={c.consultation_type} />
-                <Row label="Contact Method" value={c.contact_method} />
-                <Row label="Location" value={c.location} />
-                <div className="pt-2">
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Message</p>
-                  <p className="whitespace-pre-wrap">{c.message || "-"}</p>
-                </div>
-                {Array.isArray(c.attachments) && c.attachments.length > 0 && (
-                  <div className="pt-2">
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
-                      Attachments ({c.attachments.length})
-                    </p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {c.attachments.map((path, idx) => {
-                        const url = imgUrl(path);
-                        const isImage = /\.(png|jpe?g|gif|webp|svg)$/i.test(path);
-                        return (
-                          <a
-                            key={idx}
-                            href={url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="block border border-border rounded overflow-hidden aspect-square bg-secondary/30 hover:opacity-80 transition-opacity"
-                          >
-                            {isImage ? (
-                              <img src={url} alt={`Attachment ${idx + 1}`} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground p-1 text-center">
-                                File {idx + 1}
-                              </div>
-                            )}
-                          </a>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-card border border-border rounded-lg p-6 space-y-3">
-                <h2 className="serif text-xl">Manual Override</h2>
-                <label className="block text-xs uppercase tracking-wider text-muted-foreground">Status</label>
-                <select
-                  value={c.status}
-                  onChange={(e) => patch({ status: e.target.value })}
-                  className="w-full border border-border rounded px-3 py-2 text-sm bg-background"
-                >
-                  {STATUS_OPTIONS.map(([v, l]) => (
-                    <option key={v} value={v}>{l}</option>
-                  ))}
-                </select>
-                <label className="block text-xs uppercase tracking-wider text-muted-foreground mt-2">
-                  Admin Notes (internal)
-                </label>
-                <textarea
-                  rows={3}
-                  defaultValue={c.admin_notes ?? ""}
-                  onBlur={(e) => patch({ admin_notes: e.target.value })}
-                  className="w-full border border-border rounded px-3 py-2 text-sm bg-background"
-                />
-              </div>
-            </div>
-
-            <div className="bg-card border border-border rounded-lg p-6">
-              <h2 className="serif text-xl mb-4">Conversation with Customer</h2>
-              <ConsultationChat consultationId={c.id} mode="admin" locked={c.status === "cancelled"} />
-            </div>
-
-            <div className="bg-secondary/30 border border-border rounded-lg p-6 space-y-3">
-              <h2 className="serif text-xl">Confirm &amp; Email User</h2>
-              <input
-                type="text"
-                placeholder="Custom subject (optional)"
-                value={emailSubject}
-                onChange={(e) => setEmailSubject(e.target.value)}
-                className="w-full border border-border rounded px-3 py-2 text-sm bg-background"
-              />
-              <textarea
-                rows={3}
-                placeholder="Pesan tambahan (optional)"
-                value={emailMessage}
-                onChange={(e) => setEmailMessage(e.target.value)}
-                className="w-full border border-border rounded px-3 py-2 text-sm bg-background"
-              />
-              <button
-                onClick={handleConfirm}
-                disabled={sending}
-                className="w-full bg-foreground text-background py-3 rounded text-xs uppercase tracking-[0.25em] disabled:opacity-60"
-              >
-                {sending ? "Sending…" : "Confirm & Email User"}
-              </button>
-            </div>
-
-            {history.length > 0 && (
-              <div className="bg-card border border-border rounded-lg p-6">
-                <h2 className="serif text-xl mb-4">Status History</h2>
-                <ol className="space-y-3">
-                  {history.map((h: any) => (
-                    <li key={h.id} className="border-l-2 border-border pl-4 text-sm">
-                      <div className="text-xs text-muted-foreground">
-                        {new Date(h.created_at).toLocaleString("id-ID")}
-                        {h.changed_by_user?.name ? ` · by ${h.changed_by_user.name}` : ""}
-                      </div>
-                      <div>
-                        {h.previous_status ? `${h.previous_status} → ` : ""}
-                        <strong>{h.new_status}</strong>
-                      </div>
-                      {h.note && <p className="text-muted-foreground mt-1">{h.note}</p>}
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            )}
-          </div>
-
-          {/* Actions rail */}
-          <div className="lg:sticky lg:top-6 self-start">
-            <ActionsRail consultation={c} onRun={runAction} onScheduled={() => load()} />
+          <div className="min-w-[180px]">
+            <div className="mb-2 flex justify-between text-xs"><span>Progres proyek</span><strong>{c.project_progress ?? 0}%</strong></div>
+            <div className="h-2 overflow-hidden bg-muted"><div className="h-full bg-primary" style={{ width: `${Math.min(100, c.project_progress ?? 0)}%` }} /></div>
           </div>
         </div>
+      </header>
+
+      <div className="sticky top-[61px] z-20 -mx-4 mb-6 border-b border-border bg-background/95 px-4 backdrop-blur lg:top-0 lg:-mx-0 lg:px-0">
+        <nav className="flex overflow-x-auto" aria-label="Bagian konsultasi">
+          {TABS.map(([key, label, Icon]) => (
+            <button key={key} onClick={() => setTab(key)} className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-xs font-medium transition-colors sm:px-4 ${tab === key ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <Icon className="size-4" />{label}{key === "questions" && customerQuestions.length > 0 ? <span className="rounded-full bg-destructive px-1.5 text-[10px] text-destructive-foreground">{customerQuestions.length}</span> : null}
+            </button>
+          ))}
+        </nav>
       </div>
+
+      {tab === "summary" && <Summary consultation={c} files={files} updates={updates} questions={customerQuestions.length} onChanged={setConsultation} onPatch={patch} />}
+      {tab === "action" && <Section title="Tindakan Berikutnya" description="Satu tempat untuk menjalankan langkah operasional sesuai tahap saat ini."><div className="max-w-xl"><ActionsRail consultation={c} onRun={runAction} onScheduled={() => load(true)} /></div></Section>}
+      {tab === "payment" && <PaymentSection consultation={c} files={files} onChanged={setConsultation} />}
+      {tab === "documents" && <DocumentsSection consultation={c} files={files} />}
+      {tab === "progress" && <ProgressSection consultation={c} updates={updates} onChanged={setConsultation} />}
+      {tab === "questions" && <QuestionsSection questions={customerQuestions} onOpenProgress={() => setTab("progress")} />}
+      {tab === "chat" && <Section title="Percakapan" description="Pesan langsung antara tim Livora dan pelanggan."><div className="max-w-3xl"><ConsultationChat consultationId={c.id} mode="admin" locked={c.status === "cancelled"} /></div></Section>}
+      {tab === "history" && <HistorySection activities={activities} history={history} />}
     </div>
   );
 }
+
+function Summary({ consultation, files, updates, questions, onChanged, onPatch }: { consultation: Consultation; files: ConsultationStageFile[]; updates: ConsultationProgressUpdate[]; questions: number; onChanged: (value: Consultation) => void; onPatch: (payload: Record<string, unknown>) => Promise<void> }) {
+  return <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="space-y-6">
+      <Section title="Perjalanan Konsultasi" description="Klik setiap tahap untuk melihat rincian dan tindakan yang tersedia."><ConsultationTimeline consultation={consultation} role="admin" onChanged={onChanged} /></Section>
+      <Section title="Ringkasan Permintaan"><div className="grid gap-px bg-border sm:grid-cols-2"><Fact label="Layanan" value={consultation.service_type} /><Fact label="Jenis proyek" value={consultation.project_type} /><Fact label="Jenis konsultasi" value={consultation.consultation_type} /><Fact label="Metode kontak" value={consultation.contact_method} /><Fact label="Lokasi" value={consultation.location} /><Fact label="Gaya pilihan" value={consultation.preferred_style} /></div>{consultation.message && <div className="border-t border-border pt-5"><p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Pesan awal</p><p className="mt-2 whitespace-pre-wrap text-sm leading-6">{consultation.message}</p></div>}</Section>
+    </div>
+    <div className="space-y-6">
+      <Section title="Kondisi Saat Ini"><div className="space-y-4"><Snapshot label="Tahap" value={STATUS_LABELS[consultation.status] || consultation.status} /><Snapshot label="Dokumen" value={`${files.length + (consultation.attachments?.length || 0)} berkas`} /><Snapshot label="Pembaruan progres" value={`${updates.length} pembaruan`} /><Snapshot label="Pertanyaan pelanggan" value={`${questions} pertanyaan`} /></div></Section>
+      <Section title="Catatan Internal"><textarea rows={6} defaultValue={consultation.admin_notes ?? ""} onBlur={(event) => onPatch({ admin_notes: event.target.value })} placeholder="Tambahkan catatan yang hanya terlihat oleh tim Livora" className="ui-input resize-none" /></Section>
+    </div>
+  </div>;
+}
+
+function PaymentSection({ consultation, files, onChanged }: { consultation: Consultation; files: ConsultationStageFile[]; onChanged: (value: Consultation) => void }) {
+  return <Section title="Pembayaran" description="Periksa tagihan dan bukti pembayaran pelanggan sebelum melanjutkan tahap."><div className="grid gap-6 lg:grid-cols-2"><StagePanel title="Uang Muka"><ConsultationStageSheet stage="dp_pending" consultation={consultation} role="admin" onChanged={onChanged} /></StagePanel><StagePanel title="Pelunasan"><ConsultationStageSheet stage="project_running" consultation={consultation} role="admin" onChanged={onChanged} /></StagePanel></div></Section>;
+}
+function DocumentsSection({ consultation, files }: { consultation: Consultation; files: ConsultationStageFile[] }) {
+  const uploaded = (consultation.attachments || []).map((path, index) => ({ key: `attachment-${index}`, label: `Lampiran pelanggan ${index + 1}`, path, meta: "Dikirim bersama permintaan" }));
+  const workflow = files.map((item) => ({ key: `file-${item.id}`, label: item.kind.replaceAll("_", " "), path: item.file_path, meta: new Date(item.created_at).toLocaleString("id-ID") }));
+  const special = [{ key: "agreement-final", label: "Perjanjian final", path: consultation.final_agreement_path, meta: "Ditandatangani kedua pihak" }].filter((item) => item.path);
+  const documents = [...uploaded, ...workflow, ...special] as { key: string; label: string; path: string; meta: string }[];
+  return <Section title="Dokumen" description="Seluruh lampiran pelanggan, invoice, bukti pembayaran, dan perjanjian.">{documents.length === 0 ? <Empty text="Belum ada dokumen." /> : <div className="divide-y divide-border border-y border-border">{documents.map((document) => <a key={document.key} href={fileUrl(document.path)} target="_blank" rel="noreferrer" className="flex items-center gap-3 py-4 hover:bg-muted"><FileText className="size-5 shrink-0 text-muted-foreground" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium capitalize">{document.label}</p><p className="text-xs text-muted-foreground">{document.meta}</p></div><ChevronRight className="size-4" /></a>)}</div>}</Section>;
+}
+function ProgressSection({ consultation, updates, onChanged }: { consultation: Consultation; updates: ConsultationProgressUpdate[]; onChanged: (value: Consultation) => void }) {
+  return <Section title="Progres Proyek" description="Dokumentasi setiap perkembangan proyek beserta pertanyaan pelanggan.">{updates.length === 0 ? <Empty text="Belum ada pembaruan progres." /> : <ConsultationStageSheet stage="project_running" consultation={consultation} role="admin" onChanged={onChanged} />}</Section>;
+}
+function QuestionsSection({ questions, onOpenProgress }: { questions: { update: ConsultationProgressUpdate; comment: ConsultationProgressComment }[]; onOpenProgress: () => void }) {
+  return <Section title="Pertanyaan Pelanggan" description="Pertanyaan yang dikirim melalui setiap pembaruan progres.">{questions.length === 0 ? <Empty text="Belum ada pertanyaan dari pelanggan." /> : <div className="space-y-3">{questions.map(({ update, comment }) => <div key={comment.id} className="border border-border p-4"><div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs font-medium text-muted-foreground">Pembaruan {update.percentage}%</p><p className="mt-2 text-sm leading-6">{comment.body}</p><p className="mt-2 text-xs text-muted-foreground">{comment.author?.name || "Pelanggan"} · {new Date(comment.created_at).toLocaleString("id-ID")}</p></div><Button size="sm" variant="outline" onClick={onOpenProgress}>Lihat & balas</Button></div></div>)}</div>}</Section>;
+}
+function HistorySection({ activities, history }: { activities: ConsultationActivity[]; history: ConsultationStatusHistoryEntry[] }) {
+  const entries = [...activities.map((item) => ({ id: `a-${item.id}`, date: item.created_at, title: item.title, body: item.body })), ...history.map((item) => ({ id: `h-${item.id}`, date: item.created_at, title: `Status: ${STATUS_LABELS[item.new_status] || item.new_status}`, body: item.note }))].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  return <Section title="Riwayat" description="Catatan aktivitas dan perubahan status konsultasi.">{entries.length === 0 ? <Empty text="Belum ada aktivitas yang tercatat." /> : <ol className="border-l border-border pl-5">{entries.map((item) => <li key={item.id} className="relative pb-6 before:absolute before:-left-[25px] before:top-1 before:size-2 before:rounded-full before:bg-foreground"><p className="text-sm font-medium">{item.title}</p>{item.body && <p className="mt-1 text-sm text-muted-foreground">{item.body}</p>}<p className="mt-1 text-xs text-muted-foreground">{new Date(item.date).toLocaleString("id-ID")}</p></li>)}</ol>}</Section>;
+}
+function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) { return <section className="border border-border bg-card p-5 sm:p-6"><div className="mb-5"><h2 className="serif text-2xl">{title}</h2>{description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}</div>{children}</section>; }
+function StagePanel({ title, children }: { title: string; children: React.ReactNode }) { return <div className="border border-border p-4"><h3 className="mb-4 font-medium">{title}</h3>{children}</div>; }
+function Fact({ label, value }: { label: string; value?: string | null }) { return <div className="bg-card p-4"><p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</p><p className="mt-1 text-sm">{value || "Belum ditentukan"}</p></div>; }
+function Snapshot({ label, value }: { label: string; value: string }) { return <div className="flex items-center justify-between gap-4 border-b border-border pb-3 text-sm"><span className="text-muted-foreground">{label}</span><strong className="text-right">{value}</strong></div>; }
+function StatusBadge({ status }: { status: string }) { return <span className="border border-border bg-muted px-2 py-1 text-[10px] uppercase tracking-[0.15em]">{STATUS_LABELS[status] || status}</span>; }
+function Empty({ text }: { text: string }) { return <div className="border border-dashed border-border px-5 py-12 text-center text-sm text-muted-foreground">{text}</div>; }
+function DetailSkeleton() { return <div className="space-y-4 py-6" aria-label="Memuat detail konsultasi"><div className="h-24 animate-pulse bg-muted" /><div className="h-12 animate-pulse bg-muted" /><div className="h-96 animate-pulse bg-muted" /></div>; }
 
 function ActionsRail({
   consultation,

@@ -14,7 +14,7 @@ Prinsip: UI lengkap seperti desain awal; komponen grafik/tabel tetap dirender da
 
 # Roadmap — My Consultation full revamp
 
-- [ ] Fix file URLs, persistent profile tabs, agreement access, and admin stage filters
+- [x] Fix file URLs, persistent profile tabs, agreement access, and admin stage filters
 - [ ] Add shared consultation activity notifications and user/admin unread badges
 - [ ] Add automated email events with failure logging and retry visibility
 - [ ] Add provider-ready automated WhatsApp delivery without blocking actions
@@ -24,5 +24,6 @@ Prinsip: UI lengkap seperti desain awal; komponen grafik/tabel tetap dirender da
 - [ ] Add platform-aware meeting types and actions
 - [ ] Add progress comments and final-payment gate at 85%
 - [ ] Verify backend flows, frontend types, and desktop/mobile rendering
+- [ ] Finish admin Consultation operational workspace: search/filter, all detail sections, desktop/mobile verification
 
 Blockers requiring external setup: production WhatsApp gateway credentials and ezmeterai API credentials.
