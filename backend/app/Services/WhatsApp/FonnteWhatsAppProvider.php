@@ -19,7 +19,7 @@ class FonnteWhatsAppProvider implements WhatsAppProvider
     public function send(string $phone, string $message): array
     {
         try {
-            $response = Http::withHeaders(['Authorization' => $this->token])
+            $response = Http::timeout(10)->withHeaders(['Authorization' => $this->token])
                 ->asForm()
                 ->post('https://api.fonnte.com/send', [
                     'target'  => $phone,

@@ -26,7 +26,7 @@ class TwilioWhatsAppProvider implements WhatsAppProvider
             $to = str_starts_with($phone, 'whatsapp:') ? $phone : 'whatsapp:' . $phone;
             $from = str_starts_with($this->from, 'whatsapp:') ? $this->from : 'whatsapp:' . $this->from;
 
-            $response = Http::withBasicAuth($this->sid, $this->authToken)
+            $response = Http::timeout(10)->withBasicAuth($this->sid, $this->authToken)
                 ->asForm()
                 ->post("https://api.twilio.com/2010-04-01/Accounts/{$this->sid}/Messages.json", [
                     'From' => $from,

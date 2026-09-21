@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Mail\ConsultationUpdateMail;
 use App\Models\Consultation;
 use App\Models\User;
+use App\Services\WhatsApp\NullWhatsAppProvider;
 use App\Services\WhatsApp\WhatsAppNotifier;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -45,7 +46,28 @@ class ConsultationNotifier
                 $c, $subject, $heading, $paragraphs, $rows, self::link($c), 'Buka My Consultation', $footnote,
             ));
         } catch (\Throwable $e) {
-            Log::warning('ConsultationNotifier email failed [' . $subject . ']: ' . $e->getMessage());
+            self::emailFailed($c, $subject, $e);
+        }
+    }
+
+    /**
+     * A delivery failure must never roll back the business action, but it must
+     * not be invisible either: log it as an error and surface it in the admin
+     * activity feed so someone can follow up with the customer manually.
+     */
+    public static function emailFailed(Consultation $c, string $subject, \Throwable $e): void
+    {
+        $reason = mb_substr($e->getMessage(), 0, 200);
+        Log::error('ConsultationNotifier email failed [' . $subject . '] consultation #' . $c->id . ': ' . $reason);
+        self::alertAdmin($c, 'email_failed', 'Email ke customer gagal terkirim', $subject . ' — ' . $reason);
+    }
+
+    private static function alertAdmin(Consultation $c, string $type, string $title, string $body): void
+    {
+        try {
+            $c->recordActivity($type, $title, $body, 'admin');
+        } catch (\Throwable $e) {
+            Log::error('ConsultationNotifier could not record admin alert: ' . $e->getMessage());
         }
     }
 
@@ -60,13 +82,19 @@ class ConsultationNotifier
                 ));
             }
         } catch (\Throwable $e) {
-            Log::warning('ConsultationNotifier admin email failed: ' . $e->getMessage());
+            Log::error('ConsultationNotifier admin email failed for consultation #' . $c->id . ': ' . mb_substr($e->getMessage(), 0, 200));
         }
     }
 
     public static function whatsapp(Consultation $c, string $message): void
     {
-        WhatsAppNotifier::send($c->phone, $message);
+        $result = WhatsAppNotifier::send($c->phone, $message);
+
+        // "skipped" (no phone) and an unconfigured provider are expected states and
+        // already logged; only a real provider rejecting a message is worth an alert.
+        if (($result['status'] ?? '') === 'failed' && !(WhatsAppNotifier::provider() instanceof NullWhatsAppProvider)) {
+            self::alertAdmin($c, 'whatsapp_failed', 'WhatsApp ke customer gagal terkirim', mb_substr((string) ($result['error'] ?? ''), 0, 200));
+        }
     }
 
     // ── Milestones ───────────────────────────────────────────────────
@@ -112,6 +140,34 @@ class ConsultationNotifier
             $c->meeting_link
                 ? 'Tautan rapat di atas dibuat khusus untuk pertemuan Anda. Mohon bergabung 5 menit sebelum waktu yang dijadwalkan.'
                 : null,
+        );
+    }
+
+    public static function rejected(Consultation $c, string $reason): void
+    {
+        self::send(
+            $c,
+            'Permintaan konsultasi Anda belum dapat kami proses — Livora',
+            'Permintaan konsultasi belum dapat dilanjutkan',
+            [
+                'Terima kasih telah menghubungi Livora. Mohon maaf, saat ini permintaan konsultasi Anda belum dapat kami lanjutkan.',
+                'Anda dapat mengajukan permintaan baru kapan saja, atau menghubungi tim kami bila ada pertanyaan.',
+            ],
+            ['Alasan' => e($reason)],
+        );
+    }
+
+    public static function proofRejected(Consultation $c, string $reason): void
+    {
+        self::send(
+            $c,
+            'Bukti pembayaran Anda perlu diperbaiki — Livora',
+            'Bukti pembayaran perlu diperbaiki',
+            [
+                'Bukti pembayaran yang Anda unggah belum dapat kami verifikasi.',
+                'Mohon unggah ulang bukti pembayaran yang sesuai melalui halaman My Consultation.',
+            ],
+            ['Catatan tim' => e($reason)],
         );
     }
 

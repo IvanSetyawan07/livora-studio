@@ -110,15 +110,15 @@ class ConsultationController extends Controller
         try {
             Mail::to($consultation->email)->send(new ConsultationReceived($consultation));
         } catch (\Throwable $e) {
-            Log::warning('ConsultationReceived email failed: ' . $e->getMessage());
+            \App\Services\ConsultationNotifier::emailFailed($consultation, 'Konfirmasi konsultasi diterima', $e);
         }
 
-        $adminAddress = config('mail.admin_address') ?: env('MAIL_ADMIN_ADDRESS');
+        $adminAddress = config('mail.admin_address');
         if ($adminAddress) {
             try {
                 Mail::to($adminAddress)->send(new NewConsultationAdminAlert($consultation));
             } catch (\Throwable $e) {
-                Log::warning('NewConsultationAdminAlert email failed: ' . $e->getMessage());
+                Log::error('NewConsultationAdminAlert email failed for consultation #' . $consultation->id . ': ' . mb_substr($e->getMessage(), 0, 200));
             }
         }
 

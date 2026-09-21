@@ -24,7 +24,7 @@ class MetaCloudWhatsAppProvider implements WhatsAppProvider
     public function send(string $phone, string $message): array
     {
         try {
-            $response = Http::withToken($this->accessToken)
+            $response = Http::timeout(10)->withToken($this->accessToken)
                 ->post("https://graph.facebook.com/{$this->apiVersion}/{$this->phoneNumberId}/messages", [
                     'messaging_product' => 'whatsapp',
                     'to'                => $phone,

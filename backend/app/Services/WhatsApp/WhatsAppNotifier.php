@@ -71,6 +71,9 @@ class WhatsAppNotifier
         $digits = preg_replace('/[^0-9]/', '', $phone) ?? '';
         if (str_starts_with($digits, '0')) {
             $digits = '62' . substr($digits, 1);
+        } elseif (str_starts_with($digits, '8')) {
+            // e.g. "812-3456-7890" typed without the leading 0 / country code
+            $digits = '62' . $digits;
         }
         return $digits;
     }

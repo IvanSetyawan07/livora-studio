@@ -211,6 +211,7 @@ class ConsultationController extends Controller
         $consultation->rejection_reason = $data['reason'];
         $consultation->save();
         $consultation->changeStatus(Consultation::STATUS_REJECTED, $request->user()->id, $data['reason']);
+        ConsultationNotifier::rejected($consultation->fresh(), $data['reason']);
         return $this->show($request, $consultation->fresh());
     }
 
@@ -465,6 +466,7 @@ class ConsultationController extends Controller
         $file->save();
 
         $consultation->recordActivity('payment_proof_rejected', 'Payment proof needs revision', $data['reason'], 'both', $request->user()->id);
+        ConsultationNotifier::proofRejected($consultation->fresh(), $data['reason']);
         return $this->show($request, $consultation->fresh());
     }
 

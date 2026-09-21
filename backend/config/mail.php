@@ -114,6 +114,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Admin Notification Address
+    |--------------------------------------------------------------------------
+    |
+    | Receives the "new consultation" alert. Read via config() (not env())
+    | so it keeps working when `php artisan config:cache` is used.
+    |
+    */
+
+    'admin_address' => env('MAIL_ADMIN_ADDRESS'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Markdown Mail Settings
     |--------------------------------------------------------------------------
     |
