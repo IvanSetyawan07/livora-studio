@@ -21,7 +21,7 @@ const STATUS_OPTIONS = [
   { value: "completed", label: "Selesai" },
 ] as const;
 
-const statusLabel = (status: string) => STATUS_OPTIONS.find((item) => item.value === status)?.label ?? status.replaceAll("_", " ");
+const statusLabel = (status: string) => STATUS_OPTIONS.find((item) => item.value === status)?.label ?? status.replace(/_/g, " ");
 const needsAttention = (item: Consultation) =>
   item.status === "new_inquiry" || item.status === "under_review" || item.status === "agreement_pending" || item.status === "dp_pending" || (item.unread_messages_count ?? 0) > 0;
 const POLL_MS = 20_000;
