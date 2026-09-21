@@ -398,7 +398,8 @@ class ConsultationController extends Controller
             'author_type' => 'user',
             'body' => $data['body'],
         ]);
-        $consultation->recordActivity('progress_comment', 'New progress comment', $data['body'], 'admin', $request->user()->id, ['progress_update_id' => $progress->id]);
+        $consultation->recordActivity('customer_question', 'Customer question on progress', $data['body'], 'admin', $request->user()->id, ['progress_update_id' => $progress->id]);
+        \App\Services\ConsultationNotifier::progressQuestion($consultation, $data['body'], $progress->id);
         return response()->json($comment->load('author:id,name'), 201);
     }
 }

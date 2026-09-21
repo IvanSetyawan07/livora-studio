@@ -8,6 +8,7 @@ use App\Models\Consultation;
 use App\Models\ConsultationProgressUpdate;
 use App\Models\ConsultationStageFile;
 use App\Services\AgreementPdfService;
+use App\Services\ConsultationNotifier;
 use App\Services\Meterai\MeteraiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -199,6 +200,8 @@ class ConsultationController extends Controller
             $consultation->changeStatus(Consultation::STATUS_UNDER_REVIEW, $request->user()->id, 'Marked under review.');
         }
         $consultation->changeStatus(Consultation::STATUS_CONTACTED, $request->user()->id, $note ?: 'Inquiry approved. Chat opened.');
+        $consultation->recordActivity('inquiry_approved', 'Consultation approved', 'Your consultation request has been approved.', 'both', $request->user()->id);
+        ConsultationNotifier::approved($consultation->fresh());
         return $this->show($request, $consultation->fresh());
     }
 
@@ -223,6 +226,8 @@ class ConsultationController extends Controller
         ]);
         $consultation->fill($data)->save();
         $consultation->changeStatus(Consultation::STATUS_MEETING_SCHEDULED, $request->user()->id, $data['note'] ?? 'Meeting scheduled.');
+        $consultation->recordActivity('meeting_scheduled', 'Meeting scheduled', 'Check your email for the meeting details.', 'both', $request->user()->id);
+        ConsultationNotifier::meetingScheduled($consultation->fresh());
         return $this->show($request, $consultation->fresh());
     }
 
@@ -261,6 +266,8 @@ class ConsultationController extends Controller
             $request->user()->id,
             $data['note'] ?? ('DP requested: Rp ' . number_format((float) $data['dp_amount'], 0, ',', '.')),
         );
+        $consultation->recordActivity('dp_requested', 'DP invoice issued', 'Rp ' . number_format((float) $data['dp_amount'], 0, ',', '.'), 'both', $request->user()->id);
+        ConsultationNotifier::dpRequested($consultation->fresh());
         return $this->show($request, $consultation->fresh());
     }
 
@@ -274,6 +281,8 @@ class ConsultationController extends Controller
             'changed_by'      => $request->user()->id,
             'note'            => 'DP payment confirmed by admin.',
         ]);
+        $consultation->recordActivity('payment_verified', 'DP payment verified', 'Your DP payment has been verified by Livora.', 'both', $request->user()->id);
+        ConsultationNotifier::dpVerified($consultation->fresh());
         return $this->show($request, $consultation->fresh());
     }
 
@@ -298,6 +307,8 @@ class ConsultationController extends Controller
             $request->user()->id,
             'Agreement uploaded. Awaiting customer signature.',
         );
+        $consultation->recordActivity('agreement_ready', 'Agreement ready to sign', 'Please review and sign the project agreement.', 'both', $request->user()->id);
+        ConsultationNotifier::agreementReady($consultation->fresh());
         return $this->show($request, $consultation->fresh());
     }
 
@@ -359,6 +370,9 @@ class ConsultationController extends Controller
             ]);
         }
 
+        $consultation->recordActivity('progress_update', 'Progress updated', $data['percentage'] . '% — ' . ($data['note'] ?? 'new update'), 'both', $request->user()->id);
+        ConsultationNotifier::progressUpdated($consultation->fresh(), (int) $data['percentage'], $data['note'] ?? null);
+
         return $this->show($request, $consultation->fresh());
     }
 
@@ -374,6 +388,8 @@ class ConsultationController extends Controller
             $request->user()->id,
             $request->input('note') ?: 'Project completed.',
         );
+        $consultation->recordActivity('project_completed', 'Project completed', 'Thank you for trusting Livora.', 'both', $request->user()->id);
+        ConsultationNotifier::completed($consultation->fresh());
         return $this->show($request, $consultation->fresh());
     }
 
@@ -422,6 +438,7 @@ class ConsultationController extends Controller
             $consultation->dp_paid_at = $consultation->dp_paid_at ?: now();
             $consultation->save();
             $consultation->recordActivity('payment_verified', 'DP payment verified', 'Your DP payment has been verified by Livora.', 'both', $request->user()->id);
+            ConsultationNotifier::dpVerified($consultation->fresh());
             if ($consultation->status === Consultation::STATUS_DP_PENDING) {
                 $consultation->changeStatus(Consultation::STATUS_PROJECT_PAID, $request->user()->id, 'DP payment verified.');
             }
@@ -429,6 +446,7 @@ class ConsultationController extends Controller
             $consultation->final_payment_paid_at = $consultation->final_payment_paid_at ?: now();
             $consultation->save();
             $consultation->recordActivity('final_payment_verified', 'Final payment verified', 'Your final payment has been verified by Livora.', 'both', $request->user()->id);
+            ConsultationNotifier::finalPaymentVerified($consultation->fresh());
         }
 
         return $this->show($request, $consultation->fresh());
@@ -486,6 +504,7 @@ class ConsultationController extends Controller
             'both',
             $request->user()->id,
         );
+        ConsultationNotifier::finalPaymentRequested($consultation->fresh());
 
         return $this->show($request, $consultation->fresh());
     }
@@ -552,6 +571,7 @@ class ConsultationController extends Controller
             'both',
             $request->user()->id,
         );
+        ConsultationNotifier::agreementFinalised($consultation->fresh());
 
         return $this->show($request, $consultation->fresh());
     }
@@ -590,7 +610,8 @@ class ConsultationController extends Controller
             'body'               => $data['body'],
         ]);
 
-        $consultation->recordActivity('progress_comment', 'New comment on progress update', $data['body'], 'both', $request->user()->id);
+        $consultation->recordActivity('progress_reply', 'Livora replied to your question', $data['body'], 'user', $request->user()->id);
+        ConsultationNotifier::progressReply($consultation, $data['body']);
         return $this->show($request, $consultation->fresh());
     }
 }
