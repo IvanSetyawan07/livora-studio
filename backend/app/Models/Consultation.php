@@ -133,6 +133,8 @@ class Consultation extends Model
         'agreement_signed_at' => 'datetime',
         'livora_countersigned_at' => 'datetime',
         'meterai_completed_at' => 'datetime',
+        'agreement_generated_at' => 'datetime',
+        'meterai_applied_at' => 'datetime',
         'dp_amount'           => 'decimal:2',
         'final_payment_amount' => 'decimal:2',
         'project_progress'    => 'integer',
