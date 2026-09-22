@@ -166,6 +166,41 @@ export const stageIndex = (status: string): number => {
   return CONSULTATION_STAGES.findIndex((s) => s.key === status);
 };
 
+/**
+ * 10 stage granular di atas dikelompokkan jadi 5 fase besar untuk tampilan
+ * "Your Journey" — supaya stepper & daftar progres tidak perlu menampilkan
+ * 10 titik/panel sekaligus. Setiap stage asli tetap ada & tetap bisa diakses
+ * (lihat ConsultationJourney), cuma dikelompokkan penempatannya.
+ */
+export const CONSULTATION_PHASES = [
+  { key: "inquiry",   label: "Inquiry",   stages: ["new_inquiry", "under_review"] },
+  { key: "diskusi",   label: "Diskusi",   stages: ["contacted", "meeting_scheduled", "in_progress"] },
+  { key: "agreement", label: "Agreement", stages: ["agreement_pending"] },
+  { key: "payment",   label: "Payment",   stages: ["dp_pending", "project_paid"] },
+  { key: "project",   label: "Project",   stages: ["project_running", "completed"] },
+] as const;
+
+export type ConsultationPhaseKey = (typeof CONSULTATION_PHASES)[number]["key"];
+
+/** Index (0..9) suatu stage -> index fase (0..4) yang menampungnya. */
+export const phaseIndexForStageIdx = (stageIdx: number): number => {
+  if (stageIdx < 0) return -1;
+  const key = CONSULTATION_STAGES[stageIdx]?.key;
+  return CONSULTATION_PHASES.findIndex((p) => (p.stages as readonly string[]).includes(key));
+};
+
+/** Status mentah dari backend -> index fase (0..4), atau -1 kalau tidak dikenali. */
+export const phaseIndexForStatus = (status: string): number => phaseIndexForStageIdx(stageIndex(status));
+
+/** Daftar stage (lengkap dengan index absolutnya di CONSULTATION_STAGES) milik satu fase. */
+export const stagesForPhase = (phaseIdx: number) => {
+  const phase = CONSULTATION_PHASES[phaseIdx];
+  if (!phase) return [];
+  return CONSULTATION_STAGES
+    .map((stage, absIndex) => ({ stage, absIndex }))
+    .filter(({ stage }) => (phase.stages as readonly string[]).includes(stage.key));
+};
+
 export const isTerminal = (status: string) =>
   status === "cancelled" || status === "rejected" || status === "completed";
 

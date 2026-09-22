@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GoogleOAuthCallbackController;
+use App\Http\Controllers\MetaAdsOAuthCallbackController;
 
 /*
 |--------------------------------------------------------------------------
@@ -29,3 +30,10 @@ Route::get('/storage/{path}', function ($path) {
 // https://api.livoralcr.com/auth/google/callback tanpa prefix /api, sesuai
 // yang didaftarkan sebagai Authorized redirect URI di Google Cloud Console.
 Route::get('/auth/google/callback', [GoogleOAuthCallbackController::class, 'handle']);
+
+// Target redirect Meta (Facebook) OAuth untuk Meta Ads. Sama alasannya
+// dengan Google di atas: harus di web.php tanpa prefix /api, sesuai yang
+// didaftarkan sebagai Valid OAuth Redirect URI di Meta App Dashboard →
+// Facebook Login → Settings, yaitu
+// https://api.livoralcr.com/auth/meta-ads/callback.
+Route::get('/auth/meta-ads/callback', [MetaAdsOAuthCallbackController::class, 'handle']);

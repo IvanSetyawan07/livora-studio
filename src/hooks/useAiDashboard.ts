@@ -31,8 +31,9 @@ import type {
   AIUsageTotals,
   BusinessHealth,
   Campaign,
-  GoogleIntegrationStatus,
+   GoogleIntegrationStatus,
   ImpactRecord,
+  MetaAdsIntegrationStatus,
   MetaIntegrationStatus,
   PriorityItem,
   SearchConsoleSummary,
@@ -76,6 +77,7 @@ export const aiKeys = {
   impact: (r: AiDateRange) => ["ai", "impact", rangeKey(r)] as const,
   googleStatus: ["ai", "integrations", "google", "status"] as const,
   metaStatus: ["ai", "integrations", "meta", "status"] as const,
+  metaAdsStatus: ["ai", "integrations", "meta-ads", "status"] as const,
 };
 
 const STALE = 60_000;
@@ -373,6 +375,35 @@ export function useMetaIntegrationStatus() {
     queryFn: () => aiServices.integrations.getMetaStatus(),
     staleTime: 30_000,
     retry: retryPolicy,
+  });
+}
+export function useMetaAdsIntegrationStatus() {
+  return useQuery<MetaAdsIntegrationStatus>({
+    queryKey: aiKeys.metaAdsStatus,
+    queryFn: () => aiServices.integrations.getMetaAdsStatus(),
+    staleTime: 30_000,
+  });
+}
+
+export function useMetaAdsDisconnect() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => aiServices.integrations.disconnectMetaAds(),
+    onSuccess: (status) => {
+      qc.setQueryData(aiKeys.metaAdsStatus, status);
+      qc.invalidateQueries({ queryKey: aiKeys.agents });
+    },
+  });
+}
+
+export function useMetaAdsAuthorize() {
+  return useMutation({
+    mutationFn: async () => {
+      const url = await aiServices.integrations.getMetaAdsAuthorizeUrl();
+      if (!url) throw new Error("Backend tidak mengembalikan authorize URL.");
+      window.location.href = url;
+      return url;
+    },
   });
 }
 

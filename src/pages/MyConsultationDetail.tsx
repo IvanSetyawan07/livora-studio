@@ -4,16 +4,19 @@ import { toast } from "sonner";
 import {
   getConsultation,
   stageIndex,
-  isTerminal,
+  phaseIndexForStatus,
   CONSULTATION_STAGES,
+  CONSULTATION_PHASES,
   type Consultation,
 } from "@/lib/consultations";
 import { cancelConsultation } from "@/lib/consultationMessages";
 import { imgUrl } from "@/lib/adminApi";
 import ConsultationJourney from "@/components/livora/ConsultationJourney";
-import ConsultationChat from "@/components/livora/ConsultationChat";
+import ConsultationChatCard from "@/components/livora/ConsultationChatCard";
 import { WHATSAPP_NUMBER } from "@/components/livora/WhatsAppButton";
-import { ArrowLeft, MessageCircle, XCircle, Palette } from "lucide-react";
+import { ArrowLeft, XCircle, Palette, Check } from "lucide-react";
+
+const GOLD = "#C9974A";
 
 const NEXT_STEP_HINTS: Record<string, string> = {
   new_inquiry: "Your request is in queue to be reviewed by our team.",
@@ -62,22 +65,24 @@ export default function MyConsultationDetail() {
 
   const c = detail;
   const currentIdx = stageIndex(c.status);
-  const terminal = isTerminal(c.status);
+  const currentPhaseIdx = phaseIndexForStatus(c.status);
   const isCancelled = c.status === "cancelled";
   const isRejected = c.status === "rejected";
-  const isClosed = isCancelled || isRejected || c.status === "completed";
+  const isCompleted = c.status === "completed";
+  const isClosed = isCancelled || isRejected || isCompleted;
   const thumbnail = c.attachments?.[0] ? imgUrl(c.attachments[0]) : null;
 
-  const badgeClass = isCancelled
-    ? "bg-red-50 text-red-600"
-    : isRejected
-    ? "bg-amber-50 text-amber-700"
-    : c.status === "completed"
-    ? "bg-emerald-50 text-emerald-700"
-    : "bg-white/90 text-foreground";
-
-  const nextStages = terminal ? [] : CONSULTATION_STAGES.slice(Math.max(currentIdx, 0) + (currentIdx < 0 ? 0 : 1), Math.max(currentIdx, 0) + 3);
   const currentStage = currentIdx >= 0 ? CONSULTATION_STAGES[currentIdx] : null;
+
+  const statusDescription = isCancelled
+    ? "This consultation was cancelled."
+    : isRejected
+    ? c.rejection_reason || "This inquiry was declined."
+    : isCompleted
+    ? "This project has been completed."
+    : currentStage
+    ? NEXT_STEP_HINTS[currentStage.key] ?? "Our team is discussing your needs and preparing the proposal."
+    : "Our team is discussing your needs and preparing the proposal.";
 
   const handleCancel = async () => {
     const reason = window.prompt("Batalkan permintaan konsultasi ini?\n\nOpsional — tulis alasan singkat:", "");
@@ -95,187 +100,284 @@ export default function MyConsultationDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-10">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-background">
+      <div className="max-w-6xl mx-auto px-5 py-8 md:px-10 md:py-14">
         <button
           onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/profile/consultations"))}
-          className="mb-4 inline-flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-muted-foreground hover:text-foreground transition-colors"
+          className="mb-8 md:mb-10 inline-flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft size={14} /> Back to My Consultation
         </button>
 
-        <div className="relative rounded-xl overflow-hidden h-48 md:h-56 bg-secondary mb-6">
-          {thumbnail ? (
-            <img src={thumbnail} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-[#C9974A]/25 to-secondary" />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 p-5 md:p-7">
-            <div className="flex items-start justify-between gap-4 mb-2">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.28em] text-white/75 mb-1">Consultation</p>
-                <h1 className="serif text-2xl md:text-3xl text-white">
-                  {c.service_type ?? "Design"} #LV-{new Date(c.created_at).getFullYear()}-{String(c.id).padStart(3, "0")}
-                </h1>
-              </div>
-              <span className={`shrink-0 text-xs px-3 py-1.5 rounded-full uppercase tracking-wider ${badgeClass}`}>
-                {c.status_label ?? c.status}
-              </span>
+        {/* ── Header ───────────────────────────────────────────── */}
+        <div className="pb-8 md:pb-10 border-b border-border/70">
+          {thumbnail && (
+            <div className="mb-7 md:mb-9 h-40 md:h-56 rounded-sm overflow-hidden border border-border">
+              <img src={thumbnail} alt="" className="w-full h-full object-cover" />
             </div>
-            <p className="text-xs text-white/80">
-              Created {new Date(c.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-              {" · "}Last Updated {new Date(c.updated_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-            </p>
+          )}
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5">
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-2.5">Consultation</p>
+              <h1 className="serif text-3xl md:text-[2.5rem] leading-[1.08] text-foreground">
+                {c.service_type ?? "Design"} #LV-{new Date(c.created_at).getFullYear()}-{String(c.id).padStart(3, "0")}
+              </h1>
+              <p className="mt-3.5 text-xs text-muted-foreground">
+                Created {new Date(c.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                <span className="mx-2 text-border">/</span>
+                Last Updated {new Date(c.updated_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+              </p>
+            </div>
+            <StatusPill
+              label={c.status_label ?? c.status}
+              isCancelled={isCancelled}
+              isRejected={isRejected}
+              isCompleted={isCompleted}
+            />
           </div>
         </div>
 
-        {!isClosed && !isCancelled && !isRejected && (
-          <div className="mb-8 -mx-1 overflow-x-auto no-scrollbar">
-            <div className="flex items-start min-w-max px-1 py-1">
-              {CONSULTATION_STAGES.map((stage, i) => {
-                const done = currentIdx >= 0 && (i < currentIdx || (terminal && i === currentIdx));
-                const current = !terminal && i === currentIdx;
-                return (
-                  <div key={stage.key} className="flex items-start">
-                    <div className="flex flex-col items-center w-24 text-center">
-                      <span
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs shrink-0"
-                        style={
-                          done
-                            ? { backgroundColor: "#C9974A", color: "white" }
-                            : current
-                            ? { border: "2px solid #C9974A", color: "#C9974A" }
-                            : { backgroundColor: "var(--secondary)", color: "var(--muted-foreground)" }
-                        }
-                      >
-                        {done ? "✓" : i + 1}
-                      </span>
-                      <p className={`mt-1.5 text-[10px] leading-tight ${current ? "text-foreground font-medium" : "text-muted-foreground"}`}>
-                        {stage.label}
-                      </p>
-                    </div>
-                    {i < CONSULTATION_STAGES.length - 1 && (
-                      <div
-                        className="w-8 md:w-10 h-px mt-4 shrink-0"
-                        style={{ backgroundColor: i < currentIdx ? "#C9974A" : "var(--border)" }}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+        {/* ── Journey ──────────────────────────────────────────── */}
+        {!isClosed && (
+          <div className="pt-10 md:pt-14 pb-2">
+            <JourneyStepper currentPhaseIdx={currentPhaseIdx} currentStage={currentStage} />
           </div>
         )}
 
-        <div className="grid lg:grid-cols-[1fr_320px] gap-6">
-          <div className="space-y-6 min-w-0">
-            <div className="bg-card border border-border rounded-lg p-6">
-              <h2 className="serif text-xl mb-4">Consultation Details</h2>
-              <div className="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+        {/* ── Content ──────────────────────────────────────────── */}
+        <div className="grid lg:grid-cols-[1fr_336px] gap-8 lg:gap-14 mt-10 md:mt-14">
+          <div className="space-y-10 md:space-y-14 min-w-0">
+            <section>
+              <h2 className="serif text-2xl mb-6">Consultation Details</h2>
+              <div className="grid sm:grid-cols-2 gap-x-10">
                 <Row label="Customer Name" value={`${c.first_name} ${c.last_name ?? ""}`.trim()} />
                 <Row label="Project Type" value={c.project_type} />
                 <Row label="Email" value={c.email} />
                 <Row label="Phone" value={c.phone} />
                 <Row label="Location" value={c.location} />
                 <Row label="Estimated Area" value={c.estimated_area} />
-                <Row label="Meeting Type" value={c.consultation_type} />
+                <Row label="Meeting Preference" value={c.consultation_type} />
                 <Row label="Contact Method" value={c.contact_method} />
               </div>
               {c.preferred_style && (
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-6 flex flex-wrap gap-2">
                   {c.preferred_style.split(",").map((s) => (
-                    <span key={s} className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wider bg-secondary text-foreground px-2.5 py-1 rounded-full">
-                      <Palette size={11} /> {s.trim()}
+                    <span
+                      key={s}
+                      className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.16em] border px-3 py-1.5 rounded-full text-foreground/80"
+                      style={{ borderColor: "rgba(201,151,74,0.35)", backgroundColor: "rgba(201,151,74,0.06)" }}
+                    >
+                      <Palette size={11} style={{ color: GOLD }} /> {s.trim()}
                     </span>
                   ))}
                 </div>
               )}
               {c.message && (
-                <div className="mt-4 pt-4 border-t border-border">
-                  <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground mb-1">Message</p>
-                  <p className="text-sm whitespace-pre-wrap">{c.message}</p>
+                <div className="mt-6 pt-6 border-t border-border/70">
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground mb-2">Message</p>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{c.message}</p>
                 </div>
               )}
-            </div>
+            </section>
 
-            <div className="bg-card border border-border rounded-lg p-6">
-              <h2 className="serif text-xl mb-4">Consultation Timeline</h2>
+            <section>
+              <h2 className="serif text-2xl mb-6">Consultation Timeline</h2>
               <ConsultationJourney consultation={c} onChanged={setDetail} role="user" />
-            </div>
-
-            <div id="notes" className="bg-card border border-border rounded-lg p-6">
-              <h2 className="serif text-xl mb-4">Consultation Notes</h2>
-              <ConsultationChat consultationId={c.id} mode="user" locked={isClosed} />
-            </div>
+            </section>
           </div>
 
           <div className="space-y-6">
-            <div className="bg-card border border-border rounded-lg p-5">
-              <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground mb-2">Current Status</p>
-              <span className={`inline-block text-xs px-3 py-1.5 rounded-full uppercase tracking-wider mb-3 ${badgeClass}`}>
-                {c.status_label ?? c.status}
-              </span>
-              <p className="text-sm text-muted-foreground">
-                {isCancelled
-                  ? "This consultation was cancelled."
-                  : isRejected
-                  ? c.rejection_reason || "This inquiry was declined."
-                  : c.status === "completed"
-                  ? "This project has been completed."
-                  : currentStage
-                  ? NEXT_STEP_HINTS[currentStage.key] ?? "Our team is discussing your needs and preparing the proposal."
-                  : "Our team is discussing your needs and preparing the proposal."}
-              </p>
+            <div className="bg-card border border-border rounded-sm p-6 md:p-7">
+              <p className="text-[10px] uppercase tracking-[0.26em] text-muted-foreground mb-3">Current Status</p>
+              <StatusPill
+                label={c.status_label ?? c.status}
+                isCancelled={isCancelled}
+                isRejected={isRejected}
+                isCompleted={isCompleted}
+              />
+              <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{statusDescription}</p>
             </div>
 
-            {nextStages.length > 0 && (
-              <div className="bg-card border border-border rounded-lg p-5">
-                <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground mb-3">Next Steps</p>
-                <ul className="space-y-3">
-                  {nextStages.map((s) => (
-                    <li key={s.key} className="flex items-start gap-2.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground mt-1.5 shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium">{s.label}</p>
-                        <p className="text-xs text-muted-foreground">{NEXT_STEP_HINTS[s.key]}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {/* "Chat with Livora Design Team" harus selalu terlihat tanpa
+                perlu scroll — makanya ditaruh di sini, bukan di kolom utama. */}
+            <ConsultationChatCard
+              consultationId={c.id}
+              unreadCount={c.unread_messages_count ?? 0}
+              locked={isClosed}
+            />
 
-            <div className="bg-card border border-border rounded-lg p-5 space-y-2.5">
-              <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground mb-1">Quick Actions</p>
-              
-              <a
-                href="#notes"
-                className="w-full inline-flex items-center justify-center gap-2 rounded bg-foreground text-background px-4 py-2.5 text-xs uppercase tracking-[0.2em]"
-              >
-                <MessageCircle size={14} /> Send Message
-              </a>
-              
-              <a
-                href={`https://wa.me/${WHATSAPP_NUMBER}`}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full inline-flex items-center justify-center gap-2 rounded border border-border px-4 py-2.5 text-xs uppercase tracking-[0.2em] hover:bg-secondary/60"
-              >
-                Contact Us on WhatsApp
-              </a>
-              
-              {!isClosed && (
-                <button
-                  onClick={handleCancel}
-                  disabled={cancelling}
-                  className="w-full inline-flex items-center justify-center gap-1.5 text-[11px] uppercase tracking-[0.2em] text-red-600 hover:underline disabled:opacity-60 pt-1"
+            <div className="bg-card border border-border rounded-sm p-6 md:p-7">
+              <p className="text-[10px] uppercase tracking-[0.26em] text-muted-foreground mb-4">Quick Actions</p>
+              <div className="space-y-2.5">
+                <a
+                  href={`https://wa.me/${WHATSAPP_NUMBER}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-sm border border-border px-4 py-3 text-xs uppercase tracking-[0.2em] hover:bg-secondary/60 transition-colors"
                 >
-                  <XCircle size={13} /> {cancelling ? "Cancelling…" : "Cancel Request"}
-                </button>
-              )}
+                  Contact Us on WhatsApp
+                </a>
+
+                {!isClosed && (
+                  <button
+                    onClick={handleCancel}
+                    disabled={cancelling}
+                    className="w-full inline-flex items-center justify-center gap-1.5 text-[11px] uppercase tracking-[0.2em] text-red-600 hover:underline disabled:opacity-60 pt-2"
+                  >
+                    <XCircle size={13} /> {cancelling ? "Cancelling…" : "Cancel Request"}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatusPill({
+  label,
+  isCancelled,
+  isRejected,
+  isCompleted,
+}: {
+  label: string;
+  isCancelled: boolean;
+  isRejected: boolean;
+  isCompleted: boolean;
+}) {
+  const cls = isCancelled
+    ? "bg-red-50 text-red-700 border-red-200"
+    : isRejected
+    ? "bg-amber-50 text-amber-700 border-amber-200"
+    : isCompleted
+    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+    : "text-foreground/90";
+  const dot = isCancelled ? "#DC2626" : isRejected ? "#B45309" : isCompleted ? "#059669" : GOLD;
+  const style = !isCancelled && !isRejected && !isCompleted
+    ? { borderColor: "rgba(201,151,74,0.32)", backgroundColor: "rgba(201,151,74,0.07)" }
+    : undefined;
+
+  return (
+    <span
+      className={`shrink-0 inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[11px] uppercase tracking-[0.2em] ${cls}`}
+      style={style}
+    >
+      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: dot }} />
+      {label}
+    </span>
+  );
+}
+
+function JourneyStepper({
+  currentPhaseIdx,
+  currentStage,
+}: {
+  currentPhaseIdx: number;
+  currentStage: { key: string; label: string } | null;
+}) {
+  const total = CONSULTATION_PHASES.length;
+  const hint = currentStage ? NEXT_STEP_HINTS[currentStage.key] : null;
+  const pct = ((Math.max(currentPhaseIdx, 0) + 1) / total) * 100;
+  const currentPhaseLabel = currentPhaseIdx >= 0 ? CONSULTATION_PHASES[currentPhaseIdx].label : null;
+
+  return (
+    <div>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-7 md:mb-10">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-2">Your Journey</p>
+          {currentPhaseLabel && (
+            <>
+              <h2 className="serif text-2xl md:text-[1.75rem] text-foreground leading-tight">
+                {currentPhaseLabel}
+                {currentStage && currentStage.label !== currentPhaseLabel && (
+                  <span className="text-muted-foreground"> — {currentStage.label}</span>
+                )}
+              </h2>
+              {hint && <p className="mt-1.5 text-sm text-muted-foreground max-w-md">{hint}</p>}
+            </>
+          )}
+        </div>
+        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground shrink-0">
+          Phase {Math.max(currentPhaseIdx, 0) + 1} <span className="opacity-40">/</span> {total}
+        </p>
+      </div>
+
+      {/* Desktop / tablet-landscape stepper — 5 fase, bukan 10 stage granular
+          (yang granular tetap ada, dipindah ke daftar "Your Journey" di bawah). */}
+      <div className="hidden lg:flex items-start">
+        {CONSULTATION_PHASES.map((phase, i) => {
+          const done = i < currentPhaseIdx;
+          const current = i === currentPhaseIdx;
+          const connectorDone = i < currentPhaseIdx;
+          const isLastNode = i === total - 1;
+          return (
+            <div key={phase.key} className="flex items-start">
+              <div className="flex flex-col items-center text-center w-[86px] xl:w-[104px]">
+                <span
+                  className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                    !done && !current ? "border border-border text-muted-foreground" : ""
+                  } ${current ? "bg-card" : ""}`}
+                  style={
+                    done
+                      ? { backgroundColor: GOLD, color: "#fff" }
+                      : current
+                      ? { border: `1.5px solid ${GOLD}`, boxShadow: "0 0 0 5px rgba(201,151,74,0.13)" }
+                      : undefined
+                  }
+                >
+                  {done ? (
+                    <Check size={14} />
+                  ) : current ? (
+                    <span className="w-[7px] h-[7px] rounded-full" style={{ backgroundColor: GOLD }} />
+                  ) : (
+                    <span className="text-[11px]">{i + 1}</span>
+                  )}
+                </span>
+                <p
+                  className={`mt-3 text-[10.5px] leading-[1.25] uppercase tracking-[0.05em] px-0.5 ${
+                    current ? "text-foreground font-medium" : done ? "text-foreground/55" : "text-muted-foreground/55"
+                  }`}
+                >
+                  {phase.label}
+                </p>
+              </div>
+              {!isLastNode && (
+                <div
+                  className={`h-px mt-4 flex-1 min-w-[10px] xl:min-w-[16px] ${!connectorDone ? "bg-border" : ""}`}
+                  style={connectorDone ? { backgroundColor: GOLD } : undefined}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Compact mobile / tablet-portrait progress */}
+      <div className="lg:hidden">
+        <div className="h-[3px] rounded-full bg-border overflow-hidden mb-3.5">
+          <div
+            className="h-full rounded-full transition-all duration-700 ease-out"
+            style={{ width: `${pct}%`, backgroundColor: GOLD }}
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          {CONSULTATION_PHASES.map((phase, i) => {
+            const done = i < currentPhaseIdx;
+            const current = i === currentPhaseIdx;
+            return (
+              <span
+                key={phase.key}
+                className={`rounded-full shrink-0 ${!done && !current ? "bg-border" : ""}`}
+                style={
+                  done || current
+                    ? { width: current ? 8 : 6, height: current ? 8 : 6, backgroundColor: GOLD }
+                    : { width: 5, height: 5 }
+                }
+              />
+            );
+          })}
         </div>
       </div>
     </div>
@@ -285,9 +387,9 @@ export default function MyConsultationDetail() {
 function Row({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
-    <div className="flex items-baseline justify-between gap-4 border-b border-border/50 pb-1.5">
-      <span className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground shrink-0">{label}</span>
-      <span className="text-right truncate">{value}</span>
+    <div className="flex items-baseline justify-between gap-6 border-b border-border/60 py-2.5">
+      <span className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground shrink-0">{label}</span>
+      <span className="text-sm text-foreground text-right truncate">{value}</span>
     </div>
   );
 }

@@ -34,6 +34,7 @@ import type {
   CroFunnelSummary,
   GoogleIntegrationStatus,
   ImpactRecord,
+  MetaAdsIntegrationStatus,
   MetaIntegrationStatus,
   PriorityItem,
   SearchConsoleSummary,
@@ -140,21 +141,20 @@ export const laravelServices: AIServiceBundle = {
     getGoogleStatus: () =>
       api.get("/ai/integrations/google/status").then((r) => unwrap<GoogleIntegrationStatus>(r.data)),
     getGoogleAuthorizeUrl: () =>
-      api
-        .get("/ai/integrations/google/authorize-url")
-        .then((r) => unwrap<{ url: string }>(r.data).url),
+      api.get("/ai/integrations/google/authorize-url").then((r) => unwrap<{ url: string }>(r.data).url),
     disconnectGoogle: () =>
-      api
-        .post("/ai/integrations/google/disconnect")
-        .then((r) => unwrap<GoogleIntegrationStatus>(r.data)),
-    // Read-only status Meta Graph API (Facebook Page + Instagram Business)
-    // untuk kartu "Instagram & Facebook" di Content Agent. Token tidak
-    // pernah ada di response ini — backend (MetaIntegrationController) yang
-    // menahannya.
+      api.post("/ai/integrations/google/disconnect").then((r) => unwrap<GoogleIntegrationStatus>(r.data)),
     getMetaStatus: () =>
-      api
-        .get("/ai/content/meta/status")
-        .then((r) => unwrap<MetaIntegrationStatus>(r.data)),
+      api.get("/ai/content/meta/status").then((r) => unwrap<MetaIntegrationStatus>(r.data)),
+    // Connect/Disconnect Meta Ads (Marketing API) — kartu "Meta Ads API" di
+    // Settings. Token juga tidak pernah ada di response ini (ditahan backend,
+    // MetaAdsOAuthController).
+    getMetaAdsStatus: () =>
+      api.get("/ai/integrations/meta-ads/status").then((r) => unwrap<MetaAdsIntegrationStatus>(r.data)),
+    getMetaAdsAuthorizeUrl: () =>
+      api.get("/ai/integrations/meta-ads/authorize-url").then((r) => unwrap<{ url: string }>(r.data).url),
+    disconnectMetaAds: () =>
+      api.post("/ai/integrations/meta-ads/disconnect").then((r) => unwrap<MetaAdsIntegrationStatus>(r.data)),
   },
   cro: {
     getFunnelSummary: () =>

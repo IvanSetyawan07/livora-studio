@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Panel, Pill, SectionHeading, StatusDot } from "@/components/ai/primitives";
 import {
@@ -5,6 +7,9 @@ import {
   useGoogleAuthorize,
   useGoogleDisconnect,
   useGoogleIntegrationStatus,
+  useMetaAdsAuthorize,
+  useMetaAdsDisconnect,
+  useMetaAdsIntegrationStatus,
   useProviders,
 } from "@/hooks/useAiDashboard";
 import { toast } from "sonner";
@@ -30,40 +35,39 @@ const providerTone: Record<AIProviderInfo["status"], "success" | "neutral" | "wa
 
 /** Dependency name di tabel ai_agents yang punya alur OAuth sendiri. */
 const GOOGLE_SEARCH_CONSOLE = "Google Search Console";
+const META_ADS_API = "Meta Ads API";
 
-/**
- * Satu jalur untuk status Google: hook react-query bersama. Hook-nya sudah
- * meng-invalidate aiKeys.googleStatus + aiKeys.agents, jadi badge di halaman
- * SEO/Overview ikut segar tanpa refresh manual.
- */
-function ConnectionAction({ name }: { name: string }) {
-  const { data: status } = useGoogleIntegrationStatus();
-
-  const disconnect = useGoogleDisconnect();
-  const authorize = useGoogleAuthorize();
-  const redirecting = authorize.isPending;
-
-  if (name !== GOOGLE_SEARCH_CONSOLE) return null;
-
-  if (status?.connected) {
+/** Tombol Connect/Disconnect generik — dipakai Google & Meta Ads, cuma beda hook & label. */
+function OAuthConnectionButtons({
+  connected,
+  subtitle,
+  disconnecting,
+  redirecting,
+  onDisconnect,
+  onConnect,
+  disconnectedLabel,
+}: {
+  connected: boolean;
+  subtitle?: string | null;
+  disconnecting: boolean;
+  redirecting: boolean;
+  onDisconnect: () => void;
+  onConnect: () => void;
+  disconnectedLabel: string;
+}) {
+  if (connected) {
     return (
       <div className="flex items-center gap-3">
-        {status.email ? (
-          <span className="hidden text-xs text-muted-foreground sm:inline">{status.email}</span>
+        {subtitle ? (
+          <span className="hidden text-xs text-muted-foreground sm:inline">{subtitle}</span>
         ) : null}
         <button
           type="button"
-          onClick={() =>
-            disconnect.mutate(undefined, {
-              onSuccess: () => toast.success("Google Search Console disconnected."),
-              onError: (e: unknown) =>
-                toast.error(e instanceof Error ? e.message : "Gagal disconnect."),
-            })
-          }
-          disabled={disconnect.isPending}
+          onClick={onDisconnect}
+          disabled={disconnecting}
           className="rounded-sm border border-border px-2.5 py-1 font-mono text-[10px] tracking-[0.14em] uppercase text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
         >
-          {disconnect.isPending ? "Disconnecting…" : "Disconnect"}
+          {disconnecting ? "Disconnecting…" : "Disconnect"}
         </button>
       </div>
     );
@@ -73,16 +77,120 @@ function ConnectionAction({ name }: { name: string }) {
     <button
       type="button"
       disabled={redirecting}
-      onClick={() =>
+      onClick={onConnect}
+      className="rounded-sm border border-primary/40 bg-primary/10 px-2.5 py-1 font-mono text-[10px] tracking-[0.14em] uppercase text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+    >
+      {redirecting ? "Redirecting…" : disconnectedLabel}
+    </button>
+  );
+}
+
+/**
+ * Satu jalur untuk status Google: hook react-query bersama. Hook-nya sudah
+ * meng-invalidate aiKeys.googleStatus + aiKeys.agents, jadi badge di halaman
+ * SEO/Overview ikut segar tanpa refresh manual.
+ */
+function GoogleConnectionAction() {
+  const { data: status } = useGoogleIntegrationStatus();
+  const disconnect = useGoogleDisconnect();
+  const authorize = useGoogleAuthorize();
+
+  return (
+    <OAuthConnectionButtons
+      connected={Boolean(status?.connected)}
+      subtitle={status?.email}
+      disconnecting={disconnect.isPending}
+      redirecting={authorize.isPending}
+      disconnectedLabel="Connect"
+      onDisconnect={() =>
+        disconnect.mutate(undefined, {
+          onSuccess: () => toast.success("Google Search Console disconnected."),
+          onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Gagal disconnect."),
+        })
+      }
+      onConnect={() =>
         authorize.mutate(undefined, {
           onError: (e: unknown) =>
             toast.error(e instanceof Error ? e.message : "Gagal mengambil authorize URL."),
         })
       }
-      className="rounded-sm border border-primary/40 bg-primary/10 px-2.5 py-1 font-mono text-[10px] tracking-[0.14em] uppercase text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+    />
+  );
+}
+
+/** Padanan GoogleConnectionAction, untuk kartu "Meta Ads API". */
+function MetaAdsConnectionAction() {
+  const { data: status } = useMetaAdsIntegrationStatus();
+  const disconnect = useMetaAdsDisconnect();
+  const authorize = useMetaAdsAuthorize();
+
+  return (
+    <OAuthConnectionButtons
+      connected={Boolean(status?.connected)}
+      subtitle={status?.accountName ?? status?.accountId}
+      disconnecting={disconnect.isPending}
+      redirecting={authorize.isPending}
+      disconnectedLabel="Connect"
+      onDisconnect={() =>
+        disconnect.mutate(undefined, {
+          onSuccess: () => toast.success("Meta Ads disconnected."),
+          onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Gagal disconnect."),
+        })
+      }
+      onConnect={() =>
+        authorize.mutate(undefined, {
+          onError: (e: unknown) =>
+            toast.error(e instanceof Error ? e.message : "Gagal mengambil authorize URL."),
+        })
+      }
+    />
+  );
+}
+
+function ConnectionAction({ name }: { name: string }) {
+  if (name === GOOGLE_SEARCH_CONSOLE) return <GoogleConnectionAction />;
+  if (name === META_ADS_API) return <MetaAdsConnectionAction />;
+  return null;
+}
+
+const metaAdsCallbackMessage: Record<string, { tone: "success" | "danger"; text: string }> = {
+  connected: { tone: "success", text: "Meta Ads connected." },
+  denied: { tone: "danger", text: "Meta connection was denied." },
+  invalid_state: { tone: "danger", text: "Connection attempt expired — please try again." },
+  missing_code: { tone: "danger", text: "Meta did not return an authorization code." },
+  exchange_failed: { tone: "danger", text: "Meta rejected the token exchange — please try again." },
+};
+
+/**
+ * Banner hasil redirect dari MetaAdsOAuthCallbackController (?meta_ads=...).
+ * Polanya sama seperti GoogleSearchConsoleCard di AiMarketingSeo.tsx.
+ */
+function MetaAdsCallbackBanner() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const callbackResult = searchParams.get("meta_ads");
+
+  useEffect(() => {
+    if (callbackResult) {
+      const params = new URLSearchParams(searchParams);
+      params.delete("meta_ads");
+      setSearchParams(params, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (!callbackResult || !metaAdsCallbackMessage[callbackResult]) return null;
+
+  const { tone, text } = metaAdsCallbackMessage[callbackResult];
+
+  return (
+    <Panel
+      className={`mb-4 flex items-center gap-2 p-4 text-sm ${
+        tone === "success" ? "border-success/40 text-success" : "border-destructive/40 text-destructive"
+      }`}
     >
-      {redirecting ? "Redirecting…" : "Connect"}
-    </button>
+      <StatusDot tone={tone === "success" ? "success" : "danger"} />
+      {text}
+    </Panel>
   );
 }
 
@@ -114,6 +222,7 @@ export default function SettingsPage() {
           title="Data source & platform connections"
           description="Status is read-only. Services with their own OAuth flow can be connected right here; the rest are configured in the Laravel admin."
         />
+        <MetaAdsCallbackBanner />
         <Panel className="overflow-hidden">
           {agentsLoading ? (
             <div className="h-32 animate-pulse bg-surface/40" />

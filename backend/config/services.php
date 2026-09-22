@@ -57,10 +57,19 @@ return [
     // Semua nilai dibaca dari backend/.env. Selama kosong, dashboard
     // menampilkan blok "Not connected" dan TIDAK memakai data contoh.
     // ---------------------------------------------------------------
-    'meta_ads' => [
+     'meta_ads' => [
         'access_token' => env('META_ADS_ACCESS_TOKEN'),
         'account_id' => env('META_ADS_ACCOUNT_ID'),
         'api_version' => env('META_ADS_API_VERSION', 'v21.0'),
+    ],
+
+    // App ID/Secret Facebook App untuk tombol Connect/Disconnect Meta Ads
+    // di Settings (OAuth). Beda dari 'meta_ads' di atas: yang itu tempat
+    // fallback token statis lama, ini kredensial App-nya sendiri.
+    'meta_ads_oauth' => [
+        'app_id' => env('META_ADS_APP_ID'),
+        'app_secret' => env('META_ADS_APP_SECRET'),
+        'redirect_uri' => env('META_ADS_OAUTH_REDIRECT_URI'),
     ],
 
     'meta_graph' => [

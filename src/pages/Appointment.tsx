@@ -86,6 +86,11 @@ const VALUES = [
   { icon: Palette, title: "From Concept to Completion", desc: "We take care of every detail so you can enjoy a beautiful, well-designed space." },
 ];
 
+const STYLE_OPTIONS = [
+  "Minimalist", "Modern", "Scandinavian", "Classic", "Industrial",
+  "Bohemian", "Japandi", "Contemporary",
+];
+
 const PROVINSI_INDONESIA = [
   "Aceh", "Sumatera Utara", "Sumatera Barat", "Riau", "Kepulauan Riau", "Jambi", 
   "Sumatera Selatan", "Bangka Belitung", "Bengkulu", "Lampung", "DKI Jakarta", 
@@ -152,9 +157,13 @@ export default function Appointment() {
 
   const [form, setForm] = useState({
     name: "", email: "", phone: "", contact_method: "", location: "", 
-    project_type: "", project_type_other: "", message: "", 
+    project_type: "", project_type_other: "", estimated_area: "", message: "", 
     agree_terms: false, agree_privacy: false,
   });
+  const [preferredStyles, setPreferredStyles] = useState<string[]>([]);
+  const togglePreferredStyle = (style: string) => {
+    setPreferredStyles((prev) => prev.includes(style) ? prev.filter((s) => s !== style) : [...prev, style]);
+  };
   const [policyDoc, setPolicyDoc] = useState<PolicyDocument | null>(null);
   // ════════════════════════════════════════════════════════════════════
   // FIX LENIS: Hentikan smooth scroll saat PolicyDialog terbuka
@@ -186,11 +195,12 @@ export default function Appointment() {
   const resetForm = () => {
     setForm({
       name: "", email: "", phone: "", contact_method: "", location: "", 
-      project_type: "", project_type_other: "", message: "", 
+      project_type: "", project_type_other: "", estimated_area: "", message: "", 
       agree_terms: false, agree_privacy: false,
     });
     setHelpChoice("");
     setHelpChoiceOther("");
+    setPreferredStyles([]);
     setFiles([]);
   };
 
@@ -220,6 +230,8 @@ export default function Appointment() {
           location: form.location || undefined,
           service_type: resolvedServiceType || undefined,
           project_type: resolvedProjectType || undefined,
+          estimated_area: form.estimated_area || undefined,
+          preferred_style: preferredStyles.length ? preferredStyles.join(", ") : undefined,
           message: form.message || undefined,
           terms_accepted: true,
           privacy_accepted: true,
@@ -668,6 +680,37 @@ export default function Appointment() {
                     />
                   </div>
                 )}
+              </Field>
+
+              <Field label="Estimated Area (Optional)">
+                <Input
+                  value={form.estimated_area}
+                  onChange={(v) => upd("estimated_area", v)}
+                  placeholder="e.g. 50-100 m²"
+                />
+              </Field>
+
+              <Field label="Preferred Style (Optional)" full>
+                <div className="flex flex-wrap gap-2">
+                  {STYLE_OPTIONS.map((style) => {
+                    const active = preferredStyles.includes(style);
+                    return (
+                      <button
+                        key={style}
+                        type="button"
+                        onClick={() => togglePreferredStyle(style)}
+                        className="px-4 py-2 text-xs font-light uppercase tracking-[0.12em] border transition-colors"
+                        style={{
+                          borderColor: active ? BLACK : "#e5e5e5",
+                          backgroundColor: active ? BLACK : "white",
+                          color: active ? WHITE : BLACK,
+                        }}
+                      >
+                        {style}
+                      </button>
+                    );
+                  })}
+                </div>
               </Field>
 
               <Field label="Tell us about your question" full>
