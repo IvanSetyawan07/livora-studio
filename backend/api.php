@@ -379,20 +379,3 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::get('/leads/funnel', [LeadsController::class, 'funnel']);
     });
 });
-Route::get('/debug-mail-test', function (\Illuminate\Http\Request $request) {
-    $to = $request->query('to');
-    if (!$to) {
-        return response()->json(['status' => 'failed', 'error' => 'Tambahkan ?to=emailkamu@gmail.com di URL'], 400);
-    }
-    try {
-        \Illuminate\Support\Facades\Mail::raw(
-            'Ini email test dari Livora Studio, dikirim ' . now(),
-            function ($message) use ($to) {
-                $message->to($to)->subject('Test Mail Livora - ' . now()->format('H:i:s'));
-            }
-        );
-        return response()->json(['status' => 'success', 'message' => 'Email terkirim ke ' . $to]);
-    } catch (\Throwable $e) {
-        return response()->json(['status' => 'failed', 'error' => $e->getMessage()], 500);
-    }
-});

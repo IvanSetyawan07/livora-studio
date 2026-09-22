@@ -24,7 +24,12 @@ return [
     '#^http://localhost:\d+$#',
 ],
 
-    'allowed_headers' => ['*'],
+    'allowed_headers' => [
+    'Content-Type',
+    'X-Requested-With',
+    'Authorization',
+    'X-Locale', // tambahkan ini
+],
 
     'exposed_headers' => [],
 
