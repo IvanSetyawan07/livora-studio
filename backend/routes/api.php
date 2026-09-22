@@ -308,6 +308,10 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::post('/consultations/{consultation}/request-final-payment', [AdminConsultationController::class, 'requestFinalPayment']);
         Route::post('/consultations/{consultation}/countersign', [AdminConsultationController::class, 'countersignAgreement']);
         Route::post('/consultations/{consultation}/meterai/retry', [AdminConsultationController::class, 'retryMeterai']);
+        Route::get('/consultations/{consultation}/agreement/draft', [AdminConsultationController::class, 'agreementDraft']);
+        Route::post('/consultations/{consultation}/agreement/content', [AdminConsultationController::class, 'saveAgreementContent']);
+        Route::post('/consultations/{consultation}/agreement/generate', [AdminConsultationController::class, 'generateAgreement']);
+        Route::post('/consultations/{consultation}/meterai/apply', [AdminConsultationController::class, 'applyMeterai']);
         Route::post('/consultations/{consultation}/stage-files/{file}/approve', [AdminConsultationController::class, 'approveProof']);
         Route::post('/consultations/{consultation}/stage-files/{file}/reject', [AdminConsultationController::class, 'rejectProof']);
         Route::post('/consultations/{consultation}/progress/{progress}/comments', [AdminConsultationController::class, 'commentOnProgress']);
