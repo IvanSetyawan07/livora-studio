@@ -19,7 +19,7 @@ import {
 
 import { campaigns as campaignsFixture, impactRecords as impactFixture } from "../workspace-data";
 import { providers as providersFixture, routingStrategy, usageByAgent, usageByProvider, usageTotals } from "../system-data";
-import type { AICroService, AIApproval, AIRecommendation, AISeoService, AiChatContextKey, AiChatMessage, GoogleIntegrationStatus, MetaIntegrationStatus } from "../types";
+import type { AICroService, AIApproval, AIRecommendation, AISeoService, AiChatContextKey, AiChatMessage, GoogleIntegrationStatus, MetaAdsIntegrationStatus, MetaIntegrationStatus } from "../types";
 import type {
   AIActionService,
   AIActivityService,
@@ -248,6 +248,13 @@ let googleIntegrationState: GoogleIntegrationStatus = {
   scope: null,
   connectedAt: null,
 };
+let metaAdsIntegrationState: MetaAdsIntegrationStatus = {
+  connected: false,
+  accountId: null,
+  accountName: null,
+  expiresAt: null,
+  connectedAt: null,
+};
 
 // Honest-empty: mode mock tidak punya token Meta Graph beneran, jadi selalu
 // balikin not_configured — bukan nama Page/username Instagram karangan.
@@ -266,8 +273,6 @@ const integrations: AIIntegrationsService = {
   },
   async getGoogleAuthorizeUrl() {
     await delay(200);
-    // Tidak ada consent screen asli di mode demo — langsung tandai connected
-    // supaya alurnya tetap bisa dicoba end-to-end di UI.
     googleIntegrationState = {
       connected: true,
       email: "demo@livoralcr.com",
@@ -284,6 +289,32 @@ const integrations: AIIntegrationsService = {
   async getMetaStatus() {
     await delay(200);
     return metaIntegrationStatusFixture;
+  },
+  async getMetaAdsStatus() {
+    await delay(200);
+    return metaAdsIntegrationState;
+  },
+  async getMetaAdsAuthorizeUrl() {
+    await delay(200);
+    metaAdsIntegrationState = {
+      connected: true,
+      accountId: "act_1234567890123",
+      accountName: "Livora Demo Ad Account",
+      expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+      connectedAt: new Date().toISOString(),
+    };
+    return "#mock-meta-ads-connected";
+  },
+  async disconnectMetaAds() {
+    await delay(200);
+    metaAdsIntegrationState = {
+      connected: false,
+      accountId: null,
+      accountName: null,
+      expiresAt: null,
+      connectedAt: null,
+    };
+    return metaAdsIntegrationState;
   },
 };
 const notConfigured = (p: { from: string; to: string; days: number }) => ({

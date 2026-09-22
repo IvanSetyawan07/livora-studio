@@ -38,6 +38,7 @@ use App\Http\Controllers\Api\Ai\ImpactController as AiImpactController;
 use App\Http\Controllers\Api\Ai\InsightController as AiInsightController;
 use App\Http\Controllers\Api\Ai\ActivityController as AiActivityController;
 use App\Http\Controllers\Api\Ai\GoogleIntegrationController;
+use App\Http\Controllers\Api\Ai\MetaAdsOAuthController;
 use App\Http\Controllers\Api\Ai\MetaIntegrationController;
 use App\Http\Controllers\Api\Ai\AnalyticsController as AiAnalyticsController;
 use App\Http\Controllers\Api\Ai\AdsController as AiAdsController;
@@ -365,6 +366,12 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::get('/integrations/google/authorize-url', [GoogleIntegrationController::class, 'authorizeUrl']);
         Route::get('/integrations/google/status', [GoogleIntegrationController::class, 'status']);
         Route::post('/integrations/google/disconnect', [GoogleIntegrationController::class, 'disconnect']);
+        
+        // Meta Ads OAuth (System User token digantikan Connect/Disconnect
+        // ala Google) — dipakai kartu "Meta Ads API" di Settings.
+        Route::get('/integrations/meta-ads/authorize-url', [MetaAdsOAuthController::class, 'authorizeUrl']);
+        Route::get('/integrations/meta-ads/status', [MetaAdsOAuthController::class, 'status']);
+        Route::post('/integrations/meta-ads/disconnect', [MetaAdsOAuthController::class, 'disconnect']);
 
         // Meta Graph API (Facebook Page + Instagram Business) — read-only,
         // dipakai kartu "Instagram & Facebook" di Content Agent.

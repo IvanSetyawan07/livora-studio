@@ -525,6 +525,13 @@ export interface MetaIntegrationStatus {
   facebook: MetaFacebookStatus;
   instagram: MetaInstagramStatus;
 }
+export interface MetaAdsIntegrationStatus {
+  connected: boolean;
+  accountId: string | null;
+  accountName: string | null;
+  expiresAt: string | null;
+  connectedAt: string | null;
+}
 
 export type MarketingStatus =
   | "ok" | "not_configured" | "invalid_credentials" | "permission_required" | "rate_limited" | "api_error";

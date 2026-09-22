@@ -2,16 +2,24 @@
 
 namespace App\Services\Marketing;
 
+use App\Services\Meta\MetaAdsOAuthTokenStore;
 use Illuminate\Support\Facades\Http;
 
 /**
  * Meta Marketing API (Facebook + Instagram Ads) — read-only Insights.
  *
- * Kredensial: META_ADS_ACCESS_TOKEN (System User, scope ads_read),
- * META_ADS_ACCOUNT_ID (format act_xxxxxxxx), META_ADS_API_VERSION.
+ * Token: diprioritaskan dari MetaAdsOAuthTokenStore (hasil Connect lewat
+ * Settings), fallback ke META_ADS_ACCESS_TOKEN statis di .env kalau belum
+ * pernah Connect — supaya instalasi lama yang masih pakai System User token
+ * manual tidak breaking. Ad account tetap dari META_ADS_ACCOUNT_ID di .env
+ * (OAuth tidak menggantikan itu, lihat MetaAdsOAuthController).
  */
 class MetaAdsClient
 {
+    public function __construct(private MetaAdsOAuthTokenStore $oauthTokens)
+    {
+    }
+
     public function accountId(): ?string
     {
         $id = config('services.meta_ads.account_id');
@@ -25,20 +33,27 @@ class MetaAdsClient
 
     public function isConfigured(): bool
     {
-        return filled(config('services.meta_ads.access_token')) && filled($this->accountId());
+        return filled($this->rawToken()) && filled($this->accountId());
     }
 
     private function token(): string
     {
-        $token = config('services.meta_ads.access_token');
+        $token = $this->rawToken();
         if (! filled($token) || ! filled($this->accountId())) {
             throw MarketingApiException::notConfigured(
-                'Meta Ads belum dikonfigurasi. Isi META_ADS_ACCESS_TOKEN dan META_ADS_ACCOUNT_ID di backend/.env.'
+                'Meta Ads belum tersambung. Klik Connect di Settings → Data source & platform connections, atau isi META_ADS_ACCESS_TOKEN dan META_ADS_ACCOUNT_ID di backend/.env.'
             );
         }
 
         return (string) $token;
     }
+
+    /** Token OAuth (dari Connect di Settings) kalau ada, else fallback .env. */
+    private function rawToken(): ?string
+    {
+        return $this->oauthTokens->getValidAccessToken() ?? config('services.meta_ads.access_token');
+    }
+
 
     private function baseUrl(): string
     {

@@ -37,6 +37,7 @@ import type {
   BusinessHealth,
   Campaign,
   GoogleIntegrationStatus,
+  MetaAdsIntegrationStatus,
   ImpactRecord,
   MetaIntegrationStatus,
   PriorityItem,
@@ -125,6 +126,9 @@ export interface AIIntegrationsService {
   getGoogleAuthorizeUrl(): Promise<string>;
   disconnectGoogle(): Promise<GoogleIntegrationStatus>;
   getMetaStatus(): Promise<MetaIntegrationStatus>;
+  getMetaAdsStatus(): Promise<MetaAdsIntegrationStatus>;
+  getMetaAdsAuthorizeUrl(): Promise<string>;
+  disconnectMetaAds(): Promise<MetaAdsIntegrationStatus>;
 }
 
 export interface AIServiceBundle {
