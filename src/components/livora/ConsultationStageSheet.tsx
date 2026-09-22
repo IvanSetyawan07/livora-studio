@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   Calendar,
@@ -16,6 +16,8 @@ import {
   Download,
   ShieldCheck,
   AlertTriangle,
+  Stamp,
+  Pencil,
 } from "lucide-react";
 import {
   type Consultation,
@@ -36,6 +38,10 @@ import {
   requestFinalPayment,
   adminCommentOnProgress,
   countersignAgreement,
+  getAgreementDraft,
+  saveAgreementContent,
+  generateAgreement,
+  applyMeterai,
 } from "@/lib/adminConsultations";
 import { WHATSAPP_NUMBER } from "./WhatsAppButton";
 
@@ -43,15 +49,17 @@ type Props = {
   stage: string;
   consultation: Consultation;
   role: "user" | "admin";
-  onChanged?: (c: Consultation) => void;
+  onChanged?: ((c: Consultation) => void) | undefined;
 };
 
 export default function ConsultationStageSheet({ stage, consultation, role, onChanged }: Props) {
   return (
-    <div className="space-y-6">
-      <ConsultationMiniTimeline consultation={consultation} />
-      <StageContent stage={stage} consultation={consultation} role={role} onChanged={onChanged} />
-    </div>
+    <StageContent
+      stage={stage}
+      consultation={consultation}
+      role={role}
+      onChanged={onChanged}
+    />
   );
 }
 
@@ -59,13 +67,13 @@ export default function ConsultationStageSheet({ stage, consultation, role, onCh
  * Diekspor supaya bisa dirender inline, selalu terbuka, tanpa klik / tanpa sheet
  * (dipakai oleh ConsultationJourney). */
 export function StageContent({ stage, consultation, role, onChanged }: Props) {
-  const allFiles = consultation.stage_files || consultation.stageFiles || [];
+  const allFiles: ConsultationStageFile[] = (consultation.stage_files || consultation.stageFiles || []) as ConsultationStageFile[];
   const agreementKinds = ["agreement", "signed_agreement"];
-  const files =
+  const files: ConsultationStageFile[] =
     stage === "agreement_pending"
       ? allFiles.filter((f) => f.stage === stage || agreementKinds.includes(f.kind))
       : allFiles.filter((f) => f.stage === stage && !(stage === "project_paid" && agreementKinds.includes(f.kind)));
-  const history = (consultation.status_history || consultation.statusHistory || []).filter(
+  const history = ((consultation.status_history || consultation.statusHistory || []) as { id: string | number; new_status: string; previous_status?: string | null; note?: string | null; created_at: string; changed_by_user?: { name?: string } | null }[]).filter(
     (h) => h.new_status === stage || h.previous_status === stage,
   );
   const idx = stageIndex(stage);
@@ -74,7 +82,7 @@ export function StageContent({ stage, consultation, role, onChanged }: Props) {
   const isCurrent = currentIdx === idx;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 text-sm">
       <StatusBadge stage={stage} isPast={isPast} isCurrent={isCurrent} />
 
       {stage === "new_inquiry" && <InquiryPanel consultation={consultation} />}
@@ -83,29 +91,43 @@ export function StageContent({ stage, consultation, role, onChanged }: Props) {
       {stage === "meeting_scheduled" && <MeetingPanel consultation={consultation} />}
       {stage === "in_progress" && <InProgressPanel />}
       {stage === "agreement_pending" && (
-        <AgreementPanel consultation={consultation} role={role} files={files} onChanged={onChanged} />
+        <AgreementPanel
+          consultation={consultation}
+          role={role}
+          files={files}
+          onChanged={onChanged}
+        />
       )}
       {(stage === "dp_pending" || stage === "project_paid") && (
-        <PaymentPanel consultation={consultation} role={role} kind="dp" files={files} onChanged={onChanged} />
+        <PaymentPanel
+          consultation={consultation}
+          role={role}
+          kind={stage === "dp_pending" ? "dp" : "final"}
+          files={files}
+          onChanged={onChanged}
+        />
       )}
       {stage === "project_running" && (
-        <ProgressPanel consultation={consultation} role={role} files={files} onChanged={onChanged} />
+        <ProgressPanel
+          consultation={consultation}
+          role={role}
+          files={files}
+          onChanged={onChanged}
+        />
       )}
       {stage === "completed" && <CompletedPanel consultation={consultation} />}
 
       {history.length > 0 && (
-        <div className="border-t border-border pt-4">
-          <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground mb-2">History</p>
+        <div className="space-y-2">
+          <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">History</p>
           <ul className="space-y-2">
-            {history.map((h) => (
-              <li key={h.id} className="text-xs text-muted-foreground border-l-2 border-border pl-3">
-                <span className="block text-foreground/80">
-                  {h.note || `${h.previous_status ?? "—"} → ${h.new_status}`}
-                </span>
-                <span>
+            {history.map((h: typeof history[0]) => (
+              <li key={h.id} className="rounded border border-border p-2 text-xs">
+                <p>{h.note || `${h.previous_status ?? "—"} → ${h.new_status}`}</p>
+                <p className="text-muted-foreground">
                   {new Date(h.created_at).toLocaleString("id-ID")}
                   {h.changed_by_user?.name ? ` · ${h.changed_by_user.name}` : ""}
-                </span>
+                </p>
               </li>
             ))}
           </ul>
@@ -113,8 +135,8 @@ export function StageContent({ stage, consultation, role, onChanged }: Props) {
       )}
 
       {files.length > 0 && (
-        <div className="border-t border-border pt-4">
-          <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground mb-2">Attachments</p>
+        <div className="space-y-2">
+          <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Attachments</p>
           <FileList files={files} />
         </div>
       )}
@@ -133,43 +155,38 @@ function ConsultationMiniTimeline({ consultation: c }: { consultation: Consultat
   const completedStages = terminal && !rejected && !cancelled ? totalStages : Math.max(currentIdx, 0);
   const pct = Math.round((completedStages / totalStages) * 100);
 
-  const history = c.status_history || c.statusHistory || [];
+  const history: { new_status: string; created_at: string }[] = (c.status_history || c.statusHistory || []) as { new_status: string; created_at: string }[];
   const timestampFor = (stageKey: string) =>
     history.find((h) => h.new_status === stageKey)?.created_at;
 
   return (
-    <div>
+    <div className="space-y-6">
       {/* Progress summary */}
-      <div className="mb-6">
-        <div className="flex items-baseline justify-between mb-1">
-          <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Progress</p>
-          <p className="text-xs text-muted-foreground">
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Progress</p>
+          <p className="text-xs font-medium">
             {Math.min(completedStages, totalStages)} / {totalStages} Stages
           </p>
         </div>
-        <div className="flex items-end justify-between mb-2">
-          <p className="serif text-3xl">{pct}%</p>
-        </div>
         <div className="h-2 rounded-full bg-border overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-700 ease-out"
-            style={{ width: `${pct}%`, backgroundColor: "#C9974A" }}
-          />
+          <div className="h-full bg-foreground transition-all" style={{ width: `${pct}%` }} />
         </div>
+        <p className="text-right text-xs text-muted-foreground">{pct}%</p>
       </div>
 
       {(cancelled || rejected) && (
-        <div className={`mb-5 rounded-lg border p-3 text-xs ${
-          cancelled ? "bg-red-50 border-red-200 text-red-700" : "bg-amber-50 border-amber-200 text-amber-800"
-        }`}>
-          <p className="font-medium uppercase tracking-wider mb-0.5">{cancelled ? "Cancelled" : "Rejected"}</p>
-          <p>{cancelled ? "This consultation was cancelled." : (c.rejection_reason || "This inquiry was declined.")}</p>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">
+          <p className="mb-1 text-xs uppercase tracking-wider">{cancelled ? "Cancelled" : "Rejected"}</p>
+          <p className="text-sm">
+            {cancelled ? "This consultation was cancelled." : (c.rejection_reason || "This inquiry was declined.")}
+          </p>
         </div>
       )}
 
       {/* Vertical stage timeline */}
-      <ol className="relative border-l border-border ml-3 space-y-4 mb-2">
-        {CONSULTATION_STAGES.map((stg, i) => {
+      <div className="space-y-4">
+        {CONSULTATION_STAGES.map((stg: { key: string; label: string }, i: number) => {
           const state: "done" | "current" | "upcoming" | "blocked" =
             currentIdx < 0
               ? "upcoming"
@@ -180,31 +197,22 @@ function ConsultationMiniTimeline({ consultation: c }: { consultation: Consultat
               : (terminal ? "blocked" : "upcoming");
           const ts = timestampFor(stg.key);
           return (
-            <li key={stg.key} className="pl-6 relative">
-              <span
-                className="absolute -left-[13px] top-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[10px] border-2 border-background"
-                style={
-                  state === "done"
-                    ? { backgroundColor: "#C9974A", color: "white" }
-                    : state === "current"
-                    ? { backgroundColor: "white", color: "#C9974A", border: "2px solid #C9974A" }
-                    : undefined
-                }
-              >
-                {state === "done" ? <Check size={12} /> : state === "current" ? <Clock size={12} /> : state === "blocked" ? <Lock size={10} className="text-muted-foreground" /> : <span className="text-muted-foreground">{i + 1}</span>}
-              </span>
-              <p className={`text-sm ${state === "upcoming" ? "text-muted-foreground" : "font-medium"}`}>
-                {stg.label}
-              </p>
-              {ts && (
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  {new Date(ts).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-                </p>
-              )}
-            </li>
+            <div key={stg.key} className="flex gap-3">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[10px] font-medium">
+                {state === "done" ? <Check size={12} /> : state === "current" ? <Clock size={12} /> : state === "blocked" ? <XCircle size={12} /> : i + 1}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm">{stg.label}</p>
+                {ts && (
+                  <p className="text-[10px] text-muted-foreground">
+                    {new Date(ts).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                  </p>
+                )}
+              </div>
+            </div>
           );
         })}
-      </ol>
+      </div>
     </div>
   );
 }
@@ -217,21 +225,18 @@ function StatusBadge({ stage, isPast, isCurrent }: { stage: string; isPast: bool
     ? "bg-foreground/5 text-foreground border-foreground/20"
     : "bg-secondary text-muted-foreground border-border";
   return (
-    <span className={`inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.24em] px-2.5 py-1 rounded-full border ${cls}`}>
-      {isPast && <Check size={11} />} {label}
-    </span>
+    <div className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-wider ${cls}`}>
+      {isPast && <Check size={10} />} {label}
+    </div>
   );
 }
 
 function InquiryPanel({ consultation }: { consultation: Consultation }) {
   return (
-    <div className="space-y-3 text-sm">
-      <Row label="Requested" value={new Date(consultation.created_at).toLocaleString("id-ID")} />
-      <Row label="Service" value={consultation.service_type} />
-      <Row label="Project" value={consultation.project_type} />
+    <div className="space-y-3">
       <div>
-        <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground mb-1">Message</p>
-        <p className="whitespace-pre-wrap text-sm">{consultation.message}</p>
+        <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Message</p>
+        <p className="text-sm">{consultation.message}</p>
       </div>
     </div>
   );
@@ -240,15 +245,15 @@ function InquiryPanel({ consultation }: { consultation: Consultation }) {
 function ReviewPanel({ consultation }: { consultation: Consultation }) {
   if (consultation.status === "rejected") {
     return (
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-        <p className="font-medium mb-1">Inquiry declined</p>
-        <p>{consultation.rejection_reason || "Our team decided not to proceed."}</p>
+      <div>
+        <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Inquiry declined</p>
+        <p className="text-sm">{consultation.rejection_reason || "Our team decided not to proceed."}</p>
       </div>
     );
   }
   return (
     <p className="text-sm text-muted-foreground">
-      Our design team is reviewing your inquiry. You'll be notified once it moves forward.
+      Our design team is reviewing your inquiry. You&apos;ll be notified once it moves forward.
     </p>
   );
 }
@@ -256,22 +261,17 @@ function ReviewPanel({ consultation }: { consultation: Consultation }) {
 function ContactedPanel() {
   const waHref = `https://wa.me/${WHATSAPP_NUMBER}`;
   return (
-    <div className="text-sm space-y-3">
-      <p className="text-muted-foreground">
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
         Our design team has reached out and the chat room is now open — see Consultation Notes below to
         keep talking with your designer, or reach us directly on WhatsApp.
       </p>
-      <div className="flex flex-wrap items-center gap-2">
-        <a
-          href={waHref}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 rounded bg-foreground text-background px-4 py-2 text-xs uppercase tracking-[0.2em]"
-        >
-          <Phone size={14} /> Chat on WhatsApp
+      <div className="flex flex-wrap gap-2">
+        <a href={waHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded bg-foreground px-4 py-2 text-xs uppercase tracking-[0.2em] text-background">
+          Chat on WhatsApp
         </a>
-        <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <MessageCircle size={13} /> Or scroll to Consultation Notes
+        <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+          Or scroll to Consultation Notes
         </span>
       </div>
     </div>
@@ -287,42 +287,30 @@ function MeetingPanel({ consultation }: { consultation: Consultation }) {
     return <p className="text-sm text-muted-foreground">Meeting details will appear here once scheduled.</p>;
   }
   return (
-    <div className="space-y-2 text-sm">
+    <div className="space-y-3">
       {consultation.meeting_date && (
-        <div className="flex items-center gap-2"><Calendar size={14} />
+        <div className="flex items-center gap-2 text-sm">
+          <Calendar size={14} />
           {new Date(consultation.meeting_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
           {consultation.meeting_time ? ` · ${consultation.meeting_time}` : ""}
         </div>
       )}
       {consultation.meeting_location && (
-        <div className="flex items-center gap-2"><MapPin size={14} /> {consultation.meeting_location}</div>
+        <div className="flex items-center gap-2 text-sm">
+          <MapPin size={14} /> {consultation.meeting_location}
+        </div>
       )}
 
       {type === "call" ? (
-        <a
-          href={waHref}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 rounded bg-foreground text-background px-3 py-2 text-xs uppercase tracking-[0.2em]"
-        >
+        <a href={waHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded bg-foreground px-4 py-2 text-xs uppercase tracking-[0.2em] text-background">
           <Phone size={14} /> Call on WhatsApp
         </a>
       ) : type === "offline" ? (
-        <a
-          href={waHref}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 rounded bg-foreground text-background px-3 py-2 text-xs uppercase tracking-[0.2em]"
-        >
-          <Phone size={14} /> Contact Us on WhatsApp
+        <a href={waHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded bg-foreground px-4 py-2 text-xs uppercase tracking-[0.2em] text-background">
+          <MapPin size={14} /> Contact Us on WhatsApp
         </a>
       ) : consultation.meeting_link ? (
-        <a
-          href={consultation.meeting_link}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 rounded bg-foreground text-background px-3 py-2 text-xs uppercase tracking-[0.2em]"
-        >
+        <a href={consultation.meeting_link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded bg-foreground px-4 py-2 text-xs uppercase tracking-[0.2em] text-background">
           <Video size={14} /> Join Meeting
         </a>
       ) : null}
@@ -347,7 +335,7 @@ function PaymentPanel({
   role: "user" | "admin";
   kind: "dp" | "final";
   files: ConsultationStageFile[];
-  onChanged?: (c: Consultation) => void;
+  onChanged?: ((c: Consultation) => void) | undefined;
 }) {
   const isDp = kind === "dp";
   const amount = isDp ? consultation.dp_amount : consultation.final_payment_amount;
@@ -360,7 +348,7 @@ function PaymentPanel({
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
   const rejected = proof?.review_status === "rejected";
 
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [reviewing, setReviewing] = useState(false);
 
@@ -369,7 +357,7 @@ function PaymentPanel({
     consultation.final_payment_amount ? String(consultation.final_payment_amount) : "",
   );
   const [finalNote, setFinalNote] = useState("");
-  const finalInvoiceRef = useRef<HTMLInputElement>(null);
+  const finalInvoiceRef = useRef<HTMLInputElement | null>(null);
   const [requesting, setRequesting] = useState(false);
   const progress = consultation.project_progress ?? 0;
 
@@ -441,19 +429,25 @@ function PaymentPanel({
   if (!requested) {
     if (!isDp && role === "admin") {
       return (
-        <div className="space-y-2 text-sm">
+        <div className="space-y-3">
           {progress < 85 ? (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Reach 85% project progress before requesting the final payment ({progress}% so far).
             </p>
           ) : (
             <div className="space-y-2">
               <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Request Final Payment</p>
-              <input type="number" placeholder="Amount (IDR)" value={finalAmount}
+              <input
+                type="number"
+                value={finalAmount}
                 onChange={(e) => setFinalAmount(e.target.value)}
+                placeholder="Amount"
                 className="w-full border border-border rounded px-2 py-1.5 text-xs bg-background" />
-              <textarea rows={2} placeholder="Note (optional)" value={finalNote}
+              <input
+                type="text"
+                value={finalNote}
                 onChange={(e) => setFinalNote(e.target.value)}
+                placeholder="Note"
                 className="w-full border border-border rounded px-2 py-1.5 text-xs bg-background" />
               <input ref={finalInvoiceRef} type="file" className="text-xs" />
               <button
@@ -657,39 +651,198 @@ function SignatureCanvas({
   );
 }
 
-/** Status pill for the e-meterai (Indonesian stamp duty) lifecycle. */
+/** Status meterai. Selama API e-meterai belum tersambung, tidak ada status "gagal". */
 function MeteraiStatus({ consultation }: { consultation: Consultation }) {
   const status = consultation.meterai_status;
-  if (!status || status === "not_requested") return null;
-
-  if (status === "completed") {
+  if (!status || status === "not_requested") {
     return (
-      <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 py-1 text-xs">
-        <ShieldCheck size={12} /> e-Meterai completed
-        {consultation.meterai_reference ? ` · ${consultation.meterai_reference}` : ""}
+      <div className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-3 py-1 text-[11px] text-muted-foreground">
+        <Clock size={12} /> Menunggu meterai dibubuhkan
       </div>
     );
   }
-  if (status === "failed") {
+  if (status === "completed" || status === "affixed_manual") {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 text-red-700 p-3 text-xs">
-        <p className="font-medium uppercase tracking-wider mb-1 flex items-center gap-1.5">
-          <AlertTriangle size={12} /> e-Meterai failed
-        </p>
-        <p>{consultation.meterai_error || "Stamp duty could not be processed."}</p>
+      <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] text-emerald-700">
+        <ShieldCheck size={12} />
+        {status === "completed" ? "e-Meterai tersertifikasi" : "Meterai sudah dibubuhkan"}
+        {consultation.meterai_serial ? ` · ${consultation.meterai_serial}` : ""}
       </div>
     );
   }
   return (
-    <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1 text-xs">
-      <Clock size={12} /> e-Meterai pending
+    <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] text-amber-800">
+      <Clock size={12} /> Menunggu meterai
+    </div>
+  );
+}
+
+/** Admin: naskah perjanjian auto-generate, bisa diedit, lalu diterbitkan ke pelanggan. */
+function AgreementComposer({
+  consultation, onChanged,
+}: { consultation: Consultation; onChanged?: ((c: Consultation) => void) | undefined }) {
+  const [content, setContent] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState<"save" | "generate" | null>(null);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    getAgreementDraft(consultation.id)
+      .then((d: { content: string }) => { if (alive) setContent(d.content); })
+      .catch(() => toast.error("Gagal memuat naskah perjanjian."))
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [consultation.id]);
+
+  const handleSave = async () => {
+    setBusy("save");
+    try {
+      await saveAgreementContent(consultation.id, content);
+      toast.success("Naskah perjanjian tersimpan.");
+    } catch {
+      toast.error("Naskah gagal disimpan.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleGenerate = async () => {
+    setBusy("generate");
+    try {
+      const updated = await generateAgreement(consultation.id, content);
+      onChanged?.(updated);
+      toast.success("Dokumen perjanjian dibuat dan dikirim ke pelanggan.");
+    } catch (error: unknown) {
+      const res = (error as { response?: { data?: { message?: string } } })?.response;
+      toast.error(res?.data?.message || "Dokumen gagal dibuat.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className="space-y-3 rounded-lg border border-border p-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          Naskah Perjanjian (otomatis)
+        </p>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] text-muted-foreground underline"
+        >
+          <Pencil size={10} /> {open ? "Tutup editor" : "Edit naskah"}
+        </button>
+      </div>
+
+      {loading ? (
+        <p className="text-xs text-muted-foreground">Memuat naskah…</p>
+      ) : (
+        <>
+          {open && (
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              spellCheck={false}
+              className="h-72 w-full rounded border border-border bg-background px-3 py-2 font-mono text-[11px] leading-relaxed"
+            />
+          )}
+          {!open && (
+            <p className="line-clamp-3 whitespace-pre-wrap text-[11px] text-muted-foreground">
+              {content}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleSave}
+              disabled={busy !== null || !content.trim()}
+              className="rounded border border-border px-4 py-2 text-xs uppercase tracking-[0.2em] disabled:opacity-50"
+            >
+              {busy === "save" ? "Menyimpan…" : "Simpan Naskah"}
+            </button>
+            <button
+              onClick={handleGenerate}
+              disabled={busy !== null || !content.trim()}
+              className="rounded bg-foreground px-4 py-2 text-xs uppercase tracking-[0.2em] text-background disabled:opacity-50"
+            >
+              {busy === "generate" ? "Membuat…" : "Buat Dokumen & Kirim"}
+            </button>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Tanda tangan pelanggan & Livora otomatis ditambahkan di bagian bawah PDF
+            (tanda tangan di atas, nama dan tanggal di bawahnya).
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Admin: bubuhkan meterai di atas tanda tangan pelanggan (API e-meterai belum tersambung). */
+function MeteraiPanel({
+  consultation, onChanged,
+}: { consultation: Consultation; onChanged?: ((c: Consultation) => void) | undefined }) {
+  const [serial, setSerial] = useState("");
+  const [busy, setBusy] = useState(false);
+  const applied = !!consultation.meterai_applied_at;
+
+  const handleApply = async () => {
+    setBusy(true);
+    try {
+      const updated = await applyMeterai(consultation.id, serial.trim() || undefined);
+      onChanged?.(updated);
+      toast.success("Meterai ditambahkan ke dokumen perjanjian.");
+    } catch (error: unknown) {
+      const res = (error as { response?: { data?: { message?: string } } })?.response;
+      toast.error(res?.data?.message || "Meterai gagal ditambahkan.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (applied) {
+    return (
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-800">
+        <p className="mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wider">
+          <Stamp size={12} /> Meterai sudah dibubuhkan
+        </p>
+        <p className="text-sm">
+          {consultation.meterai_serial ? `No. seri ${consultation.meterai_serial} · ` : ""}
+          {new Date(consultation.meterai_applied_at!).toLocaleString("id-ID")}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 rounded-lg border border-border p-3">
+      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Tambah Meterai</p>
+      <input
+        type="text"
+        value={serial}
+        onChange={(e) => setSerial(e.target.value)}
+        placeholder="Nomor seri meterai (opsional)"
+        className="w-full rounded border border-border bg-background px-3 py-2 text-sm"
+      />
+      <button
+        onClick={handleApply}
+        disabled={busy}
+        className="inline-flex w-full items-center justify-center gap-2 rounded bg-foreground py-2 text-xs uppercase tracking-[0.2em] text-background disabled:opacity-50"
+      >
+        <Stamp size={13} /> {busy ? "Membubuhkan…" : "Tambah Meterai"}
+      </button>
+      <p className="text-[10px] text-muted-foreground">
+        Meterai digambar tepat di atas tanda tangan pelanggan. API e-meterai belum tersambung,
+        jadi meterai ditandai sebagai pembubuhan manual oleh admin.
+      </p>
     </div>
   );
 }
 
 function AgreementPanel({
   consultation, role, files, onChanged,
-}: { consultation: Consultation; role: "user" | "admin"; files: ConsultationStageFile[]; onChanged?: (c: Consultation) => void }) {
+}: { consultation: Consultation; role: "user" | "admin"; files: ConsultationStageFile[]; onChanged?: ((c: Consultation) => void) | undefined }) {
   const agreement = files.find((f) => f.kind === "agreement");
   const signed = !!consultation.agreement_signed_at;
   const countersigned = !!consultation.livora_countersigned_at;
@@ -723,9 +876,9 @@ function AgreementPanel({
     try {
       const updated = await countersignAgreement(consultation.id, adminName.trim(), adminSignatureData);
       onChanged?.(updated);
-      toast.success("Agreement countersigned.");
+      toast.success("Perjanjian sudah ditandatangani Livora.");
     } catch {
-      toast.error("Failed to countersign the agreement.");
+      toast.error("Gagal menandatangani perjanjian.");
     } finally {
       setCounterSaving(false);
     }
@@ -733,127 +886,138 @@ function AgreementPanel({
 
   return (
     <div className="space-y-4 text-sm">
-      {/* Read-only viewer — no download affordance until fully executed. */}
+      {/* Admin: buat / edit naskah selama pelanggan belum tanda tangan */}
+      {role === "admin" && !signed && (
+        <AgreementComposer consultation={consultation} onChanged={onChanged} />
+      )}
+
+      {/* Viewer dokumen — tanpa unduhan sampai kedua pihak tanda tangan */}
       {agreement ? (
         <div className="space-y-2">
-          <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Agreement Document</p>
-          <div className="rounded-lg border border-border overflow-hidden bg-secondary/30">
-            <iframe
-              src={fileUrl(agreement.file_path)}
-              title="Project Agreement"
-              className="w-full h-72"
-            />
+          <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Dokumen Perjanjian</p>
+          <div className="overflow-hidden rounded-lg border border-border bg-secondary/30">
+            <iframe src={fileUrl(agreement.file_path)} title="Project Agreement" className="h-72 w-full" />
           </div>
           <a
             href={fileUrl(agreement.file_path)}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] underline text-muted-foreground"
+            className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground underline"
           >
-            <FileText size={12} /> Open Agreement in New Tab
+            <FileText size={12} /> Buka di tab baru
           </a>
           <p className="text-[11px] text-muted-foreground">
-            View-only until the agreement is fully signed and countersigned.
+            Hanya bisa dibaca sampai perjanjian ditandatangani kedua pihak.
           </p>
         </div>
       ) : (
-        <p className="text-muted-foreground">Waiting for the project agreement to be uploaded.</p>
+        <p className="text-muted-foreground">
+          {role === "admin"
+            ? "Belum ada dokumen. Tekan “Buat Dokumen & Kirim” di atas."
+            : "Menunggu dokumen perjanjian dari Livora."}
+        </p>
       )}
 
-      {/* Customer signature status / form */}
+      {/* Tanda tangan pelanggan */}
       {signed ? (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-800">
-          <p className="text-xs uppercase tracking-wider mb-1 flex items-center gap-1.5">
-            <Check size={12} /> Signed by Customer
+          <p className="mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wider">
+            <Check size={12} /> Ditandatangani pelanggan
           </p>
           <p className="text-sm">
-            <strong>{consultation.agreement_signature_name}</strong> · {new Date(consultation.agreement_signed_at!).toLocaleString("id-ID")}
+            <strong>{consultation.agreement_signature_name}</strong> ·{" "}
+            {new Date(consultation.agreement_signed_at!).toLocaleString("id-ID")}
           </p>
           {consultation.agreement_signature_path && (
             <img
               src={fileUrl(consultation.agreement_signature_path)}
-              alt="Customer signature"
-              className="mt-2 h-14 bg-white rounded border border-emerald-200 p-1"
+              alt="Tanda tangan pelanggan"
+              className="mt-2 h-14 rounded border border-emerald-200 bg-white p-1"
             />
           )}
         </div>
       ) : role === "user" && agreement ? (
-        <div className="space-y-3 border border-border rounded-lg p-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Sign this Agreement</p>
+        <div className="space-y-3 rounded-lg border border-border p-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Tanda Tangani Perjanjian</p>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Full legal name"
-            className="w-full border border-border rounded px-3 py-2 text-sm bg-background"
+            placeholder="Nama lengkap sesuai identitas"
+            className="w-full rounded border border-border bg-background px-3 py-2 text-sm"
           />
           <SignatureCanvas value={signatureData} onChange={setSignatureData} />
           <button
             onClick={handleSign}
             disabled={saving || !name.trim() || !signatureData}
-            className="w-full rounded bg-foreground text-background py-2 text-xs uppercase tracking-[0.2em] disabled:opacity-50"
+            className="w-full rounded bg-foreground py-2 text-xs uppercase tracking-[0.2em] text-background disabled:opacity-50"
           >
-            {saving ? "Signing…" : "Sign Agreement"}
+            {saving ? "Menyimpan…" : "Tanda Tangan"}
           </button>
         </div>
       ) : role === "admin" ? (
-        <p className="text-muted-foreground">Waiting for the customer to sign the agreement.</p>
+        <p className="text-muted-foreground">Menunggu pelanggan menandatangani perjanjian.</p>
       ) : null}
 
-      {/* Livora countersignature status / form */}
+      {/* Tanda tangan Livora */}
       {signed && (
         countersigned ? (
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-800">
-            <p className="text-xs uppercase tracking-wider mb-1 flex items-center gap-1.5">
-              <Check size={12} /> Countersigned by Livora
+            <p className="mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wider">
+              <Check size={12} /> Ditandatangani Livora
             </p>
             <p className="text-sm">
-              <strong>{consultation.livora_countersigner_name}</strong> · {new Date(consultation.livora_countersigned_at!).toLocaleString("id-ID")}
+              <strong>{consultation.livora_countersigner_name}</strong> ·{" "}
+              {new Date(consultation.livora_countersigned_at!).toLocaleString("id-ID")}
             </p>
             {consultation.livora_signature_path && (
               <img
                 src={fileUrl(consultation.livora_signature_path)}
-                alt="Livora signature"
-                className="mt-2 h-14 bg-white rounded border border-emerald-200 p-1"
+                alt="Tanda tangan Livora"
+                className="mt-2 h-14 rounded border border-emerald-200 bg-white p-1"
               />
             )}
           </div>
         ) : role === "admin" ? (
-          <div className="space-y-3 border border-border rounded-lg p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Countersign as Livora</p>
+          <div className="space-y-3 rounded-lg border border-border p-3">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Tanda Tangan Livora</p>
             <input
               type="text"
               value={adminName}
               onChange={(e) => setAdminName(e.target.value)}
-              placeholder="Admin full name"
-              className="w-full border border-border rounded px-3 py-2 text-sm bg-background"
+              placeholder="Nama lengkap admin"
+              className="w-full rounded border border-border bg-background px-3 py-2 text-sm"
             />
             <SignatureCanvas value={adminSignatureData} onChange={setAdminSignatureData} />
             <button
               onClick={handleCountersign}
               disabled={counterSaving || !adminName.trim() || !adminSignatureData}
-              className="w-full rounded bg-foreground text-background py-2 text-xs uppercase tracking-[0.2em] disabled:opacity-50"
+              className="w-full rounded bg-foreground py-2 text-xs uppercase tracking-[0.2em] text-background disabled:opacity-50"
             >
-              {counterSaving ? "Countersigning…" : "Countersign Agreement"}
+              {counterSaving ? "Menyimpan…" : "Tanda Tangani sebagai Livora"}
             </button>
           </div>
         ) : (
-          <p className="text-muted-foreground">Waiting for Livora to countersign.</p>
+          <p className="text-muted-foreground">Menunggu tanda tangan dari Livora.</p>
         )
       )}
 
-      {/* e-Meterai status — only relevant once the final document has been generated */}
-      {consultation.final_agreement_path && <MeteraiStatus consultation={consultation} />}
+      {/* Meterai */}
+      {signed && countersigned && (
+        role === "admin"
+          ? <MeteraiPanel consultation={consultation} onChanged={onChanged} />
+          : <MeteraiStatus consultation={consultation} />
+      )}
 
-      {/* Final download — only once the agreement is actually fully executed */}
+      {/* Unduhan final */}
       {finalReady && (
         <a
           href={fileUrl(consultation.final_agreement_path)}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-2 rounded bg-foreground text-background px-4 py-2 text-xs uppercase tracking-[0.2em]"
+          className="inline-flex items-center gap-2 rounded bg-foreground px-4 py-2 text-xs uppercase tracking-[0.2em] text-background"
         >
-          <Download size={14} /> Download Final Agreement
+          <Download size={14} /> Unduh Perjanjian Final
         </a>
       )}
     </div>
@@ -866,9 +1030,9 @@ function ProgressPanel({
   consultation: Consultation;
   role: "user" | "admin";
   files: ConsultationStageFile[];
-  onChanged?: (c: Consultation) => void;
+  onChanged?: ((c: Consultation) => void) | undefined;
 }) {
-  const updates = (consultation.progress_updates || consultation.progressUpdates || []) as ConsultationProgressUpdate[];
+  const updates: ConsultationProgressUpdate[] = (consultation.progress_updates || consultation.progressUpdates || []) as ConsultationProgressUpdate[];
   return (
     <div className="space-y-6">
       <div>
@@ -884,7 +1048,7 @@ function ProgressPanel({
         <p className="text-sm text-muted-foreground">No progress updates yet.</p>
       ) : (
         <ol className="space-y-5">
-          {updates.map((u) => (
+          {updates.map((u: ConsultationProgressUpdate) => (
             <li key={u.id} className="border-l-2 border-border pl-3">
               <p className="text-xs text-muted-foreground">
                 {new Date(u.created_at).toLocaleString("id-ID")}{u.creator?.name ? ` · ${u.creator.name}` : ""}
@@ -892,11 +1056,11 @@ function ProgressPanel({
               <p className="text-sm font-medium">{u.percentage}%{u.note ? ` — ${u.note}` : ""}</p>
               {u.photos && u.photos.length > 0 && (
                 <div className="mt-2 grid grid-cols-3 gap-2">
-                  {u.photos.map((p, idx) => (
-  <a key={idx} href={fileUrl(p)} target="_blank" rel="noreferrer" className="block aspect-square bg-secondary rounded overflow-hidden">
-    <img src={fileUrl(p)} alt="progress" className="w-full h-full object-cover" />
-  </a>
-))}
+                  {u.photos.map((p: string, idx: number) => (
+                    <a key={idx} href={fileUrl(p)} target="_blank" rel="noreferrer" className="block aspect-square bg-secondary rounded overflow-hidden">
+                      <img src={fileUrl(p)} alt="progress" className="w-full h-full object-cover" />
+                    </a>
+                  ))}
                 </div>
               )}
               <ProgressComments
@@ -925,7 +1089,7 @@ function ProgressComments({
   consultationId: number;
   update: ConsultationProgressUpdate;
   role: "user" | "admin";
-  onChanged?: (c: Consultation) => void;
+  onChanged?: ((c: Consultation) => void) | undefined;
 }) {
   const comments = update.comments || [];
   const [body, setBody] = useState("");
@@ -952,7 +1116,7 @@ function ProgressComments({
     <div className="mt-3 space-y-2">
       {comments.length > 0 && (
         <ul className="space-y-2">
-          {comments.map((cm) => (
+          {comments.map((cm: NonNullable<ConsultationProgressUpdate['comments']>[0]) => (
             <li key={cm.id} className="text-xs bg-secondary/40 rounded p-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-medium">
@@ -1010,7 +1174,7 @@ function CompletedPanel({ consultation }: { consultation: Consultation }) {
 function FileList({ files }: { files: ConsultationStageFile[] }) {
   return (
     <ul className="space-y-2">
-      {files.map((f) => {
+      {files.map((f: ConsultationStageFile) => {
         const isImage = /\.(jpe?g|png|webp|gif|avif)$/i.test(f.file_path);
         return (
           <li key={f.id} className="flex items-center gap-3 text-xs">

@@ -128,6 +128,32 @@ export const countersignAgreement = (
       signature_data: signatureData,
     })
     .then((r) => r.data);
+export type AgreementDraft = {
+  content: string;
+  is_custom: boolean;
+  generated_at: string | null;
+};
+
+export const getAgreementDraft = (id: number) =>
+  api.get<AgreementDraft>(`/admin/consultations/${id}/agreement/draft`).then((r) => r.data);
+
+export const saveAgreementContent = (id: number, content: string) =>
+  api
+    .post<{ content: string; is_custom: boolean }>(
+      `/admin/consultations/${id}/agreement/content`,
+      { content },
+    )
+    .then((r) => r.data);
+
+export const generateAgreement = (id: number, content?: string, note?: string) =>
+  api
+    .post<Consultation>(`/admin/consultations/${id}/agreement/generate`, { content, note })
+    .then((r) => r.data);
+
+export const applyMeterai = (id: number, serial?: string) =>
+  api
+    .post<Consultation>(`/admin/consultations/${id}/meterai/apply`, { serial: serial || null })
+    .then((r) => r.data);
 
 export const approveProof = (id: number, fileId: number) =>
   api.post<Consultation>(`/admin/consultations/${id}/stage-files/${fileId}/approve`).then((r) => r.data);
