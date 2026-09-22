@@ -555,12 +555,21 @@ class ConsultationController extends Controller
         // Composite both signatures into an actual signed PDF — never just
         // copy the unsigned source document.
         try {
-            $finalPath = (new AgreementPdfService())->composeFinalAgreement($consultation);
+            $finalPath = $consultation->agreement_content
+                ? (new AgreementDocumentService())->render($consultation, true, false)
+                : (new AgreementPdfService())->composeFinalAgreement($consultation);
             $consultation->final_agreement_path = $finalPath;
             $consultation->save();
 
-            $finalAbsolute = Storage::disk('public')->path(str_replace('/storage/', '', $finalPath));
-            MeteraiService::requestStamp($consultation, $finalAbsolute);
+            if (MeteraiService::isConfigured()) {
+                $finalAbsolute = Storage::disk('public')->path(str_replace('/storage/', '', $finalPath));
+                MeteraiService::requestStamp($consultation, $finalAbsolute);
+            } elseif ($consultation->meterai_status !== 'affixed_manual') {
+                // No provider yet: wait for an admin to affix the meterai manually.
+                $consultation->meterai_status = 'awaiting_manual';
+                $consultation->meterai_error = null;
+                $consultation->save();
+            }
         } catch (\Throwable $e) {
             Log::error('Failed to compose final signed agreement PDF', [
                 'consultation_id' => $consultation->id,
