@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Consultation;
-use Fpdf\Fpdf;
+
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -83,7 +83,7 @@ TXT;
      */
     public function render(Consultation $c, bool $withSignatures = false, bool $withMeterai = false): string
     {
-        $pdf = new Fpdf();
+        $pdf = new \FPDF();
         $pdf->SetMargins(20, 20, 20);
         $pdf->SetAutoPageBreak(true, 28);
         $pdf->AddPage();
@@ -118,7 +118,7 @@ TXT;
         return '/storage/' . $relative;
     }
 
-    private function signatureBlock(Fpdf $pdf, Consultation $c, bool $withMeterai): void
+    private function signatureBlock(\FPDF $pdf, Consultation $c, bool $withMeterai): void
     {
         $blockHeight = 82.0;
         $pageBottom = 297 - 20;
@@ -170,7 +170,7 @@ TXT;
         $pdf->SetTextColor(0);
     }
 
-    private function meteraiBox(Fpdf $pdf, float $x, float $y, Consultation $c): void
+    private function meteraiBox(\FPDF $pdf, float $x, float $y, Consultation $c): void
     {
         $w = 40.0;
         $h = 21.0;
@@ -192,7 +192,7 @@ TXT;
         $pdf->SetDrawColor(0);
     }
 
-    private function signatureImage(Fpdf $pdf, ?string $publicPath, float $colX, float $y, float $colWidth): void
+    private function signatureImage(\FPDF $pdf, ?string $publicPath, float $colX, float $y, float $colWidth): void
     {
         if (!$publicPath) {
             return;
