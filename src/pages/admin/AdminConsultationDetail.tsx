@@ -16,7 +16,7 @@ import {
 } from "@/lib/consultations";
 import ConsultationChat from "@/components/livora/ConsultationChat";
 import ConsultationTimeline from "@/components/livora/ConsultationTimeline";
-import ConsultationStageSheet from "@/components/livora/ConsultationStageSheet";
+import ConsultationStageSheet, { StageContent } from "@/components/livora/ConsultationStageSheet";
 import { Button } from "@/components/ui/button";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -100,7 +100,7 @@ export default function AdminConsultationDetail() {
       </div>
 
       {tab === "summary" && <Summary consultation={c} files={files} updates={updates} questions={customerQuestions.length} onChanged={setConsultation} onPatch={patch} />}
-      {tab === "action" && <Section title="Tindakan Berikutnya" description="Satu tempat untuk menjalankan langkah operasional sesuai tahap saat ini."><div className="max-w-xl"><ActionsRail consultation={c} onRun={runAction} onScheduled={() => load(true)} /></div></Section>}
+      {tab === "action" && <Section title="Tindakan Berikutnya" description="Satu tempat untuk menjalankan langkah operasional sesuai tahap saat ini."><div className="max-w-xl"><ActionsRail consultation={c} onRun={runAction} onScheduled={() => load(true)} onChanged={setConsultation} /></div></Section>}
       {tab === "payment" && <PaymentSection consultation={c} files={files} onChanged={setConsultation} />}
       {tab === "documents" && <DocumentsSection consultation={c} files={files} />}
       {tab === "progress" && <ProgressSection consultation={c} updates={updates} onChanged={setConsultation} />}
@@ -157,10 +157,12 @@ function ActionsRail({
   consultation,
   onRun,
   onScheduled,
+  onChanged,
 }: {
   consultation: Consultation;
   onRun: (label: string, fn: () => Promise<Consultation>) => Promise<void>;
   onScheduled: () => void;
+  onChanged: (value: Consultation) => void;
 }) {
   const status = consultation.status;
   const [meeting, setMeeting] = useState({
@@ -270,33 +272,44 @@ function ActionsRail({
       )}
 
       {status === "agreement_pending" && (
-        <div className="space-y-2">
-          {consultation.agreement_signed_at ? (
-            <div className="rounded border border-emerald-200 bg-emerald-50 text-emerald-700 px-2 py-1.5 text-[11px]">
-              Customer signed as <strong>{consultation.agreement_signature_name}</strong>.
-            </div>
+        <div className="space-y-3">
+          {consultation.livora_countersigned_at ? (
+            <>
+              <div className="rounded border border-emerald-200 bg-emerald-50 text-emerald-700 px-2 py-1.5 text-[11px]">
+                Perjanjian sudah ditandatangani kedua pihak
+                {consultation.final_agreement_path ? " & dokumen final sudah dibuat." : "."}
+              </div>
+              <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground pt-2">Request DP Payment</p>
+              <input type="number" placeholder="Amount (IDR)" value={dpAmount}
+                onChange={(e) => setDpAmount(e.target.value)}
+                className="w-full border border-border rounded px-2 py-1.5 text-xs bg-background" />
+              <textarea rows={2} placeholder="Note (optional)" value={dpNote}
+                onChange={(e) => setDpNote(e.target.value)}
+                className="w-full border border-border rounded px-2 py-1.5 text-xs bg-background" />
+              <input ref={invoiceRef} type="file" className="text-xs" />
+              <button
+                disabled={!dpAmount}
+                onClick={() =>
+                  onRun("Request DP", () =>
+                    requestDp(consultation.id, Number(dpAmount), dpNote || undefined, invoiceRef.current?.files?.[0]),
+                  )
+                }
+                className="w-full rounded bg-foreground text-background py-2 text-xs uppercase tracking-[0.2em] disabled:opacity-50"
+              >
+                Send Invoice & Move to DP Pending
+              </button>
+            </>
           ) : (
-            <p className="text-xs text-muted-foreground">Waiting for customer signature.</p>
+            <>
+              <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+                {consultation.agreement_signed_at ? "Tinjau & Countersign Perjanjian" : "Menunggu Tanda Tangan Pelanggan"}
+              </p>
+              {/* Reuses the same sign/countersign/e-Meterai panel as the timeline
+                  stage sheet, so this action is available right here instead of
+                  requiring a trip back to Ringkasan's right-side sheet. */}
+              <StageContent stage="agreement_pending" consultation={consultation} role="admin" onChanged={onChanged} />
+            </>
           )}
-          <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground pt-2">Request DP Payment</p>
-          <input type="number" placeholder="Amount (IDR)" value={dpAmount}
-            onChange={(e) => setDpAmount(e.target.value)}
-            className="w-full border border-border rounded px-2 py-1.5 text-xs bg-background" />
-          <textarea rows={2} placeholder="Note (optional)" value={dpNote}
-            onChange={(e) => setDpNote(e.target.value)}
-            className="w-full border border-border rounded px-2 py-1.5 text-xs bg-background" />
-          <input ref={invoiceRef} type="file" className="text-xs" />
-          <button
-            disabled={!dpAmount}
-            onClick={() =>
-              onRun("Request DP", () =>
-                requestDp(consultation.id, Number(dpAmount), dpNote || undefined, invoiceRef.current?.files?.[0]),
-              )
-            }
-            className="w-full rounded bg-foreground text-background py-2 text-xs uppercase tracking-[0.2em] disabled:opacity-50"
-          >
-            Send Invoice & Move to DP Pending
-          </button>
         </div>
       )}
 

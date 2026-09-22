@@ -272,18 +272,25 @@ class ConsultationController extends Controller
         return $this->show($request, $consultation->fresh());
     }
 
+    /**
+     * Manual "Mark DP as Paid" shortcut (used when there is no uploaded proof
+     * to verify — e.g. payment confirmed offline). Mirrors the status
+     * transition done by approveProof() for the 'payment_proof' kind, so both
+     * paths converge on the same STATUS_PROJECT_PAID outcome instead of
+     * leaving the consultation stuck on STATUS_DP_PENDING.
+     */
     public function markPaid(Request $request, Consultation $consultation)
     {
-        $consultation->dp_paid_at = now();
+        $consultation->dp_paid_at = $consultation->dp_paid_at ?: now();
         $consultation->save();
-        $consultation->statusHistory()->create([
-            'previous_status' => $consultation->status,
-            'new_status'      => $consultation->status,
-            'changed_by'      => $request->user()->id,
-            'note'            => 'DP payment confirmed by admin.',
-        ]);
+
         $consultation->recordActivity('payment_verified', 'DP payment verified', 'Your DP payment has been verified by Livora.', 'both', $request->user()->id);
         ConsultationNotifier::dpVerified($consultation->fresh());
+
+        if ($consultation->status === Consultation::STATUS_DP_PENDING) {
+            $consultation->changeStatus(Consultation::STATUS_PROJECT_PAID, $request->user()->id, 'DP payment confirmed by admin.');
+        }
+
         return $this->show($request, $consultation->fresh());
     }
 

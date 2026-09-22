@@ -129,6 +129,9 @@ class ConsultationController extends Controller
     {
         return Consultation::where('user_id', $request->user()->id)
             ->with(['assignedAdmin:id,name'])
+            ->withCount(['messages as unread_messages_count' => function ($q) {
+                $q->where('sender_type', 'admin')->whereNull('read_at');
+            }])
             ->orderByDesc('created_at')
             ->get()
             ->map(function (Consultation $c) {
@@ -144,6 +147,9 @@ class ConsultationController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
+        $consultation->loadCount(['messages as unread_messages_count' => function ($q) {
+            $q->where('sender_type', 'admin')->whereNull('read_at');
+        }]);
         $consultation->load([
             'assignedAdmin:id,name',
             'statusHistory.changedByUser:id,name',
