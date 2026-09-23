@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import axios from "axios";
 import { Check, Loader2, X } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { AgentFilter, toggleAgent } from "@/components/ai/agent-filter";
@@ -21,6 +23,7 @@ const tabs: { key: TabKey; label: string }[] = [
 
 export default function AiMarketingActions() {
   usePageContext("actions");
+  const qc = useQueryClient();
   const [runningIds, setRunningIds] = useState<Set<string>>(new Set());
   const [busyId, setBusyId] = useState<string | null>(null);
   const [selectedAgents, setSelectedAgents] = useState<Set<AIAgentId>>(new Set());
@@ -34,14 +37,27 @@ export default function AiMarketingActions() {
     return agents?.find((a) => a.id === key)?.name ?? key;
   }
 
+  function extractErrorMessage(error: unknown, fallback: string) {
+    if (axios.isAxiosError(error)) {
+      const message = (error.response?.data as { message?: string } | undefined)?.message;
+      if (message) return message;
+    }
+    return fallback;
+  }
+
   async function handleApproveExecute(a: AIApproval) {
     setBusyId(a.id);
     setRunningIds((prev) => new Set(prev).add(a.id));
     try {
       await approveAndExecute.mutateAsync(a.id);
       toast.success("Action executed successfully", { description: `${a.title} updated.` });
-    } catch {
-      toast.error("Failed to execute action");
+    } catch (error) {
+      // Backend bisa menjawab 422 dengan pesan yang jelas (mis. action_type
+      // belum punya eksekutor, atau eksekusi AI gagal) — tampilkan itu, bukan
+      // pesan generik, dan refresh data karena status action bisa saja tetap
+      // berubah (mis. pending -> approved) meski eksekusinya gagal.
+      toast.error(extractErrorMessage(error, "Failed to execute action"));
+      qc.invalidateQueries({ queryKey: ["ai"] });
     } finally {
       setRunningIds((prev) => {
         const next = new Set(prev);
