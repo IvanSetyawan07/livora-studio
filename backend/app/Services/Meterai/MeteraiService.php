@@ -6,6 +6,12 @@ use App\Models\Consultation;
 
 class MeteraiService
 {
+    /** True only when a real e-meterai provider is configured. */
+    public static function isConfigured(): bool
+    {
+        return !(self::provider() instanceof NullMeteraiProvider);
+    }
+
     public static function provider(): MeteraiProvider
     {
         $config = config('services.meterai', []);

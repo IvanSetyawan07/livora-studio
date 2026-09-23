@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { AgentFilter, toggleAgent } from "@/components/ai/agent-filter";
 import { InsightCard, typeMeta } from "@/components/ai/insight-card";
 import { Reveal } from "@/components/ai/primitives";
 import { useAiInsights } from "@/hooks/useAiDashboard";
-import type { AIInsightType } from "@/lib/ai/types";
+import type { AIAgentId, AIInsightType } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
 
 const filters: (AIInsightType | "all")[] = [
@@ -18,10 +19,22 @@ const filters: (AIInsightType | "all")[] = [
 
 export default function InsightsPage() {
   const [filter, setFilter] = useState<AIInsightType | "all">("all");
+  const [selectedAgents, setSelectedAgents] = useState<Set<AIAgentId>>(new Set());
   const [dismissed, setDismissed] = useState<string[]>([]);
 
+  // Agent filtering happens client-side (multi-select) — the hook's own
+  // `agent` param only supports one value, so we keep that unused here and
+  // narrow down after fetching by type.
   const { data, isLoading, error } = useAiInsights(filter);
-  const visible = (data ?? []).filter((i) => !dismissed.includes(i.id));
+  const typeFiltered = (data ?? []).filter((i) => !dismissed.includes(i.id));
+
+  const agentCounts = useMemo(() => {
+    const counts: Partial<Record<AIAgentId, number>> = {};
+    for (const i of typeFiltered) counts[i.agent] = (counts[i.agent] ?? 0) + 1;
+    return counts;
+  }, [typeFiltered]);
+
+  const visible = typeFiltered.filter((i) => selectedAgents.size === 0 || selectedAgents.has(i.agent));
 
   return (
     <>
@@ -29,6 +42,14 @@ export default function InsightsPage() {
         eyebrow="Intelligence"
         title="AI Insights"
         description="Every insight carries its source data, reasoning and confidence. Recommendations are separate objects and always require approval."
+      />
+
+      <AgentFilter
+        className="mb-4"
+        selected={selectedAgents}
+        onToggle={(id) => setSelectedAgents((prev) => toggleAgent(prev, id))}
+        onClear={() => setSelectedAgents(new Set())}
+        counts={agentCounts}
       />
 
       <div className="scroll-rail mb-6 flex gap-2 pb-2">
@@ -70,8 +91,9 @@ export default function InsightsPage() {
 
           {visible.length === 0 ? (
             <p className="rounded-sm border border-dashed border-border-strong p-8 text-center text-sm text-muted-foreground">
-              Belum ada insight{filter === "all" ? "" : " di kategori ini"}. Agent AI akan mengisi
-              halaman ini begitu analisis pertama dijalankan.
+              {selectedAgents.size > 0
+                ? "Tidak ada insight untuk agent yang dipilih."
+                : `Belum ada insight${filter === "all" ? "" : " di kategori ini"}. Agent AI akan mengisi halaman ini begitu analisis pertama dijalankan.`}
             </p>
           ) : null}
         </>

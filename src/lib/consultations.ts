@@ -131,6 +131,11 @@ export type Consultation = ConsultationPayload & {
   meterai_reference?: string | null;
   meterai_error?: string | null;
   meterai_completed_at?: string | null;
+  agreement_content?: string | null;
+  agreement_generated_at?: string | null;
+  meterai_serial?: string | null;
+  meterai_applied_at?: string | null;
+  meterai_mode?: string | null;
   activities?: ConsultationActivity[];
   created_at: string;
   updated_at: string;

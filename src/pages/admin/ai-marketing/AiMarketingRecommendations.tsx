@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { AgentFilter, toggleAgent } from "@/components/ai/agent-filter";
 import { Panel } from "@/components/ai/primitives";
 import { RecommendationCard } from "@/components/ai/recommendation-card";
 import { QueryError } from "@/components/ai/query-error";
 import { usePageContext } from "@/context/AiMarketingContext";
 import { useRecommendationDecision, useRecommendations } from "@/hooks/useAiDashboard";
-import type { AIApprovalStatus } from "@/lib/ai/types";
+import type { AIAgentId, AIApprovalStatus } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
 
 const filters: (AIApprovalStatus | "all")[] = ["all", "pending", "approved", "executed", "rejected"];
@@ -15,6 +16,7 @@ export default function AiMarketingRecommendations() {
   usePageContext("recommendations");
   const [filter, setFilter] = useState<AIApprovalStatus | "all">("all");
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [selectedAgents, setSelectedAgents] = useState<Set<AIAgentId>>(new Set());
   const { data: items, isLoading, isError, refetch } = useRecommendations();
   // Mutation ini sudah meng-invalidate seluruh cache ["ai"], jadi Overview dan
   // Actions langsung ikut terbarui tanpa reload manual.
@@ -41,7 +43,19 @@ export default function AiMarketingRecommendations() {
     });
   }
 
-  const visible = (items ?? []).filter((r) => filter === "all" || r.status === filter);
+  // Agent counts computed on the status-filtered list, so the agent buttons
+  // reflect how many items are relevant to the current status tab.
+  const statusFiltered = useMemo(
+    () => (items ?? []).filter((r) => filter === "all" || r.status === filter),
+    [items, filter],
+  );
+  const agentCounts = useMemo(() => {
+    const counts: Partial<Record<AIAgentId, number>> = {};
+    for (const r of statusFiltered) counts[r.agent] = (counts[r.agent] ?? 0) + 1;
+    return counts;
+  }, [statusFiltered]);
+
+  const visible = statusFiltered.filter((r) => selectedAgents.size === 0 || selectedAgents.has(r.agent));
 
   return (
     <>
@@ -51,8 +65,13 @@ export default function AiMarketingRecommendations() {
         description="Actionable proposals from every agent. Approving one moves it to Actions for execution."
       />
 
-      <div className="mb-5 flex flex-wrap gap-2">
-      </div>
+      <AgentFilter
+        className="mb-4"
+        selected={selectedAgents}
+        onToggle={(id) => setSelectedAgents((prev) => toggleAgent(prev, id))}
+        onClear={() => setSelectedAgents(new Set())}
+        counts={agentCounts}
+      />
 
       <div className="mb-5 flex flex-wrap gap-2">
         {filters.map((f) => (
@@ -80,7 +99,9 @@ export default function AiMarketingRecommendations() {
           ))}
         </div>
       ) : visible.length === 0 ? (
-        <Panel className="p-10 text-center text-sm text-muted-foreground">Nothing here for this filter.</Panel>
+        <Panel className="p-10 text-center text-sm text-muted-foreground">
+          Nothing here for this filter{selectedAgents.size > 0 ? " and selected agents" : ""}.
+        </Panel>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {visible.map((rec) => (

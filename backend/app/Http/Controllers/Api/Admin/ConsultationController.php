@@ -555,12 +555,21 @@ class ConsultationController extends Controller
         // Composite both signatures into an actual signed PDF — never just
         // copy the unsigned source document.
         try {
-            $finalPath = (new AgreementPdfService())->composeFinalAgreement($consultation);
+            $finalPath = $consultation->agreement_content
+                ? (new AgreementDocumentService())->render($consultation, true, false)
+                : (new AgreementPdfService())->composeFinalAgreement($consultation);
             $consultation->final_agreement_path = $finalPath;
             $consultation->save();
 
-            $finalAbsolute = Storage::disk('public')->path(str_replace('/storage/', '', $finalPath));
-            MeteraiService::requestStamp($consultation, $finalAbsolute);
+            if (MeteraiService::isConfigured()) {
+                $finalAbsolute = Storage::disk('public')->path(str_replace('/storage/', '', $finalPath));
+                MeteraiService::requestStamp($consultation, $finalAbsolute);
+            } elseif ($consultation->meterai_status !== 'affixed_manual') {
+                // No provider yet: wait for an admin to affix the meterai manually.
+                $consultation->meterai_status = 'awaiting_manual';
+                $consultation->meterai_error = null;
+                $consultation->save();
+            }
         } catch (\Throwable $e) {
             Log::error('Failed to compose final signed agreement PDF', [
                 'consultation_id' => $consultation->id,
@@ -621,6 +630,118 @@ class ConsultationController extends Controller
 
         $consultation->recordActivity('progress_reply', 'Livora replied to your question', $data['body'], 'user', $request->user()->id);
         ConsultationNotifier::progressReply($consultation, $data['body']);
+        return $this->show($request, $consultation->fresh());
+    }
+
+    // ─── Auto-generated, admin-editable agreement document ───────────
+
+    /** Current editable agreement text (auto-generated default when empty). */
+    public function agreementDraft(Request $request, Consultation $consultation)
+    {
+        $service = new AgreementDocumentService();
+
+        return [
+            'content'      => $service->contentFor($consultation),
+            'is_custom'    => (bool) $consultation->agreement_content,
+            'generated_at' => $consultation->agreement_generated_at,
+        ];
+    }
+
+    /** Save the edited agreement text without issuing it yet. */
+    public function saveAgreementContent(Request $request, Consultation $consultation)
+    {
+        $data = $request->validate(['content' => 'required|string|max:200000']);
+        $consultation->agreement_content = $data['content'];
+        $consultation->save();
+
+        return ['content' => $consultation->agreement_content, 'is_custom' => true];
+    }
+
+    /** Render the agreement PDF and issue it to the customer for signing. */
+    public function generateAgreement(Request $request, Consultation $consultation)
+    {
+        $data = $request->validate([
+            'content' => 'nullable|string|max:200000',
+            'note'    => 'nullable|string',
+        ]);
+
+        if ($consultation->agreement_signed_at) {
+            return response()->json(['message' => 'The customer has already signed this agreement.'], 422);
+        }
+
+        $service = new AgreementDocumentService();
+        $consultation->agreement_content = $data['content'] ?: $service->contentFor($consultation);
+        $path = $service->render($consultation, false, false);
+        $consultation->agreement_generated_at = now();
+        $consultation->save();
+
+        ConsultationStageFile::create([
+            'consultation_id' => $consultation->id,
+            'stage'           => Consultation::STATUS_AGREEMENT_PENDING,
+            'kind'            => 'agreement',
+            'file_path'       => $path,
+            'note'            => $data['note'] ?? 'Dokumen perjanjian dibuat otomatis oleh Livora.',
+            'uploaded_by'     => $request->user()->id,
+        ]);
+
+        if ($consultation->status !== Consultation::STATUS_AGREEMENT_PENDING) {
+            $consultation->changeStatus(
+                Consultation::STATUS_AGREEMENT_PENDING,
+                $request->user()->id,
+                'Agreement generated. Awaiting customer signature.',
+            );
+        }
+
+        $consultation->recordActivity(
+            'agreement_ready',
+            'Agreement ready to sign',
+            'Please review and sign the project agreement.',
+            'both',
+            $request->user()->id,
+        );
+        ConsultationNotifier::agreementReady($consultation->fresh());
+
+        return $this->show($request, $consultation->fresh());
+    }
+
+    /**
+     * Affix the meterai manually (placeholder until a real e-meterai API is
+     * connected). Regenerates the final PDF with the stamp block drawn above
+     * the customer signature. It is explicitly labelled as manual — never
+     * reported as a completed provider transaction.
+     */
+    public function applyMeterai(Request $request, Consultation $consultation)
+    {
+        $data = $request->validate(['serial' => 'nullable|string|max:64']);
+
+        if (!$consultation->agreement_signed_at || !$consultation->livora_countersigned_at) {
+            return response()->json(['message' => 'Both parties must sign before the meterai can be affixed.'], 422);
+        }
+        if (!$consultation->agreement_content) {
+            return response()->json([
+                'message' => 'Meterai can only be affixed to an agreement generated by Livora.',
+            ], 422);
+        }
+
+        $consultation->meterai_serial = $data['serial'] ?? null;
+        $consultation->meterai_applied_at = now();
+        $consultation->save();
+
+        $consultation->final_agreement_path = (new AgreementDocumentService())->render($consultation, true, true);
+        $consultation->meterai_status = 'affixed_manual';
+        $consultation->meterai_mode = 'manual';
+        $consultation->meterai_reference = $data['serial'] ?? null;
+        $consultation->meterai_error = null;
+        $consultation->save();
+
+        $consultation->recordActivity(
+            'meterai_affixed',
+            'Meterai added to the agreement',
+            'The signed agreement now carries the meterai.',
+            'both',
+            $request->user()->id,
+        );
+
         return $this->show($request, $consultation->fresh());
     }
 }
