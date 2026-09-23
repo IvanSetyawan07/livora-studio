@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Check, Loader2, X } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { AgentFilter, toggleAgent } from "@/components/ai/agent-filter";
 import { Panel, Pill, RiskPill, StatusDot } from "@/components/ai/primitives";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePageContext } from "@/context/AiMarketingContext";
 import { useActionDecision, useAiActions, useAiAgents, useRecommendations } from "@/hooks/useAiDashboard";
-import type { AIApproval } from "@/lib/ai/types";
+import type { AIAgentId, AIApproval } from "@/lib/ai/types";
 
 type TabKey = "needs_review" | "scheduled" | "running" | "completed" | "failed";
 
@@ -22,6 +23,7 @@ export default function AiMarketingActions() {
   usePageContext("actions");
   const [runningIds, setRunningIds] = useState<Set<string>>(new Set());
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [selectedAgents, setSelectedAgents] = useState<Set<AIAgentId>>(new Set());
 
   const { data: items, isLoading, error } = useAiActions();
   const { data: agents } = useAiAgents();
@@ -62,13 +64,30 @@ export default function AiMarketingActions() {
     }
   }
 
-  function itemsFor(tab: TabKey): AIApproval[] {
+  // Base list already narrowed down by the agent filter — every tab (and its
+  // count) is derived from this, so "Needs Review 12" only counts items that
+  // also match the selected agents (e.g. SEO + CRO + Content).
+  const agentFiltered = useMemo(() => {
     if (!items) return [];
-    if (tab === "needs_review") return items.filter((a) => a.status === "pending");
-    if (tab === "scheduled") return items.filter((a) => a.status === "approved" && !runningIds.has(a.id));
-    if (tab === "running") return items.filter((a) => runningIds.has(a.id));
-    if (tab === "completed") return items.filter((a) => a.status === "executed");
-    return items.filter((a) => a.status === "failed");
+    if (selectedAgents.size === 0) return items;
+    return items.filter((a) => selectedAgents.has(a.agent));
+  }, [items, selectedAgents]);
+
+  // Counts for the agent filter buttons themselves stay based on the
+  // unfiltered list, so a person can see how many items each agent has
+  // before narrowing down.
+  const agentCounts = useMemo(() => {
+    const counts: Partial<Record<AIAgentId, number>> = {};
+    for (const a of items ?? []) counts[a.agent] = (counts[a.agent] ?? 0) + 1;
+    return counts;
+  }, [items]);
+
+  function itemsFor(tab: TabKey): AIApproval[] {
+    if (tab === "needs_review") return agentFiltered.filter((a) => a.status === "pending");
+    if (tab === "scheduled") return agentFiltered.filter((a) => a.status === "approved" && !runningIds.has(a.id));
+    if (tab === "running") return agentFiltered.filter((a) => runningIds.has(a.id));
+    if (tab === "completed") return agentFiltered.filter((a) => a.status === "executed");
+    return agentFiltered.filter((a) => a.status === "failed");
   }
 
   return (
@@ -84,6 +103,14 @@ export default function AiMarketingActions() {
           Actions tidak bisa dimuat dari server.
         </div>
       ) : null}
+
+      <AgentFilter
+        className="mb-5"
+        selected={selectedAgents}
+        onToggle={(id) => setSelectedAgents((prev) => toggleAgent(prev, id))}
+        onClear={() => setSelectedAgents(new Set())}
+        counts={agentCounts}
+      />
 
       <Tabs defaultValue="needs_review">
         <TabsList className="h-auto flex-wrap gap-1 bg-transparent p-0">
@@ -111,7 +138,10 @@ export default function AiMarketingActions() {
                 ))}
               </div>
             ) : itemsFor(t.key).length === 0 ? (
-              <Panel className="p-8 text-center text-sm text-muted-foreground">Nothing in {t.label.toLowerCase()} right now.</Panel>
+              <Panel className="p-8 text-center text-sm text-muted-foreground">
+                Nothing in {t.label.toLowerCase()} right now
+                {selectedAgents.size > 0 ? " for the selected agents." : "."}
+              </Panel>
             ) : (
               itemsFor(t.key).map((a) => {
                 const rec = recommendations?.find((r) => r.id === a.recommendationId);
