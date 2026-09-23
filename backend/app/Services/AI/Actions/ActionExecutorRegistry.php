@@ -40,7 +40,7 @@ class ActionExecutorRegistry
     }
 
     /** @return string ringkasan hasil eksekusi */
-    public function execute(AiRecommendation $recommendation): string
+       public function execute(AiRecommendation $recommendation): ExecutionResult
     {
         $executor = $this->executorFor($recommendation->action_type);
 

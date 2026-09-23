@@ -6,7 +6,8 @@ class Item extends Model {
     use HasTranslations;
     public array $translatable = ['title','description','texture','finish','material_detail'];
     protected $fillable = ['type_id','collection_id','title','slug','code','texture','finish','availability','image','description',
-        'stock','price','weight_kg','width_cm','depth_cm','height_cm','material_detail','warehouse_note'];
+        'stock','price','weight_kg','width_cm','depth_cm','height_cm','material_detail','warehouse_note','meta_title','meta_description'];
+
     protected $casts = [
         'stock'     => 'integer',
         'price'     => 'float',

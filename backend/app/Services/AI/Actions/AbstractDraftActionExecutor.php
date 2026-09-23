@@ -5,28 +5,22 @@ namespace App\Services\AI\Actions;
 use App\Models\AiRecommendation;
 use App\Services\AI\AIProviderManager;
 
-/**
- * Basis untuk eksekutor "generate draft konkret via AI" — pola yang sama
- * persis dengan OnPageActionExecutor, dipakai ulang untuk action_type lain
- * yang belum (dan untuk sementara tidak akan) punya integrasi tulis
- * otomatis ke sistem eksternal (CMS, ads platform, dll).
- *
- * PENTING: ini BUKAN eksekusi nyata ke platform. Ini menghasilkan
- * instruksi/draft siap pakai untuk admin, supaya tombol "Approve & Execute"
- * tidak selalu gagal 422 untuk mayoritas rekomendasi, TANPA mengklaim
- * publish otomatis yang sebenarnya belum ada. Activity Log tetap mencatat
- * hasilnya sebagai teks, bukan status "published ke situs".
- */
 abstract class AbstractDraftActionExecutor implements ActionExecutor
 {
     public function __construct(protected AIProviderManager $ai)
     {
     }
 
-    /** Label singkat untuk system prompt, mis. "SEO teknikal", "konten", "operasional". */
     abstract protected function roleLabel(): string;
 
-    public function execute(AiRecommendation $recommendation): string
+    /** Kalimat peringatan di Activity Log. Boleh dipertegas per action_type. */
+    protected function manualNotice(): string
+    {
+        return 'CATATAN: tidak ada data di sistem yang berubah oleh eksekusi ini. '
+            .'Ini hanya draft/instruksi — pekerjaannya masih HARUS dikerjakan manual oleh admin.';
+    }
+
+    final public function execute(AiRecommendation $recommendation): string
     {
         $prompt = <<<TXT
 Rekomendasi berikut perlu dieksekusi jadi langkah/draft KONKRET yang bisa
@@ -54,6 +48,7 @@ TXT;
             throw new \RuntimeException('AI provider tidak mengembalikan draft (respons kosong).');
         }
 
-        return "Checklist eksekusi dibuat otomatis oleh {$result['provider']} (belum dipublish otomatis ke sistem — perlu dikerjakan manual oleh admin):\n\n{$draft}";
+        return "Checklist eksekusi dibuat otomatis oleh {$result['provider']}.\n"
+            .$this->manualNotice()."\n\n{$draft}";
     }
 }

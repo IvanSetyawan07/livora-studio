@@ -118,6 +118,8 @@ class ItemController extends Controller
             'height_cm' => 'nullable|numeric|min:0',
             'material_detail' => 'nullable|string',
             'warehouse_note' => 'nullable|string',
+            'meta_title' => 'nullable|string|max:70',
+            'meta_description' => 'nullable|string|max:180',
         ]);
     }
 

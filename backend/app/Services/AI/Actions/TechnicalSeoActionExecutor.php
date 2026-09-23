@@ -14,4 +14,12 @@ class TechnicalSeoActionExecutor extends AbstractDraftActionExecutor
     {
         return 'spesialis SEO teknikal (redirect, canonical, structured data)';
     }
+        protected function manualNotice(): string
+    {
+        return 'WAJIB DIKERJAKAN MANUAL — TIDAK ADA PERUBAHAN OTOMATIS. '
+            .'Item SEO teknikal (redirect 301, canonical, structured data) menyentuh konfigurasi '
+            .'server (.htaccess/nginx) dan berisiko merusak SEO kalau salah, jadi sistem hanya '
+            .'menyiapkan checklist. Kerjakan di staging dulu, verifikasi, baru ke produksi.';
+    }
+
 }
