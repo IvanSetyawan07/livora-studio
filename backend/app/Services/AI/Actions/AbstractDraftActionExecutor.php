@@ -20,7 +20,7 @@ abstract class AbstractDraftActionExecutor implements ActionExecutor
             .'Ini hanya draft/instruksi — pekerjaannya masih HARUS dikerjakan manual oleh admin.';
     }
 
-    final public function execute(AiRecommendation $recommendation): string
+    final public function execute(AiRecommendation $recommendation): ExecutionResult
     {
         $prompt = <<<TXT
 Rekomendasi berikut perlu dieksekusi jadi langkah/draft KONKRET yang bisa
@@ -48,7 +48,7 @@ TXT;
             throw new \RuntimeException('AI provider tidak mengembalikan draft (respons kosong).');
         }
 
-        return "Checklist eksekusi dibuat otomatis oleh {$result['provider']}.\n"
-            .$this->manualNotice()."\n\n{$draft}";
+        return ExecutionResult::draft("Checklist eksekusi dibuat otomatis oleh {$result['provider']}.\n"
+            .$this->manualNotice()."\n\n{$draft}");
     }
 }

@@ -39,8 +39,7 @@ class ActionExecutorRegistry
         return $actionType === null ? null : ($this->executors[$actionType] ?? null);
     }
 
-    /** @return string ringkasan hasil eksekusi */
-       public function execute(AiRecommendation $recommendation): ExecutionResult
+    public function execute(AiRecommendation $recommendation): ExecutionResult
     {
         $executor = $this->executorFor($recommendation->action_type);
 

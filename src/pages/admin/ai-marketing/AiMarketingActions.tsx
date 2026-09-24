@@ -49,8 +49,18 @@ export default function AiMarketingActions() {
     setBusyId(a.id);
     setRunningIds((prev) => new Set(prev).add(a.id));
     try {
-      await approveAndExecute.mutateAsync(a.id);
-      toast.success("Action executed successfully", { description: `${a.title} updated.` });
+      const res = (await approveAndExecute.mutateAsync(a.id)) as unknown as
+        | { changed_platform?: boolean; summary?: string }
+        | undefined;
+      if (res?.changed_platform === false) {
+        toast.message("Checklist dibuat — belum ada perubahan di platform", {
+          description: "Tipe aksi ini dikerjakan manual. Lihat checklist di Activity.",
+        });
+      } else {
+        toast.success("Aksi dijalankan di platform", {
+          description: res?.summary?.split("\n")[0] ?? `${a.title} diterapkan.`,
+        });
+      }
     } catch (error) {
       // Backend bisa menjawab 422 dengan pesan yang jelas (mis. action_type
       // belum punya eksekutor, atau eksekusi AI gagal) — tampilkan itu, bukan
