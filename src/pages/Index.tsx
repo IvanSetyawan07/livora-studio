@@ -34,14 +34,14 @@ const Index = () => {
   }, [location.hash, location.key, ready]);
 
   useEffect(() => {
-    document.title = "LIVORA — Imagine. Create. Realize. | Interior Design Studio";
+    document.title = "LIVORA | Arsitek & Desain Interior Jakarta · Custom Furniture";
     const meta = document.querySelector('meta[name="description"]') ?? (() => {
       const m = document.createElement("meta");
       m.setAttribute("name", "description");
       document.head.appendChild(m);
       return m;
     })();
-    meta.setAttribute("content", "Livora is a one-stop interior ecosystem — design, supply and construction merged seamlessly. Modern, quiet, European.");
+    meta.setAttribute("content", "LIVORA (Livora LCR) — studio arsitek, desain interior & custom furniture di Jakarta untuk rumah, apartemen, villa, kantor dan ruang komersial. Konsultasi gratis.");
   }, []);
 
   // Track Furniture section visibility
