@@ -5,6 +5,7 @@ import { Eye, EyeOff, ArrowRight, Check, Mail, User } from "lucide-react";
 import { toast } from "sonner";
 import { createPortal } from "react-dom";
 import { PolicyLink } from "@/components/livora/PolicyLink";
+import { Navbar } from "@/components/livora/Navbar";
 import AdminTwoFactorDialog, { ADMIN_DEVICE_KEY, type TwoFactorChallenge } from "@/components/livora/AdminTwoFactorDialog";
 import { ACCOUNT_TERMS_VERSION, ACCOUNT_PRIVACY_VERSION } from "@/content/legal/accountPolicies";
 
@@ -349,7 +350,7 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
         <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/40 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/35 to-transparent" />
 
-        <div
+        {/* <div
           className="relative flex items-center gap-2.5 text-white px-6"
           style={{ paddingTop: "max(1.5rem, env(safe-area-inset-top))" }}
         >
@@ -366,7 +367,7 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
               LIVORA
             </div>
           </div>
-        </div>
+        </div> */}
 
         <motion.div
           className="absolute left-0 right-0 px-6 pr-12"
@@ -1020,12 +1021,12 @@ export default function Auth() {
   };
 
   return (
-    <div
-      className="min-h-screen w-full flex items-center justify-center lg:p-2 lg:sm:p-4"
+     <div
+      className="min-h-screen w-full flex items-center justify-center lg:px-4 lg:pb-4 lg:pt-20"
       style={{ backgroundColor: "#ffffff", fontFamily: "'Work Sans', system-ui, sans-serif" }}
     >
-      <div className="w-full lg:max-w-100 relative bg-white lg:rounded-2xl overflow-hidden lg:shadow-sm min-h-[100dvh] lg:min-h-[96vh]">
-
+      <Navbar />
+      <div className="w-full lg:max-w-100 relative bg-white lg:rounded-2xl overflow-hidden lg:shadow-sm min-h-[100dvh] lg:min-h-[calc(100vh-6rem)]">
         <motion.div
           animate={{ left: isLogin ? "0%" : "50%" }}
           transition={{ duration: 0.9, ease }}
@@ -1363,7 +1364,7 @@ export default function Auth() {
       {pendingGoogle &&
         createPortal(
           <div
-            className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
             role="dialog"
             aria-modal="true"
             style={{ fontFamily: "'Work Sans', system-ui, sans-serif" }}

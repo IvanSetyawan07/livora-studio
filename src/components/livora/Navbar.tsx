@@ -39,8 +39,22 @@ export const Navbar = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [activities, setActivities] = useState<ConsultationActivity[]>([]);
   const profileRef = useRef<HTMLDivElement>(null);
-  const location = useLocation();
+ const location = useLocation();
   const navigate = useNavigate();
+
+  // Halaman login/register: di mobile navbar menimpa foto hero (teks putih),
+  // di desktop berada di strip putih (teks gelap).
+  const [isMobileView, setIsMobileView] = useState(
+    typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const onChange = () => setIsMobileView(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  const isAuthPage = location.pathname === "/login" || location.pathname === "/register";
+
 
   // Links shown inside the hamburger overlay (both desktop & mobile).
   const menuLinks: NavLink[] = [
@@ -74,6 +88,7 @@ export const Navbar = () => {
   const lightText =
     !scrolled &&
     (location.pathname === "/" ||
+      (isAuthPage && isMobileView) ||
       location.pathname === "/appointment" ||
       /^\/catalog\/[^/]+$/.test(location.pathname) ||
       /^\/catalog\/[^/]+\/[^/]+$/.test(location.pathname) ||
