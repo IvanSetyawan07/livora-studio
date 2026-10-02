@@ -22,6 +22,7 @@ return [
     'allowed_origins_patterns' => [
     '#^https://(www\.)?livoralcr\.com$#',
     '#^http://localhost:\d+$#',
+    '#^https://[a-z0-9-]+\.lovable\.app$#',
 ],
 
     'allowed_headers' => ['*'],
