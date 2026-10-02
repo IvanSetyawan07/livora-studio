@@ -1,4 +1,3 @@
-import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -15,63 +14,62 @@ import { ForgotPassword, ResetPassword } from "./pages/PasswordReset";
 import Profile from "./pages/Profile.tsx";
 import MyConsultationDetail from "./pages/MyConsultationDetail.tsx";
 import { ChatWidget } from "./components/livora/ChatWidget.tsx";
+import Dashboard from "./pages/Dashboard";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminOverview from "./pages/admin/AdminOverview";
+import AdminProjects from "./pages/admin/AdminProjects";
+import AdminItems from "./pages/admin/AdminItems";
+import AdminCollections from "./pages/admin/AdminCollections";
+import AdminItemExperience from "./pages/admin/AdminItemExperience";
+import AdminTaxonomies from "./pages/admin/AdminTaxonomies";
+import AdminLanding from "./pages/admin/AdminLanding";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminBanners from "./pages/admin/AdminBanners";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminMarketing from "./pages/admin/AdminMarketing";
 import ScrollToTop from "./components/ScrollToTop.tsx";
 import SmoothScroll from "./components/SmoothScroll.tsx";
 import HeroPreloader from "./components/livora/HeroPreloader.tsx";
+import ERD from "./pages/ERD";
 import Furniture from "./pages/Furniture.tsx";
 import FurnitureFilter from "./pages/FurnitureFilter.tsx";
 import { CartDrawer } from "@/components/livora/CartDrawer.tsx";
 import { CartProvider } from "./context/CartContext.tsx";
 import CatalogPage from "./pages/CatalogPage";
 import CatalogDetail from "./pages/CatalogDetail"; // ← tambah ini
+import CatalogListAdmin from "@/pages/admin/CatalogListAdmin";
+import CatalogFormAdmin from "@/pages/admin/CatalogFormAdmin";
 import CollectionLanding from "./pages/CollectionLanding.tsx";
 import CollectionDetail from "./pages/CollectionDetail.tsx";
 import CollectionCategory from "./pages/CollectionCategory.tsx";
 import Appointment from "./pages/Appointment.tsx";
+import AdminConsultations from "./pages/admin/AdminConsultations.tsx";
+import AdminConsultationDetail from "./pages/admin/AdminConsultationDetail.tsx";
+import AdminWishlists from "./pages/admin/AdminWishlists.tsx";
+import AdminSupportChat from "./pages/admin/AdminSupportChat.tsx";
+import AdminScan from "./pages/admin/AdminScan.tsx";
+import AdminItemDetail from "./pages/admin/AdminItemDetail.tsx";
+import SalesScan from "./pages/sales/SalesScan.tsx";
+import SalesItemDetail from "./pages/sales/SalesItemDetail.tsx";
 import RequireRole from "./components/RequireRole.tsx";
-
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
-const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
-const AdminProjects = lazy(() => import("./pages/admin/AdminProjects"));
-const AdminItems = lazy(() => import("./pages/admin/AdminItems"));
-const AdminCollections = lazy(() => import("./pages/admin/AdminCollections"));
-const AdminItemExperience = lazy(() => import("./pages/admin/AdminItemExperience"));
-const AdminTaxonomies = lazy(() => import("./pages/admin/AdminTaxonomies"));
-const AdminLanding = lazy(() => import("./pages/admin/AdminLanding"));
-const AdminAnalytics = lazy(() => import("./pages/admin/AdminAnalytics"));
-const AdminBanners = lazy(() => import("./pages/admin/AdminBanners"));
-const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
-const AdminMarketing = lazy(() => import("./pages/admin/AdminMarketing"));
-const ERD = lazy(() => import("./pages/ERD"));
-const CatalogListAdmin = lazy(() => import("@/pages/admin/CatalogListAdmin"));
-const CatalogFormAdmin = lazy(() => import("@/pages/admin/CatalogFormAdmin"));
-const AdminConsultations = lazy(() => import("./pages/admin/AdminConsultations.tsx"));
-const AdminConsultationDetail = lazy(() => import("./pages/admin/AdminConsultationDetail.tsx"));
-const AdminWishlists = lazy(() => import("./pages/admin/AdminWishlists.tsx"));
-const AdminSupportChat = lazy(() => import("./pages/admin/AdminSupportChat.tsx"));
-const AdminScan = lazy(() => import("./pages/admin/AdminScan.tsx"));
-const AdminItemDetail = lazy(() => import("./pages/admin/AdminItemDetail.tsx"));
-const SalesScan = lazy(() => import("./pages/sales/SalesScan.tsx"));
-const SalesItemDetail = lazy(() => import("./pages/sales/SalesItemDetail.tsx"));
-const AiMarketingShell = lazy(() => import("./pages/admin/ai-marketing/AiMarketingShell"));
-const AiMarketingOverview = lazy(() => import("./pages/admin/ai-marketing/AiMarketingOverview"));
-const AiMarketingInsights = lazy(() => import("./pages/admin/ai-marketing/AiMarketingInsights"));
-const AiMarketingSeo = lazy(() => import("./pages/admin/ai-marketing/AiMarketingSeo"));
-const AiMarketingContent = lazy(() => import("./pages/admin/ai-marketing/AiMarketingContent"));
-const AiMarketingAds = lazy(() => import("./pages/admin/ai-marketing/AiMarketingAds"));
-const AiMarketingLeads = lazy(() => import("./pages/admin/ai-marketing/AiMarketingLeads"));
-const AiMarketingCro = lazy(() => import("./pages/admin/ai-marketing/AiMarketingCro"));
-const AiMarketingApprovals = lazy(() => import("./pages/admin/ai-marketing/AiMarketingApprovals"));
-const AiMarketingActivity = lazy(() => import("./pages/admin/ai-marketing/AiMarketingActivity"));
-const AiMarketingSettings = lazy(() => import("./pages/admin/ai-marketing/AiMarketingSettings"));
-const AiMarketingRecommendations = lazy(() => import("./pages/admin/ai-marketing/AiMarketingRecommendations"));
-const AiMarketingActions = lazy(() => import("./pages/admin/ai-marketing/AiMarketingActions"));
-const AiMarketingCampaigns = lazy(() => import("./pages/admin/ai-marketing/AiMarketingCampaigns"));
-const AiMarketingCampaignDetail = lazy(() => import("./pages/admin/ai-marketing/AiMarketingCampaignDetail"));
-const AiMarketingImpact = lazy(() => import("./pages/admin/ai-marketing/AiMarketingImpact"));
-const AiMarketingUsage = lazy(() => import("./pages/admin/ai-marketing/AiMarketingUsage"));
-const AiMarketingProviders = lazy(() => import("./pages/admin/ai-marketing/AiMarketingProviders"));
+import AiMarketingShell from "./pages/admin/ai-marketing/AiMarketingShell";
+import AiMarketingOverview from "./pages/admin/ai-marketing/AiMarketingOverview";
+import AiMarketingInsights from "./pages/admin/ai-marketing/AiMarketingInsights";
+import AiMarketingSeo from "./pages/admin/ai-marketing/AiMarketingSeo";
+import AiMarketingContent from "./pages/admin/ai-marketing/AiMarketingContent";
+import AiMarketingAds from "./pages/admin/ai-marketing/AiMarketingAds";
+import AiMarketingLeads from "./pages/admin/ai-marketing/AiMarketingLeads";
+import AiMarketingCro from "./pages/admin/ai-marketing/AiMarketingCro";
+import AiMarketingApprovals from "./pages/admin/ai-marketing/AiMarketingApprovals";
+import AiMarketingActivity from "./pages/admin/ai-marketing/AiMarketingActivity";
+import AiMarketingSettings from "./pages/admin/ai-marketing/AiMarketingSettings";
+import AiMarketingRecommendations from "./pages/admin/ai-marketing/AiMarketingRecommendations";
+import AiMarketingActions from "./pages/admin/ai-marketing/AiMarketingActions";
+import AiMarketingCampaigns from "./pages/admin/ai-marketing/AiMarketingCampaigns";
+import AiMarketingCampaignDetail from "./pages/admin/ai-marketing/AiMarketingCampaignDetail";
+import AiMarketingImpact from "./pages/admin/ai-marketing/AiMarketingImpact";
+import AiMarketingUsage from "./pages/admin/ai-marketing/AiMarketingUsage";
+import AiMarketingProviders from "./pages/admin/ai-marketing/AiMarketingProviders";
 
 const queryClient = new QueryClient();
 
@@ -86,7 +84,6 @@ function App() {
             <HeroPreloader />
             <ScrollToTop />
             <SmoothScroll />
-            <Suspense fallback={null}>
             <Routes>
               <Route path="/erd" element={<ERD />} />
               <Route path="/" element={<Index />} />
@@ -163,7 +160,6 @@ function App() {
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
-            </Suspense>
             <CartDrawer />
             <ChatWidget />
             {/* <WhatsAppButton /> */}
