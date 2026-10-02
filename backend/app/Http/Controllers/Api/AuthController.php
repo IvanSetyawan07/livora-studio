@@ -28,7 +28,7 @@ class AuthController extends Controller
             'name' => 'required',
             'email' => 'required|email|unique:users',
             'phone' => 'nullable|string|max:32',
-            'password' => 'required|min:6'
+            'password' => 'required|min:8'
         ]);
 
         $user = \App\Models\User::create([
@@ -131,7 +131,7 @@ public function changePassword(Request $request)
 
     $data = $request->validate([
         'current_password' => 'required|string',
-        'new_password'      => 'required|string|min:6|confirmed',
+        'new_password'      => 'required|string|min:8|confirmed',
     ]);
 
     if (!\Illuminate\Support\Facades\Hash::check($data['current_password'], $user->password)) {

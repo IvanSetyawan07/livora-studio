@@ -68,9 +68,9 @@ Route::get('/media', function (\Illuminate\Http\Request $request) {
 
 Route::get('/taxonomy-banners', [TaxonomyBannerController::class, 'index']);
 Route::get('/taxonomy-banners/{key}', [TaxonomyBannerController::class, 'byKey']);
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/check-email', [AuthController::class, 'checkEmail']);
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+Route::post('/check-email', [AuthController::class, 'checkEmail'])->middleware('throttle:10,1');
 Route::post('/auth/{provider}/callback', [AuthController::class, 'oauthCallback'])
     ->whereIn('provider', ['google', 'apple']);
 
