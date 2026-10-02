@@ -18,7 +18,7 @@ export function PolicyDialog({ doc, open, onOpenChange }: PolicyDialogProps) {
                 {doc.modalTitle}
               </DialogTitle>
               <DialogDescription className="text-xs uppercase tracking-[0.2em] font-light">
-                Terakhir diperbarui: {formatPolicyDate()}
+               Terakhir diperbarui: {formatPolicyDate(doc.lastUpdated)}
               </DialogDescription>
             </DialogHeader>
 

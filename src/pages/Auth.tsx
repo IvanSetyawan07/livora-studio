@@ -3,7 +3,9 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { Eye, EyeOff, ArrowRight, Check, Mail, User } from "lucide-react";
 import { toast } from "sonner";
+import { createPortal } from "react-dom";
 import { PolicyLink } from "@/components/livora/PolicyLink";
+import { ACCOUNT_TERMS_VERSION, ACCOUNT_PRIVACY_VERSION } from "@/content/legal/accountPolicies";
 
 import { api, authStorage } from "@/lib/api";
 import { homeForRole, takeIntendedPath } from "@/lib/authGuard";
@@ -653,7 +655,10 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
 
                     <button
                       type="button"
-                      onClick={() => setAgreeTerms(!agreeTerms)}
+                      onClick={(e) => {
+                        if (!e.currentTarget.contains(e.target as Node)) return; // klik dari PolicyDialog (portal)
+                        setAgreeTerms(!agreeTerms);
+                      }}
                       className="flex items-start gap-2 text-left text-[12.5px] text-neutral-600 leading-relaxed pt-1"
                     >
                       <span
@@ -727,12 +732,17 @@ export default function Auth() {
 
   const [agreeTerms, setAgreeTerms] = useState(false);
 
+  // Konfirmasi Terms/Privacy untuk akun BARU yang dibuat lewat Google.
+  const pendingGoogleCredential = useRef<string | null>(null);
+  const [pendingGoogle, setPendingGoogle] = useState(false);
+  const [googleAgree, setGoogleAgree] = useState(false);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       const { data } = await api.post("/login", { email, password });
-       authStorage.setToken(data.token);
+      authStorage.setToken(data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       redirectAfterAuth(data.user?.role);
     } catch {
@@ -741,7 +751,8 @@ export default function Auth() {
       setLoading(false);
     }
   };
-    useEffect(() => {
+
+  useEffect(() => {
     if (claimConsultationId) {
       sessionStorage.setItem("pending_consultation_claim", claimConsultationId);
     }
@@ -767,6 +778,11 @@ export default function Auth() {
       return;
     }
 
+    if (!agreeTerms) {
+      toast.error("Setujui Terms of Service dan Privacy Policy untuk membuat akun");
+      return;
+    }
+
     setLoading(true);
     try {
       await api.post("/register", {
@@ -774,6 +790,9 @@ export default function Auth() {
         email: regEmail,
         phone: `${regCountryCode}${regPhone}`,
         password: regPassword,
+        terms_accepted: true,
+        terms_version: ACCOUNT_TERMS_VERSION,
+        privacy_version: ACCOUNT_PRIVACY_VERSION,
       });
       toast.success("Register berhasil! Silakan login.");
       navigate(`/login?email=${encodeURIComponent(regEmail)}`);
@@ -810,20 +829,56 @@ export default function Auth() {
   const googleDesktopRef = useRef<HTMLDivElement>(null);
   const googleMobileRef = useRef<HTMLDivElement>(null);
 
-  const handleGoogleCredential = async (response: { credential: string }) => {
+  // NB: callback ini didaftarkan ke GIS satu kali per page load, jadi tidak boleh
+  // menunjuk langsung ke closure render ini. Lihat window.__gsiHandler di bawah:
+  // GIS memanggil handler terbaru lewat window, bukan closure mount pertama.
+  const finishGoogleLogin = async (credential: string, consent = false) => {
     setLoading(true);
     try {
       const { data } = await api.post("/auth/google/callback", {
-        id_token: response.credential,
+        id_token: credential,
+        ...(consent
+          ? {
+              terms_accepted: true,
+              terms_version: ACCOUNT_TERMS_VERSION,
+              privacy_version: ACCOUNT_PRIVACY_VERSION,
+            }
+          : {}),
       });
-       authStorage.setToken(data.token);
+      pendingGoogleCredential.current = null;
+      setPendingGoogle(false);
+      setGoogleAgree(false);
+      authStorage.setToken(data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       redirectAfterAuth(data.user?.role);
     } catch (error: any) {
+      // Email Google belum terdaftar: minta persetujuan Terms & Privacy dulu.
+      if (error?.response?.status === 422 && error?.response?.data?.code === "terms_required") {
+        pendingGoogleCredential.current = credential;
+        setGoogleAgree(false);
+        setPendingGoogle(true);
+        return;
+      }
       toast.error(error?.response?.data?.message || "Google login gagal");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleCredential = (response: { credential: string }) =>
+    finishGoogleLogin(response.credential);
+
+  // Selalu simpan handler dari instance Auth yang sedang aktif, supaya callback
+  // GIS (yang hanya di-initialize sekali) tidak menunjuk ke instance lama
+  // setelah user pindah halaman lalu kembali ke /login.
+  useEffect(() => {
+    (window as any).__gsiHandler = handleGoogleCredential;
+  });
+
+  const cancelGoogleSignup = () => {
+    pendingGoogleCredential.current = null;
+    setPendingGoogle(false);
+    setGoogleAgree(false);
   };
 
   // Shared helper: render (or re-render) Google's real button into both
@@ -887,7 +942,8 @@ export default function Auth() {
       if (!w.__gsiInitialized) {
         w.google.accounts.id.initialize({
           client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-          callback: handleGoogleCredential,
+          // Panggil handler terbaru lewat window, bukan closure mount pertama.
+          callback: (r: { credential: string }) => (window as any).__gsiHandler?.(r),
         });
         w.__gsiInitialized = true;
       }
@@ -1167,7 +1223,7 @@ export default function Auth() {
                         <div className="relative">
                           <input
                             type={showRegPassword ? "text" : "password"}
-                            placeholder="Min 6 characters"
+                            placeholder="Min 8 characters"
                             value={regPassword}
                             onChange={(e) => setRegPassword(e.target.value)}
                             required
@@ -1198,8 +1254,31 @@ export default function Auth() {
                       </div>
 
                       <button
+                        type="button"
+                        onClick={(e) => {
+                          if (!e.currentTarget.contains(e.target as Node)) return; // klik dari PolicyDialog (portal)
+                          setAgreeTerms(!agreeTerms);
+                        }}
+                        className="flex items-start gap-2 text-left text-[12px] text-neutral-600 leading-relaxed"
+                      >
+                        <span
+                          className={`mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-[4px] border transition-colors ${
+                            agreeTerms ? "border-[#C9974A] bg-[#C9974A]" : "border-neutral-300 bg-white"
+                          }`}
+                        >
+                          {agreeTerms && <Check size={10} className="text-white" strokeWidth={3} />}
+                        </span>
+                        <span>
+                          I agree to the{" "}
+                          <PolicyLink doc="terms" className="text-[#C9974A] font-medium hover:underline">Terms of Service</PolicyLink>{" "}
+                          and{" "}
+                          <PolicyLink doc="privacy" className="text-[#C9974A] font-medium hover:underline">Privacy Policy</PolicyLink>.
+                        </span>
+                      </button>
+
+                      <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || !agreeTerms}
                         className="group w-full h-11 rounded-lg bg-[#C9974A] shadow-lg shadow-[#C9974A]/20 text-white text-[14px] font-medium flex items-center justify-center gap-2 hover:bg-[#b88639] active:bg-[#a3762e] transition disabled:opacity-70"
                       >
                         {loading ? "Loading..." : "Create Account"}
@@ -1207,13 +1286,6 @@ export default function Auth() {
                           <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
                         )}
                       </button>
-
-                      <p className="text-center text-[11px] text-neutral-400 leading-relaxed">
-                        By creating an account, you agree to Livora's{" "}
-                        <PolicyLink doc="terms" className="text-[#C9974A] hover:underline">Terms of Service</PolicyLink>{" "}
-                        and{" "}
-                        <PolicyLink doc="privacy" className="text-[#C9974A] hover:underline">Privacy Policy</PolicyLink>.
-                      </p>
                     </form>
 
                     <p className="text-center text-[13px] text-neutral-400 mt-6">
@@ -1265,6 +1337,69 @@ export default function Auth() {
         />
 
       </div>
+
+      {pendingGoogle &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
+            role="dialog"
+            aria-modal="true"
+            style={{ fontFamily: "'Work Sans', system-ui, sans-serif" }}
+          >
+            <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+              <h3 className="text-[17px] font-medium text-neutral-900">Buat akun baru dengan Google?</h3>
+              <p className="mt-2 text-[13px] leading-relaxed text-neutral-500">
+                Email Google ini belum terdaftar di Livora. Setujui ketentuan berikut untuk membuat akun baru.
+              </p>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  if (!e.currentTarget.contains(e.target as Node)) return; // klik dari PolicyDialog (portal)
+                  setGoogleAgree(!googleAgree);
+                }}
+                className="mt-4 flex items-start gap-2 text-left text-[12.5px] text-neutral-600 leading-relaxed"
+              >
+                <span
+                  className={`mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-[4px] border transition-colors ${
+                    googleAgree ? "border-[#C9974A] bg-[#C9974A]" : "border-neutral-300 bg-white"
+                  }`}
+                >
+                  {googleAgree && <Check size={10} className="text-white" strokeWidth={3} />}
+                </span>
+                <span>
+                  I agree to the{" "}
+                  <PolicyLink doc="terms" className="text-[#C9974A] font-medium hover:underline">Terms of Service</PolicyLink>{" "}
+                  and{" "}
+                  <PolicyLink doc="privacy" className="text-[#C9974A] font-medium hover:underline">Privacy Policy</PolicyLink>.
+                </span>
+              </button>
+
+              <div className="mt-5 flex gap-2.5">
+                <button
+                  type="button"
+                  onClick={cancelGoogleSignup}
+                  disabled={loading}
+                  className="h-11 flex-1 rounded-lg border border-neutral-200 bg-white text-[14px] font-medium text-neutral-700 hover:bg-neutral-50 transition disabled:opacity-60"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    pendingGoogleCredential.current &&
+                    finishGoogleLogin(pendingGoogleCredential.current, true)
+                  }
+                  disabled={loading || !googleAgree}
+                  className="h-11 flex-1 rounded-lg bg-[#C9974A] text-[14px] font-medium text-white hover:bg-[#b88639] transition disabled:opacity-50"
+                >
+                  {loading ? "Loading..." : "Buat Akun"}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
