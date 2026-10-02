@@ -10,12 +10,22 @@ use Illuminate\Support\Str;
 
 class CollectionController extends Controller
 {
+    /** Staff (admin/sales) boleh melihat draft; pengunjung publik hanya yang published. */
+    private function isStaff(): bool {
+        $u = auth('sanctum')->user();
+        return $u && in_array($u->role, ['admin', 'sales'], true);
+    }
+
     public function index() {
-        return Collection::orderBy('display_order')->orderBy('name')->get();
+        $q = Collection::orderBy('display_order')->orderBy('name');
+        if (!$this->isStaff()) $q->where(fn($x) => $x->where('status', 'published')->orWhereNull('status'));
+        return $q->get();
     }
 
     public function show($slug) {
-        return Collection::where('slug', $slug)
+        $q = Collection::where('slug', $slug);
+        if (!$this->isStaff()) $q->where(fn($x) => $x->where('status', 'published')->orWhereNull('status'));
+        return $q
             ->with([
                 'story',
                 'packages.items.type',

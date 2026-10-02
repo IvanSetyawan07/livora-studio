@@ -17,7 +17,8 @@ return [
 
     'paths' => ['api/*', 'storage/*', 'sanctum/csrf-cookie'],
     'allowed_methods' => ['*'],
-'allowed_origins' => ['*'], // atau domain frontend spesifik
+'allowed_origins' => array_filter(explode(',', env('CORS_ALLOWED_ORIGINS', 'https://www.livoralcr.com,https://livoralcr.com,http://localhost:8080'))),
+    'allowed_origins_patterns' => ['#^https://.*\\.lovable\\.app$#'],
 
     'allowed_origins_patterns' => [
     '#^https://(www\.)?livoralcr\.com$#',
