@@ -125,6 +125,16 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
+
+        $twoFactor = app(\App\Services\Auth\AdminTwoFactor::class);
+        if ($twoFactor->required($user, $request->input('device_token'))) {
+            try {
+                return response()->json($twoFactor->start($user, ['provider' => null]));
+            } catch (\RuntimeException $e) {
+                return response()->json(['message' => $e->getMessage()], 503);
+            }
+        }
+
         $user->login_count = (int) ($user->login_count ?? 0) + 1;
         $user->last_login_at = now();
         $user->last_ip = $request->ip();
@@ -320,6 +330,16 @@ public function changePassword(Request $request)
             if (!empty($data['avatar_url'])) $user->avatar_url = $data['avatar_url'];
         }
 
+        $twoFactor = app(\App\Services\Auth\AdminTwoFactor::class);
+        if ($twoFactor->required($user, $request->input('device_token'))) {
+            $user->save();
+            try {
+                return response()->json($twoFactor->start($user, ['provider' => $provider]));
+            } catch (\RuntimeException $e) {
+                return response()->json(['message' => $e->getMessage()], 503);
+            }
+        }
+
         $user->login_count   = (int) ($user->login_count ?? 0) + 1;
         $user->last_login_at = now();
         $user->last_ip       = $request->ip();
@@ -334,5 +354,75 @@ public function changePassword(Request $request)
             'token'   => $token,
             'user'    => $user,
         ]);
+    }
+
+    /** POST /login/2fa — verifikasi kode admin lalu terbitkan token. */
+    public function verifyTwoFactor(Request $request, \App\Services\Auth\AdminTwoFactor $twoFactor)
+    {
+        $data = $request->validate([
+            'challenge' => 'required|string|max:100',
+            'code'      => 'required|string|size:6',
+            'remember'  => 'nullable|boolean',
+        ]);
+
+        $result = $twoFactor->verify($data['challenge'], $data['code']);
+        if (!$result['ok']) {
+            $messages = [
+                'expired' => 'Kode sudah kedaluwarsa. Silakan masuk ulang.',
+                'locked'  => 'Terlalu banyak percobaan salah. Silakan masuk ulang.',
+                'invalid' => 'Kode salah. Sisa percobaan: '.($result['remaining'] ?? 0).'.',
+            ];
+            return response()->json([
+                'code'    => $result['error'],
+                'message' => $messages[$result['error']] ?? 'Verifikasi gagal.',
+            ], 422);
+        }
+
+        $user = $result['user'];
+        $provider = $result['context']['provider'] ?? null;
+
+        $user->login_count = (int) ($user->login_count ?? 0) + 1;
+        $user->last_login_at = now();
+        $user->last_ip = $request->ip();
+        $user->save();
+
+        UserActivity::log($user->id, 'login', $request, array_filter(['provider' => $provider, 'two_factor' => 'email']));
+
+        $deviceToken = null;
+        if (!empty($data['remember'])) {
+            try {
+                $deviceToken = $twoFactor->trustDevice($user, $request);
+            } catch (\Throwable $e) {
+                $deviceToken = null;
+            }
+        }
+
+        return response()->json([
+            'message'      => 'Login berhasil',
+            'token'        => $user->createToken('auth_token')->plainTextToken,
+            'user'         => $user,
+            'device_token' => $deviceToken,
+        ]);
+    }
+
+    /** POST /login/2fa/resend */
+    public function resendTwoFactor(Request $request, \App\Services\Auth\AdminTwoFactor $twoFactor)
+    {
+        $data = $request->validate(['challenge' => 'required|string|max:100']);
+
+        try {
+            $result = $twoFactor->resend($data['challenge']);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 503);
+        }
+
+        if ($result === null) {
+            return response()->json(['code' => 'expired', 'message' => 'Sesi verifikasi berakhir. Silakan masuk ulang.'], 422);
+        }
+        if (!empty($result['cooldown'])) {
+            return response()->json(['message' => 'Tunggu sebentar sebelum meminta kode baru.'], 429);
+        }
+
+        return response()->json(['message' => 'Kode baru telah dikirim.', 'email_masked' => $result['email_masked']]);
     }
 }

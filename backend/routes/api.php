@@ -70,6 +70,8 @@ Route::get('/taxonomy-banners', [TaxonomyBannerController::class, 'index']);
 Route::get('/taxonomy-banners/{key}', [TaxonomyBannerController::class, 'byKey']);
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+Route::post('/login/2fa', [AuthController::class, 'verifyTwoFactor'])->middleware('throttle:10,1');
+Route::post('/login/2fa/resend', [AuthController::class, 'resendTwoFactor'])->middleware('throttle:5,1');
 Route::post('/check-email', [AuthController::class, 'checkEmail'])->middleware('throttle:10,1');
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:10,1');
