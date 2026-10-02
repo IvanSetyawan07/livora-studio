@@ -105,6 +105,7 @@ class AuthController extends Controller
         $user->password = Hash::make($data['password']);
         $user->save();
         $user->tokens()->delete(); // keluarkan semua sesi lama
+        try { app(\App\Services\Auth\AdminTwoFactor::class)->revokeAll($user); } catch (\Throwable $e) {}
         \Illuminate\Support\Facades\DB::table('password_reset_tokens')->where('email', $data['email'])->delete();
         UserActivity::log($user->id, 'password_reset', $request);
 

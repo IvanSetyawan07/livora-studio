@@ -106,6 +106,27 @@ class SupportChatController extends Controller
             'item_name'  => 'nullable|string|max:200',
         ]);
 
+        // Chat wajib login (menekan biaya AI & spam). Batas pesan ke AI per hari per akun.
+        $loginUser = auth('sanctum')->user();
+        if (!$loginUser) {
+            return response()->json([
+                'code'    => 'login_required',
+                'message' => 'Silakan masuk untuk melanjutkan chat dengan Livora.',
+            ], 401);
+        }
+
+        $quotaKey = null;
+        if (in_array($session->status, [SupportSession::STATUS_BOT, SupportSession::STATUS_CLOSED], true)) {
+            $limit = (int) config('services.support_chat.daily_ai_limit', 50);
+            $quotaKey = 'support-ai-quota:'.$loginUser->id.':'.now()->toDateString();
+            if ($limit > 0 && (int) \Illuminate\Support\Facades\Cache::get($quotaKey, 0) >= $limit) {
+                return response()->json([
+                    'code'    => 'daily_limit',
+                    'message' => "Batas {$limit} pesan AI hari ini sudah tercapai. Anda tetap bisa minta bicara dengan tim Livora, atau lanjut besok.",
+                ], 429);
+            }
+        }
+
         if ($session->status === SupportSession::STATUS_CLOSED) {
             $session->update([
                 'status'    => SupportSession::STATUS_BOT,
@@ -138,6 +159,11 @@ class SupportChatController extends Controller
                 ->latest('id')->take(10)->get()->reverse()
                 ->map(fn ($m) => ['role' => $m->sender === 'user' ? 'user' : 'bot', 'text' => $m->text])
                 ->values()->all();
+
+            if ($quotaKey) {
+                \Illuminate\Support\Facades\Cache::add($quotaKey, 0, now()->endOfDay());
+                \Illuminate\Support\Facades\Cache::increment($quotaKey);
+            }
 
             $result = $assistant->reply($data['text'], $history, [
                 'item_slug' => $data['item_slug'] ?? null,
