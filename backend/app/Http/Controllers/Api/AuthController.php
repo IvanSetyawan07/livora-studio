@@ -22,13 +22,16 @@ class AuthController extends Controller
         return response()->json(['exists' => $exists]);
     }
 
-    public function register(Request $request)
+        public function register(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required',
             'email' => 'required|email|unique:users',
             'phone' => 'nullable|string|max:32',
-            'password' => 'required|min:8'
+            'password' => 'required|min:8',
+            'terms_accepted'  => 'accepted',
+            'terms_version'   => 'required|string|max:20',
+            'privacy_version' => 'required|string|max:20',
         ]);
 
         $user = \App\Models\User::create([
@@ -37,6 +40,9 @@ class AuthController extends Controller
             'phone' => $validated['phone'] ?? null,
             'password' => $validated['password'], // auto-hash via $casts
             'role' => 'user',
+            'terms_accepted_at' => now(),
+            'terms_version'     => $validated['terms_version'],
+            'privacy_version'   => $validated['privacy_version'],
         ]);
 
         UserActivity::log($user->id, 'register', $request);
@@ -233,7 +239,12 @@ public function changePassword(Request $request)
             'name'        => 'nullable|string',
             'provider_id' => 'nullable|string',
             'avatar_url'  => 'nullable|string',
+            'terms_accepted'  => 'nullable|boolean',
+            'terms_version'   => 'nullable|string|max:20',
+            'privacy_version' => 'nullable|string|max:20',
         ]);
+
+        // TODO: verify $data['id_token']
 
         // TODO: verify $data['id_token'] with the provider's public keys.
         // Until credentials are configured, accept the trusted-payload shape
@@ -248,7 +259,7 @@ public function changePassword(Request $request)
         'client_id' => config('services.google.client_id'),
     ]);
 
-    $client = new Google_Client(['client_id' => config('services.google.client_id')]);
+    $client = app()->makeWith(Google_Client::class, ['config' => ['client_id' => config('services.google.client_id')]]);
 
     try {
         $payload = $client->verifyIdToken($data['id_token']);
@@ -281,6 +292,16 @@ public function changePassword(Request $request)
 
         $user = \App\Models\User::where('email', $email)->first();
         if (!$user) {
+            // Akun baru lewat OAuth wajib menyetujui Terms & Privacy.
+            // Frontend akan menampilkan konfirmasi lalu mengirim ulang dengan terms_accepted=true.
+            if (empty($data['terms_accepted']) || empty($data['terms_version']) || empty($data['privacy_version'])) {
+                return response()->json([
+                    'code'    => 'terms_required',
+                    'message' => 'Untuk membuat akun baru, setujui Terms of Service dan Privacy Policy terlebih dahulu.',
+                    'email'   => $email,
+                ], 422);
+            }
+
             $user = \App\Models\User::create([
                 'name'        => $data['name'] ?? Str::before($email, '@'),
                 'email'       => $email,
@@ -289,6 +310,9 @@ public function changePassword(Request $request)
                 'provider'    => $provider,
                 'provider_id' => $data['provider_id'] ?? null,
                 'avatar_url'  => $data['avatar_url'] ?? null,
+                'terms_accepted_at' => now(),
+                'terms_version'     => $data['terms_version'],
+                'privacy_version'   => $data['privacy_version'],
             ]);
         } else {
             $user->provider    = $user->provider ?? $provider;
