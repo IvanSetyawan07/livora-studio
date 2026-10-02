@@ -55,7 +55,7 @@ class GeminiProvider implements AIProviderContract
                     'parts' => [['text' => $systemPrompt]],
                 ],
                 'generationConfig' => [
-                    'maxOutputTokens' => $options['max_tokens'] ?? 1024,
+                    'maxOutputTokens' => $options['max_tokens'] ?? 4096,
                     'temperature' => $options['temperature'] ?? 0.4,
                 ],
             ]);

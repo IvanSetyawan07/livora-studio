@@ -407,3 +407,9 @@ Route::get('/debug-mail-test', function (\Illuminate\Http\Request $request) {
         return response()->json(['status' => 'failed', 'error' => $e->getMessage()], 500);
     }
 });
+
+// Lupa & reset password
+Route::post('/forgot-password', [\App\Http\Controllers\Api\PasswordResetController::class, 'forgot'])
+    ->middleware('throttle:5,1');
+Route::post('/reset-password', [\App\Http\Controllers\Api\PasswordResetController::class, 'reset'])
+    ->middleware('throttle:10,1');

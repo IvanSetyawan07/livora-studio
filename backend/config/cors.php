@@ -17,7 +17,7 @@ return [
 
     'paths' => ['api/*', 'storage/*', 'sanctum/csrf-cookie'],
     'allowed_methods' => ['*'],
-'allowed_origins' => ['*'], // atau domain frontend spesifik
+    'allowed_origins' => [],
 
     'allowed_origins_patterns' => [
     '#^https://(www\.)?livoralcr\.com$#',
