@@ -10,6 +10,7 @@ import ProjectsPage from "./pages/Projects.tsx";
 import ItemDetail from "./pages/ItemDetail.tsx";
 import AboutPage from "./pages/About.tsx";
 import Auth from "./pages/Auth";
+import { ForgotPassword, ResetPassword } from "./pages/PasswordReset";
 import Profile from "./pages/Profile.tsx";
 import MyConsultationDetail from "./pages/MyConsultationDetail.tsx";
 import { ChatWidget } from "./components/livora/ChatWidget.tsx";
@@ -104,6 +105,8 @@ function App() {
               <Route path="/appointment" element={<Appointment />} />
               <Route path="/login" element={<Auth />} />
               <Route path="/register" element={<Auth />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/profile/:tab" element={<Profile />} />
               <Route path="/profile/consultations/:id" element={<MyConsultationDetail />} />

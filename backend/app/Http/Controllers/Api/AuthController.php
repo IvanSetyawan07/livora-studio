@@ -28,7 +28,7 @@ class AuthController extends Controller
             'name' => 'required',
             'email' => 'required|email|unique:users',
             'phone' => 'nullable|string|max:32',
-            'password' => 'required|min:6'
+            'password' => 'required|min:8'
         ]);
 
         $user = \App\Models\User::create([
@@ -48,6 +48,61 @@ class AuthController extends Controller
             'token' => $token,
             'user' => $user
         ]);
+    }
+
+    /**
+     * Kirim tautan reset password. Respons selalu sama (tidak membocorkan
+     * apakah email terdaftar). Token disimpan ter-hash, berlaku 60 menit.
+     */
+    public function forgotPassword(Request $request)
+    {
+        $data = $request->validate(['email' => 'required|email|max:255']);
+        $user = \App\Models\User::where('email', $data['email'])->first();
+
+        if ($user) {
+            $token = Str::random(64);
+            \Illuminate\Support\Facades\DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $user->email],
+                ['token' => Hash::make($token), 'created_at' => now()]
+            );
+            $link = rtrim(config('app.frontend_url'), '/').'/reset-password?token='.$token.'&email='.urlencode($user->email);
+            try {
+                \Illuminate\Support\Facades\Mail::raw(
+                    "Halo {$user->name},\n\nKami menerima permintaan untuk mengatur ulang password akun Livora Anda.\n\nBuat password baru melalui tautan berikut (berlaku 60 menit):\n{$link}\n\nJika Anda tidak meminta ini, abaikan email ini — password Anda tetap aman.\n\nSalam,\nLIVORA",
+                    fn ($m) => $m->to($user->email)->subject('Atur ulang password akun Livora')
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Forgot password mail failed: '.$e->getMessage());
+            }
+        }
+
+        return response()->json(['message' => 'Jika email terdaftar, tautan reset telah dikirim.']);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $data = $request->validate([
+            'email' => 'required|email',
+            'token' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $row = \Illuminate\Support\Facades\DB::table('password_reset_tokens')->where('email', $data['email'])->first();
+        $valid = $row && Hash::check($data['token'], $row->token)
+            && now()->diffInMinutes(\Illuminate\Support\Carbon::parse($row->created_at)) <= 60;
+
+        if (!$valid) {
+            return response()->json(['message' => 'Tautan reset tidak valid atau sudah kedaluwarsa. Silakan minta tautan baru.'], 422);
+        }
+
+        $user = \App\Models\User::where('email', $data['email'])->firstOrFail();
+        $user->password = Hash::make($data['password']);
+        $user->save();
+        $user->tokens()->delete(); // keluarkan semua sesi lama
+        \Illuminate\Support\Facades\DB::table('password_reset_tokens')->where('email', $data['email'])->delete();
+        UserActivity::log($user->id, 'password_reset', $request);
+
+        return response()->json(['message' => 'Password berhasil diperbarui. Silakan masuk.']);
     }
 
     public function login(Request $request)
@@ -131,7 +186,7 @@ public function changePassword(Request $request)
 
     $data = $request->validate([
         'current_password' => 'required|string',
-        'new_password'      => 'required|string|min:6|confirmed',
+        'new_password'      => 'required|string|min:8|confirmed',
     ]);
 
     if (!\Illuminate\Support\Facades\Hash::check($data['current_password'], $user->password)) {

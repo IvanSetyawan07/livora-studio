@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { Eye, EyeOff, ArrowRight, Check, Mail, User } from "lucide-react";
 import { toast } from "sonner";
+import { PolicyLink } from "@/components/livora/PolicyLink";
 
 import { api, authStorage } from "@/lib/api";
 import { homeForRole, takeIntendedPath } from "@/lib/authGuard";
@@ -620,7 +621,7 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
                           onChange={(e) => setRegPassword(e.target.value)}
                           onFocus={() => snapTo(true)}
                           required
-                          minLength={6}
+                          minLength={8}
                           className="w-full h-12 px-3.5 pr-10 rounded-lg border border-neutral-200 bg-white text-[14px] text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-[#C9974A] focus:ring-2 focus:ring-[#C9974A]/15 transition"
                         />
                         <button
@@ -643,7 +644,7 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
                           onChange={(e) => setRegConfirmPassword(e.target.value)}
                           onFocus={() => snapTo(true)}
                           required
-                          minLength={6}
+                          minLength={8}
                           className="w-full h-12 px-3.5 pr-10 rounded-lg border border-neutral-200 bg-white text-[14px] text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-[#C9974A] focus:ring-2 focus:ring-[#C9974A]/15 transition"
                         />
                         <Eye size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-300" />
@@ -664,9 +665,9 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
                       </span>
                       <span>
                         I agree to the{" "}
-                        <a href="/terms" className="text-[#C9974A] font-medium hover:underline">Terms of Service</a>{" "}
+                        <PolicyLink doc="terms" className="text-[#C9974A] font-medium hover:underline">Terms of Service</PolicyLink>{" "}
                         and{" "}
-                        <a href="/privacy" className="text-[#C9974A] font-medium hover:underline">Privacy Policy</a>.
+                        <PolicyLink doc="privacy" className="text-[#C9974A] font-medium hover:underline">Privacy Policy</PolicyLink>.
                       </span>
                     </button>
 
@@ -1170,7 +1171,7 @@ export default function Auth() {
                             value={regPassword}
                             onChange={(e) => setRegPassword(e.target.value)}
                             required
-                            minLength={6}
+                            minLength={8}
                             className="w-full h-11 px-3.5 pr-10 rounded-lg border border-neutral-200 bg-white text-[14px] text-neutral-900 placeholder:text-neutral-300 outline-none focus:border-[#C9974A] focus:ring-2 focus:ring-[#C9974A]/15 transition"
                           />
                           <button
@@ -1191,7 +1192,7 @@ export default function Auth() {
                           value={regConfirmPassword}
                           onChange={(e) => setRegConfirmPassword(e.target.value)}
                           required
-                          minLength={6}
+                          minLength={8}
                           className="w-full h-11 px-3.5 rounded-lg border border-neutral-200 bg-white text-[14px] text-neutral-900 placeholder:text-neutral-300 outline-none focus:border-[#C9974A] focus:ring-2 focus:ring-[#C9974A]/15 transition"
                         />
                       </div>
@@ -1209,9 +1210,9 @@ export default function Auth() {
 
                       <p className="text-center text-[11px] text-neutral-400 leading-relaxed">
                         By creating an account, you agree to Livora's{" "}
-                        <a href="/terms" className="text-[#C9974A] hover:underline">Terms of Service</a>{" "}
+                        <PolicyLink doc="terms" className="text-[#C9974A] hover:underline">Terms of Service</PolicyLink>{" "}
                         and{" "}
-                        <a href="/privacy" className="text-[#C9974A] hover:underline">Privacy Policy</a>.
+                        <PolicyLink doc="privacy" className="text-[#C9974A] hover:underline">Privacy Policy</PolicyLink>.
                       </p>
                     </form>
 
