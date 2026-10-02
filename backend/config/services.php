@@ -144,4 +144,8 @@ return [
             'api_version' => env('META_WHATSAPP_API_VERSION', 'v21.0'),
         ],
     ],
+    'support_chat' => [
+        'daily_ai_limit' => (int) env('SUPPORT_CHAT_DAILY_AI_LIMIT', 50),
+    ],
+
 ];

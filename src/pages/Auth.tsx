@@ -5,6 +5,7 @@ import { Eye, EyeOff, ArrowRight, Check, Mail, User } from "lucide-react";
 import { toast } from "sonner";
 import { createPortal } from "react-dom";
 import { PolicyLink } from "@/components/livora/PolicyLink";
+import AdminTwoFactorDialog, { ADMIN_DEVICE_KEY, type TwoFactorChallenge } from "@/components/livora/AdminTwoFactorDialog";
 import { ACCOUNT_TERMS_VERSION, ACCOUNT_PRIVACY_VERSION } from "@/content/legal/accountPolicies";
 
 import { api, authStorage } from "@/lib/api";
@@ -737,16 +738,28 @@ export default function Auth() {
   const [pendingGoogle, setPendingGoogle] = useState(false);
   const [googleAgree, setGoogleAgree] = useState(false);
 
+  const [twoFactor, setTwoFactor] = useState<TwoFactorChallenge | null>(null);
+  const completeTwoFactor = (data: { token: string; user: any }) => {
+    setTwoFactor(null);
+    authStorage.setToken(data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+    redirectAfterAuth(data.user?.role);
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data } = await api.post("/login", { email, password });
+      const { data } = await api.post("/login", { email, password, device_token: localStorage.getItem(ADMIN_DEVICE_KEY) });
+      if (data.two_factor_required) {
+        setTwoFactor({ challenge: data.challenge, email_masked: data.email_masked });
+        return;
+      }
       authStorage.setToken(data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       redirectAfterAuth(data.user?.role);
-    } catch {
-      toast.error("Email atau password salah");
+    } catch (error: any) {
+      toast.error(error?.response?.status === 401 ? "Email atau password salah" : error?.response?.data?.message || "Gagal masuk, coba lagi");
     } finally {
       setLoading(false);
     }
@@ -837,6 +850,7 @@ export default function Auth() {
     try {
       const { data } = await api.post("/auth/google/callback", {
         id_token: credential,
+        device_token: localStorage.getItem(ADMIN_DEVICE_KEY),
         ...(consent
           ? {
               terms_accepted: true,
@@ -848,6 +862,10 @@ export default function Auth() {
       pendingGoogleCredential.current = null;
       setPendingGoogle(false);
       setGoogleAgree(false);
+      if (data.two_factor_required) {
+        setTwoFactor({ challenge: data.challenge, email_masked: data.email_masked });
+        return;
+      }
       authStorage.setToken(data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       redirectAfterAuth(data.user?.role);
@@ -1337,6 +1355,10 @@ export default function Auth() {
         />
 
       </div>
+
+      {twoFactor && (
+        <AdminTwoFactorDialog challenge={twoFactor} onSuccess={completeTwoFactor} onCancel={() => setTwoFactor(null)} />
+      )}
 
       {pendingGoogle &&
         createPortal(
