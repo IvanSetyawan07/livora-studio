@@ -41,9 +41,9 @@ function Shell({ eyebrow, title, subtitle, children }: { eyebrow: string; title:
           animate={{ scale: 1 }}
           transition={{ duration: 2.2, ease }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,.7), rgba(0,0,0,.15) 55%, transparent)" }} />
         <motion.div
-          className="absolute bottom-14 left-14 right-14 text-white"
+          className="absolute text-white" style={{ bottom: 56, left: 56, right: 56 }}
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.4, ease }}
