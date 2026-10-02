@@ -80,7 +80,7 @@ Route::post('/auth/{provider}/callback', [AuthController::class, 'oauthCallback'
 
 // Public read APIs
 Route::post('/consultations', [ConsultationController::class, 'store']);
-Route::post('/chat', [ChatController::class, 'store']);
+Route::post('/chat', [ChatController::class, 'store'])->middleware(['auth:sanctum', 'throttle:20,1']);
 
 // Support chat (AI concierge + eskalasi ke customer service)
 Route::post('/support/session', [\App\Http\Controllers\Api\SupportChatController::class, 'session']);
