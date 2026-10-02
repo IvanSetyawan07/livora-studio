@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, KeyRound, Mail, ShieldCheck } from "lucide-react";
@@ -16,10 +16,23 @@ const inputCls =
 const btnCls =
   "group w-full h-12 rounded-xl bg-[#C9974A] shadow-lg shadow-[#C9974A]/25 text-white text-[14px] font-medium flex items-center justify-center gap-2 hover:bg-[#b88639] active:scale-[0.99] transition disabled:opacity-60";
 
+function useWide() {
+  const q = "(min-width: 1024px)";
+  const [wide, setWide] = useState(() => typeof window !== "undefined" && window.matchMedia(q).matches);
+  useEffect(() => {
+    const m = window.matchMedia(q);
+    const on = () => setWide(m.matches);
+    m.addEventListener("change", on);
+    return () => m.removeEventListener("change", on);
+  }, []);
+  return wide;
+}
+
 function Shell({ eyebrow, title, subtitle, children }: { eyebrow: string; title: string; subtitle: string; children: ReactNode }) {
+  const wide = useWide();
   return (
     <div className="min-h-screen flex bg-[#FAF8F5]">
-      <div className="relative hidden lg:block lg:w-[52%] shrink-0 min-h-screen overflow-hidden">
+      {wide && <div className="relative shrink-0 min-h-screen overflow-hidden" style={{ width: "52%" }}>
         <motion.img
           src={loginBg}
           alt="Interior karya Livora"
@@ -41,11 +54,11 @@ function Shell({ eyebrow, title, subtitle, children }: { eyebrow: string; title:
             Atur ulang password dalam beberapa langkah dan kembali ke konsultasi Anda.
           </p>
         </motion.div>
-      </div>
+      </div>}
 
       <div className="flex flex-1 items-center justify-center px-6 py-12">
         <motion.div
-          className="w-full max-w-[400px]"
+          className="w-full" style={{ maxWidth: 400 }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease }}
