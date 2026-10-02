@@ -18,8 +18,8 @@ const btnCls =
 
 function Shell({ eyebrow, title, subtitle, children }: { eyebrow: string; title: string; subtitle: string; children: ReactNode }) {
   return (
-    <div className="min-h-screen grid lg:grid-cols-[1.1fr_1fr] bg-[#FAF8F5]">
-      <div className="relative hidden lg:block overflow-hidden">
+    <div className="min-h-screen flex bg-[#FAF8F5]">
+      <div className="relative hidden lg:block lg:w-[52%] shrink-0 min-h-screen overflow-hidden">
         <motion.img
           src={loginBg}
           alt="Interior karya Livora"
@@ -43,7 +43,7 @@ function Shell({ eyebrow, title, subtitle, children }: { eyebrow: string; title:
         </motion.div>
       </div>
 
-      <div className="flex items-center justify-center px-6 py-12">
+      <div className="flex flex-1 items-center justify-center px-6 py-12">
         <motion.div
           className="w-full max-w-[400px]"
           initial={{ opacity: 0, y: 20 }}
@@ -126,7 +126,7 @@ export function ForgotPassword() {
               <span className="text-[12px] font-medium text-neutral-700">Email</span>
               <div className="relative mt-1.5">
                 <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
-                <input type="email" autoFocus required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nama@email.com" className={inputCls} />
+                <input style={{ paddingLeft: 44, paddingRight: 44 }} type="email" autoFocus required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nama@email.com" className={inputCls} />
                 <AnimatePresence>
                   {valid && (
                     <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className="absolute right-4 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded-full text-white" style={{ background: GOLD }}>
@@ -211,7 +211,7 @@ export function ResetPassword() {
               <span className="text-[12px] font-medium text-neutral-700">Password baru</span>
               <div className="relative mt-1.5">
                 <KeyRound size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
-                <input type={show ? "text" : "password"} autoFocus value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Minimal 8 karakter" className={inputCls} />
+                <input style={{ paddingLeft: 44, paddingRight: 44 }} type={show ? "text" : "password"} autoFocus value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Minimal 8 karakter" className={inputCls} />
                 <button type="button" onClick={() => setShow(!show)} aria-label={show ? "Sembunyikan password" : "Tampilkan password"} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700">
                   {show ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -246,7 +246,7 @@ export function ResetPassword() {
               <span className="text-[12px] font-medium text-neutral-700">Ulangi password</span>
               <div className="relative mt-1.5">
                 <KeyRound size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
-                <input type={show ? "text" : "password"} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Ketik ulang password" className={inputCls} />
+                <input style={{ paddingLeft: 44, paddingRight: 44 }} type={show ? "text" : "password"} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Ketik ulang password" className={inputCls} />
                 {confirm && (
                   <span className={`absolute right-4 top-1/2 -translate-y-1/2 text-[11px] font-medium ${matches ? "" : "text-red-500"}`} style={matches ? { color: GOLD } : undefined}>
                     {matches ? "Cocok" : "Belum cocok"}
