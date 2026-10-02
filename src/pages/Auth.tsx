@@ -9,8 +9,8 @@ import { ACCOUNT_TERMS_VERSION, ACCOUNT_PRIVACY_VERSION } from "@/content/legal/
 
 import { api, authStorage } from "@/lib/api";
 import { homeForRole, takeIntendedPath } from "@/lib/authGuard";
-import loginBg from "@/assets/create-login1.png";
-import logoLivora from "@/assets/logo-livora.png";
+import loginBg from "@/assets/create-login1.webp";
+import logoLivora from "@/assets/logo-livora.webp";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 

@@ -11,7 +11,7 @@ import { Contact } from "@/components/livora/Contact";
 import { Footer } from "@/components/livora/Footer";
 import { useReveal } from "@/hooks/useReveal";
 import { CatalogPreview } from "@/components/livora/CatalogPreview";
-import wallpaper from "@/assets/add.png";
+import wallpaper from "@/assets/add.webp";
 
 const Index = () => {
   useReveal();

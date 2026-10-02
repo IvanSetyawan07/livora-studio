@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-import cloud4 from "@/assets/cloud/cloud4.png";
-import cloud2 from "@/assets/cloud/cloud2.png";
-import cloud3 from "@/assets/cloud/cloud3.png";
-import skyToHouse from "@/assets/hero-update.png";
-import cloud1 from "@/assets/cloud/cloud1.png";
-import cloud5 from "@/assets/cloud/cloud5.png";
-import cloud6 from "@/assets/cloud/cloud6.png";
+import cloud4 from "@/assets/cloud/cloud4.webp";
+import cloud2 from "@/assets/cloud/cloud2.webp";
+import cloud3 from "@/assets/cloud/cloud3.webp";
+import skyToHouse from "@/assets/hero-update.webp";
+import cloud1 from "@/assets/cloud/cloud1.webp";
+import cloud5 from "@/assets/cloud/cloud5.webp";
+import cloud6 from "@/assets/cloud/cloud6.webp";
 
 type CloudItem = {
   id: number;

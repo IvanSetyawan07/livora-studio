@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, KeyRound, Mail, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import loginBg from "@/assets/create-login1.png";
-import logoLivora from "@/assets/logo-livora.png";
+import loginBg from "@/assets/create-login1.webp";
+import logoLivora from "@/assets/logo-livora.webp";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 const GOLD = "#C9974A";
