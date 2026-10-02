@@ -32,19 +32,19 @@ import {
   type PolicyDocument,
 } from "@/content/legal/consultationPolicies";
 
-import hero from "@/assets/appointment/hero-consultation.jpg";
-import helpInspiration from "@/assets/appointment/help-inspiration.jpg";
-import helpProduct from "@/assets/appointment/help-product.jpg";
-import helpRoom from "@/assets/appointment/help-room.jpg";
-import helpFull from "@/assets/appointment/help-full.jpg";
-import stepDesigner from "@/assets/appointment/step-designer.jpg";
-import stepVision from "@/assets/appointment/step-vision.jpg";
-import stepLife from "@/assets/appointment/step-life.jpg";
-import questionsMedia from "@/assets/appointment/questions-video.jpg";
-import meetShowroom from "@/assets/appointment/meet-showroom.jpg";
-import meetVirtual from "@/assets/appointment/meet-virtual.jpg";
-import meetSpace from "@/assets/appointment/meet-space.jpg";
-import formSide from "@/assets/appointment/form-side.jpg";
+import hero from "@/assets/appointment/hero-consultation.webp";
+import helpInspiration from "@/assets/appointment/help-inspiration.webp";
+import helpProduct from "@/assets/appointment/help-product.webp";
+import helpRoom from "@/assets/appointment/help-room.webp";
+import helpFull from "@/assets/appointment/help-full.webp";
+import stepDesigner from "@/assets/appointment/step-designer.webp";
+import stepVision from "@/assets/appointment/step-vision.webp";
+import stepLife from "@/assets/appointment/step-life.webp";
+import questionsMedia from "@/assets/appointment/questions-video.webp";
+import meetShowroom from "@/assets/appointment/meet-showroom.webp";
+import meetVirtual from "@/assets/appointment/meet-virtual.webp";
+import meetSpace from "@/assets/appointment/meet-space.webp";
+import formSide from "@/assets/appointment/form-side.webp";
 
 /* ────────── Design tokens (inline, konsisten Livora) ────────── */
 const BLACK = "#000000";

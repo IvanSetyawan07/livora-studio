@@ -185,4 +185,53 @@ class MetaAdsClient
 
         return $map;
     }
+
+    /**
+     * Detail satu campaign — dipakai eksekutor untuk memastikan campaign milik
+     * ad account Livora dan membaca nilai "before" yang sebenarnya.
+     *
+     * @return array{id: string, name: string, status: string, daily_budget: ?int, lifetime_budget: ?int, account_id: string}
+     */
+    public function campaign(string $campaignId): array
+    {
+        $row = $this->get('/'.$campaignId, ['fields' => 'id,name,status,effective_status,daily_budget,lifetime_budget,account_id']);
+
+        return [
+            'id' => (string) ($row['id'] ?? $campaignId),
+            'name' => (string) ($row['name'] ?? ''),
+            'status' => (string) ($row['status'] ?? ''),
+            'daily_budget' => isset($row['daily_budget']) ? (int) $row['daily_budget'] : null,
+            'lifetime_budget' => isset($row['lifetime_budget']) ? (int) $row['lifetime_budget'] : null,
+            'account_id' => 'act_'.ltrim((string) ($row['account_id'] ?? ''), 'act_'),
+        ];
+    }
+
+    /** Daftar campaign (id, name, status, daily_budget) untuk grounding AI. */
+    public function campaignList(): array
+    {
+        $payload = $this->get('/'.$this->accountId().'/campaigns', [
+            'fields' => 'id,name,status,daily_budget,lifetime_budget',
+            'limit' => 100,
+        ]);
+
+        return $payload['data'] ?? [];
+    }
+
+    /**
+     * WRITE: ubah campaign di Meta (butuh izin ads_management).
+     * Nilai budget dalam satuan minor mata uang akun (IDR: rupiah utuh × 1).
+     *
+     * @param array{status?: string, daily_budget?: int} $fields
+     */
+    public function updateCampaign(string $campaignId, array $fields): void
+    {
+        $response = Http::asForm()->timeout(30)
+            ->post($this->baseUrl().'/'.$campaignId, $fields + ['access_token' => $this->token()]);
+
+        if (! $response->successful() || $response->json('success') === false) {
+            $error = $response->json('error.message');
+
+            throw MarketingApiException::fromHttp('Meta Ads', $response->status(), is_string($error) ? $error : $response->body());
+        }
+    }
 }

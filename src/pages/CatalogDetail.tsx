@@ -7,7 +7,7 @@ import React, { useEffect, useRef, useState, useMemo } from "react";
 import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { X, ChevronLeft, ChevronRight, ArrowUpRight, Download } from "lucide-react";
 import { downloadCatalogPDF, type CatalogPageSize } from "@/components/livora/CatalogPDF";
-import logoLivora from "@/assets/logo-livora.png";
+import logoLivora from "@/assets/logo-livora.webp";
 import { toast } from "sonner";
 import { motion, useScroll, useTransform, easeOut } from "framer-motion";
 import { Navbar } from "@/components/livora/Navbar";

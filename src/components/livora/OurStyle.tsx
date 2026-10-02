@@ -2,11 +2,11 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import european from "@/assets/style-european.jpg";
-import tropical from "@/assets/style-tropical.jpg";
-import industrial from "@/assets/style-industrial.jpg";
-import japandi from "@/assets/style-japandi.jpg";
-import scandinavian from "@/assets/style-scandinavian.jpg";
+import european from "@/assets/style-european.webp";
+import tropical from "@/assets/style-tropical.webp";
+import industrial from "@/assets/style-industrial.webp";
+import japandi from "@/assets/style-japandi.webp";
+import scandinavian from "@/assets/style-scandinavian.webp";
 
 const STYLES = [
   { img: european, words: ["Modern.", "Quiet.", "European."], name: "European" },

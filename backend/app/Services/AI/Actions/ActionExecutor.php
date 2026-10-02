@@ -5,21 +5,17 @@ namespace App\Services\AI\Actions;
 use App\Models\AiRecommendation;
 
 /**
- * Kontrak eksekutor aksi nyata untuk sebuah recommendation.
+ * Kontrak eksekutor aksi untuk sebuah recommendation.
  *
- * Satu implementasi = satu tipe aksi yang benar-benar bisa dijalankan ke
- * sistem/eksternal. Kalau tidak ada implementasi untuk sebuah action_type,
- * approval TIDAK boleh ditandai 'executed' — lihat ActionExecutorRegistry.
+ * Satu implementasi = satu action_type. Eksekutor yang menyentuh platform
+ * nyata (Meta Ads, Facebook Page, email pelanggan, database situs) wajib
+ * mengembalikan ExecutionResult::changed() dengan {before, after}. Yang
+ * hanya menghasilkan checklist mengembalikan ExecutionResult::draft().
+ * Gagal => lempar exception, status TIDAK boleh jadi 'executed'.
  */
 interface ActionExecutor
 {
-    /** action_type yang ditangani eksekutor ini. */
     public function handles(): string;
 
-    /**
-     * Jalankan aksinya. Lempar exception kalau gagal.
-     *
-     * @return string ringkasan hasil eksekusi untuk activity log
-     */
-    public function execute(AiRecommendation $recommendation): string;
+    public function execute(AiRecommendation $recommendation): ExecutionResult;
 }

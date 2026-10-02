@@ -3,13 +3,13 @@ import { Link } from "react-router-dom";
 import { Gem, Leaf, Infinity } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { motion, VariantLabels, Variants } from "framer-motion";
-import accessories from "@/assets/landing-furniture/accecories.png";
-import beds from "@/assets/landing-furniture/bed.png";
-import chairs from "@/assets/landing-furniture/chair.png";
-import sofas from "@/assets/landing-furniture/sofa.png";
-import tables from "@/assets/landing-furniture/table.png";
-import newArrival from "@/assets/landing-furniture/new-arrival.png";
-import furnitureImg from "@/assets/furniture-hompage.png";
+import accessories from "@/assets/landing-furniture/accecories.webp";
+import beds from "@/assets/landing-furniture/bed.webp";
+import chairs from "@/assets/landing-furniture/chair.webp";
+import sofas from "@/assets/landing-furniture/sofa.webp";
+import tables from "@/assets/landing-furniture/table.webp";
+import newArrival from "@/assets/landing-furniture/new-arrival.webp";
+import furnitureImg from "@/assets/furniture-hompage.webp";
 
 const categories = [
   { id: 1, label: "New arrivals", slug: "new-arrivals", image: newArrival },

@@ -9,15 +9,17 @@ class AiRecommendation extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'insight_id', 'title', 'description', 'action_type', 'risk', 'status',
+        protected $fillable = [
+        'insight_id', 'title', 'description', 'action_type', 'target_type', 'target_id', 'risk', 'status',
         'expected_impact', 'confidence', 'agent_key', 'priority', 'why',
         'suggested_action', 'change_from', 'change_to',
     ];
 
     protected $casts = [
         'confidence' => 'integer',
+        'target_id' => 'integer',
     ];
+
 
     public function insight()
     {

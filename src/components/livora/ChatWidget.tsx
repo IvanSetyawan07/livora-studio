@@ -20,6 +20,10 @@ import {
 } from "@/lib/supportChat";
 import { playChatSound, unlockChatSound } from "@/lib/chatSound";
 import { imgUrl } from "@/lib/adminApi";
+import { authStorage } from "@/lib/api";
+import { rememberIntendedPath } from "@/lib/authGuard";
+
+const PENDING_CHAT_KEY = "livora_chat_pending";
 
 /* ────────── Design tokens (konsisten dengan komponen Livora lainnya) ────────── */
 const INK = "#000000";
@@ -112,6 +116,9 @@ export function ChatWidget() {
   const lastInteractionRef = useRef<number>(Date.now());
   const contextRef = useRef<{ item_slug?: string; item_name?: string }>({});
   const navigate = useNavigate();
+  /** null = normal, "login" = perlu masuk dulu, "limit" = batas harian tercapai */
+  const [gate, setGate] = useState<null | "login" | "limit">(null);
+  const [gateMessage, setGateMessage] = useState<string>("");
 
   const { pathname } = useLocation();
   const isLanding = pathname === "/";
@@ -287,9 +294,27 @@ export function ChatWidget() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boot, session]);
 
+  const askLogin = (text: string, ctx?: { item_slug?: string; item_name?: string }) => {
+    sessionStorage.setItem(PENDING_CHAT_KEY, JSON.stringify({ text, ctx: ctx ?? contextRef.current }));
+    setGate("login");
+  };
+
+  const goToAuth = (path: "/login" | "/register") => {
+    rememberIntendedPath();
+    setOpen(false);
+    navigate(path);
+  };
+
   const submit = async (text: string, ctx?: { item_slug?: string; item_name?: string }) => {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
+
+    // Chat dengan AI wajib login — simpan pesan, lanjut otomatis setelah masuk.
+    if (!authStorage.getToken()) {
+      askLogin(trimmed, ctx);
+      return;
+    }
+    setGate(null);
 
     let active = session;
     if (!active) {
@@ -323,7 +348,19 @@ export function ChatWidget() {
       if (data.messages.some((m) => m.sender === "bot" || m.sender === "admin")) {
         playChatSound("incoming");
       }
-    } catch {
+    } catch (error: any) {
+      const status = error?.response?.status;
+      const code = error?.response?.data?.code;
+      if (status === 401 || code === "login_required") {
+        setMessages((prev) => prev.filter((m) => !(m.sender === "user" && m.text === trimmed && m.id > 1e12)));
+        askLogin(trimmed, ctx);
+        return;
+      }
+      if (code === "daily_limit") {
+        setGate("limit");
+        setGateMessage(error.response.data.message);
+        return;
+      }
       setMessages((prev) => [
         ...prev,
         {
@@ -336,6 +373,24 @@ export function ChatWidget() {
       setLoading(false);
     }
   };
+
+  /* Setelah login: buka chat lagi & kirim pesan yang tertunda */
+  useEffect(() => {
+    if (isHidden) return;
+    const raw = sessionStorage.getItem(PENDING_CHAT_KEY);
+    if (!raw || !authStorage.getToken()) return;
+    sessionStorage.removeItem(PENDING_CHAT_KEY);
+    try {
+      const pending = JSON.parse(raw) as { text: string; ctx?: { item_slug?: string; item_name?: string } };
+      setVisible(true);
+      setOpen(true);
+      setGate(null);
+      setTimeout(() => submit(pending.text, pending.ctx), 400);
+    } catch {
+      /* ignore */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, isHidden]);
 
   const handleSend = async () => {
     const text = input;
@@ -644,6 +699,45 @@ export function ChatWidget() {
                     </div>
                   </div>
                 ),
+              )}
+
+              {gate && (
+                <div
+                  className="rounded-2xl border p-4 text-sm"
+                  style={{ borderColor: "rgba(201,151,74,0.35)", backgroundColor: "rgba(201,151,74,0.06)", color: INK }}
+                >
+                  {gate === "login" ? (
+                    <>
+                      <p className="serif text-base">Masuk untuk lanjut chat</p>
+                      <p className="mt-1 text-xs font-light leading-relaxed opacity-70">
+                        Pesan Anda sudah kami simpan dan akan langsung terkirim setelah Anda masuk. Gratis, bisa pakai akun Google.
+                      </p>
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => goToAuth("/login")}
+                          className="flex-1 h-9 rounded-full text-xs font-medium"
+                          style={{ backgroundColor: GOLD, color: PAPER }}
+                        >
+                          Masuk
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => goToAuth("/register")}
+                          className="flex-1 h-9 rounded-full border text-xs font-medium"
+                          style={{ borderColor: GOLD, color: GOLD }}
+                        >
+                          Daftar
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="serif text-base">Batas chat hari ini tercapai</p>
+                      <p className="mt-1 text-xs font-light leading-relaxed opacity-70">{gateMessage}</p>
+                    </>
+                  )}
+                </div>
               )}
 
               {loading && (

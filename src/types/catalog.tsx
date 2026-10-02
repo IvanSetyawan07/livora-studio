@@ -1,4 +1,4 @@
-import livingRoom from "@/assets/catalo-livinroom.png";
+import livingRoom from "@/assets/catalo-livinroom.webp";
 export type CatalogCategory =
   | "living-rooms"
   | "dining-rooms"

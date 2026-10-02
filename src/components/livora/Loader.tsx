@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import logoLivora from "@/assets/logo-livora.png";
+import logoLivora from "@/assets/logo-livora.webp";
 interface LoaderProps {
   onDone?: () => void;
 }

@@ -18,6 +18,8 @@ export type PolicySection = {
 export type PolicyDocument = {
   modalTitle: string;
   title: string;
+  /** ISO date (YYYY-MM-DD). Jika kosong, memakai POLICY_LAST_UPDATED. */
+  lastUpdated?: string;
   intro: string[];
   sections: PolicySection[];
 };

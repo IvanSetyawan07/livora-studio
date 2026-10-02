@@ -1,7 +1,7 @@
-import decorative from "@/assets/scope-deocrative.png";
-import furniture from "@/assets/scope-furniture.jpg";
-import contractor from "@/assets/scope-contractor.jpg";
-import materials from "@/assets/scope-materials.jpg";
+import decorative from "@/assets/scope-deocrative.webp";
+import furniture from "@/assets/scope-furniture.webp";
+import contractor from "@/assets/scope-contractor.webp";
+import materials from "@/assets/scope-materials.webp";
 
 export interface ScopeItem {
   number: string;

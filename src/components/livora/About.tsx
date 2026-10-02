@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import aboutImg from "@/assets/about-livora.jpg";
+import aboutImg from "@/assets/about-livora.webp";
 import { SectionHeader } from "./SectionHeader";
 
 export const About = () => {

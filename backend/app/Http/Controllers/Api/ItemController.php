@@ -15,7 +15,18 @@ class ItemController extends Controller
         if ($t = $r->query('theme'))      $q->whereHas('themes', fn($x) => $x->where('slug',$t));
         if ($t = $r->query('category'))   $q->whereHas('categories', fn($x) => $x->where('slug',$t));
         if ($t = $r->query('collection')) $q->whereHas('collection', fn($x) => $x->where('slug',$t));
-        return $q->orderByDesc('id')->get();
+        $items = $q->orderByDesc('id')->get();
+        if (!$this->isStaff()) $items->each->makeHidden(self::INTERNAL_FIELDS);
+        return $items;
+    }
+
+    /** Field internal yang tidak boleh terlihat pengunjung publik. */
+    private const INTERNAL_FIELDS = ['stock', 'warehouse_note'];
+
+    private function isStaff(): bool
+    {
+        $u = auth('sanctum')->user();
+        return $u && in_array($u->role, ['admin', 'sales'], true);
     }
 
     public function show($slug)
@@ -25,6 +36,7 @@ class ItemController extends Controller
             'variants.gallery','gallery','lifestyle',
             'story.cards',
         ])->where('slug',$slug)->firstOrFail();
+        if (!$this->isStaff()) $item->makeHidden(self::INTERNAL_FIELDS);
 
         $related = [];
         if ($item->collection_id) {
@@ -118,6 +130,8 @@ class ItemController extends Controller
             'height_cm' => 'nullable|numeric|min:0',
             'material_detail' => 'nullable|string',
             'warehouse_note' => 'nullable|string',
+            'meta_title' => 'nullable|string|max:70',
+            'meta_description' => 'nullable|string|max:180',
         ]);
     }
 

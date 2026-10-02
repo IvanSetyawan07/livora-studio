@@ -16,8 +16,10 @@ use App\Http\Controllers\MetaAdsOAuthCallbackController;
 */
 
 Route::get('/storage/{path}', function ($path) {
-    $fullPath = storage_path('app/public/' . $path);
-    if (!file_exists($fullPath)) {
+    // Cegah path traversal (../) — hanya file di dalam storage/app/public.
+    $base = realpath(storage_path('app/public'));
+    $fullPath = realpath(storage_path('app/public/' . $path));
+    if ($base === false || $fullPath === false || !str_starts_with($fullPath, $base . DIRECTORY_SEPARATOR) || !is_file($fullPath)) {
         abort(404);
     }
     return response()->file($fullPath, [

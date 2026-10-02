@@ -22,13 +22,16 @@ class AuthController extends Controller
         return response()->json(['exists' => $exists]);
     }
 
-    public function register(Request $request)
+        public function register(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required',
             'email' => 'required|email|unique:users',
             'phone' => 'nullable|string|max:32',
-            'password' => 'required|min:6'
+            'password' => 'required|min:8',
+            'terms_accepted'  => 'accepted',
+            'terms_version'   => 'required|string|max:20',
+            'privacy_version' => 'required|string|max:20',
         ]);
 
         $user = \App\Models\User::create([
@@ -37,6 +40,9 @@ class AuthController extends Controller
             'phone' => $validated['phone'] ?? null,
             'password' => $validated['password'], // auto-hash via $casts
             'role' => 'user',
+            'terms_accepted_at' => now(),
+            'terms_version'     => $validated['terms_version'],
+            'privacy_version'   => $validated['privacy_version'],
         ]);
 
         UserActivity::log($user->id, 'register', $request);
@@ -48,6 +54,62 @@ class AuthController extends Controller
             'token' => $token,
             'user' => $user
         ]);
+    }
+
+    /**
+     * Kirim tautan reset password. Respons selalu sama (tidak membocorkan
+     * apakah email terdaftar). Token disimpan ter-hash, berlaku 60 menit.
+     */
+    public function forgotPassword(Request $request)
+    {
+        $data = $request->validate(['email' => 'required|email|max:255']);
+        $user = \App\Models\User::where('email', $data['email'])->first();
+
+        if ($user) {
+            $token = Str::random(64);
+            \Illuminate\Support\Facades\DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $user->email],
+                ['token' => Hash::make($token), 'created_at' => now()]
+            );
+            $link = rtrim(config('app.frontend_url'), '/').'/reset-password?token='.$token.'&email='.urlencode($user->email);
+            try {
+                \Illuminate\Support\Facades\Mail::raw(
+                    "Halo {$user->name},\n\nKami menerima permintaan untuk mengatur ulang password akun Livora Anda.\n\nBuat password baru melalui tautan berikut (berlaku 60 menit):\n{$link}\n\nJika Anda tidak meminta ini, abaikan email ini — password Anda tetap aman.\n\nSalam,\nLIVORA",
+                    fn ($m) => $m->to($user->email)->subject('Atur ulang password akun Livora')
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Forgot password mail failed: '.$e->getMessage());
+            }
+        }
+
+        return response()->json(['message' => 'Jika email terdaftar, tautan reset telah dikirim.']);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $data = $request->validate([
+            'email' => 'required|email',
+            'token' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $row = \Illuminate\Support\Facades\DB::table('password_reset_tokens')->where('email', $data['email'])->first();
+        $valid = $row && Hash::check($data['token'], $row->token)
+            && now()->diffInMinutes(\Illuminate\Support\Carbon::parse($row->created_at)) <= 60;
+
+        if (!$valid) {
+            return response()->json(['message' => 'Tautan reset tidak valid atau sudah kedaluwarsa. Silakan minta tautan baru.'], 422);
+        }
+
+        $user = \App\Models\User::where('email', $data['email'])->firstOrFail();
+        $user->password = Hash::make($data['password']);
+        $user->save();
+        $user->tokens()->delete(); // keluarkan semua sesi lama
+        try { app(\App\Services\Auth\AdminTwoFactor::class)->revokeAll($user); } catch (\Throwable $e) {}
+        \Illuminate\Support\Facades\DB::table('password_reset_tokens')->where('email', $data['email'])->delete();
+        UserActivity::log($user->id, 'password_reset', $request);
+
+        return response()->json(['message' => 'Password berhasil diperbarui. Silakan masuk.']);
     }
 
     public function login(Request $request)
@@ -64,6 +126,16 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
+
+        $twoFactor = app(\App\Services\Auth\AdminTwoFactor::class);
+        if ($twoFactor->required($user, $request->input('device_token'))) {
+            try {
+                return response()->json($twoFactor->start($user, ['provider' => null]));
+            } catch (\RuntimeException $e) {
+                return response()->json(['message' => $e->getMessage()], 503);
+            }
+        }
+
         $user->login_count = (int) ($user->login_count ?? 0) + 1;
         $user->last_login_at = now();
         $user->last_ip = $request->ip();
@@ -131,7 +203,7 @@ public function changePassword(Request $request)
 
     $data = $request->validate([
         'current_password' => 'required|string',
-        'new_password'      => 'required|string|min:6|confirmed',
+        'new_password'      => 'required|string|min:8|confirmed',
     ]);
 
     if (!\Illuminate\Support\Facades\Hash::check($data['current_password'], $user->password)) {
@@ -178,7 +250,12 @@ public function changePassword(Request $request)
             'name'        => 'nullable|string',
             'provider_id' => 'nullable|string',
             'avatar_url'  => 'nullable|string',
+            'terms_accepted'  => 'nullable|boolean',
+            'terms_version'   => 'nullable|string|max:20',
+            'privacy_version' => 'nullable|string|max:20',
         ]);
+
+        // TODO: verify $data['id_token']
 
         // TODO: verify $data['id_token'] with the provider's public keys.
         // Until credentials are configured, accept the trusted-payload shape
@@ -193,7 +270,7 @@ public function changePassword(Request $request)
         'client_id' => config('services.google.client_id'),
     ]);
 
-    $client = new Google_Client(['client_id' => config('services.google.client_id')]);
+    $client = app()->makeWith(Google_Client::class, ['config' => ['client_id' => config('services.google.client_id')]]);
 
     try {
         $payload = $client->verifyIdToken($data['id_token']);
@@ -226,6 +303,16 @@ public function changePassword(Request $request)
 
         $user = \App\Models\User::where('email', $email)->first();
         if (!$user) {
+            // Akun baru lewat OAuth wajib menyetujui Terms & Privacy.
+            // Frontend akan menampilkan konfirmasi lalu mengirim ulang dengan terms_accepted=true.
+            if (empty($data['terms_accepted']) || empty($data['terms_version']) || empty($data['privacy_version'])) {
+                return response()->json([
+                    'code'    => 'terms_required',
+                    'message' => 'Untuk membuat akun baru, setujui Terms of Service dan Privacy Policy terlebih dahulu.',
+                    'email'   => $email,
+                ], 422);
+            }
+
             $user = \App\Models\User::create([
                 'name'        => $data['name'] ?? Str::before($email, '@'),
                 'email'       => $email,
@@ -234,11 +321,24 @@ public function changePassword(Request $request)
                 'provider'    => $provider,
                 'provider_id' => $data['provider_id'] ?? null,
                 'avatar_url'  => $data['avatar_url'] ?? null,
+                'terms_accepted_at' => now(),
+                'terms_version'     => $data['terms_version'],
+                'privacy_version'   => $data['privacy_version'],
             ]);
         } else {
             $user->provider    = $user->provider ?? $provider;
             $user->provider_id = $user->provider_id ?? ($data['provider_id'] ?? null);
             if (!empty($data['avatar_url'])) $user->avatar_url = $data['avatar_url'];
+        }
+
+        $twoFactor = app(\App\Services\Auth\AdminTwoFactor::class);
+        if ($twoFactor->required($user, $request->input('device_token'))) {
+            $user->save();
+            try {
+                return response()->json($twoFactor->start($user, ['provider' => $provider]));
+            } catch (\RuntimeException $e) {
+                return response()->json(['message' => $e->getMessage()], 503);
+            }
         }
 
         $user->login_count   = (int) ($user->login_count ?? 0) + 1;
@@ -255,5 +355,75 @@ public function changePassword(Request $request)
             'token'   => $token,
             'user'    => $user,
         ]);
+    }
+
+    /** POST /login/2fa — verifikasi kode admin lalu terbitkan token. */
+    public function verifyTwoFactor(Request $request, \App\Services\Auth\AdminTwoFactor $twoFactor)
+    {
+        $data = $request->validate([
+            'challenge' => 'required|string|max:100',
+            'code'      => 'required|string|size:6',
+            'remember'  => 'nullable|boolean',
+        ]);
+
+        $result = $twoFactor->verify($data['challenge'], $data['code']);
+        if (!$result['ok']) {
+            $messages = [
+                'expired' => 'Kode sudah kedaluwarsa. Silakan masuk ulang.',
+                'locked'  => 'Terlalu banyak percobaan salah. Silakan masuk ulang.',
+                'invalid' => 'Kode salah. Sisa percobaan: '.($result['remaining'] ?? 0).'.',
+            ];
+            return response()->json([
+                'code'    => $result['error'],
+                'message' => $messages[$result['error']] ?? 'Verifikasi gagal.',
+            ], 422);
+        }
+
+        $user = $result['user'];
+        $provider = $result['context']['provider'] ?? null;
+
+        $user->login_count = (int) ($user->login_count ?? 0) + 1;
+        $user->last_login_at = now();
+        $user->last_ip = $request->ip();
+        $user->save();
+
+        UserActivity::log($user->id, 'login', $request, array_filter(['provider' => $provider, 'two_factor' => 'email']));
+
+        $deviceToken = null;
+        if (!empty($data['remember'])) {
+            try {
+                $deviceToken = $twoFactor->trustDevice($user, $request);
+            } catch (\Throwable $e) {
+                $deviceToken = null;
+            }
+        }
+
+        return response()->json([
+            'message'      => 'Login berhasil',
+            'token'        => $user->createToken('auth_token')->plainTextToken,
+            'user'         => $user,
+            'device_token' => $deviceToken,
+        ]);
+    }
+
+    /** POST /login/2fa/resend */
+    public function resendTwoFactor(Request $request, \App\Services\Auth\AdminTwoFactor $twoFactor)
+    {
+        $data = $request->validate(['challenge' => 'required|string|max:100']);
+
+        try {
+            $result = $twoFactor->resend($data['challenge']);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 503);
+        }
+
+        if ($result === null) {
+            return response()->json(['code' => 'expired', 'message' => 'Sesi verifikasi berakhir. Silakan masuk ulang.'], 422);
+        }
+        if (!empty($result['cooldown'])) {
+            return response()->json(['message' => 'Tunggu sebentar sebelum meminta kode baru.'], 429);
+        }
+
+        return response()->json(['message' => 'Kode baru telah dikirim.', 'email_masked' => $result['email_masked']]);
     }
 }

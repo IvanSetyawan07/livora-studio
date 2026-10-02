@@ -1,10 +1,10 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
-import styleEuropean from "@/assets/style-european.jpg";
-import styleJapandi from "@/assets/style-japandi.jpg";
-import styleScandinavian from "@/assets/style-scandinavian.jpg";
-import styleIndustrial from "@/assets/style-industrial.jpg";
-import styleTropical from "@/assets/style-tropical.jpg";
+import styleEuropean from "@/assets/style-european.webp";
+import styleJapandi from "@/assets/style-japandi.webp";
+import styleScandinavian from "@/assets/style-scandinavian.webp";
+import styleIndustrial from "@/assets/style-industrial.webp";
+import styleTropical from "@/assets/style-tropical.webp";
 
 type Slide = {
   key: string;

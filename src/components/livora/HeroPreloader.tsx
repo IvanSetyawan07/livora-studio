@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import logoLivora from "@/assets/logo-livora.png";
+import logoLivora from "@/assets/logo-livora.webp";
 
 /**
  * Global Hero Preloader

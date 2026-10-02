@@ -38,6 +38,9 @@ class User extends Authenticatable
         'login_count',
         'last_login_at',
         'last_ip',
+        'terms_accepted_at',
+        'terms_version',
+        'privacy_version',
     ];
 
     /**
@@ -59,6 +62,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'last_seen_at' => 'datetime',
         'last_login_at' => 'datetime',
+        'terms_accepted_at' => 'datetime',
         'password' => 'hashed',
     ];
     

@@ -74,7 +74,12 @@ class ActionController extends Controller
         }
 
         try {
-            $summary = $this->executors->execute($recommendation);
+            $result = $this->executors->execute($recommendation);
+        } catch (\App\Services\AI\Actions\ActionNotExecutableException|\App\Services\AI\Actions\ActionTargetChangedException $e) {
+            // Belum bisa dijalankan (kredensial/target kurang) — keputusan tetap approved, bukan failed.
+            $action->update(['status' => 'approved', 'decided_by' => auth()->user()->name ?? 'You', 'decided_at' => now()]);
+
+            return response()->json(['message' => $e->getMessage(), 'status' => 'approved', 'executed' => false], 422);
         } catch (Throwable $e) {
             Log::error('AI action execution failed', [
                 'approval_id' => $action->id,
@@ -94,7 +99,7 @@ class ActionController extends Controller
             ], 422);
         }
 
-        DB::transaction(function () use ($action, $recommendation, $summary) {
+        DB::transaction(function () use ($action, $recommendation, $result) {
             $action->update([
                 'status' => 'executed',
                 'decided_by' => auth()->user()->name ?? 'You',
@@ -106,13 +111,18 @@ class ActionController extends Controller
             AiActivityLog::create([
                 'actor' => auth()->user()->name ?? 'Admin',
                 'agent_key' => $action->agent_key,
-                'message' => $summary,
-                'kind' => 'execution',
+                'message' => $result->summary,
+                'payload' => $result->payload,
+                'kind' => $result->wroteToDatabase ? 'execution' : 'draft',
                 'recommendation_id' => $recommendation->id,
             ]);
         });
 
-        return new AiApprovalResource($action->fresh());
+        return (new AiApprovalResource($action->fresh()))->additional([
+            'executed' => true,
+            'changed_platform' => $result->wroteToDatabase,
+            'summary' => $result->summary,
+        ]);
     }
 
     /** pending|approved -> rejected. */
