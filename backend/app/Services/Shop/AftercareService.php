@@ -97,7 +97,7 @@ class AftercareService
     {
         if (!$order->paid_at) $this->fail('Pesanan belum dibayar. Batalkan langsung tanpa pengembalian dana.');
         if ($order->hasMto() && $order->production_started_at) $this->fail('Sesuai syarat yang disetujui, pesanan custom tidak bisa dibatalkan atau dikembalikan dananya setelah produksi dimulai.');
-        if (in_array($order->status, ['dikirim', 'diterima', 'selesai'], true) && !$user?->role === 'admin') $this->fail('Pesanan yang sudah dikirim diproses lewat klaim.');
+        if (in_array($order->status, ['dikirim', 'diterima', 'selesai'], true) && $user?->role !== 'admin') $this->fail('Pesanan yang sudah dikirim diproses lewat klaim.');
         if (DB::table('shop_refunds')->where('order_id', $order->id)->whereIn('status', ['diajukan', 'disetujui', 'dikirim'])->exists()) $this->fail('Pengajuan pengembalian dana sudah ada.');
 
         $paid = (int) $order->payments()->where('status', 'paid')->sum('amount');
