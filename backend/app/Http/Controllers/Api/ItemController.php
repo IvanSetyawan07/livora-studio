@@ -21,7 +21,7 @@ class ItemController extends Controller
     }
 
     /** Field internal yang tidak boleh terlihat pengunjung publik. */
-    private const INTERNAL_FIELDS = ['stock', 'warehouse_note'];
+    private const INTERNAL_FIELDS = ['stock', 'warehouse_note', 'price', 'discount_type', 'discount_value'];
 
     private function isStaff(): bool
     {
