@@ -30,6 +30,9 @@ import {
   Menu,
   X,
   Home,
+  ShoppingBag,
+  Wallet,
+  Database,
 } from "lucide-react";
 
 const nav = [
@@ -44,6 +47,9 @@ const nav = [
   { to: "/admin/banners", key: "banners", icon: ImageIcon },
   { to: "/admin/users", key: "users", icon: Users },
   { to: "/admin/consultations", key: "consultations", icon: MessageCircle },
+  { to: "/admin/shop/orders", key: "shopOrders", label: "Pesanan", icon: ShoppingBag },
+  { to: "/admin/shop/payments", key: "shopPayments", label: "Verifikasi bayar", icon: Wallet },
+  { to: "/admin/shop/database", key: "shopDatabase", label: "Database toko", icon: Database },
   { to: "/admin/wishlists", key: "wishlists", icon: Bookmark },
   { to: "/admin/support", key: "support", icon: MessageCircle },
   { to: "/admin/analytics", key: "analytics", icon: BarChart3 },
@@ -154,7 +160,7 @@ export default function AdminLayout() {
             }
           >
             <n.icon className="w-4 h-4 shrink-0" />
-            {t(`admin.nav.${n.key}`)}
+            {t(`admin.nav.${n.key}`, { defaultValue: (n as { label?: string }).label ?? n.key })}
           </NavLink>
         ))}
       </nav>

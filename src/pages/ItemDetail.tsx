@@ -1,3 +1,4 @@
+import AddToCartButton from "@/components/shop/AddToCartButton";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronRight, ChevronDown, ImageIcon, MessageCircle, QrCode, Info } from "lucide-react";
@@ -346,6 +347,8 @@ const ItemDetail = () => {
                 </div>
               </div>
             )}
+
+            <AddToCartButton itemId={item.apiId} variantId={activeVariantId} hasVariants={!!item.variants?.length} variantName={activeVariant?.variant_name} />
 
             <div className="h-px w-full bg-[#1A1A1A]/10" style={{ margin: "28px 0" }} />
 

@@ -1,3 +1,4 @@
+import OrdersTab from "@/components/shop/OrdersTab";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, authStorage } from "@/lib/api";
@@ -26,16 +27,18 @@ type User = { id: number; name: string; email: string; phone?: string | null; ad
 const TABS = [
   { key: "profile", label: "Edit Profile", icon: UserIcon },
   { key: "consultations", label: "My Consultations", icon: ClipboardList },
+  { key: "orders", label: "My Orders", icon: ClipboardList },
   { key: "wishlist", label: "Saved", icon: Bookmark },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
 
 // URL <-> tab mapping: /profile, /profile/consultations, /profile/saved
-const PATH_TO_TAB: Record<string, TabKey> = { consultations: "consultations", saved: "wishlist" };
+const PATH_TO_TAB: Record<string, TabKey> = { consultations: "consultations", orders: "orders", saved: "wishlist" };
 const TAB_TO_PATH: Record<TabKey, string> = {
   profile: "/profile",
   consultations: "/profile/consultations",
+  orders: "/profile/orders",
   wishlist: "/profile/saved",
 };
 
@@ -137,6 +140,7 @@ export default function Profile() {
           <ProfileTab user={user} onUpdated={setUser} />
         )}
         {activeTab === "consultations" && <ConsultationsTab />}
+        {activeTab === "orders" && <OrdersTab />}
         {activeTab === "wishlist" && <WishlistTab />}
       </div>
     </div>
