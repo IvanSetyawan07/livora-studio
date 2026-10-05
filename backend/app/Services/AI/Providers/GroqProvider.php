@@ -45,7 +45,7 @@ class GroqProvider implements AIProviderContract
                     ['role' => 'system', 'content' => $systemPrompt],
                     ['role' => 'user', 'content' => $userMessage],
                 ],
-                'max_tokens' => $options['max_tokens'] ?? 1024,
+                'max_tokens' => $options['max_tokens'] ?? 4096,
                 'temperature' => $options['temperature'] ?? 0.4,
             ]);
 

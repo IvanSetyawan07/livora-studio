@@ -394,3 +394,74 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::get('/leads/funnel', [LeadsController::class, 'funnel']);
     });
 });
+Route::get('/debug-mail-test', function (\Illuminate\Http\Request $request) {
+    $to = $request->query('to');
+    if (!$to) {
+        return response()->json(['status' => 'failed', 'error' => 'Tambahkan ?to=emailkamu@gmail.com di URL'], 400);
+    }
+    try {
+        \Illuminate\Support\Facades\Mail::raw(
+            'Ini email test dari Livora Studio, dikirim ' . now(),
+            function ($message) use ($to) {
+                $message->to($to)->subject('Test Mail Livora - ' . now()->format('H:i:s'));
+            }
+        );
+        return response()->json(['status' => 'success', 'message' => 'Email terkirim ke ' . $to]);
+    } catch (\Throwable $e) {
+        return response()->json(['status' => 'failed', 'error' => $e->getMessage()], 500);
+    }
+});
+
+// Lupa & reset password
+Route::post('/forgot-password', [\App\Http\Controllers\Api\PasswordResetController::class, 'forgot'])
+    ->middleware('throttle:5,1');
+Route::post('/reset-password', [\App\Http\Controllers\Api\PasswordResetController::class, 'reset'])
+    ->middleware('throttle:10,1');
+
+// ── Sistem pesanan furnitur ──
+Route::post('/webhooks/midtrans', [\App\Http\Controllers\Api\Shop\WebhookController::class, 'midtrans']);
+Route::get('/webhooks/whatsapp', [\App\Http\Controllers\Api\Shop\WebhookController::class, 'whatsappVerify']);
+Route::post('/webhooks/whatsapp', [\App\Http\Controllers\Api\Shop\WebhookController::class, 'whatsappIncoming']);
+Route::get('/order-form/{code}', [\App\Http\Controllers\Api\Shop\OrderFormController::class, 'show'])->middleware('throttle:30,1');
+Route::post('/order-form/{code}', [\App\Http\Controllers\Api\Shop\OrderFormController::class, 'submit'])->middleware('throttle:10,1');
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/cart', [\App\Http\Controllers\Api\Shop\CartController::class, 'index']);
+    Route::get('/cart/count', [\App\Http\Controllers\Api\Shop\CartController::class, 'count']);
+    Route::post('/cart', [\App\Http\Controllers\Api\Shop\CartController::class, 'store'])->middleware('throttle:60,1');
+    Route::patch('/cart/{cartItem}', [\App\Http\Controllers\Api\Shop\CartController::class, 'update']);
+    Route::delete('/cart/{cartItem}', [\App\Http\Controllers\Api\Shop\CartController::class, 'destroy']);
+    Route::get('/orders', [\App\Http\Controllers\Api\Shop\OrderController::class, 'index']);
+    Route::post('/orders', [\App\Http\Controllers\Api\Shop\OrderController::class, 'store'])->middleware('throttle:10,1');
+    Route::get('/orders/{code}', [\App\Http\Controllers\Api\Shop\OrderController::class, 'show']);
+    Route::get('/orders/{code}/wa-link', [\App\Http\Controllers\Api\Shop\OrderController::class, 'waLink']);
+    Route::post('/orders/{code}/approve-quote', [\App\Http\Controllers\Api\Shop\OrderController::class, 'approveQuote']);
+    Route::post('/orders/{code}/cancel', [\App\Http\Controllers\Api\Shop\OrderController::class, 'cancel']);
+    Route::post('/orders/{code}/qris', [\App\Http\Controllers\Api\Shop\OrderController::class, 'qris'])->middleware('throttle:10,1');
+    Route::post('/orders/{code}/payment-proof', [\App\Http\Controllers\Api\Shop\OrderController::class, 'uploadProof'])->middleware('throttle:10,1');
+    Route::get('/orders/{code}/documents/{document}', [\App\Http\Controllers\Api\Shop\OrderController::class, 'document']);
+
+    Route::prefix('admin/shop')->middleware('admin')->group(function () {
+        $c = \App\Http\Controllers\Api\Admin\ShopOrderController::class;
+        Route::get('/summary', [$c, 'summary']);
+        Route::get('/orders', [$c, 'index']);
+        Route::get('/orders/{code}', [$c, 'show']);
+        Route::get('/documents/find', [$c, 'findDocument']);
+        Route::get('/documents/{document}', [$c, 'document'])->middleware('admin_role:finance,cs');
+        Route::get('/items', [$c, 'itemSearch']);
+        Route::post('/orders/{code}/wa-connected', [$c, 'markWaConnected'])->middleware('admin_role:cs');
+        Route::post('/orders/{code}/send-form', [$c, 'sendForm'])->middleware('admin_role:cs');
+        Route::post('/orders/{code}/quote-preview', [$c, 'previewQuote'])->middleware('admin_role:cs,finance');
+        Route::post('/orders/{code}/quote', [$c, 'sendQuote'])->middleware('admin_role:cs,finance');
+        Route::post('/orders/{code}/advance', [$c, 'advance'])->middleware('admin_role:production');
+        Route::post('/orders/{code}/cancel', [$c, 'cancel'])->middleware('admin_role:cs');
+        Route::post('/orders', [$c, 'storeManual'])->middleware('admin_role:cs');
+        Route::get('/proofs', [$c, 'proofQueue'])->middleware('admin_role:finance');
+        Route::get('/proofs/{proof}/file', [$c, 'proofFile'])->middleware('admin_role:finance');
+        Route::post('/proofs/{proof}/review', [$c, 'reviewProof'])->middleware('admin_role:finance');
+        Route::get('/admins', [$c, 'admins']);
+        Route::post('/admins/{user}/role', [$c, 'setRole'])->middleware('admin_role:owner');
+        Route::get('/audit', [$c, 'audit'])->middleware('admin_role:owner');
+        Route::get('/database/{grid}', [\App\Http\Controllers\Api\Admin\ShopDatabaseController::class, 'grid'])->middleware('admin_role:finance,cs');
+    });
+});

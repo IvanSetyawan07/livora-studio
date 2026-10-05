@@ -25,7 +25,12 @@ return [
     '#^https://[a-z0-9-]+\.lovable\.app$#',
 ],
 
-    'allowed_headers' => ['*'],
+    'allowed_headers' => [
+    'Content-Type',
+    'X-Requested-With',
+    'Authorization',
+    'X-Locale', // tambahkan ini
+],
 
     'exposed_headers' => [],
 

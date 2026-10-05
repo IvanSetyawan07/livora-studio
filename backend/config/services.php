@@ -148,4 +148,34 @@ return [
         'daily_ai_limit' => (int) env('SUPPORT_CHAT_DAILY_AI_LIMIT', 50),
     ],
 
+    // Sistem pesanan furnitur (Keranjang -> Pesanan Saya). Isi nilai asli di .env.
+    'shop' => [
+        'company_name' => env('SHOP_COMPANY_NAME', 'PT. Langgeng Cipta Ruang'),
+        'company_address' => env('SHOP_COMPANY_ADDRESS', 'Jl. Ciputat Raya No.5, RT.9/RW.8, Kby. Lama Utara, Jakarta'),
+        'company_npwp' => env('SHOP_COMPANY_NPWP'),
+        'company_phone' => env('SHOP_COMPANY_PHONE'),
+        'bank_name' => env('SHOP_BANK_NAME', 'BCA'),
+        'bank_account' => env('SHOP_BANK_ACCOUNT'),
+        'bank_holder' => env('SHOP_BANK_HOLDER'),
+        'whatsapp_number' => env('SHOP_WHATSAPP_NUMBER', '628212043307'),
+        'doc_division' => env('SHOP_DOC_DIVISION', 'LF'),
+        'doc_admin_initials' => env('SHOP_DOC_ADMIN_INITIALS', 'AH'),
+        'ppn_rate' => (float) env('SHOP_PPN_RATE', 0.11),
+        'quote_valid_days' => (int) env('SHOP_QUOTE_VALID_DAYS', 3),
+        'review_threshold' => (int) env('SHOP_REVIEW_THRESHOLD', 50000000),
+        'qris_max_amount' => (int) env('SHOP_QRIS_MAX_AMOUNT', 10000000),
+        'order_expire_days' => (int) env('SHOP_ORDER_EXPIRE_DAYS', 14),
+        'max_items_per_order' => 10,
+    ],
+
+    'midtrans' => [
+        'server_key' => env('MIDTRANS_SERVER_KEY'),
+        'is_production' => (bool) env('MIDTRANS_IS_PRODUCTION', false),
+    ],
+
+    'meta_whatsapp_webhook' => [
+        'verify_token' => env('META_WHATSAPP_VERIFY_TOKEN'),
+        'app_secret' => env('META_WHATSAPP_APP_SECRET'),
+    ],
+
 ];

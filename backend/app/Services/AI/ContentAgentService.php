@@ -86,7 +86,7 @@ class ContentAgentService extends BaseAgentService
             ->where('item_clicks.target_type', 'item')
             ->whereBetween('item_clicks.clicked_at', [$from, $to])
             ->selectRaw('items.title as name, COUNT(*) as clicks')
-->groupBy('items.title')->orderByDesc('clicks')->limit(15)->get()
+            ->groupBy('items.title')->orderByDesc('clicks')->limit(15)->get()
             ->map(fn ($r) => ['name' => $r->name, 'clicks' => (int) $r->clicks])->all();
 
         $topProjects = DB::table('item_clicks')

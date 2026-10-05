@@ -39,4 +39,5 @@ backend/bootstrap/cache/*.php
 # PHP
 vendor/
 client_secret.json
+.env
 assets-backup/

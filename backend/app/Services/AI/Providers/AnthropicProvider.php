@@ -45,7 +45,7 @@ class AnthropicProvider implements AIProviderContract
             ->post("{$this->baseUrl}/messages", [
                 'model' => $this->modelName,
                 'system' => $systemPrompt,
-                'max_tokens' => $options['max_tokens'] ?? 1024,
+                'max_tokens' => $options['max_tokens'] ?? 4096,
                 'messages' => [
                     ['role' => 'user', 'content' => $userMessage],
                 ],
