@@ -9,6 +9,7 @@ import {
   ORDER_STEPS, approveQuote, cancelOrder, downloadPrivate, getOrder, getWaLink, rupiah, startQris, stepIndex, uploadPaymentProof, type ShopOrder,
 } from "@/lib/shop";
 import StatusBadge from "@/components/shop/StatusBadge";
+import { useConfirm } from "@/components/shop/useConfirm";
 
 export default function MyOrderDetail() {
   const { code = "" } = useParams();
@@ -18,6 +19,7 @@ export default function MyOrderDetail() {
   const [busy, setBusy] = useState<string | null>(null);
   const [qr, setQr] = useState<{ qr_url: string | null; amount: number; expires_at: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const confirm = useConfirm();
 
   const load = useCallback(() => getOrder(code).then(setOrder).catch(() => setMissing(true)), [code]);
 
@@ -192,12 +194,13 @@ export default function MyOrderDetail() {
               </section>
             )}
             {["menunggu_wa", "wa_terhubung", "menunggu_data", "data_lengkap", "menunggu_review_admin", "penawaran"].includes(order.status) && (
-              <button type="button" disabled={!!busy} onClick={() => { if (confirm("Batalkan pesanan ini?")) run("cancel", () => cancelOrder(order.code), "Pesanan dibatalkan"); }}
+              <button type="button" disabled={!!busy} onClick={async () => { if (await confirm.ask({ title: "Batalkan pesanan ini?", text: "Stok yang ditahan akan dilepas. Anda bisa memesan lagi dari keranjang.", confirmLabel: "Batalkan pesanan", danger: true })) run("cancel", () => cancelOrder(order.code), "Pesanan dibatalkan"); }}
                 className="w-full text-center text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground">Batalkan pesanan</button>
             )}
           </aside>
         </div>
       </div>
+      {confirm.node}
       <style>{`.btn-primary{display:inline-flex;height:3rem;align-items:center;justify-content:center;gap:.5rem;border-radius:999px;background:hsl(var(--foreground));color:hsl(var(--background));padding:0 1.5rem;font-size:.875rem;font-weight:500}.btn-primary.bg-emerald-600{background:#059669;color:#fff}.btn-primary:disabled,.btn-ghost:disabled{opacity:.5}.btn-ghost{display:inline-flex;height:3rem;align-items:center;justify-content:center;gap:.5rem;border-radius:999px;border:1px solid hsl(var(--border));padding:0 1.5rem;font-size:.875rem}`}</style>
     </main>
   );

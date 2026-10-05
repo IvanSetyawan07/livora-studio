@@ -3,17 +3,25 @@ import { Link } from "react-router-dom";
 import { Check, Eye, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { adminShop, openPrivate, rupiah } from "@/lib/shop";
+import { useConfirm } from "@/components/shop/useConfirm";
 
 /** Antrean verifikasi bukti transfer (peran Keuangan). */
 export default function AdminShopPayments() {
   const [rows, setRows] = useState<any[] | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
+  const confirm = useConfirm();
   const load = useCallback(() => adminShop.proofs().then(setRows).catch((e) => { toast.error(e.message); setRows([]); }), []);
   useEffect(() => { load(); }, [load]);
 
   const review = async (id: number, accept: boolean) => {
     let reason: string | undefined;
-    if (!accept) { reason = prompt("Alasan menolak? (dikirim ke pelanggan)") ?? undefined; if (!reason) return; }
+    if (accept) {
+      if (!(await confirm.ask({ title: "Terima pembayaran ini?", text: "Pastikan dana sudah masuk di mutasi rekening. Invoice LUNAS akan langsung terbit dan stok dikurangi.", confirmLabel: "Ya, terima" }))) return;
+    } else {
+      const r = await confirm.ask({ title: "Tolak bukti transfer?", text: "Alasan dikirim ke pelanggan agar bisa mengunggah ulang.", inputLabel: "Alasan menolak", confirmLabel: "Tolak", danger: true });
+      if (typeof r !== "string") return;
+      reason = r;
+    }
     setBusy(id);
     try { await adminShop.reviewProof(id, accept, reason); toast.success(accept ? "Pembayaran diterima. Invoice LUNAS terbit." : "Bukti ditolak"); load(); }
     catch (e: any) { toast.error(e.message); } finally { setBusy(null); }
@@ -21,6 +29,7 @@ export default function AdminShopPayments() {
 
   return (
     <div className="space-y-6">
+      {confirm.node}
       <div>
         <h1 className="text-2xl font-semibold">Verifikasi pembayaran</h1>
         <p className="text-sm text-muted-foreground">Cocokkan nominal & nama di mutasi rekening sebelum menerima.</p>

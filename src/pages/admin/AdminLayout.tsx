@@ -50,6 +50,7 @@ const nav = [
   { to: "/admin/shop/orders", key: "shopOrders", label: "Pesanan", icon: ShoppingBag },
   { to: "/admin/shop/payments", key: "shopPayments", label: "Verifikasi bayar", icon: Wallet },
   { to: "/admin/shop/database", key: "shopDatabase", label: "Database toko", icon: Database },
+  { to: "/admin/shop/scan", key: "shopScan", label: "Scan dokumen", icon: QrCodeIcon },
   { to: "/admin/wishlists", key: "wishlists", icon: Bookmark },
   { to: "/admin/support", key: "support", icon: MessageCircle },
   { to: "/admin/analytics", key: "analytics", icon: BarChart3 },
