@@ -1,0 +1,3 @@
+- Shop post-payment logic (MTO production, BAST, claims, refunds, change orders) lives in `AftercareService`; order lifecycle stays in `ShopOrderService` — keeps the core flow small and auditable.
+- Owner-editable shop settings go through `ShopSettings` (shop_settings table, JSON, falls back to config) — changes apply without deploy.
+- All outbound shop WhatsApp goes through `Ops::sendWa` so every message is logged and failures land in the retry queue.
