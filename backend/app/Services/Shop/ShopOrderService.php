@@ -433,7 +433,7 @@ class ShopOrderService
         ];
 
         $doc = ShopDocument::create([
-            'number' => $from ? $from->number.'#v'.($from->version + 1) : DocumentNumber::next('INV'),
+            'number' => $from ? $from->number : DocumentNumber::next('INV'),
             'type' => 'INV',
             'title' => $title,
             'status' => $title === 'Invoice' ? 'lunas' : 'belum_dibayar',
@@ -444,12 +444,8 @@ class ShopOrderService
             'issued_at' => $from?->issued_at ?? now(),
             'paid_at' => $title === 'Invoice' ? now() : null,
         ]);
-        // Satu nomor, dua judul: simpan nomor asli tanpa sufiks versi.
-        if ($from) {
-            $doc->number = $from->number;
-            $from->update(['number' => $from->number.'~v'.$from->version, 'status' => 'lunas']);
-            $doc->save();
-        }
+        // Satu nomor, dua judul: PDF Tagihan lama diarsipkan, statusnya ikut lunas.
+        $from?->update(['status' => 'lunas']);
         try {
             $doc->pdf_path = $this->pdf->render($doc);
             $doc->save();

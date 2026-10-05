@@ -154,7 +154,7 @@ return new class extends Migration
 
         Schema::create('shop_documents', function (Blueprint $t) {
             $t->id();
-            $t->string('number')->unique();
+            $t->string('number')->index();
             $t->string('type', 10)->default('INV');
             $t->string('title', 20)->default('Tagihan'); // Tagihan|Invoice
             $t->string('status', 20)->default('belum_dibayar'); // belum_dibayar|lunas|kedaluwarsa|batal
@@ -166,6 +166,7 @@ return new class extends Migration
             $t->timestamp('issued_at');
             $t->timestamp('paid_at')->nullable();
             $t->timestamps();
+            $t->unique(['number', 'version']);
         });
 
         Schema::create('audit_logs', function (Blueprint $t) {
