@@ -26,6 +26,7 @@ export type OrderItem = {
 
 export type ShopPayment = {
   id: number;
+  kind?: string;
   method: string | null;
   amount: number;
   status: string;
@@ -65,6 +66,16 @@ export type ShopOrder = {
   quote?: Quote | null;
   payments?: ShopPayment[];
   documents?: ShopDocument[];
+  has_mto?: boolean;
+  spec_approved_at?: string | null;
+  production_started_at?: string | null;
+  custom_spec?: { order_item_id: number; dimensions?: string; material?: string; color?: string; notes?: string }[] | null;
+  delivery?: { receiver_name: string | null; received_at: string | null; notes: string | null } | null;
+  claims?: { id: number; type: string; description: string; status: string; resolution: string | null; photo_count: number; created_at: string }[];
+  refunds?: { id: number; amount: number; status: string; reason: string; admin_note: string | null; bank_name: string | null; account: string | null; created_at: string }[];
+  changes?: { id: number; description: string; price_delta: number; ppn: number; total: number; status: string; payment_id: number | null; created_at: string }[];
+  warranty_days?: number;
+  return_days?: number;
   payment_options?: { qris: boolean; bank: { name: string; account: string | null; holder: string | null } };
 };
 
@@ -107,7 +118,22 @@ export const createOrder = (body: { cart_item_ids: number[]; note?: string; wa_c
 export const getOrders = () => api.get<ShopOrder[]>("/orders").then((r) => r.data);
 export const getOrder = (code: string) => api.get<ShopOrder>(`/orders/${code}`).then((r) => r.data);
 export const getWaLink = (code: string) => api.get<{ wa_url: string }>(`/orders/${code}/wa-link`).then((r) => r.data.wa_url);
-export const approveQuote = (code: string) => api.post<ShopOrder>(`/orders/${code}/approve-quote`).then((r) => r.data);
+export const approveQuote = (code: string, acceptTerms = false) => api.post<ShopOrder>(`/orders/${code}/approve-quote`, { accept_terms: acceptTerms }).then((r) => r.data);
+export const requestRefund = (code: string, body: { reason: string; bank_name: string; account_number: string; account_holder: string }) =>
+  api.post<ShopOrder>(`/orders/${code}/refund`, body).then((r) => r.data);
+export const openClaim = (code: string, type: string, description: string, photos: File[]) => {
+  const f = new FormData();
+  f.append("type", type);
+  f.append("description", description);
+  photos.forEach((p) => f.append("photos[]", p));
+  return api.post<ShopOrder>(`/orders/${code}/claims`, f, { headers: { "Content-Type": "multipart/form-data" } }).then((r) => r.data);
+};
+export const respondChange = (code: string, id: number, approve: boolean) => api.post<ShopOrder>(`/orders/${code}/changes/${id}`, { approve }).then((r) => r.data);
+export const trackFunnel = (event: "konsultasi_klik") => {
+  let s = sessionStorage.getItem("livora_sid");
+  if (!s) { s = crypto.randomUUID(); sessionStorage.setItem("livora_sid", s); }
+  api.post("/funnel", { event, path: window.location.pathname, session: s }).catch(() => {});
+};
 export const cancelOrder = (code: string, reason?: string) => api.post<ShopOrder>(`/orders/${code}/cancel`, { reason }).then((r) => r.data);
 export const startQris = (code: string) =>
   api.post<{ qr_url: string | null; qr_payload: string | null; amount: number; expires_at: string }>(`/orders/${code}/qris`).then((r) => r.data);
@@ -166,7 +192,43 @@ export const adminShop = {
   findDocument: (number: string) => api.get("/admin/shop/documents/find", { params: { number } }).then((r) => r.data),
   admins: () => api.get("/admin/shop/admins").then((r) => r.data),
   setRole: (id: number, admin_role: string) => api.post(`/admin/shop/admins/${id}/role`, { admin_role }).then((r) => r.data),
-  audit: (page = 1) => api.get("/admin/shop/audit", { params: { page } }).then((r) => r.data),
+  audit: (page = 1, action?: string) => api.get("/admin/shop/audit", { params: { page, action } }).then((r) => r.data),
+  extras: (code: string) => api.get(`/admin/shop/orders/${code}/extras`).then((r) => r.data),
+  startProduction: (code: string) => api.post(`/admin/shop/orders/${code}/production`).then((r) => r.data),
+  bast: (code: string, photos: File[], receiver_name: string, signature?: File | null, notes?: string) => {
+    const f = new FormData();
+    photos.forEach((p) => f.append("photos[]", p));
+    if (signature) f.append("signature", signature);
+    f.append("receiver_name", receiver_name);
+    if (notes) f.append("notes", notes);
+    return api.post(`/admin/shop/orders/${code}/bast`, f, { headers: { "Content-Type": "multipart/form-data" } }).then((r) => r.data);
+  },
+  linkProject: (code: string, project_id: number | null) => api.post(`/admin/shop/orders/${code}/project`, { project_id }).then((r) => r.data),
+  projects: () => api.get<{ id: number; title: string }[]>("/admin/shop/projects").then((r) => r.data),
+  createChange: (code: string, description: string, price_delta: number) => api.post(`/admin/shop/orders/${code}/changes`, { description, price_delta }).then((r) => r.data),
+  createRefund: (code: string, body: Record<string, unknown>) => api.post(`/admin/shop/orders/${code}/refunds`, body).then((r) => r.data),
+  claims: (status?: string) => api.get("/admin/shop/claims", { params: { status } }).then((r) => r.data as any[]),
+  updateClaim: (id: number, status: string, resolution?: string) => api.post(`/admin/shop/claims/${id}`, { status, resolution }).then((r) => r.data),
+  refunds: (status?: string) => api.get("/admin/shop/refunds", { params: { status } }).then((r) => r.data as any[]),
+  updateRefund: (id: number, action: string, extra: { note?: string; amount?: number; proof?: File | null } = {}) => {
+    const f = new FormData();
+    f.append("action", action);
+    if (extra.note) f.append("note", extra.note);
+    if (extra.amount !== undefined) f.append("amount", String(extra.amount));
+    if (extra.proof) f.append("proof", extra.proof);
+    return api.post(`/admin/shop/refunds/${id}`, f, { headers: { "Content-Type": "multipart/form-data" } }).then((r) => r.data);
+  },
+  inbox: (status?: string) => api.get("/admin/shop/inbox", { params: { status } }).then((r) => r.data as any[]),
+  inboxMessages: (id: number) => api.get(`/admin/shop/inbox/${id}`).then((r) => r.data as any[]),
+  inboxReply: (id: number, body: string, note = false) => api.post(`/admin/shop/inbox/${id}/reply`, { body, note }).then((r) => r.data),
+  inboxAction: (id: number, action: string) => api.post(`/admin/shop/inbox/${id}/action`, { action }).then((r) => r.data),
+  settings: () => api.get("/admin/shop/settings").then((r) => r.data as Record<string, any>),
+  saveSettings: (body: Record<string, unknown>) => api.post("/admin/shop/settings", body).then((r) => r.data as Record<string, any>),
+  health: () => api.get("/admin/shop/health").then((r) => r.data as Record<string, any>),
+  retryFailed: (id: number) => api.post(`/admin/shop/health/failed/${id}/retry`).then((r) => r.data),
+  dismissFailed: (id: number) => api.post(`/admin/shop/health/failed/${id}/dismiss`).then((r) => r.data),
+  funnel: (days = 30) => api.get("/admin/shop/funnel", { params: { days } }).then((r) => r.data as Record<string, any>),
+  simulate: (phone: string, text: string) => api.post("/admin/shop/bot/simulate", { phone, text }).then((r) => r.data as { replies: string[]; session: string; flow?: boolean }),
 };
 
 export const STATUS_TONE: Record<string, string> = {

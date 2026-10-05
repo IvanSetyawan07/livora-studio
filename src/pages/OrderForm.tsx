@@ -32,6 +32,7 @@ export default function OrderForm() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!f.consent) return toast.error("Centang persetujuan terlebih dahulu");
+    if (meta?.has_mto && !f.mto_terms) return toast.error("Setujui syarat pesanan custom terlebih dahulu");
     setBusy(true);
     try {
       const custom_spec = Object.entries(spec).map(([id, s]) => ({ order_item_id: Number(id), ...s }));
@@ -145,7 +146,11 @@ export default function OrderForm() {
                 ))}
               </div>
             ))}
-            <p className="text-xs text-muted-foreground">Barang custom dibuat setelah lunas. Perubahan spesifikasi setelah produksi dimulai dapat dikenakan biaya.</p>
+            <label className="mt-2 flex cursor-pointer items-start gap-2 text-sm text-muted-foreground">
+              <input type="checkbox" checked={!!f.mto_terms} onChange={(e) => set("mto_terms", e.target.checked)} className="mt-0.5 h-4 w-4" />
+              Saya memahami barang custom dibuat setelah lunas, dan pesanan custom tidak bisa dibatalkan atau dikembalikan dananya setelah produksi dimulai. Perubahan spesifikasi dapat dikenakan biaya tambahan.
+            </label>
+            {errors.mto_terms && <p className="mt-1 text-xs text-red-600">{errors.mto_terms}</p>}
           </Card>
         )}
 
