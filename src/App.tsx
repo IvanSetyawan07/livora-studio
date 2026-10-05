@@ -31,6 +31,14 @@ import Appointment from "./pages/Appointment.tsx";
 import RequireRole from "./components/RequireRole.tsx";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Cart = lazy(() => import("./pages/Cart"));
+const OrderWhatsApp = lazy(() => import("./pages/OrderWhatsApp"));
+const MyOrderDetail = lazy(() => import("./pages/MyOrderDetail"));
+const OrderForm = lazy(() => import("./pages/OrderForm"));
+const AdminShopOrders = lazy(() => import("./pages/admin/shop/AdminShopOrders"));
+const AdminShopOrderDetail = lazy(() => import("./pages/admin/shop/AdminShopOrderDetail"));
+const AdminShopPayments = lazy(() => import("./pages/admin/shop/AdminShopPayments"));
+const AdminShopDatabase = lazy(() => import("./pages/admin/shop/AdminShopDatabase"));
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
 const AdminProjects = lazy(() => import("./pages/admin/AdminProjects"));
@@ -110,6 +118,10 @@ function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/profile/:tab" element={<Profile />} />
               <Route path="/profile/consultations/:id" element={<MyConsultationDetail />} />
+              <Route path="/profile/orders/:code" element={<MyOrderDetail />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/order/:code/whatsapp" element={<OrderWhatsApp />} />
+              <Route path="/order-form/:code" element={<OrderForm />} />
               <Route element={<RequireRole roles={["sales", "admin"]} />}>
                 <Route path="/sales/scan" element={<SalesScan />} />
                 <Route path="/sales/items/:slug" element={<SalesItemDetail />} />
@@ -158,6 +170,10 @@ function App() {
                 <Route path="banners" element={<AdminBanners />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="marketing" element={<AdminMarketing />} />
+                <Route path="shop/orders" element={<AdminShopOrders />} />
+                <Route path="shop/orders/:code" element={<AdminShopOrderDetail />} />
+                <Route path="shop/payments" element={<AdminShopPayments />} />
+                <Route path="shop/database" element={<AdminShopDatabase />} />
                 
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
