@@ -38,6 +38,7 @@ const OrderForm = lazy(() => import("./pages/OrderForm"));
 const AdminShopOrders = lazy(() => import("./pages/admin/shop/AdminShopOrders"));
 const AdminShopOrderDetail = lazy(() => import("./pages/admin/shop/AdminShopOrderDetail"));
 const AdminShopPayments = lazy(() => import("./pages/admin/shop/AdminShopPayments"));
+const AdminShopScan = lazy(() => import("./pages/admin/shop/AdminShopScan"));
 const AdminShopDatabase = lazy(() => import("./pages/admin/shop/AdminShopDatabase"));
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
@@ -174,6 +175,7 @@ function App() {
                 <Route path="shop/orders/:code" element={<AdminShopOrderDetail />} />
                 <Route path="shop/payments" element={<AdminShopPayments />} />
                 <Route path="shop/database" element={<AdminShopDatabase />} />
+                <Route path="shop/scan" element={<AdminShopScan />} />
                 
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
