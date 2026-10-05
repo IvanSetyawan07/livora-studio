@@ -38,6 +38,11 @@ const OrderForm = lazy(() => import("./pages/OrderForm"));
 const AdminShopOrders = lazy(() => import("./pages/admin/shop/AdminShopOrders"));
 const AdminShopOrderDetail = lazy(() => import("./pages/admin/shop/AdminShopOrderDetail"));
 const AdminShopPayments = lazy(() => import("./pages/admin/shop/AdminShopPayments"));
+const AdminShopInbox = lazy(() => import("./pages/admin/shop/AdminShopInbox"));
+const AdminShopAftercare = lazy(() => import("./pages/admin/shop/AdminShopAftercare"));
+const AdminShopSettings = lazy(() => import("./pages/admin/shop/AdminShopSettings"));
+const AdminShopHealth = lazy(() => import("./pages/admin/shop/AdminShopHealth"));
+const AdminShopBotSimulator = lazy(() => import("./pages/admin/shop/AdminShopBotSimulator"));
 const AdminShopScan = lazy(() => import("./pages/admin/shop/AdminShopScan"));
 const AdminShopDatabase = lazy(() => import("./pages/admin/shop/AdminShopDatabase"));
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
@@ -176,6 +181,11 @@ function App() {
                 <Route path="shop/payments" element={<AdminShopPayments />} />
                 <Route path="shop/database" element={<AdminShopDatabase />} />
                 <Route path="shop/scan" element={<AdminShopScan />} />
+                <Route path="shop/inbox" element={<AdminShopInbox />} />
+                <Route path="shop/aftercare" element={<AdminShopAftercare />} />
+                <Route path="shop/settings" element={<AdminShopSettings />} />
+                <Route path="shop/health" element={<AdminShopHealth />} />
+                <Route path="shop/bot-simulator" element={<AdminShopBotSimulator />} />
                 
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -422,6 +422,11 @@ Route::post('/reset-password', [\App\Http\Controllers\Api\PasswordResetControlle
 Route::post('/webhooks/midtrans', [\App\Http\Controllers\Api\Shop\WebhookController::class, 'midtrans']);
 Route::get('/webhooks/whatsapp', [\App\Http\Controllers\Api\Shop\WebhookController::class, 'whatsappVerify']);
 Route::post('/webhooks/whatsapp', [\App\Http\Controllers\Api\Shop\WebhookController::class, 'whatsappIncoming']);
+Route::post('/funnel', function (\Illuminate\Http\Request $r) {
+    $event = $r->input('event');
+    if (in_array($event, ['konsultasi_klik'], true)) \App\Services\Shop\Ops::funnel($event, null, optional($r->user('sanctum'))->id, ['path' => substr((string) $r->input('path'), 0, 120)], substr((string) $r->input('session'), 0, 64));
+    return ['ok' => true];
+})->middleware('throttle:30,1');
 Route::get('/order-form/{code}', [\App\Http\Controllers\Api\Shop\OrderFormController::class, 'show'])->middleware('throttle:30,1');
 Route::post('/order-form/{code}', [\App\Http\Controllers\Api\Shop\OrderFormController::class, 'submit'])->middleware('throttle:10,1');
 
@@ -440,6 +445,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/orders/{code}/qris', [\App\Http\Controllers\Api\Shop\OrderController::class, 'qris'])->middleware('throttle:10,1');
     Route::post('/orders/{code}/payment-proof', [\App\Http\Controllers\Api\Shop\OrderController::class, 'uploadProof'])->middleware('throttle:10,1');
     Route::get('/orders/{code}/documents/{document}', [\App\Http\Controllers\Api\Shop\OrderController::class, 'document']);
+    Route::post('/orders/{code}/refund', [\App\Http\Controllers\Api\Shop\OrderController::class, 'requestRefund'])->middleware('throttle:5,1');
+    Route::post('/orders/{code}/claims', [\App\Http\Controllers\Api\Shop\OrderController::class, 'openClaim'])->middleware('throttle:5,1');
+    Route::get('/orders/{code}/claims/{claim}/photos/{index}', [\App\Http\Controllers\Api\Shop\OrderController::class, 'claimPhoto']);
+    Route::post('/orders/{code}/changes/{change}', [\App\Http\Controllers\Api\Shop\OrderController::class, 'respondChange']);
 
     Route::prefix('admin/shop')->middleware('admin')->group(function () {
         $c = \App\Http\Controllers\Api\Admin\ShopOrderController::class;
@@ -462,6 +471,30 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/admins', [$c, 'admins']);
         Route::post('/admins/{user}/role', [$c, 'setRole'])->middleware('admin_role:owner');
         Route::get('/audit', [$c, 'audit'])->middleware('admin_role:owner');
+        $a = \App\Http\Controllers\Api\Admin\ShopAftercareController::class;
+        Route::get('/orders/{code}/extras', [$a, 'extras']);
+        Route::post('/orders/{code}/production', [$a, 'startProduction'])->middleware('admin_role:production');
+        Route::post('/orders/{code}/bast', [$a, 'bast'])->middleware('admin_role:production');
+        Route::post('/orders/{code}/project', [$a, 'linkProject'])->middleware('admin_role:cs,production');
+        Route::post('/orders/{code}/changes', [$a, 'createChange'])->middleware('admin_role:cs');
+        Route::post('/orders/{code}/refunds', [$a, 'createRefund'])->middleware('admin_role:finance');
+        Route::get('/projects', [$a, 'projects']);
+        Route::get('/files', [$a, 'file']);
+        Route::get('/claims', [$a, 'claims']);
+        Route::post('/claims/{claim}', [$a, 'updateClaim'])->middleware('admin_role:production');
+        Route::get('/refunds', [$a, 'refunds'])->middleware('admin_role:finance,cs');
+        Route::post('/refunds/{refund}', [$a, 'updateRefund'])->middleware('admin_role:finance');
+        Route::get('/inbox', [$a, 'sessions'])->middleware('admin_role:cs');
+        Route::get('/inbox/{session}', [$a, 'messages'])->middleware('admin_role:cs');
+        Route::post('/inbox/{session}/reply', [$a, 'reply'])->middleware('admin_role:cs');
+        Route::post('/inbox/{session}/action', [$a, 'sessionAction'])->middleware('admin_role:cs');
+        Route::get('/settings', [$a, 'settings'])->middleware('admin_role:owner');
+        Route::post('/settings', [$a, 'saveSettings'])->middleware('admin_role:owner');
+        Route::get('/health', [$a, 'health'])->middleware('admin_role:owner');
+        Route::post('/health/failed/{id}/retry', [$a, 'retryFailed'])->middleware('admin_role:owner');
+        Route::post('/health/failed/{id}/dismiss', [$a, 'dismissFailed'])->middleware('admin_role:owner');
+        Route::get('/funnel', [$a, 'funnel'])->middleware('admin_role:owner');
+        Route::post('/bot/simulate', [$a, 'simulate'])->middleware('admin_role:owner');
         Route::get('/database/{grid}', [\App\Http\Controllers\Api\Admin\ShopDatabaseController::class, 'grid'])->middleware('admin_role:finance,cs');
     });
 });

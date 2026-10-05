@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { authStorage } from "@/lib/api";
 import { rememberIntendedPath } from "@/lib/authGuard";
 import { imgUrl } from "@/lib/adminApi";
-import { getCart, updateCartLine, removeCartLine, createOrder, type CartLine } from "@/lib/shop";
+import { getCart, updateCartLine, removeCartLine, createOrder, trackFunnel, type CartLine } from "@/lib/shop";
 import Seo from "@/components/Seo.jsx";
 
 const COUNTRIES = [
@@ -54,6 +54,7 @@ export default function Cart() {
   const submit = async (withPhone?: string) => {
     if (!chosen.length) return toast.error("Pilih minimal satu barang");
     if (!consent) return toast.error("Centang persetujuan dihubungi via WhatsApp");
+    if (!withPhone) trackFunnel("konsultasi_klik");
     setSubmitting(true);
     try {
       const { order, wa_url } = await createOrder(

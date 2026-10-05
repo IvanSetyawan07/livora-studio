@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { adminShop, downloadPrivate, openPrivate, rupiah, type Quote } from "@/lib/shop";
 import StatusBadge from "@/components/shop/StatusBadge";
 import { useConfirm } from "@/components/shop/useConfirm";
+import AdminOrderAftercare from "@/components/shop/AdminOrderAftercare";
 
 const NEXT: Record<string, { to: string; label: string }> = {
   dibayar: { to: "diproses", label: "Mulai proses" },
@@ -114,6 +115,8 @@ export default function AdminShopOrderDetail() {
           </ul>
         </section>
       </div>
+
+      <AdminOrderAftercare o={o} reload={load} />
 
       <section className="rounded-xl border border-border bg-card p-5 text-sm">
         <h2 className="font-semibold">Riwayat</h2>
