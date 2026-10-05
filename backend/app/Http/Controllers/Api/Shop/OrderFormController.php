@@ -28,6 +28,7 @@ class OrderFormController extends Controller
     {
         $order = $this->resolve($request, $code);
         $user = $order->user;
+        \App\Services\Shop\Ops::funnel('form_dibuka', $order->id, $order->user_id);
 
         return [
             'code' => $order->code,

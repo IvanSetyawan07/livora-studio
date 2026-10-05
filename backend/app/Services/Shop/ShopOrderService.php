@@ -172,13 +172,13 @@ class ShopOrderService
         return rtrim(config('app.frontend_url', env('FRONTEND_URL', 'https://www.livoralcr.com')), '/')."/order-form/{$order->code}?token={$order->form_token}";
     }
 
-    public function sendForm(ShopOrder $order): string
+    public function sendForm(ShopOrder $order, bool $notify = true): string
     {
         $url = $this->formUrl($order);
         if (in_array($order->status, ['menunggu_wa', 'wa_terhubung'], true)) {
             $this->setStatus($order, 'menunggu_data');
         }
-        $this->notify($order, 'Lengkapi data pengiriman', [
+        if ($notify) $this->notify($order, 'Lengkapi data pengiriman', [
             "Silakan lengkapi data pengiriman pesanan {$order->code} melalui tautan berikut (berlaku 7 hari):",
         ], $url, 'Isi Data Pengiriman', "Lengkapi data pengiriman pesanan {$order->code}: {$url}");
 
@@ -202,7 +202,7 @@ class ShopOrderService
         $needsReview = $order->hasMto()
             || ($delivery && $zoneFee === null)                    // wilayah belum ada di tabel ongkir → admin hitung
             || !empty($shipping['needs_installation'])
-            || $this->estimate($order) > config('services.shop.review_threshold');
+            || $this->estimate($order) > (int) ShopSettings::get('review_threshold');
 
         if ($needsReview) {
             $this->setStatus($order, 'menunggu_review_admin');
@@ -214,7 +214,7 @@ class ShopOrderService
     /** Ongkir otomatis dari SHOP_SHIPPING_ZONES (kota dulu, lalu provinsi). null = tidak ada tarif. */
     public static function zoneFee(array $s): ?int
     {
-        $zones = array_change_key_case((array) config('services.shop.shipping_zones', []), CASE_LOWER);
+        $zones = array_change_key_case((array) ShopSettings::get('shipping_zones', []), CASE_LOWER);
         foreach ([$s['city'] ?? null, $s['province'] ?? null] as $k) {
             $k = strtolower(trim((string) $k));
             if ($k !== '' && array_key_exists($k, $zones)) return (int) $zones[$k];
@@ -253,7 +253,7 @@ class ShopOrderService
         InvoiceCalculator::apply($order->load('items'));
         $order->quote_version++;
         $order->quote_sent_at = now();
-        $order->quote_expires_at = now()->addDays(config('services.shop.quote_valid_days', 3));
+        $order->quote_expires_at = now()->addDays((int) ShopSettings::get('quote_valid_days', 3));
         $order->save();
         // penawaran lama yang belum dibayar dibatalkan
         $this->voidOpenPayments($order);
@@ -310,6 +310,7 @@ class ShopOrderService
         });
 
         $this->setStatus($order, 'menunggu_bayar');
+        Ops::funnel('penawaran_disetujui', $order->id, $order->user_id);
         AuditLog::record('quote.approved', $order, null, ['grand_total' => $order->grand_total]);
         $this->notify($order, 'Tagihan pesanan Anda', [
             "Terima kasih, penawaran {$order->code} sudah disetujui. Tagihan sebesar ".self::rp($order->grand_total).' telah terbit.',
@@ -377,6 +378,20 @@ class ShopOrderService
     {
         if ($payment->status === 'paid') return; // idempoten
         $order = $payment->order;
+        if ($payment->kind === 'change') {
+            DB::transaction(function () use ($payment, $methodLabel, $eventId) {
+                $payment->status = 'paid';
+                $payment->paid_at = now();
+                if ($eventId) $payment->webhook_event_id = $eventId;
+                $payment->save();
+                app(AftercareService::class)->changePaid($payment, $methodLabel);
+            });
+            AuditLog::record('payment.paid', $payment, null, ['method' => $methodLabel, 'amount' => $payment->amount, 'kind' => 'change']);
+            $this->notify($order, 'Pembayaran tambahan diterima', ["Pembayaran tambahan pesanan {$order->code} sebesar ".self::rp($payment->amount).' sudah kami terima.'],
+                $this->orderUrl($order), 'Lihat Pesanan', "Pembayaran tambahan {$order->code} ".self::rp($payment->amount).' diterima.');
+            return;
+        }
+        Ops::funnel('dibayar', $order->id, $order->user_id, ['amount' => (int) $payment->amount]);
 
         DB::transaction(function () use ($payment, $order, $methodLabel, $eventId) {
             $payment->status = 'paid';
@@ -570,10 +585,11 @@ class ShopOrderService
 
     // ───────────────────────────── Helper ─────────────────────────────
 
-    protected function setStatus(ShopOrder $order, string $status): void
+    public function setStatus(ShopOrder $order, string $status): void
     {
         $from = $order->status;
         $order->status = $status;
+        if ($status === 'menunggu_review_admin') $order->sla_due_at = now()->addHours((int) ShopSettings::get('sla_hours', 4));
         $order->save();
         AuditLog::record('order.status', $order, ['status' => $from], ['status' => $status]);
     }
@@ -599,13 +615,13 @@ class ShopOrderService
             }
         }
         if ($order->wa_consent && $order->customer_phone) {
-            WhatsAppNotifier::send($order->customer_phone, "Livora: ".$waText);
+            Ops::sendWa($order->customer_phone, "Livora: ".$waText, $order->id);
         }
     }
 
     public function notifyAdmins(string $subject, string $line): void
     {
-        foreach (User::where('role', 'admin')->whereIn('admin_role', [null, 'owner', 'finance'])->pluck('email') as $email) {
+        foreach (User::where('role', 'admin')->where(fn ($q) => $q->whereNull('admin_role')->orWhereIn('admin_role', ['owner', 'cs', 'finance']))->pluck('email') as $email) {
             try {
                 Mail::raw($line, fn ($m) => $m->to($email)->subject('[Livora Admin] '.$subject));
             } catch (\Throwable $e) {

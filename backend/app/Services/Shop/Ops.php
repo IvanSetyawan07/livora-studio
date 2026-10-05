@@ -44,7 +44,8 @@ class Ops
                 'phone' => WhatsAppNotifier::normalizePhone($phone), 'order_id' => $orderId, 'direction' => 'out', 'type' => 'text',
                 'body' => $body, 'sent_by' => $sentBy, 'status' => $res['status'] ?? null, 'created_at' => now(), 'updated_at' => now(),
             ]);
-            if (!$ok && ($res['status'] ?? '') !== 'skipped') {
+            $nullProvider = WhatsAppNotifier::provider() instanceof \App\Services\WhatsApp\NullWhatsAppProvider;
+            if (!$ok && !$nullProvider && ($res['status'] ?? '') !== 'skipped') {
                 DB::table('wa_failed_messages')->insert([
                     'phone' => $phone, 'body' => $body, 'order_id' => $orderId, 'error' => $res['error'] ?? 'unknown',
                     'created_at' => now(), 'updated_at' => now(),

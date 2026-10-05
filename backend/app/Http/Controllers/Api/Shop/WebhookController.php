@@ -21,8 +21,10 @@ class WebhookController extends Controller
     {
         $p = $request->all();
         if (!MidtransGateway::validSignature($p)) {
+            \App\Services\Shop\Ops::webhook('midtrans', 'rejected', $p['transaction_id'] ?? null, $p, 'invalid signature');
             return response()->json(['message' => 'invalid signature'], 403);
         }
+        \App\Services\Shop\Ops::webhook('midtrans', 'ok', $p['transaction_id'] ?? null, $p);
         $payment = ShopPayment::where('gateway_ref', $p['order_id'] ?? '')->first();
         if (!$payment) return response()->json(['ok' => true]);
 
@@ -57,16 +59,19 @@ class WebhookController extends Controller
         if ($secret) {
             $sig = 'sha256='.hash_hmac('sha256', $request->getContent(), $secret);
             if (!hash_equals($sig, (string) $request->header('X-Hub-Signature-256'))) {
+                \App\Services\Shop\Ops::webhook('whatsapp', 'rejected', null, null, 'invalid signature');
                 return response('invalid signature', 403);
             }
         }
 
+        \App\Services\Shop\Ops::webhook('whatsapp', 'ok', null, ['entries' => count($request->input('entry', []))]);
         foreach ($request->input('entry', []) as $entry) {
             foreach ($entry['changes'] ?? [] as $change) {
                 foreach ($change['value']['messages'] ?? [] as $m) {
                     try {
                         $this->handleMessage($m);
                     } catch (\Throwable $e) {
+                        \App\Services\Shop\Ops::webhook('whatsapp', 'error', $m['id'] ?? null, null, $e->getMessage());
                         Log::error('WA webhook gagal', ['error' => $e->getMessage()]);
                     }
                 }
@@ -80,36 +85,44 @@ class WebhookController extends Controller
     {
         if (DB::table('wa_messages')->where('message_id', $m['id'] ?? '')->exists()) return; // idempoten
         $phone = WhatsAppNotifier::normalizePhone($m['from'] ?? '');
-        $text = trim($m['text']['body'] ?? $m['button']['text'] ?? '');
-        preg_match('/LVR-[A-Z0-9]{6}/i', $text, $match);
-        $order = $match
-            ? ShopOrder::where('code', strtoupper($match[0]))->first()
-            : ShopOrder::where('customer_phone', $phone)->whereNotIn('status', ['selesai', 'dibatalkan', 'kedaluwarsa'])->latest()->first();
+        $type = $m['type'] ?? 'text';
+        $text = trim($m['text']['body'] ?? $m['button']['text'] ?? $m['interactive']['button_reply']['title'] ?? '');
+        if ($type === 'location') $text = '[lokasi] '.($m['location']['latitude'] ?? '').','.($m['location']['longitude'] ?? '');
+        if (in_array($type, ['image', 'document'], true)) $text = '['.$type.'] '.($m[$type]['caption'] ?? '');
 
+        $orderId = DB::table('wa_sessions')->where('phone', $phone)->value('order_id')
+            ?? ShopOrder::where('customer_phone', $phone)->latest()->value('id');
         DB::table('wa_messages')->insert([
-            'message_id' => $m['id'] ?? null, 'phone' => $phone, 'order_id' => $order?->id, 'direction' => 'in',
-            'type' => $m['type'] ?? 'text', 'body' => $text, 'raw' => json_encode($m), 'created_at' => now(), 'updated_at' => now(),
+            'message_id' => $m['id'] ?? null, 'phone' => $phone, 'order_id' => $orderId, 'direction' => 'in',
+            'type' => $type, 'body' => $text, 'raw' => json_encode($m), 'created_at' => now(), 'updated_at' => now(),
         ]);
+        \App\Services\Shop\Ops::funnel('wa_masuk', $orderId, null, ['type' => $type]);
 
-        if (strtoupper($text) === 'STOP') {
-            \App\Models\User::where('phone', $phone)->update(['wa_opt_out_at' => now(), 'wa_opt_in' => false]);
-            ShopOrder::where('customer_phone', $phone)->update(['wa_consent' => false]);
-            WhatsAppNotifier::send($phone, 'Baik, Anda tidak akan menerima pesan promosi lagi dari Livora.');
+        // Balasan WhatsApp Flow (form pengiriman di dalam WA)
+        if ($type === 'interactive' && ($m['interactive']['type'] ?? '') === 'nfm_reply') {
+            $this->handleFlowReply($phone, json_decode($m['interactive']['nfm_reply']['response_json'] ?? '{}', true) ?: []);
             return;
         }
-        if (!$order) {
-            WhatsAppNotifier::send($phone, 'Halo, terima kasih sudah menghubungi Livora (asisten otomatis). Mohon sebutkan kode pesanan Anda (contoh: LVR-AB12CD), atau tunggu tim kami membalas di jam kerja.');
+
+        $result = app(\App\Services\Shop\WaBot::class)->handle($phone, $text, false, $type);
+        foreach ($result['replies'] as $reply) {
+            \App\Services\Shop\Ops::sendWa($phone, $reply, $orderId);
+        }
+    }
+
+    protected function handleFlowReply(string $phone, array $data): void
+    {
+        [$code, $token] = array_pad(explode('|', (string) ($data['flow_token'] ?? '')), 2, '');
+        $order = ShopOrder::where('code', $code)->first();
+        if (!$order || !$order->form_token || !hash_equals($order->form_token, $token)) {
+            \App\Services\Shop\Ops::sendWa($phone, 'Maaf, form sudah tidak berlaku. Ketik TIM untuk dibantu.');
             return;
         }
-        if ($order->customer_phone && $order->customer_phone !== $phone) {
-            WhatsAppNotifier::send($phone, "Nomor ini berbeda dengan nomor di pesanan {$order->code}. Tim kami akan memeriksa dan membalas Anda.");
-            return;
-        }
-        if (in_array($order->status, ['menunggu_wa', 'wa_terhubung'], true)) {
-            $this->service->markWaConnected($order);
-            \App\Models\User::where('id', $order->user_id)->whereNull('phone_verified_at')->update(['phone_verified_at' => now()]);
-            $url = $this->service->sendForm($order);
-            WhatsAppNotifier::send($phone, "Halo {$order->customer_name}, saya asisten otomatis Livora. Pesanan {$order->code} sudah kami terima. Silakan lengkapi data pengiriman di: {$url}\nKetik \"TIM\" kapan saja untuk berbicara dengan tim kami.");
-        }
+        $shipping = array_intersect_key($data, array_flip(['method', 'recipient', 'phone', 'street', 'district', 'city', 'province', 'postal_code', 'landmark', 'building_type', 'floor', 'notes']));
+        $shipping['method'] = $shipping['method'] ?? 'delivery';
+        $shipping['has_lift'] = filter_var($data['has_lift'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $shipping['needs_installation'] = filter_var($data['needs_installation'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $this->service->submitForm($order, $shipping, null);
+        \App\Services\Shop\Ops::sendWa($phone, "Terima kasih, data pengiriman pesanan {$order->code} sudah kami terima.", $order->id);
     }
 }
