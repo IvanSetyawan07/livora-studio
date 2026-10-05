@@ -33,6 +33,11 @@ import {
   ShoppingBag,
   Wallet,
   Database,
+  Inbox,
+  LifeBuoy,
+  Settings2,
+  Activity,
+  Bot,
 } from "lucide-react";
 
 const nav = [
@@ -48,8 +53,14 @@ const nav = [
   { to: "/admin/users", key: "users", icon: Users },
   { to: "/admin/consultations", key: "consultations", icon: MessageCircle },
   { to: "/admin/shop/orders", key: "shopOrders", label: "Pesanan", icon: ShoppingBag },
+  { to: "/admin/shop/inbox", key: "shopInbox", label: "Inbox WhatsApp", icon: Inbox },
   { to: "/admin/shop/payments", key: "shopPayments", label: "Verifikasi bayar", icon: Wallet },
+  { to: "/admin/shop/aftercare", key: "shopAftercare", label: "Klaim & Refund", icon: LifeBuoy },
   { to: "/admin/shop/database", key: "shopDatabase", label: "Database toko", icon: Database },
+  { to: "/admin/shop/scan", key: "shopScan", label: "Scan dokumen", icon: QrCodeIcon },
+  { to: "/admin/shop/health", key: "shopHealth", label: "Kesehatan & funnel", icon: Activity },
+  { to: "/admin/shop/settings", key: "shopSettings", label: "Pengaturan toko", icon: Settings2 },
+  { to: "/admin/shop/bot-simulator", key: "shopBot", label: "Simulator bot", icon: Bot },
   { to: "/admin/wishlists", key: "wishlists", icon: Bookmark },
   { to: "/admin/support", key: "support", icon: MessageCircle },
   { to: "/admin/analytics", key: "analytics", icon: BarChart3 },

@@ -166,6 +166,11 @@ return [
         'qris_max_amount' => (int) env('SHOP_QRIS_MAX_AMOUNT', 10000000),
         'order_expire_days' => (int) env('SHOP_ORDER_EXPIRE_DAYS', 14),
         'max_items_per_order' => 10,
+        // Contoh: {"jakarta selatan":150000,"dki jakarta":200000,"jawa barat":350000}
+        'shipping_zones' => json_decode((string) env('SHOP_SHIPPING_ZONES', '{}'), true) ?: [],
+        'wa_flow_id' => env('SHOP_WA_FLOW_ID'),
+        'sheets_webhook_url' => env('SHOP_SHEETS_WEBHOOK_URL'),
+        'sheets_webhook_secret' => env('SHOP_SHEETS_WEBHOOK_SECRET'),
     ],
 
     'midtrans' => [

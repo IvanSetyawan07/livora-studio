@@ -9,6 +9,8 @@ import {
   ORDER_STEPS, approveQuote, cancelOrder, downloadPrivate, getOrder, getWaLink, rupiah, startQris, stepIndex, uploadPaymentProof, type ShopOrder,
 } from "@/lib/shop";
 import StatusBadge from "@/components/shop/StatusBadge";
+import { useConfirm } from "@/components/shop/useConfirm";
+import OrderAftercare from "@/components/shop/OrderAftercare";
 
 export default function MyOrderDetail() {
   const { code = "" } = useParams();
@@ -16,8 +18,10 @@ export default function MyOrderDetail() {
   const [order, setOrder] = useState<ShopOrder | null>(null);
   const [missing, setMissing] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [terms, setTerms] = useState(false);
   const [qr, setQr] = useState<{ qr_url: string | null; amount: number; expires_at: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const confirm = useConfirm();
 
   const load = useCallback(() => getOrder(code).then(setOrder).catch(() => setMissing(true)), [code]);
 
@@ -51,9 +55,9 @@ export default function MyOrderDetail() {
 
   const idx = stepIndex(order.status);
   const closed = ["dibatalkan", "kedaluwarsa"].includes(order.status);
-  const payment = order.payments?.find((p) => p.status === "menunggu") ?? null;
+  const payment = order.payments?.find((p) => p.status === "pending" || p.status === "menunggu_verifikasi") ?? null;
   const pendingProof = payment?.proofs.some((p) => p.status === "menunggu");
-  const rejectedProof = payment?.proofs.find((p) => p.status === "ditolak");
+  const rejectedProof = payment?.proofs.find((p) => p.status === "tolak");
   const q = order.quote;
 
   return (
@@ -94,8 +98,23 @@ export default function MyOrderDetail() {
               <h2 className="serif text-xl">Penawaran harga</h2>
               <p className="mt-1 text-sm text-muted-foreground">Berlaku sampai {order.quote_expires_at ? new Date(order.quote_expires_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" }) : "—"}.</p>
               <Totals q={q} />
+              {order.has_mto && (
+                <div className="mt-4 rounded-xl bg-muted p-4 text-sm">
+                  <p className="font-medium">Spesifikasi final barang custom</p>
+                  <ul className="mt-2 space-y-1 text-muted-foreground">
+                    {order.items.filter((i) => i.fulfillment_type === "made_to_order").map((i) => {
+                      const s = order.custom_spec?.find((x) => x.order_item_id === i.id);
+                      return <li key={i.id}>{i.title}: {[s?.dimensions, s?.material, s?.color].filter(Boolean).join(" · ") || "sesuai katalog"}{s?.notes ? ` — ${s.notes}` : ""}</li>;
+                    })}
+                  </ul>
+                  <label className="mt-3 flex cursor-pointer items-start gap-2">
+                    <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} className="mt-0.5 h-4 w-4" />
+                    <span>Spesifikasi di atas sudah benar. Saya setuju pembayaran lunas sebelum produksi, dan pesanan custom tidak bisa dibatalkan atau dikembalikan dananya setelah produksi dimulai.</span>
+                  </label>
+                </div>
+              )}
               <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-                <button type="button" disabled={!!busy} onClick={() => run("approve", () => approveQuote(order.code), "Penawaran disetujui. Tagihan sudah terbit.")} className="btn-primary flex-1">
+                <button type="button" disabled={!!busy || (order.has_mto && !terms)} onClick={() => run("approve", () => approveQuote(order.code, terms), "Penawaran disetujui. Tagihan sudah terbit.")} className="btn-primary flex-1">
                   {busy === "approve" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Setujui & lanjut bayar
                 </button>
                 <button type="button" onClick={async () => window.open(await getWaLink(order.code), "_blank", "noopener")} className="btn-ghost flex-1">Tanya / minta revisi</button>
@@ -131,8 +150,6 @@ export default function MyOrderDetail() {
                     ) : <p className="mt-2 text-sm text-muted-foreground">Nomor rekening dikirim lewat WhatsApp.</p>}
                     <p className="text-xs text-muted-foreground">a.n. {order.payment_options?.bank.holder ?? "Livora"}</p>
                     {rejectedProof && <p className="mt-2 text-xs text-red-600">Bukti sebelumnya ditolak: {rejectedProof.reason}</p>}
-                    <input ref={fileRef} type="file" accept="image/*,application/pdf" className="hidden"
-                      onChange={(e) => { const f = e.target.files?.[0]; if (f) run("proof", () => uploadPaymentProof(order.code, f), "Bukti transfer terkirim"); e.target.value = ""; }} />
                     <button type="button" disabled={!!busy} onClick={() => fileRef.current?.click()} className="btn-ghost mt-3 w-full">
                       {busy === "proof" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} Unggah bukti transfer
                     </button>
@@ -147,6 +164,25 @@ export default function MyOrderDetail() {
             </Action>
           )}
         </section>
+
+        {(() => {
+          const extra = order.payments?.find((p) => p.kind === "change" && ["pending", "menunggu_verifikasi"].includes(p.status));
+          if (!extra || order.status === "menunggu_bayar") return null;
+          return (
+            <section className="mt-6 rounded-2xl border border-border bg-card p-5 text-sm">
+              <h2 className="serif text-lg">Tagihan tambahan {rupiah(extra.amount)}</h2>
+              {extra.proofs.some((p) => p.status === "menunggu") ? <p className="mt-2 text-muted-foreground">Bukti transfer sedang diperiksa.</p> : (
+                <>
+                  <p className="mt-1 text-muted-foreground">Transfer ke {order.payment_options?.bank.name} {order.payment_options?.bank.account ?? ""} a.n. {order.payment_options?.bank.holder ?? "Livora"}, lalu unggah buktinya.</p>
+                  <button type="button" disabled={!!busy} onClick={() => fileRef.current?.click()} className="btn-ghost mt-3 w-full">{busy === "proof" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} Unggah bukti transfer</button>
+                </>
+              )}
+            </section>
+          );
+        })()}
+        <OrderAftercare order={order} onChange={setOrder} />
+        <input ref={fileRef} type="file" accept="image/*,application/pdf" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) run("proof", () => uploadPaymentProof(order.code, f), "Bukti transfer terkirim"); e.target.value = ""; }} />
 
         <div className="mt-6 grid gap-6 md:grid-cols-[1fr_300px]">
           <section className="rounded-2xl border border-border bg-card p-5">
@@ -192,12 +228,13 @@ export default function MyOrderDetail() {
               </section>
             )}
             {["menunggu_wa", "wa_terhubung", "menunggu_data", "data_lengkap", "menunggu_review_admin", "penawaran"].includes(order.status) && (
-              <button type="button" disabled={!!busy} onClick={() => { if (confirm("Batalkan pesanan ini?")) run("cancel", () => cancelOrder(order.code), "Pesanan dibatalkan"); }}
+              <button type="button" disabled={!!busy} onClick={async () => { if (await confirm.ask({ title: "Batalkan pesanan ini?", text: "Stok yang ditahan akan dilepas. Anda bisa memesan lagi dari keranjang.", confirmLabel: "Batalkan pesanan", danger: true })) run("cancel", () => cancelOrder(order.code), "Pesanan dibatalkan"); }}
                 className="w-full text-center text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground">Batalkan pesanan</button>
             )}
           </aside>
         </div>
       </div>
+      {confirm.node}
       <style>{`.btn-primary{display:inline-flex;height:3rem;align-items:center;justify-content:center;gap:.5rem;border-radius:999px;background:hsl(var(--foreground));color:hsl(var(--background));padding:0 1.5rem;font-size:.875rem;font-weight:500}.btn-primary.bg-emerald-600{background:#059669;color:#fff}.btn-primary:disabled,.btn-ghost:disabled{opacity:.5}.btn-ghost{display:inline-flex;height:3rem;align-items:center;justify-content:center;gap:.5rem;border-radius:999px;border:1px solid hsl(var(--border));padding:0 1.5rem;font-size:.875rem}`}</style>
     </main>
   );

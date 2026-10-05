@@ -147,6 +147,19 @@ class InvoicePdf
         }
         $pdf->SetTextColor(0, 0, 0);
 
+        // QR berisi nomor dokumen → dipindai di Admin › Scan dokumen
+        try {
+            $qr = \Illuminate\Support\Facades\Http::timeout(8)->get('https://api.qrserver.com/v1/create-qr-code/', ['size' => '240x240', 'format' => 'png', 'data' => $doc->number]);
+            if ($qr->successful()) {
+                $tmp = tempnam(sys_get_temp_dir(), 'qr').'.png';
+                file_put_contents($tmp, $qr->body());
+                $pdf->Image($tmp, 172, 255, 24, 24, 'PNG');
+                @unlink($tmp);
+            }
+        } catch (\Throwable $e) {
+            // QR opsional; dokumen tetap terbit
+        }
+
         $pdf->SetY(-18);
         $pdf->SetFont('Helvetica', 'I', 7);
         $pdf->SetTextColor(130, 120, 110);

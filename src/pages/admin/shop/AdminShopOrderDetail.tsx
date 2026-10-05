@@ -4,6 +4,8 @@ import { ArrowLeft, Copy, Download, ExternalLink, Loader2, MessageCircle } from 
 import { toast } from "sonner";
 import { adminShop, downloadPrivate, openPrivate, rupiah, type Quote } from "@/lib/shop";
 import StatusBadge from "@/components/shop/StatusBadge";
+import { useConfirm } from "@/components/shop/useConfirm";
+import AdminOrderAftercare from "@/components/shop/AdminOrderAftercare";
 
 const NEXT: Record<string, { to: string; label: string }> = {
   dibayar: { to: "diproses", label: "Mulai proses" },
@@ -19,6 +21,7 @@ export default function AdminShopOrderDetail() {
   const { code = "" } = useParams();
   const [o, setO] = useState<any>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const confirm = useConfirm();
   const load = useCallback(() => adminShop.order(code).then(setO).catch((e) => toast.error(e.message)), [code]);
   useEffect(() => { load(); }, [load]);
 
@@ -55,9 +58,9 @@ export default function AdminShopOrderDetail() {
           {o.form_url && <button type="button" className="btn" onClick={() => { navigator.clipboard.writeText(o.form_url); toast.success("Tautan form disalin"); }}><Copy className="h-4 w-4" /> Salin tautan form</button>}
           {NEXT[o.status] && <AdvanceButton o={o} busy={busy} run={run} />}
           {CANCELABLE.includes(o.status) && (
-            <button type="button" className="btn text-red-600" disabled={!!busy} onClick={() => {
-              const reason = prompt("Alasan pembatalan?");
-              if (reason) run("cancel", () => adminShop.cancel(o.code, reason), "Pesanan dibatalkan");
+            <button type="button" className="btn text-red-600" disabled={!!busy} onClick={async () => {
+              const reason = await confirm.ask({ title: `Batalkan ${o.code}?`, text: "Alasan akan dikirim ke pelanggan.", inputLabel: "Alasan pembatalan", confirmLabel: "Batalkan pesanan", danger: true });
+              if (typeof reason === "string") run("cancel", () => adminShop.cancel(o.code, reason), "Pesanan dibatalkan");
             }}>Batalkan</button>
           )}
         </div>
@@ -113,6 +116,8 @@ export default function AdminShopOrderDetail() {
         </section>
       </div>
 
+      <AdminOrderAftercare o={o} reload={load} />
+
       <section className="rounded-xl border border-border bg-card p-5 text-sm">
         <h2 className="font-semibold">Riwayat</h2>
         <ul className="mt-3 space-y-2">
@@ -122,6 +127,7 @@ export default function AdminShopOrderDetail() {
           {!o.audit?.length && <li className="text-muted-foreground">Belum ada riwayat.</li>}
         </ul>
       </section>
+      {confirm.node}
       <style>{`.btn{display:inline-flex;align-items:center;gap:.4rem;height:2.5rem;padding:0 1rem;border-radius:.5rem;border:1px solid hsl(var(--border));font-size:.875rem;background:hsl(var(--card))}.btn:disabled{opacity:.5}.btn-dark{background:hsl(var(--foreground));color:hsl(var(--background));border-color:transparent}`}</style>
     </div>
   );

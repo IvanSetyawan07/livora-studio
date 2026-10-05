@@ -110,6 +110,14 @@ class ShopOrderController extends Controller
             return response()->json(['message' => 'Alasan diskon wajib diisi.'], 422);
         }
         $order = ShopOrder::with('items')->where('code', $code)->firstOrFail();
+        if ($order->hasMto() && !$order->spec_reviewed_by) {
+            $order->spec_reviewed_by = $request->user()->id;
+            $order->save();
+        }
+        if ($order->quote_sent_at && !empty($data['unit_prices'])) {
+            $order->spec_revised = true;
+            $order->save();
+        }
         $this->service->sendQuote($order, $data);
 
         return $this->show($request, $code);
