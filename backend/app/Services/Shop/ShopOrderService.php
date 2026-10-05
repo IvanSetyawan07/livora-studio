@@ -196,15 +196,31 @@ class ShopOrderService
         $this->setStatus($order, 'data_lengkap');
         $order->load('items');
 
+        $delivery = ($shipping['method'] ?? 'delivery') === 'delivery';
+        $zoneFee = $delivery ? self::zoneFee($shipping) : 0;
+
         $needsReview = $order->hasMto()
-            || ($shipping['method'] ?? 'delivery') === 'delivery'   // ongkir dihitung manual oleh admin
+            || ($delivery && $zoneFee === null)                    // wilayah belum ada di tabel ongkir → admin hitung
+            || !empty($shipping['needs_installation'])
             || $this->estimate($order) > config('services.shop.review_threshold');
 
         if ($needsReview) {
             $this->setStatus($order, 'menunggu_review_admin');
         } else {
-            $this->sendQuote($order, ['shipping_fee' => 0, 'installation_fee' => 0, 'other_fee' => 0], true);
+            $this->sendQuote($order, ['shipping_fee' => (int) $zoneFee, 'installation_fee' => 0, 'other_fee' => 0], true);
         }
+    }
+
+    /** Ongkir otomatis dari SHOP_SHIPPING_ZONES (kota dulu, lalu provinsi). null = tidak ada tarif. */
+    public static function zoneFee(array $s): ?int
+    {
+        $zones = array_change_key_case((array) config('services.shop.shipping_zones', []), CASE_LOWER);
+        foreach ([$s['city'] ?? null, $s['province'] ?? null] as $k) {
+            $k = strtolower(trim((string) $k));
+            if ($k !== '' && array_key_exists($k, $zones)) return (int) $zones[$k];
+        }
+
+        return null;
     }
 
     protected function estimate(ShopOrder $order): int
@@ -449,11 +465,33 @@ class ShopOrderService
         try {
             $doc->pdf_path = $this->pdf->render($doc);
             $doc->save();
+            $this->pushToSheets($doc);
         } catch (\Throwable $e) {
             Log::error('PDF dokumen gagal dibuat', ['doc' => $doc->id, 'error' => $e->getMessage()]);
         }
 
         return $doc;
+    }
+
+    /** Kirim baris register dokumen ke Google Sheets (Apps Script Web App). Opsional. */
+    protected function pushToSheets(ShopDocument $doc): void
+    {
+        $url = config('services.shop.sheets_webhook_url');
+        if (!$url) return;
+        try {
+            $s = $doc->snapshot;
+            \Illuminate\Support\Facades\Http::timeout(8)->post($url, [
+                'secret' => config('services.shop.sheets_webhook_secret'),
+                'nomor' => $doc->number, 'judul' => $doc->title, 'status' => $doc->status, 'versi' => $doc->version,
+                'tanggal' => $doc->issued_at?->toDateString(), 'kode_order' => $s['order_code'] ?? null,
+                'customer' => $s['buyer']['name'] ?? null, 'perusahaan' => $s['buyer']['company'] ?? null,
+                'item' => collect($s['items'] ?? [])->map(fn ($i) => $i['title'].' x'.$i['quantity'])->implode('; '),
+                'dpp' => $s['totals']['dpp'] ?? 0, 'ppn' => $s['totals']['ppn'] ?? 0, 'grand_total' => $s['totals']['grand_total'] ?? 0,
+                'dibayar' => $s['paid_at'] ?? null, 'metode' => $s['paid_method'] ?? null,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Sinkron Google Sheets gagal', ['doc' => $doc->id, 'error' => $e->getMessage()]);
+        }
     }
 
     public static function formatAddress(array $s): ?string
