@@ -23,9 +23,11 @@ import { DOMAINS, TABLES, RELATIONS, FLOWS, Domain } from "@/data/erdSchema";
 // re-lays itself out automatically.
 // -------------------------------------------------------------
 const COL_WIDTH = 380;
-const ROW_HEIGHT = 260;
 const NODE_WIDTH = 300;
-
+const NODE_GAP = 40;
+// Estimated rendered height of a table node (header + one 15px line per column
+// + padding) so tall tables like shop_orders never overlap the next one.
+const nodeHeight = (columnCount: number) => 56 + columnCount * 15;
 const colorOf = (d: Domain) => DOMAINS.find((x) => x.id === d)?.color ?? "#374151";
 
 function buildGraph(active: Domain | "all"): { nodes: Node[]; edges: Edge[] } {
@@ -39,7 +41,7 @@ function buildGraph(active: Domain | "all"): { nodes: Node[]; edges: Edge[] } {
     tables.forEach((t, row) => {
       nodes.push({
         id: t.name,
-        position: { x: col * COL_WIDTH, y: row * ROW_HEIGHT },
+        position: { x: col * COL_WIDTH, y: row * nodeHeight(t.columns.length) + row * NODE_GAP },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
         data: {
