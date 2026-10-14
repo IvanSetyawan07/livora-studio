@@ -1,4 +1,5 @@
 import OrdersTab from "@/components/shop/OrdersTab";
+import { Navbar } from "@/components/livora/Navbar";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, authStorage } from "@/lib/api";
@@ -84,15 +85,9 @@ export default function Profile() {
   const displayFirst = firstName.charAt(0).toUpperCase() + firstName.slice(1);
 
   return (
-    <div className="min-h-screen bg-background p-6 md:p-10">
-      <div className="max-w-3xl mx-auto">
-        <button
-          onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/"))}
-          className="mb-6 inline-flex items-center gap-2 text-xs uppercase tracking-[0.28em] text-muted-foreground hover:text-foreground transition-colors"
-          aria-label="Back"
-        >
-          <ArrowLeft size={14} /> Back
-        </button>
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <div className="max-w-3xl mx-auto p-6 pt-28 md:p-10 md:pt-36">
         <div className="flex items-center justify-between mb-8">
           <div>
             <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground mb-1">
