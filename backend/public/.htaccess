@@ -2,7 +2,7 @@
     SetEnvIf Origin "^https?://(www\.)?livoralcr\.com$" ORIGIN_ALLOWED=$0
     Header set Access-Control-Allow-Origin %{ORIGIN_ALLOWED}e env=ORIGIN_ALLOWED
     Header set Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, X-XSRF-TOKEN"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, X-XSRF-TOKEN, X-Locale, Idempotency-Key, Accept"
     Header set Access-Control-Allow-Credentials "true"
 </IfModule>
 

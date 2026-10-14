@@ -14,9 +14,11 @@ export type ApiErrorKind =
   | "unknown";
 
 // Base URL backend Laravel. Ganti via VITE_API_URL saat deploy.
+const PROD_API_URL = "https://api.livoralcr.com/api";
+
 export const API_BASE_URL =
   (import.meta.env["VITE_API_URL"] as string | undefined) ??
-  "http://127.0.0.1:8000/api";
+  (import.meta.env.PROD ? PROD_API_URL : "http://127.0.0.1:8000/api");
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -49,7 +51,8 @@ export const authStorage = {
 
 // True hanya kalau developer sudah mengganti base URL via env.
 // Kalau masih default localhost, dianggap belum dikonfigurasi untuk production.
-export const isApiConfigured = Boolean(import.meta.env["VITE_API_URL"]);
+export const isApiConfigured =
+  Boolean(import.meta.env["VITE_API_URL"]) || import.meta.env.PROD;
 
 export class ApiError extends Error {
   readonly kind: ApiErrorKind;

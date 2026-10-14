@@ -18,8 +18,12 @@ const buildStorageUrl = (path: string): string => {
   if (!path) return "";
   if (path.startsWith('http')) return path;
   
-  const baseUrl = (import.meta.env.VITE_API_URL as string | undefined)
-  ?.replace(/\/api\/?$/, "") ?? "http://127.0.0.1:8000";
+  const baseUrl = (
+    (import.meta.env.VITE_API_URL as string | undefined) ??
+    (import.meta.env.PROD
+      ? "https://api.livoralcr.com/api"
+      : "http://127.0.0.1:8000/api")
+  ).replace(/\/api\/?$/, "");
   
   return `${baseUrl}/storage/${path}`;
 };
