@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { imgUrl } from "@/lib/adminApi";
 import {
   Bookmark, User as UserIcon,
-  ClipboardList, ArrowLeft, MessageCircle, XCircle, Check, Bell,
+  ClipboardList, MessageCircle, XCircle, Check, Bell,
 } from "lucide-react";
 
 type User = { id: number; name: string; email: string; phone?: string | null; address?: string | null };
