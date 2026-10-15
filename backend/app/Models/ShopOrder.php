@@ -41,6 +41,12 @@ class ShopOrder extends Model
         'extra_discount', 'dpp', 'ppn', 'shipping_fee', 'installation_fee', 'other_fee', 'grand_total',
     ];
 
+    protected static function booted(): void
+    {
+        // Setiap perubahan order → sinkron ke tab "Pesanan" di Google Sheets (setelah respons selesai).
+        static::saved(fn (self $o) => \App\Services\Shop\SheetsSync::queueOrder($o->id));
+    }
+
     public static function generateCode(): string
     {
         $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

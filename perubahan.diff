@@ -1,0 +1,106 @@
+--- a/backend/app/Services/Shop/ShopOrderService.php	2026-10-05 17:08:50.000000000 +0700
++++ b/backend/app/Services/Shop/ShopOrderService.php	2026-10-15 14:26:29.275386292 +0700
+@@ -480,35 +480,16 @@
+         try {
+             $doc->pdf_path = $this->pdf->render($doc);
+             $doc->save();
+-            $this->pushToSheets($doc);
+         } catch (\Throwable $e) {
+             Log::error('PDF dokumen gagal dibuat', ['doc' => $doc->id, 'error' => $e->getMessage()]);
+         }
++        // Register Dokumen di Google Sheets: dikirim SETELAH respons selesai (di luar transaksi),
++        // dan tidak lagi tergantung keberhasilan PDF. Gagal → dicoba ulang scheduler (SheetsSync).
++        SheetsSync::queueDocument($doc->id);
+ 
+         return $doc;
+     }
+ 
+-    /** Kirim baris register dokumen ke Google Sheets (Apps Script Web App). Opsional. */
+-    protected function pushToSheets(ShopDocument $doc): void
+-    {
+-        $url = config('services.shop.sheets_webhook_url');
+-        if (!$url) return;
+-        try {
+-            $s = $doc->snapshot;
+-            \Illuminate\Support\Facades\Http::timeout(8)->post($url, [
+-                'secret' => config('services.shop.sheets_webhook_secret'),
+-                'nomor' => $doc->number, 'judul' => $doc->title, 'status' => $doc->status, 'versi' => $doc->version,
+-                'tanggal' => $doc->issued_at?->toDateString(), 'kode_order' => $s['order_code'] ?? null,
+-                'customer' => $s['buyer']['name'] ?? null, 'perusahaan' => $s['buyer']['company'] ?? null,
+-                'item' => collect($s['items'] ?? [])->map(fn ($i) => $i['title'].' x'.$i['quantity'])->implode('; '),
+-                'dpp' => $s['totals']['dpp'] ?? 0, 'ppn' => $s['totals']['ppn'] ?? 0, 'grand_total' => $s['totals']['grand_total'] ?? 0,
+-                'dibayar' => $s['paid_at'] ?? null, 'metode' => $s['paid_method'] ?? null,
+-            ]);
+-        } catch (\Throwable $e) {
+-            Log::warning('Sinkron Google Sheets gagal', ['doc' => $doc->id, 'error' => $e->getMessage()]);
+-        }
+-    }
+-
+     public static function formatAddress(array $s): ?string
+     {
+         if (($s['method'] ?? null) === 'pickup') return 'Diambil di showroom Livora';
+--- a/backend/app/Models/ShopOrder.php	2026-10-05 16:28:06.000000000 +0700
++++ b/backend/app/Models/ShopOrder.php	2026-10-15 14:26:31.331386414 +0700
+@@ -41,6 +41,12 @@
+         'extra_discount', 'dpp', 'ppn', 'shipping_fee', 'installation_fee', 'other_fee', 'grand_total',
+     ];
+ 
++    protected static function booted(): void
++    {
++        // Setiap perubahan order → sinkron ke tab "Pesanan" di Google Sheets (setelah respons selesai).
++        static::saved(fn (self $o) => \App\Services\Shop\SheetsSync::queueOrder($o->id));
++    }
++
+     public static function generateCode(): string
+     {
+         $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+--- a/backend/app/Models/ShopOrderItem.php	2026-10-05 16:28:06.000000000 +0700
++++ b/backend/app/Models/ShopOrderItem.php	2026-10-15 14:26:33.339386533 +0700
+@@ -8,6 +8,12 @@
+ {
+     protected $guarded = ['id'];
+ 
++    protected static function booted(): void
++    {
++        static::saved(fn (self $i) => \App\Services\Shop\SheetsSync::queueOrder($i->order_id));
++        static::deleted(fn (self $i) => \App\Services\Shop\SheetsSync::queueOrder($i->order_id));
++    }
++
+     public function order() { return $this->belongsTo(ShopOrder::class, 'order_id'); }
+     public function item() { return $this->belongsTo(Item::class); }
+ }
+--- a/backend/app/Console/Kernel.php	2026-10-05 17:08:50.000000000 +0700
++++ b/backend/app/Console/Kernel.php	2026-10-15 14:26:35.439386658 +0700
+@@ -14,6 +14,8 @@
+     {
+         $schedule->command('shop:expire')->everyFifteenMinutes();
+         $schedule->command('shop:maintenance')->dailyAt('02:00');
++        // Google Sheets: kirim ulang order/dokumen yang gagal atau berubah (jaring pengaman untuk pengiriman real-time).
++        $schedule->command('shop:sheets-sync')->everyFiveMinutes()->withoutOverlapping();
+         // $schedule->command('inspire')->hourly();
+     }
+ 
+--- a/backend/config/services.php	2026-10-05 17:08:50.000000000 +0700
++++ b/backend/config/services.php	2026-10-15 14:26:37.975386809 +0700
+@@ -171,6 +171,9 @@
+         'wa_flow_id' => env('SHOP_WA_FLOW_ID'),
+         'sheets_webhook_url' => env('SHOP_SHEETS_WEBHOOK_URL'),
+         'sheets_webhook_secret' => env('SHOP_SHEETS_WEBHOOK_SECRET'),
++        // Tab "Pesanan" (satu baris per barang) — Apps Script terpisah dari Register Dokumen. Kosong = nonaktif.
++        'sheets_orders_url' => env('SHOP_SHEETS_ORDERS_URL'),
++        'sheets_orders_secret' => env('SHOP_SHEETS_ORDERS_SECRET', env('SHOP_SHEETS_WEBHOOK_SECRET')),
+     ],
+ 
+     'midtrans' => [
+--- a/backend/.env.example	2026-10-05 17:10:06.000000000 +0700
++++ b/backend/.env.example	2026-10-15 14:26:40.115386936 +0700
+@@ -139,6 +139,9 @@
+ SHOP_SHIPPING_ZONES='{"jakarta selatan":150000,"dki jakarta":200000}'
+ SHOP_SHEETS_WEBHOOK_URL=
+ SHOP_SHEETS_WEBHOOK_SECRET=
++# Tab "Pesanan" (satu baris per barang, ter-update otomatis). Kosong = nonaktif. Secret kosong = pakai SHOP_SHEETS_WEBHOOK_SECRET.
++SHOP_SHEETS_ORDERS_URL=
++SHOP_SHEETS_ORDERS_SECRET=
+ # Tahap 4: form pengiriman di dalam WhatsApp (Flow ID dari WhatsApp Manager) & pengingat masa token Meta
+ SHOP_WA_FLOW_ID=
+ META_WHATSAPP_TOKEN_EXPIRES_AT=

@@ -14,6 +14,8 @@ class Kernel extends ConsoleKernel
     {
         $schedule->command('shop:expire')->everyFifteenMinutes();
         $schedule->command('shop:maintenance')->dailyAt('02:00');
+        // Google Sheets: kirim ulang order/dokumen yang gagal atau berubah (jaring pengaman untuk pengiriman real-time).
+        $schedule->command('shop:sheets-sync')->everyFiveMinutes()->withoutOverlapping();
         // $schedule->command('inspire')->hourly();
     }
 

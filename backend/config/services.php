@@ -171,6 +171,9 @@ return [
         'wa_flow_id' => env('SHOP_WA_FLOW_ID'),
         'sheets_webhook_url' => env('SHOP_SHEETS_WEBHOOK_URL'),
         'sheets_webhook_secret' => env('SHOP_SHEETS_WEBHOOK_SECRET'),
+        // Tab "Pesanan" (satu baris per barang) — Apps Script terpisah dari Register Dokumen. Kosong = nonaktif.
+        'sheets_orders_url' => env('SHOP_SHEETS_ORDERS_URL'),
+        'sheets_orders_secret' => env('SHOP_SHEETS_ORDERS_SECRET', env('SHOP_SHEETS_WEBHOOK_SECRET')),
     ],
 
     'midtrans' => [

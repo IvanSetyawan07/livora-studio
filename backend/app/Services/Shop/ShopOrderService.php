@@ -480,33 +480,14 @@ class ShopOrderService
         try {
             $doc->pdf_path = $this->pdf->render($doc);
             $doc->save();
-            $this->pushToSheets($doc);
         } catch (\Throwable $e) {
             Log::error('PDF dokumen gagal dibuat', ['doc' => $doc->id, 'error' => $e->getMessage()]);
         }
+        // Register Dokumen di Google Sheets: dikirim SETELAH respons selesai (di luar transaksi),
+        // dan tidak lagi tergantung keberhasilan PDF. Gagal → dicoba ulang scheduler (SheetsSync).
+        SheetsSync::queueDocument($doc->id);
 
         return $doc;
-    }
-
-    /** Kirim baris register dokumen ke Google Sheets (Apps Script Web App). Opsional. */
-    protected function pushToSheets(ShopDocument $doc): void
-    {
-        $url = config('services.shop.sheets_webhook_url');
-        if (!$url) return;
-        try {
-            $s = $doc->snapshot;
-            \Illuminate\Support\Facades\Http::timeout(8)->post($url, [
-                'secret' => config('services.shop.sheets_webhook_secret'),
-                'nomor' => $doc->number, 'judul' => $doc->title, 'status' => $doc->status, 'versi' => $doc->version,
-                'tanggal' => $doc->issued_at?->toDateString(), 'kode_order' => $s['order_code'] ?? null,
-                'customer' => $s['buyer']['name'] ?? null, 'perusahaan' => $s['buyer']['company'] ?? null,
-                'item' => collect($s['items'] ?? [])->map(fn ($i) => $i['title'].' x'.$i['quantity'])->implode('; '),
-                'dpp' => $s['totals']['dpp'] ?? 0, 'ppn' => $s['totals']['ppn'] ?? 0, 'grand_total' => $s['totals']['grand_total'] ?? 0,
-                'dibayar' => $s['paid_at'] ?? null, 'metode' => $s['paid_method'] ?? null,
-            ]);
-        } catch (\Throwable $e) {
-            Log::warning('Sinkron Google Sheets gagal', ['doc' => $doc->id, 'error' => $e->getMessage()]);
-        }
     }
 
     public static function formatAddress(array $s): ?string
