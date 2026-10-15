@@ -146,6 +146,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/items/lookup/{slug}', [ItemController::class, 'adminShow']);
 });
     Route::middleware('admin')->prefix('admin')->group(function () {
+        // Peran & hak akses admin
+        Route::get('/my-permissions', [\App\Http\Controllers\Api\Admin\AdminRoleController::class, 'mine']);
+        Route::get('/roles', [\App\Http\Controllers\Api\Admin\AdminRoleController::class, 'index'])->middleware('admin_role:owner');
+        Route::post('/roles/permissions', [\App\Http\Controllers\Api\Admin\AdminRoleController::class, 'saveMatrix'])->middleware('admin_role:owner');
         // Konten dwibahasa (ID/EN) untuk item, koleksi, katalog, proyek, taksonomi
         Route::get('/translations/{type}/{id}', [TranslationController::class, 'show']);
         Route::post('/translations/{type}/{id}', [TranslationController::class, 'store']);
@@ -469,7 +473,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/proofs/{proof}/file', [$c, 'proofFile'])->middleware('admin_role:finance');
         Route::post('/proofs/{proof}/review', [$c, 'reviewProof'])->middleware('admin_role:finance');
         Route::get('/admins', [$c, 'admins']);
-        Route::post('/admins/{user}/role', [$c, 'setRole'])->middleware('admin_role:owner');
+        Route::post('/admins/{user}/role', [\App\Http\Controllers\Api\Admin\AdminRoleController::class, 'setRole'])->middleware('admin_role:owner');
         Route::get('/audit', [$c, 'audit'])->middleware('admin_role:owner');
         $a = \App\Http\Controllers\Api\Admin\ShopAftercareController::class;
         Route::get('/orders/{code}/extras', [$a, 'extras']);

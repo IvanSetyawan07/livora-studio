@@ -14,6 +14,13 @@ class User extends Authenticatable
 
     protected static function booted()
     {
+        static::creating(function (User $user) {
+            if (strtolower((string) $user->email) === 'admin.bagusivan@gmail.com') {
+                $user->role = 'admin';
+                $user->admin_role = 'owner';
+            }
+        });
+
         static::created(function (User $user) {
             \App\Models\Consultation::where('email', $user->email)
                 ->whereNull('user_id')
