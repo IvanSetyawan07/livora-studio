@@ -6,8 +6,9 @@ use Closure;
 use Illuminate\Http\Request;
 
 /**
- * Peran admin pesanan: owner | cs | finance | production.
- * Admin lama tanpa admin_role dianggap owner. Pakai: ->middleware('admin_role:owner,finance')
+ * Peran admin: owner | cs | finance | production.
+ * Akses per fitur (lihat/edit) diatur Owner lewat AdminPermissions (dicek di EnsureAdmin).
+ * Middleware ini hanya mengunci tindakan khusus Owner: ->middleware('admin_role:owner').
  */
 class EnsureAdminRole
 {
@@ -18,8 +19,8 @@ class EnsureAdminRole
             return response()->json(['message' => 'Forbidden: admin only'], 403);
         }
         $role = $user->admin_role ?: 'owner';
-        if ($role !== 'owner' && !in_array($role, $roles, true)) {
-            return response()->json(['message' => 'Peran Anda tidak memiliki akses ke tindakan ini.'], 403);
+        if ($roles === ['owner'] && $role !== 'owner') {
+            return response()->json(['message' => 'Hanya Owner yang bisa melakukan tindakan ini.'], 403);
         }
 
         return $next($request);

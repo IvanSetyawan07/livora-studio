@@ -44,6 +44,7 @@ const AdminShopSettings = lazy(() => import("./pages/admin/shop/AdminShopSetting
 const AdminShopHealth = lazy(() => import("./pages/admin/shop/AdminShopHealth"));
 const AdminShopBotSimulator = lazy(() => import("./pages/admin/shop/AdminShopBotSimulator"));
 const AdminShopScan = lazy(() => import("./pages/admin/shop/AdminShopScan"));
+const AdminRoles = lazy(() => import("./pages/admin/AdminRoles"));
 const AdminShopDatabase = lazy(() => import("./pages/admin/shop/AdminShopDatabase"));
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
@@ -180,6 +181,7 @@ function App() {
                 <Route path="shop/orders/:code" element={<AdminShopOrderDetail />} />
                 <Route path="shop/payments" element={<AdminShopPayments />} />
                 <Route path="shop/database" element={<AdminShopDatabase />} />
+                <Route path="roles" element={<AdminRoles />} />
                 <Route path="shop/scan" element={<AdminShopScan />} />
                 <Route path="shop/inbox" element={<AdminShopInbox />} />
                 <Route path="shop/aftercare" element={<AdminShopAftercare />} />
