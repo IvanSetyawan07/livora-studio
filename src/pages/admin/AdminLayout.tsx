@@ -38,33 +38,36 @@ import {
   Settings2,
   Activity,
   Bot,
+  ShieldCheck,
+  Eye,
 } from "lucide-react";
 
 const nav = [
   { to: "/admin", end: true, key: "overview", icon: LayoutDashboard },
-  { to: "/admin/projects", key: "projects", icon: FolderKanban },
-  { to: "/admin/items", key: "items", icon: Sofa },
-  { to: "/admin/scan", key: "scan", icon: QrCodeIcon },
-  { to: "/admin/collections", key: "collections", icon: BookOpen },
-  { to: "/admin/catalogs", key: "catalogs", icon: BookOpen },
-  { to: "/admin/taxonomies", key: "taxonomies", icon: Tags },
-  { to: "/admin/landing", key: "landing", icon: Star },
-  { to: "/admin/banners", key: "banners", icon: ImageIcon },
-  { to: "/admin/users", key: "users", icon: Users },
-  { to: "/admin/consultations", key: "consultations", icon: MessageCircle },
-  { to: "/admin/shop/orders", key: "shopOrders", label: "Pesanan", icon: ShoppingBag },
-  { to: "/admin/shop/inbox", key: "shopInbox", label: "Inbox WhatsApp", icon: Inbox },
-  { to: "/admin/shop/payments", key: "shopPayments", label: "Verifikasi bayar", icon: Wallet },
-  { to: "/admin/shop/aftercare", key: "shopAftercare", label: "Klaim & Refund", icon: LifeBuoy },
-  { to: "/admin/shop/database", key: "shopDatabase", label: "Database toko", icon: Database },
-  { to: "/admin/shop/scan", key: "shopScan", label: "Scan dokumen", icon: QrCodeIcon },
-  { to: "/admin/shop/health", key: "shopHealth", label: "Kesehatan & funnel", icon: Activity },
-  { to: "/admin/shop/settings", key: "shopSettings", label: "Pengaturan toko", icon: Settings2 },
-  { to: "/admin/shop/bot-simulator", key: "shopBot", label: "Simulator bot", icon: Bot },
-  { to: "/admin/wishlists", key: "wishlists", icon: Bookmark },
-  { to: "/admin/support", key: "support", icon: MessageCircle },
-  { to: "/admin/analytics", key: "analytics", icon: BarChart3 },
-  { to: "/admin/marketing", key: "marketing", icon: Mail },
+  { to: "/admin/roles", key: "roles", label: "Peran & hak akses", icon: ShieldCheck, owner: true },
+  { to: "/admin/projects", key: "projects", feature: "projects", icon: FolderKanban },
+  { to: "/admin/items", key: "items", feature: "catalog", icon: Sofa },
+  { to: "/admin/scan", key: "scan", feature: "catalog", icon: QrCodeIcon },
+  { to: "/admin/collections", key: "collections", feature: "catalog", icon: BookOpen },
+  { to: "/admin/catalogs", key: "catalogs", feature: "catalog", icon: BookOpen },
+  { to: "/admin/taxonomies", key: "taxonomies", feature: "catalog", icon: Tags },
+  { to: "/admin/landing", key: "landing", feature: "landing", icon: Star },
+  { to: "/admin/banners", key: "banners", feature: "landing", icon: ImageIcon },
+  { to: "/admin/users", key: "users", feature: "users", icon: Users },
+  { to: "/admin/consultations", key: "consultations", feature: "consultations", icon: MessageCircle },
+  { to: "/admin/shop/orders", key: "shopOrders", feature: "shop_orders", label: "Pesanan", icon: ShoppingBag },
+  { to: "/admin/shop/inbox", key: "shopInbox", feature: "shop_inbox", label: "Inbox WhatsApp", icon: Inbox },
+  { to: "/admin/shop/payments", key: "shopPayments", feature: "shop_payments", label: "Verifikasi bayar", icon: Wallet },
+  { to: "/admin/shop/aftercare", key: "shopAftercare", feature: "shop_aftercare", label: "Klaim & Refund", icon: LifeBuoy },
+  { to: "/admin/shop/database", key: "shopDatabase", feature: "shop_database", label: "Database toko", icon: Database },
+  { to: "/admin/shop/scan", key: "shopScan", feature: "shop_orders", label: "Scan dokumen", icon: QrCodeIcon },
+  { to: "/admin/shop/health", key: "shopHealth", feature: "shop_system", label: "Kesehatan & funnel", icon: Activity },
+  { to: "/admin/shop/settings", key: "shopSettings", feature: "shop_system", label: "Pengaturan toko", icon: Settings2 },
+  { to: "/admin/shop/bot-simulator", key: "shopBot", feature: "shop_system", label: "Simulator bot", icon: Bot },
+  { to: "/admin/wishlists", key: "wishlists", feature: "wishlists", icon: Bookmark },
+  { to: "/admin/support", key: "support", feature: "support", icon: MessageCircle },
+  { to: "/admin/analytics", key: "analytics", feature: "analytics", icon: BarChart3 },
+  { to: "/admin/marketing", key: "marketing", feature: "marketing", icon: Mail },
 ];
 
 export default function AdminLayout() {
@@ -75,6 +78,7 @@ export default function AdminLayout() {
   const [open, setOpen] = useState(false);
   const [activities, setActivities] = useState<ConsultationActivity[]>([]);
   const [unreadActivities, setUnreadActivities] = useState(0);
+  const [perm, setPerm] = useState<{ role: string; permissions: Record<string, string> } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -86,6 +90,7 @@ export default function AdminLayout() {
           return;
         }
         setUser(data);
+        api.get("/admin/my-permissions").then((r) => setPerm(r.data)).catch(() => {});
       } catch {
         rememberIntendedPath();
         toast.error("Silakan masuk terlebih dahulu");
@@ -138,6 +143,12 @@ export default function AdminLayout() {
 
   if (!user) return null;
 
+  const isOwner = !perm || perm.role === "owner";
+  const levelOf = (f?: string) => (!f || isOwner ? "edit" : perm?.permissions?.[f] ?? "none");
+  const visibleNav = nav.filter((n: any) => (n.owner ? isOwner : levelOf(n.feature) !== "none"));
+  const current = [...nav].sort((a, b) => b.to.length - a.to.length).find((n: any) => n.to !== "/admin" && location.pathname.startsWith(n.to)) as any;
+  const currentLevel = current ? (current.owner ? (isOwner ? "edit" : "none") : levelOf(current.feature)) : "edit";
+
   const sidebar = (
     <div className="flex h-full flex-col">
       <div className="p-6 border-b border-border">
@@ -157,7 +168,7 @@ export default function AdminLayout() {
       </div>
 
       <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-        {nav.map((n) => (
+        {visibleNav.map((n) => (
           <NavLink
             key={n.to}
             to={n.to}
@@ -256,7 +267,20 @@ export default function AdminLayout() {
           />
         </div>
         <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-10">
-          <Outlet />
+          {currentLevel === "none" ? (
+            <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+              Peran Anda tidak memiliki akses ke halaman ini. Hubungi Owner bila perlu akses.
+            </div>
+          ) : (
+            <>
+              {currentLevel === "view" && (
+                <div className="mb-4 flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-4 py-2.5 text-sm text-muted-foreground">
+                  <Eye className="h-4 w-4 shrink-0" /> Mode lihat saja — peran Anda tidak bisa mengubah data di halaman ini.
+                </div>
+              )}
+              <Outlet />
+            </>
+          )}
         </div>
       </main>
     </div>
