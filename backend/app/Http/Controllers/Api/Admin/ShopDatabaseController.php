@@ -17,7 +17,7 @@ class ShopDatabaseController extends Controller
         $rows = $this->rows($grid, $request);
         if ($request->query('format') === 'csv') {
             $role = $request->user()->admin_role ?: 'owner';
-            abort_unless(in_array($role, ['owner', 'finance'], true), 403, 'Ekspor hanya untuk Owner dan Keuangan.');
+            abort_unless(in_array($role, ['owner', 'finance', 'cs'], true), 403, 'Ekspor hanya untuk Owner, Keuangan, dan CS.');
             AuditLog::record('database.export', null, null, ['grid' => $grid, 'rows' => count($rows)]);
 
             return response()->streamDownload(function () use ($rows) {
