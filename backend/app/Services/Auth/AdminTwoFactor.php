@@ -29,6 +29,12 @@ class AdminTwoFactor
             return false;
         }
 
+        // Tombol darurat: set ADMIN_2FA_ENABLED=false di .env server untuk
+        // mematikan sementara (misalnya email server belum dikonfigurasi).
+        if (!filter_var(env('ADMIN_2FA_ENABLED', true), FILTER_VALIDATE_BOOLEAN)) {
+            return false;
+        }
+
         return !$this->isTrusted($user, $deviceToken);
     }
 
