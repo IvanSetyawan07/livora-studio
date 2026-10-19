@@ -111,7 +111,7 @@ class OrderController extends Controller
         $order = $this->owned($request, $code);
         abort_unless($document->order_id === $order->id && $document->pdf_path && Storage::disk('local')->exists($document->pdf_path), 404);
 
-        return Storage::disk('local')->download($document->pdf_path, $document->title.'-'.str_replace('/', '-', $document->number).'.pdf');
+        return Storage::disk('local')->download($document->pdf_path, \App\Services\Shop\InvoicePdf::label($document->title).'-'.str_replace('/', '-', $document->number).'.pdf');
     }
 
     public function requestRefund(Request $request, string $code, \App\Services\Shop\AftercareService $after)
