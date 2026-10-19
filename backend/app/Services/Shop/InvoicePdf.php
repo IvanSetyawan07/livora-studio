@@ -12,6 +12,11 @@ use Illuminate\Support\Facades\Storage;
  */
 class InvoicePdf
 {
+    public static function label(string $title): string
+    {
+        return ['Tagihan' => 'Proforma Invoice', 'Tagihan Tambahan' => 'Proforma Invoice Tambahan'][$title] ?? $title;
+    }
+
     public function render(ShopDocument $doc): string
     {
         $s = $doc->snapshot;
@@ -42,7 +47,7 @@ class InvoicePdf
         // Header kanan
         $pdf->SetXY(120, 15);
         $pdf->SetFont('Helvetica', 'B', 20);
-        $pdf->Cell(75, 10, $t(strtoupper($doc->title)), 0, 2, 'R');
+        $pdf->Cell(75, 10, $t(strtoupper(self::label($doc->title))), 0, 2, 'R');
         $pdf->SetFont('Helvetica', '', 8);
         $pdf->SetX(120);
         $pdf->Cell(25, 6, 'Tanggal', 1, 0);
@@ -123,13 +128,35 @@ class InvoicePdf
         $pdf->Cell(35, 8, $rp($tot['grand_total'] ?? 0), 'T', 1, 'R');
         $endRight = $pdf->GetY();
 
+        // Kotak pembayaran: rekening + total yang harus ditransfer
         $pdf->SetXY(15, $startY);
+        $pdf->SetDrawColor(200, 190, 175);
+        $pdf->SetFillColor(250, 247, 241);
+        $pdf->Rect(15, $startY, 95, 52, 'DF');
+        $pdf->SetXY(19, $startY + 3);
         $pdf->SetFont('Helvetica', 'B', 9);
-        $pdf->Cell(95, 5, 'Pembayaran', 0, 2);
-        $pdf->SetFont('Helvetica', '', 8);
-        $bank = trim(($c['bank_name'] ?? 'BCA').' '.($c['bank_account'] ?? '(nomor rekening belum diatur)'));
-        $pdf->MultiCell(95, 4, $t("Transfer $bank\na.n. ".($c['bank_holder'] ?? '-')."\nCantumkan nomor tagihan pada berita transfer.\nAtau bayar dengan QRIS dari halaman Pesanan Saya."));
-        if (!empty($s['due_at'])) $pdf->Cell(95, 5, $t('Batas waktu bayar: '.$s['due_at']), 0, 2);
+        $pdf->Cell(87, 5, $t('Pembayaran - Transfer '.($c['bank_name'] ?? 'BCA')), 0, 2);
+        $pdf->SetFont('Helvetica', '', 7);
+        $pdf->SetTextColor(120, 110, 100);
+        $pdf->Cell(87, 4, 'NOMOR REKENING', 0, 2);
+        $pdf->SetTextColor(0, 0, 0);
+        $pdf->SetFont('Helvetica', 'B', 14);
+        $pdf->Cell(87, 7, $t($c['bank_account'] ?: '(belum diatur)'), 0, 2);
+        $pdf->SetFont('Helvetica', '', 7);
+        $pdf->SetTextColor(120, 110, 100);
+        $pdf->Cell(87, 4, 'ATAS NAMA', 0, 2);
+        $pdf->SetTextColor(0, 0, 0);
+        $pdf->SetFont('Helvetica', 'B', 9);
+        $pdf->Cell(87, 5, $t($c['bank_holder'] ?? '-'), 0, 2);
+        $pdf->SetFont('Helvetica', '', 7);
+        $pdf->SetTextColor(120, 110, 100);
+        $pdf->Cell(87, 5, 'TOTAL TAGIHAN (NOMINAL TRANSFER)', 0, 2);
+        $pdf->SetTextColor(0, 0, 0);
+        $pdf->SetFont('Helvetica', 'B', 15);
+        $pdf->Cell(87, 7, $rp($tot['grand_total'] ?? 0), 0, 2);
+        $pdf->SetFont('Helvetica', '', 7);
+        $pdf->MultiCell(87, 3.5, $t('Cantumkan nomor dokumen pada berita transfer. Atau bayar QRIS di halaman Pesanan Saya.'.(!empty($s['due_at']) ? ' Batas bayar: '.$s['due_at'] : '')));
+        $pdf->SetY(max($pdf->GetY(), $startY + 52));
 
         // Status
         $pdf->SetY(max($endRight, $pdf->GetY()) + 8);

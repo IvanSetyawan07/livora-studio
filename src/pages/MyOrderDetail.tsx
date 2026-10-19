@@ -127,6 +127,27 @@ export default function MyOrderDetail() {
               {pendingProof ? (
                 <p className="mt-4 rounded-xl bg-sky-50 p-4 text-sm text-sky-900">Bukti transfer sedang diperiksa tim Keuangan. Biasanya selesai dalam 1 hari kerja.</p>
               ) : (
+                <>
+                <div className="mt-5 rounded-2xl border border-border bg-muted/40 p-5">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nomor rekening {order.payment_options?.bank.name ?? "BCA"}</p>
+                      {order.payment_options?.bank.account ? (
+                        <button type="button" onClick={() => { navigator.clipboard.writeText(order.payment_options!.bank.account!); toast.success("Nomor rekening disalin"); }} className="mt-1 flex items-center gap-2 font-mono text-2xl font-semibold">
+                          {order.payment_options.bank.account} <Copy className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      ) : <p className="mt-1 text-sm text-muted-foreground">Dikirim lewat WhatsApp.</p>}
+                      <p className="mt-1 text-xs text-muted-foreground">a.n. {order.payment_options?.bank.holder ?? "Livora"}</p>
+                    </div>
+                    <div className="sm:text-right">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total tagihan (nominal transfer)</p>
+                      <button type="button" onClick={() => { navigator.clipboard.writeText(String(payment?.amount ?? order.grand_total ?? "")); toast.success("Nominal disalin"); }} className="mt-1 inline-flex items-center gap-2 text-2xl font-semibold text-primary">
+                        {rupiah(payment?.amount ?? order.grand_total)} <Copy className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                      {order.documents?.find((d) => d.title.startsWith("Proforma")) && <p className="mt-1 text-xs text-muted-foreground">Proforma Invoice {order.documents.find((d) => d.title.startsWith("Proforma"))!.number}</p>}
+                    </div>
+                  </div>
+                </div>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
                   {order.payment_options?.qris && (
                     <div className="rounded-xl border border-border p-4">
@@ -155,6 +176,7 @@ export default function MyOrderDetail() {
                     </button>
                   </div>
                 </div>
+                </>
               )}
             </div>
           ) : (
