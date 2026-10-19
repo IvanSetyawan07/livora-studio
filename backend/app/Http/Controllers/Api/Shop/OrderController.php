@@ -200,7 +200,7 @@ class OrderController extends Controller
                 'expires_at' => $p->expires_at, 'paid_at' => $p->paid_at, 'qr_url' => $p->qr_url,
                 'proofs' => $p->proofs->map(fn ($pr) => $pr->only(['id', 'status', 'reason', 'created_at']))->values(),
             ])->values() : [],
-            'documents' => $o->relationLoaded('documents') ? $o->documents->sortByDesc('version')->values()->map(fn ($d) => $d->only(['id', 'number', 'title', 'status', 'version', 'issued_at', 'paid_at']))->values() : [],
+            'documents' => $o->relationLoaded('documents') ? $o->documents->sortByDesc('version')->values()->map(fn ($d) => ['title' => \App\Services\Shop\InvoicePdf::label($d->title)] + $d->only(['id', 'number', 'status', 'version', 'issued_at', 'paid_at']))->values() : [],
             'has_mto' => $o->relationLoaded('items') ? $o->hasMto() : false,
             'spec_approved_at' => $o->spec_approved_at,
             'production_started_at' => $o->production_started_at,
