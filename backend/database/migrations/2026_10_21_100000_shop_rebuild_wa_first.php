@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Schema;
  * - Halaman bertoken (konfirmasi & pembayaran) tanpa login.
  * - Pemetaan status lama → status baru (data lama tidak hilang, nomor dokumen tetap).
  * Semua additive; tidak ada DROP. Kolom lama yang tidak dipakai lagi ditandai
- * DEPRECATED lewat COMMENT, bukan dihapus.
+ * DEPRECATED lewat komentar PHP, bukan dihapus.
  */
 return new class extends Migration
 {
@@ -181,9 +181,8 @@ return new class extends Migration
                 SELECT 1 FROM shop_payments p JOIN shop_payment_proofs pr ON pr.payment_id = p.id
                 WHERE p.order_id = o.id AND pr.status = 'menunggu')");
 
-        // Kolom lama yang tidak dipakai lagi di alur baru
-        DB::statement("COMMENT ON COLUMN shop_orders.form_token IS 'DEPRECATED: diganti confirm_token/payment_token (rombak WA-first)'");
-        DB::statement("COMMENT ON COLUMN shop_orders.form_token_expires_at IS 'DEPRECATED: diganti confirm_token/payment_token'");
+        // DEPRECATED: shop_orders.form_token diganti confirm_token/payment_token (rombak WA-first).
+        // DEPRECATED: shop_orders.form_token_expires_at diganti confirm_token/payment_token.
     }
 
     public function down(): void
