@@ -93,7 +93,7 @@ class WebhookController extends Controller
         $orderId = DB::table('wa_sessions')->where('phone', $phone)->value('order_id')
             ?? ShopOrder::where('customer_phone', $phone)->latest()->value('id');
         DB::table('wa_messages')->insert([
-            'message_id' => $m['id'] ?? null, 'phone' => $phone, 'order_id' => $orderId, 'direction' => 'in',
+            'message_id' => $m['id'] ?? null, 'wa_message_id' => $m['id'] ?? null, 'phone' => $phone, 'order_id' => $orderId, 'direction' => 'in',
             'type' => $type, 'body' => $text, 'raw' => json_encode($m), 'created_at' => now(), 'updated_at' => now(),
         ]);
         \App\Services\Shop\Ops::funnel('wa_masuk', $orderId, null, ['type' => $type]);
@@ -104,9 +104,14 @@ class WebhookController extends Controller
             return;
         }
 
-        $result = app(\App\Services\Shop\WaBot::class)->handle($phone, $text, false, $type);
+        // Mesin bot baru: Livi (state machine + AI + guardrail)
+        $result = app(\App\Services\Shop\LiviBot::class)->handle($phone, $text, $type, $m, false);
         foreach ($result['replies'] as $reply) {
-            \App\Services\Shop\Ops::sendWa($phone, $reply, $orderId);
+            if (is_array($reply)) {
+                \App\Services\Shop\WaSender::send($phone, $reply, $orderId);
+            } else {
+                \App\Services\Shop\Ops::sendWa($phone, (string) $reply, $orderId);
+            }
         }
     }
 
