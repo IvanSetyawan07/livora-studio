@@ -79,13 +79,12 @@ export type ShopOrder = {
   payment_options?: { qris: boolean; bank: { name: string; account: string | null; holder: string | null } };
 };
 
-/** Urutan tahap yang ditampilkan ke pelanggan (disederhanakan). */
+/** Urutan tahap yang ditampilkan ke pelanggan (disederhanakan, alur WA-first). */
 export const ORDER_STEPS: { key: string; label: string; hint: string; statuses: string[] }[] = [
-  { key: "wa", label: "Chat WhatsApp", hint: "Kirim pesan berisi kode pesanan ke WhatsApp Livora.", statuses: ["menunggu_wa", "wa_terhubung"] },
-  { key: "data", label: "Data pengiriman", hint: "Isi alamat & detail lokasi lewat tautan yang kami kirim.", statuses: ["menunggu_data", "data_lengkap", "menunggu_review_admin"] },
+  { key: "wa", label: "Chat WhatsApp", hint: "Ngobrol dengan asisten kami di WhatsApp sampai data lengkap.", statuses: ["menunggu_harga", "menunggu_wa", "wa_terhubung", "menunggu_data", "data_lengkap", "menunggu_review_admin"] },
   { key: "quote", label: "Penawaran", hint: "Periksa rincian harga, lalu setujui bila sesuai.", statuses: ["penawaran"] },
-  { key: "pay", label: "Pembayaran", hint: "Bayar lunas dengan QRIS atau transfer BCA.", statuses: ["menunggu_bayar"] },
-  { key: "process", label: "Diproses", hint: "Pesanan disiapkan tim kami.", statuses: ["dibayar", "diproses", "perlu_tindakan"] },
+  { key: "pay", label: "Pembayaran", hint: "Transfer BCA sesuai total + kode unik, lalu kirim bukti ke WhatsApp.", statuses: ["menunggu_bayar", "menunggu_verifikasi"] },
+  { key: "process", label: "Diproses", hint: "Pesanan disiapkan tim kami.", statuses: ["dibayar", "diproses", "perlu_tindakan", "bermasalah"] },
   { key: "ship", label: "Pengiriman", hint: "Pesanan dalam perjalanan ke alamat Anda.", statuses: ["siap_kirim", "dikirim"] },
   { key: "done", label: "Selesai", hint: "Pesanan sudah diterima.", statuses: ["diterima", "selesai"] },
 ];
@@ -176,7 +175,7 @@ export const submitOrderForm = (code: string, token: string, body: Record<string
 // ── Admin ──
 export const adminShop = {
   summary: () => api.get<Record<string, number>>("/admin/shop/summary").then((r) => r.data),
-  orders: (params: { status?: string; q?: string; page?: number }) => api.get("/admin/shop/orders", { params }).then((r) => r.data),
+  orders: (params: { status?: string; q?: string; page?: number; per_page?: number }) => api.get("/admin/shop/orders", { params }).then((r) => r.data),
   order: (code: string) => api.get(`/admin/shop/orders/${code}`).then((r) => r.data),
   waConnected: (code: string) => api.post(`/admin/shop/orders/${code}/wa-connected`).then((r) => r.data),
   sendForm: (code: string) => api.post<{ form_url: string }>(`/admin/shop/orders/${code}/send-form`).then((r) => r.data),
