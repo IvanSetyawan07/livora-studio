@@ -2,13 +2,21 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, ShoppingBag, Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { authStorage } from "@/lib/api";
-import { rememberIntendedPath } from "@/lib/authGuard";
-import { addToCart } from "@/lib/shop";
+import { addPublicCartLine } from "@/lib/shopPublic";
 
-type Props = { itemId?: number; variantId: number | null; hasVariants: boolean; variantName?: string };
+type Props = {
+  itemId?: number;
+  variantId: number | null;
+  hasVariants: boolean;
+  variantName?: string;
+  itemTitle: string;
+  itemCode?: string | null;
+  itemImage?: string | null;
+  itemSlug?: string;
+};
 
-export default function AddToCartButton({ itemId, variantId, hasVariants, variantName }: Props) {
+/** Tambah ke keranjang anonim (localStorage) — tanpa login. */
+export default function AddToCartButton({ itemId, variantId, hasVariants, variantName, itemTitle, itemCode, itemImage, itemSlug }: Props) {
   const navigate = useNavigate();
   const [qty, setQty] = useState(1);
   const [busy, setBusy] = useState(false);
@@ -17,19 +25,14 @@ export default function AddToCartButton({ itemId, variantId, hasVariants, varian
   const needVariant = hasVariants && !variantId;
 
   const add = async () => {
-    if (!authStorage.getToken()) {
-      rememberIntendedPath();
-      toast("Masuk dulu untuk menyimpan barang ke keranjang");
-      navigate("/login");
-      return;
-    }
     if (needVariant) return toast.error("Pilih varian terlebih dahulu");
     setBusy(true);
     try {
-      await addToCart({ item_id: itemId, variant_id: variantId, quantity: qty });
+      addPublicCartLine({
+        item_id: itemId, variant_id: variantId, quantity: qty,
+        title: itemTitle, code: itemCode ?? null, image: itemImage ?? null, slug: itemSlug,
+      });
       toast.success("Ditambahkan ke keranjang", { action: { label: "Lihat", onClick: () => navigate("/cart") } });
-    } catch (e: any) {
-      toast.error(e?.message || "Gagal menambahkan");
     } finally {
       setBusy(false);
     }
@@ -50,8 +53,8 @@ export default function AddToCartButton({ itemId, variantId, hasVariants, varian
         </button>
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        {needVariant ? "Pilih varian di atas untuk melanjutkan." : variantName ? `Varian: ${variantName}. ` : ""}
-        Harga diberikan tim Livora lewat WhatsApp.
+        {needVariant ? "Pilih varian di atas untuk melanjutkan. " : variantName ? `Varian: ${variantName}. ` : ""}
+        Tanpa login — harga diberikan tim Livora lewat penawaran resmi di WhatsApp.
       </p>
     </div>
   );

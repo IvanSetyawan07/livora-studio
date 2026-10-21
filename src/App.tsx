@@ -43,6 +43,10 @@ const AdminShopAftercare = lazy(() => import("./pages/admin/shop/AdminShopAfterc
 const AdminShopSettings = lazy(() => import("./pages/admin/shop/AdminShopSettings"));
 const AdminShopHealth = lazy(() => import("./pages/admin/shop/AdminShopHealth"));
 const AdminShopBotSimulator = lazy(() => import("./pages/admin/shop/AdminShopBotSimulator"));
+const AdminShopBoard = lazy(() => import("./pages/admin/shop/AdminShopBoard"));
+const AdminBotLogs = lazy(() => import("./pages/admin/shop/AdminBotLogs"));
+const OrderConfirm = lazy(() => import("./pages/OrderConfirm"));
+const OrderPay = lazy(() => import("./pages/OrderPay"));
 const AdminShopScan = lazy(() => import("./pages/admin/shop/AdminShopScan"));
 const AdminRoles = lazy(() => import("./pages/admin/AdminRoles"));
 const AdminShopDatabase = lazy(() => import("./pages/admin/shop/AdminShopDatabase"));
@@ -129,6 +133,8 @@ function App() {
               <Route path="/cart" element={<Cart />} />
               <Route path="/order/:code/whatsapp" element={<OrderWhatsApp />} />
               <Route path="/order-form/:code" element={<OrderForm />} />
+              <Route path="/order/confirm/:code" element={<OrderConfirm />} />
+              <Route path="/order/pay/:code" element={<OrderPay />} />
               <Route element={<RequireRole roles={["sales", "admin"]} />}>
                 <Route path="/sales/scan" element={<SalesScan />} />
                 <Route path="/sales/items/:slug" element={<SalesItemDetail />} />
@@ -188,7 +194,9 @@ function App() {
                 <Route path="shop/settings" element={<AdminShopSettings />} />
                 <Route path="shop/health" element={<AdminShopHealth />} />
                 <Route path="shop/bot-simulator" element={<AdminShopBotSimulator />} />
-                
+                <Route path="shop/board" element={<AdminShopBoard />} />
+                <Route path="shop/bot-logs" element={<AdminBotLogs />} />
+
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

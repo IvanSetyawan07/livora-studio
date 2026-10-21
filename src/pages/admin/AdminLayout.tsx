@@ -1,4 +1,5 @@
 import { QrCode as QrCodeIcon } from "lucide-react";
+import AdminNotificationsBell from "@/components/admin/AdminNotificationsBell";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -40,6 +41,7 @@ import {
   Bot,
   ShieldCheck,
   Eye,
+  FileText,
 } from "lucide-react";
 
 const nav = [
@@ -55,6 +57,7 @@ const nav = [
   { to: "/admin/banners", key: "banners", feature: "landing", icon: ImageIcon },
   { to: "/admin/users", key: "users", feature: "users", icon: Users },
   { to: "/admin/consultations", key: "consultations", feature: "consultations", icon: MessageCircle },
+  { to: "/admin/shop/board", key: "shopBoard", feature: "shop_orders", label: "Pantau Proses", icon: Activity },
   { to: "/admin/shop/orders", key: "shopOrders", feature: "shop_orders", label: "Pesanan", icon: ShoppingBag },
   { to: "/admin/shop/inbox", key: "shopInbox", feature: "shop_inbox", label: "Inbox WhatsApp", icon: Inbox },
   { to: "/admin/shop/payments", key: "shopPayments", feature: "shop_payments", label: "Verifikasi bayar", icon: Wallet },
@@ -64,6 +67,7 @@ const nav = [
   { to: "/admin/shop/health", key: "shopHealth", feature: "shop_system", label: "Kesehatan & funnel", icon: Activity },
   { to: "/admin/shop/settings", key: "shopSettings", feature: "shop_system", label: "Pengaturan toko", icon: Settings2 },
   { to: "/admin/shop/bot-simulator", key: "shopBot", feature: "shop_system", label: "Simulator bot", icon: Bot },
+  { to: "/admin/shop/bot-logs", key: "shopBotLogs", feature: "shop_system", label: "Log AI & uji", icon: FileText },
   { to: "/admin/wishlists", key: "wishlists", feature: "wishlists", icon: Bookmark },
   { to: "/admin/support", key: "support", feature: "support", icon: MessageCircle },
   { to: "/admin/analytics", key: "analytics", feature: "analytics", icon: BarChart3 },
@@ -218,6 +222,7 @@ export default function AdminLayout() {
         </button>
         <p className="serif text-lg truncate">{t("admin.panel")}</p>
         <div className="flex items-center gap-1">
+          <AdminNotificationsBell />
           <NotificationBell
             activities={activities}
             unreadCount={unreadActivities}

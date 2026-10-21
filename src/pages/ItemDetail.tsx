@@ -348,7 +348,7 @@ const ItemDetail = () => {
               </div>
             )}
 
-            <AddToCartButton itemId={item.apiId} variantId={activeVariantId} hasVariants={!!item.variants?.length} variantName={activeVariant?.variant_name} />
+            <AddToCartButton itemId={item.apiId} variantId={activeVariantId} hasVariants={!!item.variants?.length} variantName={activeVariant?.variant_name} itemTitle={item.name} itemCode={item.code} itemImage={item.image} itemSlug={item.slug} />
 
             <div className="h-px w-full bg-[#1A1A1A]/10" style={{ margin: "28px 0" }} />
 

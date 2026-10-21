@@ -6,15 +6,17 @@ class Item extends Model {
     use HasTranslations;
     public array $translatable = ['title','description','texture','finish','material_detail'];
     protected $fillable = ['type_id','collection_id','title','slug','code','texture','finish','availability','image','description',
-        'stock','price','weight_kg','width_cm','depth_cm','height_cm','material_detail','warehouse_note','meta_title','meta_description'];
+        'stock','price','weight_kg','volume_m3','width_cm','depth_cm','height_cm','material_detail','warehouse_note','meta_title','meta_description','price_confirmed_at'];
 
     protected $casts = [
         'stock'     => 'integer',
         'price'     => 'float',
         'weight_kg' => 'float',
+        'volume_m3' => 'float',
         'width_cm'  => 'float',
         'depth_cm'  => 'float',
         'height_cm' => 'float',
+        'price_confirmed_at' => 'datetime',
     ];
     public function type(){ return $this->belongsTo(FurnitureType::class, 'type_id'); }
     public function collection(){ return $this->belongsTo(Collection::class); }

@@ -434,6 +434,15 @@ Route::post('/funnel', function (\Illuminate\Http\Request $r) {
 Route::get('/order-form/{code}', [\App\Http\Controllers\Api\Shop\OrderFormController::class, 'show'])->middleware('throttle:30,1');
 Route::post('/order-form/{code}', [\App\Http\Controllers\Api\Shop\OrderFormController::class, 'submit'])->middleware('throttle:10,1');
 
+// Keranjang anonim CRT-XXXX + halaman bertoken (tanpa login, rate-limited)
+Route::post('/shop/carts', [\App\Http\Controllers\Api\Shop\ShopCartController::class, 'store'])->middleware('throttle:20,1');
+Route::get('/shop/carts/{code}', [\App\Http\Controllers\Api\Shop\ShopCartController::class, 'show'])->middleware('throttle:30,1');
+Route::get('/shop/order/{code}/confirm', [\App\Http\Controllers\Api\Shop\TokenPageController::class, 'confirmShow'])->middleware('throttle:30,1');
+Route::post('/shop/order/{code}/confirm', [\App\Http\Controllers\Api\Shop\TokenPageController::class, 'confirm'])->middleware('throttle:10,1');
+Route::post('/shop/order/{code}/revise', [\App\Http\Controllers\Api\Shop\TokenPageController::class, 'revise'])->middleware('throttle:10,1');
+Route::get('/shop/order/{code}/pay', [\App\Http\Controllers\Api\Shop\TokenPageController::class, 'payShow'])->middleware('throttle:30,1');
+Route::get('/shop/order/{code}/invoice.pdf', [\App\Http\Controllers\Api\Shop\TokenPageController::class, 'invoicePdf'])->middleware('throttle:10,1');
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/cart', [\App\Http\Controllers\Api\Shop\CartController::class, 'index']);
     Route::get('/cart/count', [\App\Http\Controllers\Api\Shop\CartController::class, 'count']);
@@ -500,5 +509,22 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/funnel', [$a, 'funnel'])->middleware('admin_role:owner');
         Route::post('/bot/simulate', [$a, 'simulate'])->middleware('admin_role:owner');
         Route::get('/database/{grid}', [\App\Http\Controllers\Api\Admin\ShopDatabaseController::class, 'grid'])->middleware('admin_role:finance,cs');
+
+        // Simulator bot Livi + Log AI + Uji Skenario
+        $b = \App\Http\Controllers\Api\Admin\BotSimulatorController::class;
+        Route::post('/bot/chat', [$b, 'chat'])->middleware('admin_role:owner,cs');
+        Route::get('/bot/conversation', [$b, 'conversation'])->middleware('admin_role:owner,cs');
+        Route::post('/bot/reset', [$b, 'reset'])->middleware('admin_role:owner,cs');
+        Route::get('/bot/logs', [$b, 'logs'])->middleware('admin_role:owner');
+        Route::post('/bot/logs/{id}/bad', [$b, 'markBad'])->middleware('admin_role:owner');
+        Route::get('/bot/scenarios', [$b, 'scenarios'])->middleware('admin_role:owner');
+        Route::post('/bot/scenarios', [$b, 'saveScenario'])->middleware('admin_role:owner');
+        Route::post('/bot/scenarios/run', [$b, 'runScenarios'])->middleware('admin_role:owner');
     });
+
+    // Notifikasi admin N1–N16 (lonceng, Tugas Saya)
+    $n = \App\Http\Controllers\Api\Admin\NotificationController::class;
+    Route::get('/admin/notifications', [$n, 'index'])->middleware('admin');
+    Route::get('/admin/notifications/count', [$n, 'count'])->middleware('admin');
+    Route::post('/admin/notifications/{id}/read', [$n, 'markRead'])->middleware('admin');
 });
