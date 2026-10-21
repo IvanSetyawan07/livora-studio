@@ -22,12 +22,15 @@ use Illuminate\Validation\ValidationException;
 class ShopOrderService
 {
     public const LABELS = [
-        'menunggu_wa' => 'Menunggu chat WhatsApp', 'wa_terhubung' => 'Terhubung di WhatsApp',
-        'menunggu_data' => 'Menunggu data pengiriman', 'data_lengkap' => 'Data lengkap',
-        'menunggu_review_admin' => 'Ditinjau tim Livora', 'penawaran' => 'Penawaran dikirim',
-        'menunggu_bayar' => 'Menunggu pembayaran', 'dibayar' => 'Pembayaran diterima', 'diproses' => 'Diproses',
-        'siap_kirim' => 'Siap dikirim', 'dikirim' => 'Dikirim', 'diterima' => 'Diterima', 'selesai' => 'Selesai',
-        'dibatalkan' => 'Dibatalkan', 'kedaluwarsa' => 'Kedaluwarsa', 'perlu_tindakan' => 'Perlu tindakan',
+        'menunggu_harga' => 'Menunggu harga', 'penawaran' => 'Penawaran dikirim',
+        'menunggu_bayar' => 'Menunggu pembayaran', 'menunggu_verifikasi' => 'Menunggu verifikasi',
+        'diproses' => 'Diproses', 'siap_kirim' => 'Siap dikirim', 'dikirim' => 'Dikirim',
+        'diterima' => 'Diterima', 'selesai' => 'Selesai',
+        'bermasalah' => 'Bermasalah', 'kedaluwarsa' => 'Kedaluwarsa', 'dibatalkan' => 'Dibatalkan',
+        // Label lama (kompatibilitas tampilan data yang belum termigrasi)
+        'menunggu_wa' => 'Menunggu harga', 'wa_terhubung' => 'Menunggu harga',
+        'menunggu_data' => 'Menunggu harga', 'data_lengkap' => 'Menunggu harga',
+        'menunggu_review_admin' => 'Menunggu harga', 'dibayar' => 'Diproses', 'perlu_tindakan' => 'Bermasalah',
     ];
 
     public function __construct(protected InvoicePdf $pdf) {}
@@ -609,5 +612,148 @@ class ShopOrderService
                 Log::warning('Email admin gagal: '.$e->getMessage());
             }
         }
+    }
+
+    // ───────────────────────────── Alur baru (WA-first) ─────────────────────────────
+
+    /** Pesanan dibuat bot dari keranjang CRT + data terkumpul di chat. Status: menunggu_harga. */
+    public function createFromBot(string $phone, array $items, array $collected, ?string $shippingMethod): ShopOrder
+    {
+        $order = DB::transaction(function () use ($phone, $items, $collected, $shippingMethod) {
+            $user = User::where('phone', $phone)->first();
+            $order = ShopOrder::create([
+                'code' => ShopOrder::generateCode(),
+                'user_id' => $user?->id,
+                'status' => 'menunggu_harga',
+                'source' => 'web',
+                'customer_name' => $collected['name'] ?? null,
+                'customer_phone' => $phone,
+                'customer_email' => $user?->email,
+                'wa_consent' => true,
+                'shipping_method' => $shippingMethod,
+                'confirm_token' => \Illuminate\Support\Str::random(48),
+                'payment_token' => \Illuminate\Support\Str::random(48),
+                'shipping' => [
+                    'recipient' => $collected['name'] ?? null,
+                    'phone' => $collected['phone'] ?? $phone,
+                    'street' => $collected['address'] ?? null,
+                    'city' => $collected['city'] ?? null,
+                    'pin_location' => $collected['pin_location'] ?? null,
+                    'building_access' => $collected['building_access'] ?? null,
+                    'needs_installation' => (bool) ($collected['install_on_site'] ?? false),
+                    'company' => $collected['company_name'] ?? null,
+                    'npwp' => $collected['npwp'] ?? null,
+                    'invoice_address' => $collected['invoice_address'] ?? null,
+                ],
+            ]);
+            foreach ($items as $row) {
+                $item = Item::find($row['item_id'] ?? 0);
+                if (!$item) continue;
+                $this->addLine($order, $item, $row['variant_id'] ?? null, null, (int) ($row['quantity'] ?? 1), $row['note'] ?? null);
+            }
+            $order->order_type = $order->items()->pluck('fulfillment_type')->unique()->count() > 1 ? 'mixed' : ($order->items()->value('fulfillment_type') ?? 'ready_stock');
+            $order->save();
+
+            return $order;
+        });
+
+        // Ringkasan AI untuk admin (hanya fakta dari percakapan)
+        try {
+            $order->ai_summary = $this->summarizeForAdmin($order, $collected);
+            $order->save();
+        } catch (\Throwable $e) { /* ringkasan opsional */ }
+
+        NotifyService::notify('N2', $order->id);
+        NotifyService::notify('N3', $order->id);
+        NotifyService::timeline($order->id, 'status_change', 'Pesanan dibuat oleh bot WhatsApp', ['method' => $shippingMethod]);
+        Ops::funnel('pesanan_dibuat_bot', $order->id);
+        AuditLog::record('order.created_bot', $order, null, ['code' => $order->code]);
+
+        return $order->load('items');
+    }
+
+    protected function summarizeForAdmin(ShopOrder $order, array $collected): string
+    {
+        $lines = [
+            'Barang: '.$order->items->map(fn ($i) => "{$i->title} x{$i->quantity}")->implode(', '),
+            'Kota: '.($collected['city'] ?? 'tidak disebut'),
+            'Akses gedung: '.($collected['building_access'] ?? 'tidak disebut'),
+            'Pasang di tempat: '.(!empty($collected['install_on_site']) ? 'ya' : 'tidak disebut'),
+            'Faktur pajak: '.(!empty($collected['need_tax_invoice']) ? 'ya ('.($collected['company_name'] ?? '-').')' : 'tidak'),
+            'Budget: tidak disebut',
+            'Keberatan customer: tidak disebut',
+        ];
+
+        return implode("\n", $lines);
+    }
+
+    /** Link halaman konfirmasi pesanan (bertoken, tanpa login). */
+    public function confirmUrl(ShopOrder $order): string
+    {
+        if (!$order->confirm_token) {
+            $order->confirm_token = \Illuminate\Support\Str::random(48);
+            $order->save();
+        }
+
+        return rtrim(env('FRONTEND_URL', 'https://www.livoralcr.com'), '/')."/order/confirm/{$order->code}?token={$order->confirm_token}";
+    }
+
+    /** Link halaman ringkasan pembayaran (bertoken, tanpa login). */
+    public function paymentUrl(ShopOrder $order): string
+    {
+        if (!$order->payment_token) {
+            $order->payment_token = \Illuminate\Support\Str::random(48);
+            $order->save();
+        }
+
+        return rtrim(env('FRONTEND_URL', 'https://www.livoralcr.com'), '/')."/order/pay/{$order->code}?token={$order->payment_token}";
+    }
+
+    /** Customer menekan "Minta Revisi / Nego" di halaman konfirmasi. */
+    public function requestRevision(ShopOrder $order, string $note): void
+    {
+        if ($order->status !== 'penawaran') {
+            throw ValidationException::withMessages(['status' => 'Penawaran ini tidak bisa direvisi.']);
+        }
+        $order->review_note = $note;
+        $order->save();
+        NotifyService::notify('N4', $order->id, ['note' => $note], 'v'.$order->quote_version);
+        NotifyService::timeline($order->id, 'quote', 'Customer minta revisi/nego', ['note' => $note]);
+        Ops::sendWa($order->customer_phone, "Catatan revisi untuk {$order->code} sudah saya teruskan ke tim kami ya Kak. Mereka akan menghubungi Kakak di sini.", $order->id);
+    }
+
+    /** Customer menekan "Konfirmasi Pesanan" di halaman bertoken: setujui penawaran + terbitkan Tagihan. */
+    public function confirmOrder(ShopOrder $order, ?string $ip): ShopOrder
+    {
+        $order->confirmed_ip = $ip;
+        $result = $this->approveQuote($order);
+        // Kode unik 3 digit sebagai bagian dari total transfer
+        if (!$result->unique_code) {
+            $result->unique_code = random_int(1, 999);
+            $result->payment_due_at = $result->quote_expires_at;
+            $result->save();
+        }
+        NotifyService::notify('N5', $result->id);
+        NotifyService::closeFor('N3', $result->id);
+        NotifyService::closeFor('N4', $result->id);
+        NotifyService::timeline($result->id, 'quote', 'Penawaran disetujui customer', ['ip' => $ip]);
+
+        return $result;
+    }
+
+    /** Kirim penawaran lewat bot: ringkasan + PDF + link konfirmasi bertoken. */
+    public function sendQuoteViaBot(ShopOrder $order, array $fees): ShopOrder
+    {
+        $order = $this->sendQuote($order, $fees);
+        $doc = $order->documents()->where('title', 'Tagihan')->latest('version')->first();
+        $pdfUrl = $doc?->pdf_path ? url('/api/shop/documents/'.$doc->id.'/download') : null;
+        $lines = $order->items->map(fn ($i) => '- '.$i->title." x{$i->quantity}")->implode("\n");
+        WaSender::text($order->customer_phone,
+            "Kak, penawaran resmi untuk pesanan {$order->code} sudah siap 🙏\n\n{$lines}\n\nTotal: ".self::rp($order->grand_total)." (sudah termasuk PPN 11%). Berlaku sampai ".$order->quote_expires_at->translatedFormat('d F Y').".\n\nCek detail & konfirmasi di sini: ".$this->confirmUrl($order), $order->id);
+        if ($pdfUrl) WaSender::document($order->customer_phone, "Proforma Invoice {$order->code}", $pdfUrl, 'Proforma-Invoice-'.$order->code.'.pdf', $order->id);
+        NotifyService::closeFor('N3', $order->id);
+        NotifyService::timeline($order->id, 'quote', 'Penawaran v'.$order->quote_version.' dikirim via WhatsApp');
+
+        return $order;
     }
 }
