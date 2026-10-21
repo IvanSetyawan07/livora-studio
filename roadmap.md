@@ -1,8 +1,8 @@
 # Roadmap — Restore rich AI Marketing UI + live integrations
 
 ## MariaDB compatibility
-- [ ] Remove PostgreSQL column-comment statements and audit all backend SQL for MariaDB compatibility.
-- [ ] Add and run a regression check; production migration execution requires server access.
+- [x] Remove PostgreSQL column-comment statements and audit all backend SQL for MariaDB compatibility; no other PostgreSQL-only SQL found.
+- [x] Add and run a regression check (PHPUnit: 1 test, 2 assertions) and PHP migration lint; production migration execution still requires server access.
 
 - [x] Overview: 6 KPI cards (live + locked), Performance chart panel, AI Insights, Social/Content Queue/Campaign panels, live sections
 - [x] Audit semua halaman AI Marketing yang jadi "kurus" setelah cleanup dummy
