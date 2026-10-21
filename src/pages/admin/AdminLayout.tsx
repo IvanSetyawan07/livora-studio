@@ -1,4 +1,5 @@
 import { QrCode as QrCodeIcon } from "lucide-react";
+import AdminNotificationsBell from "@/components/admin/AdminNotificationsBell";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
