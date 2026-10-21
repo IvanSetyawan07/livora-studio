@@ -62,7 +62,7 @@ class NotifyService
         $body = $vars['body'] ?? self::body($type, $orderId, $vars);
         $link = $vars['link'] ?? self::link($type, $orderId, $conversationId);
         $data = [
-            'title' => $title, 'kind' => $kind, 'priority' => $priority, 'body' => $body, 'link' => $link,
+            'type' => $type, 'title' => $title, 'kind' => $kind, 'priority' => $priority, 'body' => $body, 'link' => $link,
             'roles' => json_encode($roles), 'order_id' => $orderId, 'conversation_id' => $conversationId,
             'status' => 'open', 'due_at' => $dueMin ? now()->addMinutes($dueMin) : null, 'updated_at' => now(),
         ];

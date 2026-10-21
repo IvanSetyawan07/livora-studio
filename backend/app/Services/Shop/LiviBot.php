@@ -43,6 +43,16 @@ P;
     {
         $phone = \App\Services\WhatsApp\WhatsAppNotifier::normalizePhone($phone);
         $conv = $this->conversation($phone, $simulate);
+        // Pilihan tombol/list dikenali lewat id (stabil), bukan hanya judul
+        $replyId = (string) ($raw['_reply']['id'] ?? '');
+        if ($replyId !== '') {
+            $text = match ($replyId) {
+                'btn_bicara-dengan-tim' => 'TIM',
+                'btn_pesan-sekarang' => 'Pesan sekarang',
+                'btn_spesifikasi-harga' => 'Spesifikasi & harga',
+                default => $text !== '' ? $text : $replyId,
+            };
+        }
         $lower = mb_strtolower(trim($text));
         $started = microtime(true);
 
