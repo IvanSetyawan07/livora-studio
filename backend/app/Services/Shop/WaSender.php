@@ -127,7 +127,7 @@ class WaSender
                 'document' => ['link' => $msg['url'], 'caption' => $msg['body'] ?? '', 'filename' => $msg['filename']]],
             'template' => ['messaging_product' => 'whatsapp', 'to' => $phone, 'type' => 'template', 'template' => $msg['template']],
             default => ['messaging_product' => 'whatsapp', 'to' => $phone, 'type' => 'text', 'text' => ['body' => $msg['body'] ?? '']],
-        ];
+        };
         try {
             $res = Http::timeout(12)->withToken($c['access_token'])
                 ->post("https://graph.facebook.com/{$version}/{$c['phone_number_id']}/messages", $payload);
