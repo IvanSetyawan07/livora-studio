@@ -141,7 +141,7 @@ class SheetsSync
         $s = (array) $doc->snapshot;
         $ok = static::post($url, config('services.shop.sheets_webhook_secret'), [
             'tab' => 'register',
-            'nomor' => $doc->number, 'judul' => $doc->title, 'status' => $doc->status, 'versi' => $doc->version,
+            'nomor' => $doc->number, 'judul' => InvoicePdf::label($doc->title), 'status' => $doc->status, 'versi' => $doc->version,
             'tanggal' => $doc->issued_at?->toDateString(), 'kode_order' => $s['order_code'] ?? null,
             'customer' => $s['buyer']['name'] ?? null, 'perusahaan' => $s['buyer']['company'] ?? null,
             'item' => collect($s['items'] ?? [])->map(fn ($i) => ($i['title'] ?? '').' x'.($i['quantity'] ?? 1))->implode('; '),
