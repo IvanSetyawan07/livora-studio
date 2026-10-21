@@ -117,6 +117,23 @@ class SheetsSync
             'rows' => static::buildRows($order),
         ], 'order '.$order->code);
 
+        // Tab Customer: satu baris per nomor WA (kunci), data terbaru menimpa.
+        if ($ok && $order->customer_phone) {
+            static::post($url, config('services.shop.sheets_orders_secret'), [
+                'tab' => 'customer',
+                'headers' => ['Telepon', 'Nama', 'Kota', 'Alamat', 'Order Terakhir', 'Total Order', 'Terakhir Update'],
+                'rows' => [[
+                    $order->customer_phone,
+                    $order->customer_name ?? '',
+                    $order->shipping['city'] ?? '',
+                    $order->shipping['street'] ?? '',
+                    $order->code,
+                    ShopOrder::where('customer_phone', $order->customer_phone)->count(),
+                    now()->toDateTimeString(),
+                ]],
+            ], 'customer '.$order->customer_phone);
+        }
+
         if ($ok) DB::table('shop_orders')->where('id', $id)->update(['sheets_synced_at' => $startedAt]);
 
         return $ok;
