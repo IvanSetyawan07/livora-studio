@@ -40,6 +40,7 @@ import {
   Bot,
   ShieldCheck,
   Eye,
+  FileText,
 } from "lucide-react";
 
 const nav = [
@@ -220,6 +221,7 @@ export default function AdminLayout() {
         </button>
         <p className="serif text-lg truncate">{t("admin.panel")}</p>
         <div className="flex items-center gap-1">
+          <AdminNotificationsBell />
           <NotificationBell
             activities={activities}
             unreadCount={unreadActivities}
