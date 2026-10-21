@@ -37,6 +37,11 @@ Legenda: ✅ selesai · 🟡 sebagian · ❌ belum
 - ✅ Frontend: keranjang anonim (Cart.tsx), AddToCartButton tanpa login, halaman OrderConfirm & OrderPay (mobile-first, salin rekening/nominal, QRIS segera hadir), Pantau Proses (8 kolom, poll 20 dtk), Simulator WhatsApp (panel state/intent/tool), Log AI & Uji Skenario, lonceng notifikasi admin (poll 20 dtk, toast mendesak), menu admin baru.
 - ✅ Typecheck frontend bersih (tsc).
 
+- ✅ Perbaikan 21-10: `NotifyService::notify` kini mengisi kolom `type` (sebelumnya semua insert N1–N16 gagal error 1364 di MariaDB). Insert lain ke admin_notifications, shop_order_events, wa_ai_logs, wa_conversations, wa_messages sudah dicek — semua kolom wajib terisi; wa_templates belum punya insert di kode.
+- ✅ `WaSender::normalize` — tombol jadi `{id: btn_slug-judul, title ≤20}` maks 3; list row `{id, title ≤24, description ≤72}` maks 10; body/footer dipotong sesuai batas WA; id tombol tercatat di `wa_messages.payload`.
+- ✅ Webhook membaca `button_reply`/`list_reply` (id + judul) dan meneruskannya ke LiviBot (`_reply`); LiviBot mengenali pilihan lewat id.
+- ✅ Gagal kirim Meta: `Log::warning` berisi HTTP status + body respons (token disamarkan), ringkasan kode/pesan error disimpan di kolom baru `wa_messages.error_note` (migrasi `2026_10_21_130000_wa_messages_error_note.php`).
+
 ## Yang sebagian / belum
 
 - 🟡 Email admin untuk notifikasi — `NotifyService::push` hanya push WA; email belum diimplementasikan (N1–N16 via lonceng + WA).
@@ -46,7 +51,7 @@ Legenda: ✅ selesai · 🟡 sebagian · ❌ belum
 
 ## Yang harus Anda lakukan di server
 
-1. `php artisan migrate` — 3 migrasi baru.
+1. `php artisan migrate` — 4 migrasi baru (termasuk `wa_messages.error_note`).
 2. `php artisan db:seed --class=BotScenarioSeeder` — 20 skenario uji.
 3. Pastikan cron `php artisan schedule:run` jalan tiap menit (untuk `NotifyService::tick`, pengingat, eskalasi).
 4. Isi `shop_notify_settings` (atau lewat Pengaturan Toko) untuk nomor WA penerima notifikasi admin.

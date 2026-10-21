@@ -86,7 +86,16 @@ class WebhookController extends Controller
         if (DB::table('wa_messages')->where('message_id', $m['id'] ?? '')->exists()) return; // idempoten
         $phone = WhatsAppNotifier::normalizePhone($m['from'] ?? '');
         $type = $m['type'] ?? 'text';
-        $text = trim($m['text']['body'] ?? $m['button']['text'] ?? $m['interactive']['button_reply']['title'] ?? '');
+        $text = trim($m['text']['body'] ?? $m['button']['text'] ?? '');
+        // Balasan interaktif: ambil id + judul agar LiviBot mengenali pilihan secara pasti
+        $choice = $m['interactive']['button_reply'] ?? $m['interactive']['list_reply'] ?? null;
+        if ($type === 'interactive' && is_array($choice)) {
+            $text = trim((string) ($choice['title'] ?? ''));
+            $m['_reply'] = ['id' => (string) ($choice['id'] ?? ''), 'title' => $text,
+                'kind' => isset($m['interactive']['list_reply']) ? 'list' : 'button'];
+        } elseif ($type === 'button' && isset($m['button'])) {
+            $m['_reply'] = ['id' => (string) ($m['button']['payload'] ?? ''), 'title' => $text, 'kind' => 'template_button'];
+        }
         if ($type === 'location') $text = '[lokasi] '.($m['location']['latitude'] ?? '').','.($m['location']['longitude'] ?? '');
         if (in_array($type, ['image', 'document'], true)) $text = '['.$type.'] '.($m[$type]['caption'] ?? '');
 
