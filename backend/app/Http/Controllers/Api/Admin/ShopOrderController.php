@@ -30,13 +30,12 @@ class ShopOrderController extends Controller
         $count = fn ($s) => ShopOrder::whereIn('status', (array) $s)->count();
 
         return [
-            'menunggu_wa' => $count(['menunggu_wa', 'wa_terhubung']),
-            'menunggu_data' => $count('menunggu_data'),
-            'review' => $count(['data_lengkap', 'menunggu_review_admin']),
+            'chat_menunggu' => DB::table('wa_conversations')->where('mode', 'menunggu_admin')->count(),
+            'perlu_harga' => $count(['menunggu_harga', 'data_lengkap', 'menunggu_review_admin', 'menunggu_wa', 'wa_terhubung', 'menunggu_data']),
             'penawaran' => $count('penawaran'),
             'menunggu_bayar' => $count('menunggu_bayar'),
             'verifikasi' => ShopPaymentProof::where('status', 'menunggu')->count(),
-            'perlu_tindakan' => $count('perlu_tindakan'),
+            'bermasalah' => $count(['bermasalah', 'perlu_tindakan']),
             'fulfillment' => $count(['dibayar', 'diproses', 'siap_kirim', 'dikirim']),
         ];
     }
@@ -57,8 +56,10 @@ class ShopOrderController extends Controller
         $order = ShopOrder::with(['items', 'payments.proofs.verifier', 'documents', 'holds', 'user:id,name,email,phone'])->where('code', $code)->firstOrFail();
         $data = $this->present($order, $request, true);
         $data['audit'] = AuditLog::with('user:id,name')->where('object_type', 'ShopOrder')->where('object_id', $order->id)->latest('created_at')->limit(50)->get();
-        $data['wa_messages'] = DB::table('wa_messages')->where('order_id', $order->id)->latest()->limit(50)->get();
-
+        $data['wa_messages'] = DB::table('wa_messages')->leftJoin('users', 'users.id', '=', 'wa_messages.sent_by')
+            ->where('wa_messages.phone', $order->customer_phone)
+            ->select('wa_messages.id', 'direction', 'type', 'body', 'is_note', 'wa_messages.status', 'wa_messages.created_at', 'users.name as sender')
+            ->latest('wa_messages.id')->limit(100)->get()->reverse()->values();
         return $data;
     }
 
@@ -118,7 +119,11 @@ class ShopOrderController extends Controller
             $order->spec_revised = true;
             $order->save();
         }
-        $this->service->sendQuote($order, $data);
+        if ($order->customer_phone && $order->wa_consent) {
+            $this->service->sendQuoteViaBot($order, $data);
+        } else {
+            $this->service->sendQuote($order, $data);
+        }
 
         return $this->show($request, $code);
     }
@@ -140,13 +145,28 @@ class ShopOrderController extends Controller
 
     public function proofQueue()
     {
-        return ShopPaymentProof::with('payment.order:id,code,customer_name,customer_phone,grand_total')->where('status', 'menunggu')->oldest()->get()
-            ->map(fn ($p) => [
-                'id' => $p->id, 'amount' => $p->amount, 'created_at' => $p->created_at,
-                'payment' => ['id' => $p->payment->id, 'amount' => $p->payment->amount],
-                'order' => $p->payment->order?->only(['code', 'customer_name', 'customer_phone', 'grand_total']),
-                'document_number' => ShopDocument::where('payment_id', $p->payment_id)->value('number'),
-            ]);
+        return ShopPaymentProof::with('payment.order:id,code,customer_name,customer_phone,grand_total,unique_code')->where('status', 'menunggu')->oldest()->get()
+            ->map(function ($p) {
+                $order = $p->payment?->order;
+                $expected = $order ? (int) $order->grand_total + (int) ($order->unique_code ?? 0) : null;
+
+                return [
+                    'id' => $p->id, 'amount' => $p->amount, 'created_at' => $p->created_at, 'source' => $p->source ?? null,
+                    'phone' => $p->phone ?? $order?->customer_phone, 'ai_read' => $p->ai_read ? json_decode((string) $p->ai_read, true) : null,
+                    'payment' => $p->payment ? ['id' => $p->payment->id, 'amount' => $p->payment->amount] : null,
+                    'expected' => $expected,
+                    'order' => $order?->only(['code', 'customer_name', 'customer_phone', 'grand_total']),
+                    'document_number' => $p->payment_id ? ShopDocument::where('payment_id', $p->payment_id)->value('number') : null,
+                ];
+            });
+    }
+
+    public function assignProof(Request $request, ShopPaymentProof $proof)
+    {
+        $data = $request->validate(['order_code' => 'required|string|exists:shop_orders,code']);
+        $this->service->assignProof($proof, ShopOrder::where('code', $data['order_code'])->firstOrFail(), $request->user());
+
+        return ['ok' => true];
     }
 
     public function advance(Request $request, string $code)
@@ -236,6 +256,7 @@ class ShopOrderController extends Controller
         $data['status_label'] = ShopOrderService::LABELS[$o->status] ?? $o->status;
         $data['form_url'] = $o->form_token && $o->form_token_expires_at?->isFuture() ? $this->service->formUrl($o) : null;
         $data['wa_url'] = 'https://wa.me/'.$o->customer_phone;
+        $data['conversation_id'] = DB::table('wa_conversations')->where('phone', $o->customer_phone)->value('id');
         if ($role === 'cs' && isset($data['shipping'])) unset($data['shipping']['npwp']);
 
         return $data;

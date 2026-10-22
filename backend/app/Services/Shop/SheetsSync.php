@@ -36,7 +36,7 @@ class SheetsSync
     public const TEXT_COLUMNS = ['ID Baris', 'Kode Order', 'Telepon', 'Resi'];
 
     private const ORDER_TYPES = ['ready_stock' => 'Ready stock', 'made_to_order' => 'Made to order', 'mixed' => 'Campuran'];
-    private const SOURCES = ['web' => 'Website', 'manual' => 'Manual'];
+    private const SOURCES = ['web' => 'Website', 'whatsapp' => 'WhatsApp', 'manual' => 'Manual'];
     private const METHODS = ['bca_transfer' => 'Transfer BCA', 'qris' => 'QRIS'];
 
     /** @var array<int,true> */

@@ -14,8 +14,9 @@ const NEXT: Record<string, { to: string; label: string }> = {
   siap_kirim: { to: "dikirim", label: "Tandai dikirim" },
   dikirim: { to: "diterima", label: "Tandai diterima" },
   diterima: { to: "selesai", label: "Selesaikan pesanan" },
+  bermasalah: { to: "diproses", label: "Lanjutkan proses" },
 };
-const CANCELABLE = ["menunggu_wa", "wa_terhubung", "menunggu_data", "data_lengkap", "menunggu_review_admin", "penawaran", "menunggu_bayar"];
+const CANCELABLE = ["menunggu_harga", "bermasalah", "wa_terhubung", "menunggu_data", "data_lengkap", "menunggu_review_admin", "penawaran", "menunggu_bayar"];
 
 export default function AdminShopOrderDetail() {
   const { code = "" } = useParams();
@@ -47,6 +48,7 @@ export default function AdminShopOrderDetail() {
       <section className="rounded-xl border border-border bg-card p-5">
         <h2 className="font-semibold">Tindakan berikutnya</h2>
         <div className="mt-3 flex flex-wrap gap-2">
+        {o.conversation_id && <Link to={`/admin/shop/inbox?c=${o.conversation_id}`} className="btn btn-dark"><MessageCircle className="h-4 w-4" /> Buka chat di Inbox</Link>}
           <a href={o.wa_url} target="_blank" rel="noopener noreferrer" className="btn"><MessageCircle className="h-4 w-4" /> Chat {o.customer_phone}</a>
           {o.status === "menunggu_wa" && <button type="button" className="btn" disabled={!!busy} onClick={() => run("wa", () => adminShop.waConnected(o.code), "Ditandai terhubung")}>Tandai sudah chat</button>}
           {["menunggu_wa", "wa_terhubung", "menunggu_data"].includes(o.status) && (
@@ -66,7 +68,7 @@ export default function AdminShopOrderDetail() {
         </div>
       </section>
 
-      {["data_lengkap", "menunggu_review_admin", "penawaran", "wa_terhubung", "menunggu_data"].includes(o.status) && <QuoteEditor o={o} onSent={setO} />}
+      {["menunggu_harga", "data_lengkap", "menunggu_review_admin", "penawaran", "wa_terhubung", "menunggu_data", "bermasalah"].includes(o.status) && <QuoteEditor o={o} onSent={setO} />}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-xl border border-border bg-card p-5 text-sm">
@@ -117,8 +119,41 @@ export default function AdminShopOrderDetail() {
       </div>
 
       <AdminOrderAftercare o={o} reload={load} />
-
+            <section className="rounded-xl border border-border bg-card p-5 text-sm">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold">Chat WhatsApp dengan pelanggan</h2>
+          {o.conversation_id && <Link to={`/admin/shop/inbox?c=${o.conversation_id}`} className="text-xs underline">Buka di Inbox untuk membalas</Link>}
+        </div>
+        <div className="mt-3 max-h-96 space-y-2 overflow-y-auto rounded-lg bg-muted/30 p-3">
+          {o.wa_messages?.map((m: any) => (
+            <div key={m.id} className={`flex ${m.direction === "in" ? "justify-start" : "justify-end"}`}>
+              <div className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 ${m.is_note ? "border border-dashed border-amber-400 bg-amber-50 text-amber-900" : m.direction === "in" ? "bg-card" : "bg-foreground text-background"}`}>
+                {m.is_note && <p className="mb-1 text-[10px] font-medium">Catatan internal</p>}
+                {m.body}
+                <p className="mt-1 text-[10px] opacity-60">
+                  {new Date(m.created_at).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" })}
+                  {m.direction === "in" ? ` · ${o.customer_name}` : m.sender ? ` · ${m.sender}` : !m.is_note ? " · bot Livi / sistem" : ""}
+                </p>
+              </div>
+            </div>
+          ))}
+          {!o.wa_messages?.length && <p className="text-muted-foreground">Belum ada chat untuk nomor ini.</p>}
+        </div>
+      </section>
+      
       <section className="rounded-xl border border-border bg-card p-5 text-sm">
+        <section className="rounded-xl border border-border bg-card p-5 text-sm">
+        <h2 className="font-semibold">Linimasa pesanan</h2>
+        <ul className="mt-3 space-y-2">
+          {o.timeline?.map((t: any) => (
+            <li key={t.id} className="flex gap-3">
+              <span className="w-36 shrink-0 text-xs text-muted-foreground">{new Date(t.created_at).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" })}</span>
+              <span><span className="mr-2 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">{t.event}</span>{t.label}{t.user ? ` · ${t.user}` : ""}</span>
+            </li>
+          ))}
+          {!o.timeline?.length && <li className="text-muted-foreground">Belum ada kejadian.</li>}
+        </ul>
+      </section>
         <h2 className="font-semibold">Riwayat</h2>
         <ul className="mt-3 space-y-2">
           {o.audit?.map((a: any) => (
@@ -206,7 +241,7 @@ function QuoteEditor({ o, onSent }: { o: any; onSent: (x: any) => void }) {
             </dl>
           ) : <Loader2 className="h-4 w-4 animate-spin" />}
           <button type="button" disabled={busy} onClick={send} className="mt-4 h-10 w-full rounded-lg bg-foreground text-sm text-background disabled:opacity-50">{busy ? "Mengirim…" : "Kirim penawaran"}</button>
-          <p className="mt-2 text-xs text-muted-foreground">Pelanggan menerima WA & email. Berlaku 3 hari.</p>
+          <p className="mt-2 text-xs text-muted-foreground">Dikirim lewat WhatsApp: ringkasan, PDF Proforma Invoice, dan tautan konfirmasi. Stok ditahan selama penawaran berlaku.</p>
         </div>
       </div>
     </section>

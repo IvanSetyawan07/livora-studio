@@ -68,9 +68,13 @@ class NotifyService
         ];
         try {
             $exists = DB::table('admin_notifications')->where('event_key', $eventKey)->first();
-            if ($exists) {
+                        if ($exists) {
                 if ($exists->status === 'open') {
                     DB::table('admin_notifications')->where('id', $exists->id)->update($data);
+                } elseif ($kind === 'perlu_tindakan' && $exists->status === 'done') {
+                    DB::table('admin_notifications')->where('id', $exists->id)->update($data + [
+                        'status' => 'open', 'reminder_count' => 0, 'escalated_at' => null, 'done_by' => null, 'done_at' => null, 'read_by' => null,
+                    ]);
                 }
             } else {
                 DB::table('admin_notifications')->insert($data + ['event_key' => $eventKey, 'created_at' => now()]);
@@ -85,7 +89,8 @@ class NotifyService
     public static function closeFor(string $type, int $orderId, ?int $byUserId = null): void
     {
         DB::table('admin_notifications')
-            ->where('type', $type)->where('order_id', $orderId)->where('status', 'open')
+             ->where('type', $type)->where('status', 'open')
+            ->when($orderId > 0, fn ($q) => $q->where('order_id', $orderId), fn ($q) => $q->whereNull('order_id'))
             ->update(['status' => 'done', 'done_by' => $byUserId, 'done_at' => now(), 'updated_at' => now()]);
     }
 
@@ -100,8 +105,57 @@ class NotifyService
     }
 
     /** Pemeriksa batas waktu: 50% pengingat (maks 3x, jam kerja), 100% eskalasi ke Owner. */
+        public static function closeConversation(int $conversationId, ?int $byUserId = null, array $types = ['N1', 'N16']): void
+    {
+        DB::table('admin_notifications')
+            ->whereIn('type', $types)->where('conversation_id', $conversationId)->where('status', 'open')
+            ->update(['status' => 'done', 'done_by' => $byUserId, 'done_at' => now(), 'updated_at' => now()]);
+    }
+
+    /** Kejadian berbasis waktu: N6 (H-1), N11, N12, N16 + pengingat H-1 ke customer. */
+    public static function scan(): void
+    {
+        $service = app(ShopOrderService::class);
+
+        foreach (ShopOrder::whereIn('status', ['penawaran', 'menunggu_bayar'])->whereBetween('quote_expires_at', [now(), now()->addDay()])->get() as $o) {
+            self::notify('N6', $o->id, [], 'h1-v'.$o->quote_version);
+            $sent = DB::table('shop_order_events')->where('order_id', $o->id)->where('event', 'reminder')->where('label', 'like', 'Pengingat H-1 v'.$o->quote_version.'%')->exists();
+            if (!$sent && $o->customer_phone && $o->wa_consent) {
+                $link = $o->status === 'penawaran' ? $service->confirmUrl($o) : $service->paymentUrl($o);
+                Ops::sendWa($o->customer_phone, 'Halo Kak, pengingat: '.($o->status === 'penawaran' ? 'penawaran' : 'tagihan')." pesanan {$o->code} berlaku sampai ".$o->quote_expires_at->timezone('Asia/Jakarta')->translatedFormat('d F Y H:i').". Detail: {$link}", $o->id);
+                self::timeline($o->id, 'reminder', 'Pengingat H-1 v'.$o->quote_version.' dikirim ke customer');
+            }
+        }
+
+        $tomorrow = now('Asia/Jakarta')->addDay()->toDateString();
+        foreach (ShopOrder::whereIn('status', ['siap_kirim', 'diproses'])->whereDate('delivery_date', $tomorrow)->get() as $o) {
+            if (empty($o->courier) || empty($o->tracking_number)) {
+                if (($o->shipping_method ?? null) !== 'showroom') self::notify('N11', $o->id, [], 'd'.$tomorrow);
+            }
+            $sent = DB::table('shop_order_events')->where('order_id', $o->id)->where('event', 'reminder')->where('label', 'Pengingat H-1 pengiriman '.$tomorrow)->exists();
+            if (!$sent && $o->customer_phone && $o->wa_consent) {
+                Ops::sendWa($o->customer_phone, "Halo Kak, pesanan {$o->code} dijadwalkan dikirim besok ({$tomorrow}). Mohon pastikan ada yang menerima ya.", $o->id);
+                self::timeline($o->id, 'reminder', 'Pengingat H-1 pengiriman '.$tomorrow);
+            }
+        }
+
+        foreach (ShopOrder::where('status', 'dikirim')->where('shipped_at', '<=', now()->subDays(3))->get() as $o) {
+            self::notify('N12', $o->id, [], 's'.optional($o->shipped_at)->format('Ymd'));
+        }
+
+        foreach (DB::table('wa_conversations')->where('mode', 'dipegang_admin')->whereBetween('last_inbound_at', [now()->subHours(24), now()->subMinutes(23 * 60 + 30)])->get() as $c) {
+            self::notify('N16', $c->order_id, ['phone' => $c->phone, 'body' => 'Jendela chat 24 jam dengan '.($c->wa_name ?: '+'.$c->phone).' tinggal ±30 menit. Balas sebelum tertutup.'],
+                'c'.$c->id.'-'.strtotime((string) $c->last_inbound_at), $c->id);
+        }
+    }
+
     public static function tick(): void
     {
+        try {
+            self::scan();
+        } catch (\Throwable $e) {
+            Log::warning('NotifyService::scan gagal', ['error' => $e->getMessage()]);
+        }
         self::flushHeld();
         $open = DB::table('admin_notifications')->where('status', 'open')->whereNotNull('due_at')->get();
         foreach ($open as $n) {
@@ -163,7 +217,7 @@ class NotifyService
     protected static function link(string $type, ?int $orderId, ?int $conversationId): string
     {
         return match ($type) {
-            'N1', 'N16' => '/admin/shop/inbox',
+            'N1', 'N16' => '/admin/shop/inbox'.($conversationId ? '?c='.$conversationId : ''),
             'N7', 'N8' => '/admin/shop/payments',
             'N14' => '/admin/shop/aftercare',
             'N15' => '/admin/shop/health',

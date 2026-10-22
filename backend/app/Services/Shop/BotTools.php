@@ -31,7 +31,7 @@ class BotTools
     {
         return match ($name) {
             'get_cart' => $this->getCart($args['code'] ?? ''),
-            'get_product_info' => $this->getProductInfo($args['query'] ?? ''),
+            'get_product_info' => $this->getProductInfo((string) ($args['query'] ?? ''), (int) ($args['item_id'] ?? 0)),
             'get_price' => $this->getPrice((int) ($args['item_id'] ?? 0)),
             'save_customer_fields' => $this->saveFields((array) ($args['fields'] ?? [])),
             'create_order' => $this->createOrder($args['shipping_method'] ?? null),
@@ -53,12 +53,12 @@ class BotTools
         return ['found' => true, 'code' => $cart->code, 'items' => $cart->items];
     }
 
-    protected function getProductInfo(string $query): array
+    protected function getProductInfo(string $query, int $itemId = 0): array
     {
-        $item = Item::query()
-            ->where('title', 'like', '%'.$query.'%')
-            ->orWhere('code', $query)
-            ->first();
+        if ($itemId <= 0 && trim($query) === '') return ['found' => false];
+        $item = $itemId > 0
+            ? Item::find($itemId)
+            : Item::query()->where('title', 'like', '%'.$query.'%')->orWhere('code', $query)->first();
         if (!$item) return ['found' => false];
 
         return [
@@ -91,31 +91,42 @@ class BotTools
         return ['saved' => array_keys($fields), 'collected' => $collected];
     }
 
-    protected function createOrder(?string $method): array
+        protected function createOrder(?string $method): array
     {
         $collected = (array) json_decode((string) ($this->conversation->collected ?? '[]'), true);
         $cart = $this->conversation->cart_id ? ShopCartService::find(DB::table('shop_carts')->where('id', $this->conversation->cart_id)->value('code') ?? '') : null;
         $items = $cart?->items ?? [];
         if (!$items) return ['error' => 'keranjang kosong'];
 
+        // Satu keranjang = satu pesanan (cegah ganda bila tombol ditekan dua kali)
+        if ($cart->order_id && ($existing = ShopOrder::find($cart->order_id))) {
+            return ['created' => true, 'code' => $existing->code, 'order_id' => $existing->id];
+        }
+
         $order = app(ShopOrderService::class)->createFromBot($this->phone, $items, $collected, $method);
         if ($cart) ShopCartService::attachOrder($cart->id, $order->id);
         DB::table('wa_conversations')->where('id', $this->conversation->id)->update([
-            'order_id' => $order->id, 'state' => 'menunggu_penawaran', 'updated_at' => now(),
+            'order_id' => $order->id, 'state' => 'menunggu_penawaran', 'last_intent' => null, 'updated_at' => now(),
         ]);
+        $this->conversation->order_id = $order->id;
+        // Chat sebelum pesanan dibuat ikut tertaut ke pesanan (tampil di linimasa & detail pesanan)
+        DB::table('wa_messages')->where('phone', $this->phone)->whereNull('order_id')->update(['order_id' => $order->id]);
+        DB::table('wa_messages')->where('phone', $this->phone)->whereNull('conversation_id')->update(['conversation_id' => $this->conversation->id]);
 
-        return ['created' => true, 'code' => $order->code];
+        return ['created' => true, 'code' => $order->code, 'order_id' => $order->id];
     }
 
     protected function handoff(string $reason, string $summary): array
     {
-        DB::table('wa_conversations')->where('id', $this->conversation->id)->update([
-            'mode' => 'menunggu_admin', 'updated_at' => now(),
+        $convId = (int) ($this->conversation->id ?? 0);
+        DB::table('wa_conversations')->where('id', $convId)->update([
+            'mode' => 'menunggu_admin', 'handoff_reason' => mb_substr($reason, 0, 60), 'handoff_at' => now(), 'updated_at' => now(),
         ]);
-        NotifyService::notify('N1', $this->conversation->order_id, [
+        $this->conversation->mode = 'menunggu_admin';
+        NotifyService::notify('N1', $this->conversation->order_id ?: null, [
             'phone' => $this->phone, 'trigger' => $reason,
-            'body' => "Chat {$this->phone} butuh admin ({$reason}). Ringkasan: {$summary}",
-        ], '', $this->conversation->id);
+            'body' => 'Chat '.($this->conversation->wa_name ?: '+'.$this->phone)." butuh admin ({$reason}). ".$summary,
+        ], 'c'.$convId.'-'.time(), $convId ?: null);
 
         return ['handed_off' => true];
     }

@@ -6,14 +6,13 @@ import { adminShop, rupiah } from "@/lib/shop";
 import StatusBadge from "@/components/shop/StatusBadge";
 
 const CARDS: { key: string; label: string; status: string }[] = [
-  { key: "menunggu_wa", label: "Menunggu chat WA", status: "menunggu_wa,wa_terhubung" },
-  { key: "menunggu_data", label: "Menunggu data", status: "menunggu_data" },
-  { key: "review", label: "Perlu penawaran", status: "data_lengkap,menunggu_review_admin" },
+  { key: "chat_menunggu", label: "Chat butuh admin", status: "__inbox" },
+  { key: "perlu_harga", label: "Menunggu harga", status: "menunggu_harga,data_lengkap,menunggu_review_admin,menunggu_wa,wa_terhubung,menunggu_data" },
   { key: "penawaran", label: "Penawaran terkirim", status: "penawaran" },
   { key: "menunggu_bayar", label: "Menunggu bayar", status: "menunggu_bayar" },
   { key: "verifikasi", label: "Bukti transfer", status: "__proofs" },
   { key: "fulfillment", label: "Diproses & kirim", status: "dibayar,diproses,siap_kirim,dikirim" },
-  { key: "perlu_tindakan", label: "Perlu tindakan", status: "perlu_tindakan" },
+  { key: "bermasalah", label: "Bermasalah", status: "bermasalah,perlu_tindakan" },
 ];
 
 export default function AdminShopOrders() {
@@ -32,6 +31,7 @@ export default function AdminShopOrders() {
 
   const pick = (s: string) => {
     if (s === "__proofs") { window.location.assign("/admin/shop/payments"); return; }
+    if (s === "__inbox") { window.location.assign("/admin/shop/inbox"); return; }
     const n = new URLSearchParams(sp);
     status === s ? n.delete("status") : n.set("status", s);
     setSp(n);

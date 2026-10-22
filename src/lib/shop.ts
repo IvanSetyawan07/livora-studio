@@ -186,6 +186,7 @@ export const adminShop = {
   createManual: (body: Record<string, unknown>) => api.post<{ code: string }>("/admin/shop/orders", body).then((r) => r.data),
   proofs: () => api.get("/admin/shop/proofs").then((r) => r.data),
   reviewProof: (id: number, accept: boolean, reason?: string) => api.post(`/admin/shop/proofs/${id}/review`, { accept, reason }).then((r) => r.data),
+  assignProof: (id: number, order_code: string) => api.post(`/admin/shop/proofs/${id}/assign`, { order_code }).then((r) => r.data),
   items: (q: string) => api.get("/admin/shop/items", { params: { q } }).then((r) => r.data),
   grid: (grid: string, params: Record<string, string> = {}) => api.get(`/admin/shop/database/${grid}`, { params }).then((r) => r.data.rows as Record<string, any>[]),
   findDocument: (number: string) => api.get("/admin/shop/documents/find", { params: { number } }).then((r) => r.data),
@@ -231,6 +232,9 @@ export const adminShop = {
 };
 
 export const STATUS_TONE: Record<string, string> = {
+  menunggu_harga: "bg-amber-50 text-amber-800 border-amber-200",
+  menunggu_verifikasi: "bg-orange-50 text-orange-800 border-orange-200",
+  bermasalah: "bg-red-50 text-red-700 border-red-200",
   menunggu_wa: "bg-amber-50 text-amber-800 border-amber-200",
   wa_terhubung: "bg-amber-50 text-amber-800 border-amber-200",
   menunggu_data: "bg-amber-50 text-amber-800 border-amber-200",

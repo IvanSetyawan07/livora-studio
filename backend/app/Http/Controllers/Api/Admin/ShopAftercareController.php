@@ -9,7 +9,8 @@ use App\Services\Shop\AftercareService;
 use App\Services\Shop\Ops;
 use App\Services\Shop\ShopOrderService;
 use App\Services\Shop\ShopSettings;
-use App\Services\Shop\WaBot;
+use App\Services\Shop\LiviBot;
+use App\Services\Shop\NotifyService;
 use App\Services\WhatsApp\WhatsAppNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -152,43 +153,64 @@ class ShopAftercareController extends Controller
         return ['ok' => true];
     }
 
-    // ── Inbox handoff ──
+        // ── Inbox handoff (sumber data: wa_conversations, tabel yang ditulis LiviBot) ──
     public function sessions(Request $r)
     {
-        return DB::table('wa_sessions')->leftJoin('shop_orders', 'shop_orders.id', '=', 'wa_sessions.order_id')
-            ->leftJoin('users', 'users.id', '=', 'wa_sessions.assigned_to')
-            ->when($r->query('status'), fn ($q, $s) => $q->whereIn('wa_sessions.status', explode(',', $s)))
-            ->select('wa_sessions.*', 'shop_orders.code as order_code', 'shop_orders.customer_name', 'users.name as assignee')
-            ->orderByRaw("CASE wa_sessions.status WHEN 'menunggu_cs' THEN 0 WHEN 'aktif' THEN 1 WHEN 'bot' THEN 2 ELSE 3 END")
-            ->latest('wa_sessions.last_inbound_at')->limit(200)->get()
-            ->map(function ($s) {
-                $s->last_message = DB::table('wa_messages')->where('phone', $s->phone)->latest('id')->value('body');
-                $s->window_left_minutes = $s->last_inbound_at ? max(0, 1440 - (int) now()->diffInMinutes($s->last_inbound_at)) : 0;
-                return $s;
-            });
+        $rows = DB::table('wa_conversations as c')
+            ->leftJoin('shop_orders as o', 'o.id', '=', 'c.order_id')
+            ->leftJoin('shop_carts as k', 'k.id', '=', 'c.cart_id')
+            ->leftJoin('users as h', 'h.id', '=', 'c.handled_by')
+            ->leftJoin('users as u', 'u.id', '=', 'c.user_id')
+            ->when($r->query('status'), fn ($q, $s) => $q->whereIn('c.mode', explode(',', $s)))
+            ->where('c.phone', 'not like', 'sim-%')
+            ->select('c.*', 'o.code as order_code', 'o.status as order_status', 'o.customer_name as order_customer', 'k.code as cart_code',
+                'h.name as assignee', 'u.name as user_name')
+            ->orderByRaw("CASE c.mode WHEN 'menunggu_admin' THEN 0 WHEN 'dipegang_admin' THEN 1 ELSE 2 END")
+            ->orderByDesc('c.last_inbound_at')->limit(200)->get();
+
+        return $rows->map(function ($c) {
+            $collected = (array) json_decode((string) ($c->collected ?? '[]'), true);
+            $last = DB::table('wa_messages')->where('phone', $c->phone)->where('is_note', false)->latest('id')->first(['body', 'created_at']);
+            // Identitas: nama di pesanan → nama dari chat → nama akun → nama profil WA → nomor
+            $c->display_name = $c->order_customer ?: ($collected['name'] ?? null) ?: $c->user_name ?: $c->wa_name ?: '+'.$c->phone;
+            $c->identified = $c->display_name !== '+'.$c->phone;
+            $c->collected_data = $collected;
+            $c->last_message = $last->body ?? null;
+            $c->last_message_at = $last->created_at ?? null;
+            $c->window_left_minutes = $c->last_inbound_at ? max(0, 1440 - (int) now()->diffInMinutes($c->last_inbound_at)) : 0;
+            unset($c->collected);
+
+            return $c;
+        });
     }
 
     public function messages(int $session)
     {
-        $s = DB::table('wa_sessions')->find($session) ?? abort(404);
+        $c = DB::table('wa_conversations')->find($session) ?? abort(404);
 
-        return DB::table('wa_messages')->leftJoin('users', 'users.id', '=', 'wa_messages.sent_by')->where('wa_messages.phone', $s->phone)
-            ->select('wa_messages.id', 'direction', 'type', 'body', 'is_note', 'wa_messages.status', 'wa_messages.created_at', 'users.name as sender')
+        return DB::table('wa_messages')->leftJoin('users', 'users.id', '=', 'wa_messages.sent_by')->where('wa_messages.phone', $c->phone)
+            ->select('wa_messages.id', 'direction', 'type', 'body', 'is_note', 'wa_messages.status', 'wa_messages.created_at', 'wa_messages.sent_by', 'users.name as sender')
             ->latest('wa_messages.id')->limit(200)->get()->reverse()->values();
     }
 
     public function sessionAction(Request $r, int $session)
     {
         $d = $r->validate(['action' => 'required|in:ambil,serahkan,tutup,ke_bot']);
-        $s = DB::table('wa_sessions')->find($session) ?? abort(404);
+        $c = DB::table('wa_conversations')->find($session) ?? abort(404);
+        $uid = $r->user()->id;
         $upd = match ($d['action']) {
-            'ambil' => ['status' => 'aktif', 'assigned_to' => $r->user()->id],
-            'serahkan' => ['status' => 'menunggu_cs', 'assigned_to' => null],
-            'tutup', 'ke_bot' => ['status' => 'selesai', 'assigned_to' => null, 'fail_count' => 0],
+            'ambil' => ['mode' => 'dipegang_admin', 'handled_by' => $uid, 'handled_at' => now()],
+            'serahkan' => ['mode' => 'menunggu_admin', 'handled_by' => null, 'handled_at' => null, 'handoff_at' => now()],
+            'tutup', 'ke_bot' => ['mode' => 'bot', 'handled_by' => null, 'handled_at' => null, 'fail_count' => 0],
         };
-        DB::table('wa_sessions')->where('id', $s->id)->update($upd + ['updated_at' => now()]);
-        AuditLog::record('inbox.'.$d['action'], null, ['session' => $s->id, 'status' => $s->status], $upd);
-        if (in_array($d['action'], ['tutup', 'ke_bot'], true)) Ops::sendWa($s->phone, ShopSettings::template('session_closed'), $s->order_id, $r->user()->id);
+        DB::table('wa_conversations')->where('id', $c->id)->update($upd + ['updated_at' => now()]);
+        AuditLog::record('inbox.'.$d['action'], null, ['conversation' => $c->id, 'mode' => $c->mode, 'handled_by' => $c->handled_by], $upd);
+        if ($c->order_id) NotifyService::timeline($c->order_id, 'chat', 'Chat: '.$d['action'], [], $uid);
+        // 7.10: N1 ditutup otomatis saat chat diambil / dikembalikan ke bot
+        if ($d['action'] !== 'serahkan') NotifyService::closeConversation($c->id, $uid);
+        if (in_array($d['action'], ['tutup', 'ke_bot'], true) && $c->last_inbound_at && now()->diffInHours($c->last_inbound_at) < 24) {
+            Ops::sendWa($c->phone, ShopSettings::template('session_closed'), $c->order_id, $uid);
+        }
 
         return ['ok' => true];
     }
@@ -196,24 +218,26 @@ class ShopAftercareController extends Controller
     public function reply(Request $r, int $session)
     {
         $d = $r->validate(['body' => 'required|string|max:4000', 'note' => 'nullable|boolean']);
-        $s = DB::table('wa_sessions')->find($session) ?? abort(404);
+        $c = DB::table('wa_conversations')->find($session) ?? abort(404);
         if ($r->boolean('note')) {
-            DB::table('wa_messages')->insert(['phone' => $s->phone, 'order_id' => $s->order_id, 'direction' => 'out', 'type' => 'note',
+            DB::table('wa_messages')->insert(['phone' => $c->phone, 'order_id' => $c->order_id, 'conversation_id' => $c->id, 'direction' => 'out', 'type' => 'note',
                 'body' => $d['body'], 'is_note' => true, 'sent_by' => $r->user()->id, 'created_at' => now(), 'updated_at' => now()]);
+
             return ['ok' => true];
         }
-        if (!$s->last_inbound_at || now()->diffInHours($s->last_inbound_at) >= 24) {
+        if (!$c->last_inbound_at || now()->diffInHours($c->last_inbound_at) >= 24) {
             abort(422, 'Jendela 24 jam sudah lewat. Di luar jendela, WhatsApp hanya mengizinkan pesan template yang disetujui Meta.');
         }
-        if ($s->status !== 'aktif') {
-            DB::table('wa_sessions')->where('id', $s->id)->update(['status' => 'aktif', 'assigned_to' => $r->user()->id, 'updated_at' => now()]);
+        // Membalas = otomatis memegang chat (bot diam) dan menutup N1
+        if ($c->mode !== 'dipegang_admin' || (int) $c->handled_by !== (int) $r->user()->id) {
+            DB::table('wa_conversations')->where('id', $c->id)->update(['mode' => 'dipegang_admin', 'handled_by' => $r->user()->id, 'handled_at' => now(), 'updated_at' => now()]);
+            NotifyService::closeConversation($c->id, $r->user()->id);
         }
-        $ok = Ops::sendWa($s->phone, $d['body'], $s->order_id, $r->user()->id);
-        AuditLog::record('inbox.reply', null, null, ['session' => $s->id]);
+        $ok = Ops::sendWa($c->phone, $d['body'], $c->order_id, $r->user()->id);
+        AuditLog::record('inbox.reply', null, null, ['conversation' => $c->id]);
 
         return ['ok' => $ok];
     }
-
     // ── Pengaturan (Owner) ──
     public function settings()
     {
@@ -251,8 +275,8 @@ class ShopAftercareController extends Controller
                 'errors_24h' => DB::table('webhook_logs')->where('source', $s)->where('status', '!=', 'ok')->where('created_at', '>', now()->subDay())->count(),
             ]]),
             'failed_messages' => DB::table('wa_failed_messages')->whereNull('resolved_at')->latest()->limit(100)->get(),
-            'sessions_waiting' => DB::table('wa_sessions')->where('status', 'menunggu_cs')->count(),
-            'sla_overdue' => ShopOrder::where('status', 'menunggu_review_admin')->where('sla_due_at', '<', now())->count(),
+            'sessions_waiting' => DB::table('wa_conversations')->where('mode', 'menunggu_admin')->count(),
+'sla_overdue' => ShopOrder::whereIn('status', ['menunggu_harga', 'menunggu_review_admin'])->where('sla_due_at', '<', now())->count(),
             'unpaid_after_expiry' => DB::table('shop_payments')->where('status', 'paid')->whereColumn('paid_at', '>', 'expires_at')->where('paid_at', '>', now()->subDays(30))->count(),
             'config' => [
                 'whatsapp_provider' => config('services.whatsapp.provider', env('WHATSAPP_PROVIDER')),
@@ -296,16 +320,17 @@ class ShopAftercareController extends Controller
             'steps' => collect($steps)->map(fn ($label, $k) => ['key' => $k, 'label' => $label, 'count' => (int) ($counts[$k] ?? 0)])->values(),
             'mto_reviewed' => (clone $mto)->count(),
             'mto_revised' => (clone $mto)->where('spec_revised', true)->count(),
-            'handoffs' => DB::table('wa_sessions')->where('handoff_at', '>', now()->subDays($days))->count(),
-            'handoff_triggers' => DB::table('wa_sessions')->where('handoff_at', '>', now()->subDays($days))->selectRaw('`trigger`, COUNT(*) as n')->groupBy('trigger')->pluck('n', 'trigger'),
+            'handoffs' => DB::table('wa_conversations')->where('handoff_at', '>', now()->subDays($days))->count(),
+            'handoff_triggers' => DB::table('wa_conversations')->where('handoff_at', '>', now()->subDays($days))->selectRaw('handoff_reason as `trigger`, COUNT(*) as n')->groupBy('handoff_reason')->pluck('n', 'trigger'),
         ];
     }
 
     // ── Simulator bot ──
-    public function simulate(Request $r, WaBot $bot)
+    public function simulate(Request $r, LiviBot $bot)
     {
         $d = $r->validate(['phone' => 'required|string|max:20', 'text' => 'required|string|max:1000']);
+        $res = $bot->handle('sim-'.preg_replace('/\D/', '', $d['phone']), $d['text'], 'text', [], true);
 
-        return $bot->handle($d['phone'], $d['text'], true);
+        return ['replies' => collect($res['replies'])->pluck('body')->all(), 'session' => $res['state'], 'flow' => true];
     }
 }

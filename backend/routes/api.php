@@ -441,6 +441,7 @@ Route::get('/shop/order/{code}/confirm', [\App\Http\Controllers\Api\Shop\TokenPa
 Route::post('/shop/order/{code}/confirm', [\App\Http\Controllers\Api\Shop\TokenPageController::class, 'confirm'])->middleware('throttle:10,1');
 Route::post('/shop/order/{code}/revise', [\App\Http\Controllers\Api\Shop\TokenPageController::class, 'revise'])->middleware('throttle:10,1');
 Route::get('/shop/order/{code}/pay', [\App\Http\Controllers\Api\Shop\TokenPageController::class, 'payShow'])->middleware('throttle:30,1');
+Route::get('/shop/order/{code}/proforma.pdf', [\App\Http\Controllers\Api\Shop\TokenPageController::class, 'proformaPdf'])->middleware('throttle:20,1');
 Route::get('/shop/order/{code}/invoice.pdf', [\App\Http\Controllers\Api\Shop\TokenPageController::class, 'invoicePdf'])->middleware('throttle:10,1');
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -481,6 +482,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/proofs', [$c, 'proofQueue'])->middleware('admin_role:finance');
         Route::get('/proofs/{proof}/file', [$c, 'proofFile'])->middleware('admin_role:finance');
         Route::post('/proofs/{proof}/review', [$c, 'reviewProof'])->middleware('admin_role:finance');
+        Route::post('/proofs/{proof}/assign', [$c, 'assignProof'])->middleware('admin_role:finance');
         Route::get('/admins', [$c, 'admins']);
         Route::post('/admins/{user}/role', [\App\Http\Controllers\Api\Admin\AdminRoleController::class, 'setRole'])->middleware('admin_role:owner');
         Route::get('/audit', [$c, 'audit'])->middleware('admin_role:owner');
