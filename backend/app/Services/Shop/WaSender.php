@@ -47,11 +47,7 @@ class WaSender
                 'created_at' => now(), 'updated_at' => now(),
             ];
             if (\Illuminate\Support\Facades\Schema::hasColumn('wa_messages', 'error_note')) $row['error_note'] = $error;
-             DB::table('wa_messages')->insert([
-                'phone' => WhatsAppNotifier::normalizePhone($phone), 'order_id' => $orderId, 'direction' => 'out', 'type' => 'text',
-                'conversation_id' => DB::table('wa_conversations')->where('phone', WhatsAppNotifier::normalizePhone($phone))->value('id'),
-                'body' => $body, 'sent_by' => $sentBy, 'status' => $res['status'] ?? null, 'created_at' => now(), 'updated_at' => now(),
-            ]);
+            DB::table("wa_messages")->insert($row);
             DB::table('wa_conversations')->where('phone', WhatsAppNotifier::normalizePhone($phone))->update(['last_outbound_at' => now()]);
         } catch (\Throwable $e) {
             Log::warning('Catatan WA keluar gagal', ['error' => $e->getMessage()]);

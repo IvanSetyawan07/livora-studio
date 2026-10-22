@@ -63,8 +63,8 @@ class BotTools
 
         return [
             'found' => true, 'item_id' => $item->id, 'title' => $item->title, 'code' => $item->code,
-            'description' => $item->description, 'dimensions' => $item->dimensions ?? null,
-            'material' => $item->material ?? null, 'image' => $item->image ?? null,
+            'description' => $item->description, 'dimensions' => ($item->width_cm && $item->depth_cm && $item->height_cm) ? (round($item->width_cm).' x '.round($item->depth_cm).' x '.round($item->height_cm).' cm') : null,
+            'material' => ($item->material_detail ?: $item->texture) ?: null, 'image' => $item->image ?? null,
             'fulfillment_type' => $item->fulfillment_type ?? 'ready_stock',
             'weight_kg' => $item->weight_kg ?? null, 'volume_m3' => $item->volume_m3 ?? null,
         ];
@@ -75,9 +75,9 @@ class BotTools
     {
         $item = Item::find($itemId);
         if (!$item) return ['confirmed' => false, 'price' => null];
-        $confirmed = !empty($item->price_confirmed_at) && (int) ($item->base_price ?? 0) > 0;
+        $confirmed = !empty($item->price_confirmed_at) && (int) ($item->price ?? 0) > 0;
 
-        return ['confirmed' => $confirmed, 'price' => $confirmed ? (int) $item->base_price : null];
+        return ['confirmed' => $confirmed, 'price' => $confirmed ? (int) $item->price : null];
     }
 
     protected function saveFields(array $fields): array
