@@ -67,7 +67,9 @@ class WebhookController extends Controller
         \App\Services\Shop\Ops::webhook('whatsapp', 'ok', null, ['entries' => count($request->input('entry', []))]);
         foreach ($request->input('entry', []) as $entry) {
             foreach ($entry['changes'] ?? [] as $change) {
+                $names = collect($change['value']['contacts'] ?? [])->mapWithKeys(fn ($c) => [(string) ($c['wa_id'] ?? '') => $c['profile']['name'] ?? null])->all();
                 foreach ($change['value']['messages'] ?? [] as $m) {
+                    $m['_profile_name'] = $names[(string) ($m['from'] ?? '')] ?? null;
                     try {
                         $this->handleMessage($m);
                     } catch (\Throwable $e) {
@@ -99,13 +101,13 @@ class WebhookController extends Controller
         if ($type === 'location') $text = '[lokasi] '.($m['location']['latitude'] ?? '').','.($m['location']['longitude'] ?? '');
         if (in_array($type, ['image', 'document'], true)) $text = '['.$type.'] '.($m[$type]['caption'] ?? '');
 
-        $orderId = DB::table('wa_sessions')->where('phone', $phone)->value('order_id')
-            ?? ShopOrder::where('customer_phone', $phone)->latest()->value('id');
+        $conv = $this->ensureConversation($phone, $m['_profile_name'] ?? null);
+        $orderId = $conv->order_id ?: ($conv->cart_id ? null : ShopOrder::where('customer_phone', $phone)->latest()->value('id'));
         DB::table('wa_messages')->insert([
-            'message_id' => $m['id'] ?? null, 'wa_message_id' => $m['id'] ?? null, 'phone' => $phone, 'order_id' => $orderId, 'direction' => 'in',
+            'message_id' => $m['id'] ?? null, 'wa_message_id' => $m['id'] ?? null, 'phone' => $phone, 'order_id' => $orderId,
+            'conversation_id' => $conv->id, 'direction' => 'in',
             'type' => $type, 'body' => $text, 'raw' => json_encode($m), 'created_at' => now(), 'updated_at' => now(),
         ]);
-        \App\Services\Shop\Ops::funnel('wa_masuk', $orderId, null, ['type' => $type]);
 
         // Balasan WhatsApp Flow (form pengiriman di dalam WA)
         if ($type === 'interactive' && ($m['interactive']['type'] ?? '') === 'nfm_reply') {
@@ -115,13 +117,24 @@ class WebhookController extends Controller
 
         // Mesin bot baru: Livi (state machine + AI + guardrail)
         $result = app(\App\Services\Shop\LiviBot::class)->handle($phone, $text, $type, $m, false);
+        $orderId = DB::table('wa_conversations')->where('id', $conv->id)->value('order_id') ?: $orderId;
         foreach ($result['replies'] as $reply) {
-            if (is_array($reply)) {
-                \App\Services\Shop\WaSender::send($phone, $reply, $orderId);
-            } else {
-                \App\Services\Shop\Ops::sendWa($phone, (string) $reply, $orderId);
-            }
+            $msg = is_array($reply) ? $reply : ['type' => 'text', 'body' => (string) $reply];
+            \App\Services\Shop\WaSender::send($phone, $msg, $orderId, $conv->id);
         }
+    }
+
+    protected function ensureConversation(string $phone, ?string $name): object
+    {
+        $conv = DB::table('wa_conversations')->where('phone', $phone)->first();
+        if ($conv) return $conv;
+        DB::table('wa_conversations')->insert([
+            'phone' => $phone, 'state' => 'sapaan', 'mode' => 'bot', 'wa_name' => $name ? mb_substr($name, 0, 120) : null,
+            'user_id' => \App\Models\User::where('phone', $phone)->value('id'),
+            'last_inbound_at' => now(), 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        return DB::table('wa_conversations')->where('phone', $phone)->first();
     }
 
     protected function handleFlowReply(string $phone, array $data): void

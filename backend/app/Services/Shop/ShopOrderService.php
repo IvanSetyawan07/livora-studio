@@ -70,7 +70,7 @@ class ShopOrderService
                 'user_id' => $user->id,
                 'status' => 'menunggu_wa',
                 'order_type' => $types->count() > 1 ? 'mixed' : $types->first(),
-                'source' => 'web',
+                'source' => 'whatsapp',
                 'customer_name' => $user->name,
                 'customer_phone' => WhatsAppNotifier::normalizePhone($user->phone),
                 'customer_email' => $user->email,
@@ -233,9 +233,9 @@ class ShopOrderService
 
     // ───────────────────────────── Penawaran ─────────────────────────────
 
-    public function sendQuote(ShopOrder $order, array $fees, bool $automatic = false): ShopOrder
+     public function sendQuote(ShopOrder $order, array $fees, bool $automatic = false, bool $notifyCustomer = true): ShopOrder
     {
-        if (!in_array($order->status, ['data_lengkap', 'menunggu_review_admin', 'penawaran', 'perlu_tindakan', 'kedaluwarsa'], true)) {
+        if (!in_array($order->status, ['menunggu_harga', 'data_lengkap', 'menunggu_review_admin', 'penawaran', 'bermasalah', 'perlu_tindakan', 'kedaluwarsa'], true)) {
             throw ValidationException::withMessages(['status' => 'Penawaran tidak bisa dikirim pada status ini.']);
         }
         $before = $order->only(ShopOrder::PRICE_FIELDS);
@@ -259,11 +259,19 @@ class ShopOrderService
         $order->quote_expires_at = now()->addDays((int) ShopSettings::get('quote_valid_days', 3));
         $order->save();
         // penawaran lama yang belum dibayar dibatalkan
-        $this->voidOpenPayments($order);
+         $this->voidOpenPayments($order);
+        DB::transaction(function () use ($order) {
+            $payment = $order->payments()->create(['amount' => $order->grand_total, 'status' => 'pending', 'expires_at' => $order->quote_expires_at]);
+            $this->issueDocument($order, $payment, 'Tagihan');
+            $this->holdStock($order);
+        });
         $this->setStatus($order, 'penawaran');
+        NotifyService::closeFor('N3', $order->id, auth()->id());
+        NotifyService::closeFor('N4', $order->id, auth()->id());
+        NotifyService::timeline($order->id, 'quote', 'Penawaran v'.$order->quote_version.' diterbitkan ('.self::rp($order->grand_total).')', [], auth()->id());
         AuditLog::record($automatic ? 'quote.auto_sent' : 'quote.sent', $order, $before, $order->only(ShopOrder::PRICE_FIELDS));
 
-        $this->notify($order, 'Penawaran pesanan Anda', [
+        if ($notifyCustomer) $this->notify($order, 'Penawaran pesanan Anda', [
             "Penawaran pesanan {$order->code} sudah siap.",
             'Total: '.self::rp($order->grand_total).' (sudah termasuk PPN).',
             'Penawaran berlaku sampai '.$order->quote_expires_at->translatedFormat('d F Y H:i').'.',
@@ -274,7 +282,7 @@ class ShopOrderService
     }
 
     /** Customer menyetujui → tahan stok + terbitkan Tagihan. */
-    public function approveQuote(ShopOrder $order): ShopOrder
+        public function approveQuote(ShopOrder $order, bool $notifyCustomer = true): ShopOrder
     {
         if ($order->status !== 'penawaran') {
             throw ValidationException::withMessages(['status' => 'Penawaran ini tidak bisa disetujui.']);
@@ -304,14 +312,14 @@ class ShopOrderService
             $order->quote_approved_at = now();
             $order->save();
 
-            $payment = $order->payments()->create([
-                'amount' => $order->grand_total,
-                'status' => 'pending',
-                'expires_at' => $expires,
-            ]);
-            $this->issueDocument($order, $payment, 'Tagihan');
+            $payment = $order->payments()->where('status', 'pending')->latest('id')->first();
+            if ($payment) {
+                $payment->update(['amount' => $order->grand_total, 'expires_at' => $expires]);
+            } else { // penawaran lama sebelum perbaikan
+                $payment = $order->payments()->create(['amount' => $order->grand_total, 'status' => 'pending', 'expires_at' => $expires]);
+                $this->issueDocument($order, $payment, 'Tagihan');
+            }
         });
-
         $this->setStatus($order, 'menunggu_bayar');
         Ops::funnel('penawaran_disetujui', $order->id, $order->user_id);
         AuditLog::record('quote.approved', $order, null, ['grand_total' => $order->grand_total]);
@@ -350,31 +358,64 @@ class ShopOrderService
     {
         $proof = $payment->proofs()->create(['file_path' => $path, 'amount' => $amount, 'status' => 'menunggu']);
         $payment->update(['method' => 'bca_transfer', 'status' => 'menunggu_verifikasi']);
+        $this->setStatus($payment->order, 'menunggu_verifikasi');
+        NotifyService::notify('N7', $payment->order_id, [], 'p'.$proof->id);
         AuditLog::record('payment.proof_uploaded', $payment, null, ['proof_id' => $proof->id]);
         $this->notifyAdmins("Bukti transfer baru: {$payment->order->code}", 'Ada bukti transfer yang menunggu verifikasi.');
 
         return $proof;
     }
 
-    public function reviewProof(ShopPaymentProof $proof, bool $accept, ?string $reason, User $admin): void
+        public function reviewProof(ShopPaymentProof $proof, bool $accept, ?string $reason, User $admin): void
     {
         if ($proof->status !== 'menunggu') {
             throw ValidationException::withMessages(['proof' => 'Bukti ini sudah diproses.']);
         }
-        $proof->update(['status' => $accept ? 'acc' : 'tolak', 'reason' => $reason, 'verified_by' => $admin->id, 'verified_at' => now()]);
         $payment = $proof->payment;
+        if (!$payment && $accept) {
+            throw ValidationException::withMessages(['proof' => 'Bukti ini belum tertaut ke pesanan. Tautkan ke pesanan dulu.']);
+        }
+        $proof->update(['status' => $accept ? 'acc' : 'tolak', 'reason' => $reason, 'verified_by' => $admin->id, 'verified_at' => now()]);
         AuditLog::record($accept ? 'payment.proof_accepted' : 'payment.proof_rejected', $proof, null, ['reason' => $reason]);
+
+        if (!$payment) { // bukti yatim ditolak: minta kirim ulang lewat chat
+            if ($proof->phone) Ops::sendWa($proof->phone, 'Bukti transfer Kakak belum bisa kami verifikasi. Alasan: '.($reason ?: '-').'. Mohon kirim ulang foto buktinya di chat ini ya, sebutkan kode pesanannya.', null, $admin->id);
+            NotifyService::closeFor('N8', 0, $admin->id);
+            return;
+        }
+        $order = $payment->order;
+        NotifyService::closeFor('N7', $order->id, $admin->id);
+        NotifyService::closeFor('N8', $order->id, $admin->id);
 
         if ($accept) {
             $payment->verified_by = $admin->id;
             $this->markPaid($payment, 'Transfer BCA');
         } else {
             $payment->update(['status' => 'pending']);
-            $order = $payment->order;
-            $this->notify($order, 'Bukti transfer perlu diunggah ulang', [
+            if ($order->status === 'menunggu_verifikasi') $this->setStatus($order, 'menunggu_bayar');
+            NotifyService::timeline($order->id, 'payment', 'Bukti ditolak: '.($reason ?: '-'), ['proof_id' => $proof->id], $admin->id);
+            // 4.10: bot minta kirim ulang beserta alasan
+            $this->notify($order, 'Bukti transfer perlu dikirim ulang', [
                 "Bukti transfer pesanan {$order->code} belum bisa kami verifikasi.", 'Alasan: '.($reason ?: '-'),
-            ], $this->orderUrl($order), 'Unggah Ulang Bukti', "Bukti transfer {$order->code} ditolak: {$reason}. Unggah ulang di ".$this->orderUrl($order));
+            ], $this->paymentUrl($order), 'Lihat Ringkasan Pembayaran',
+                "Bukti transfer {$order->code} belum bisa kami verifikasi. Alasan: ".($reason ?: '-').'. Mohon kirim ulang foto buktinya di chat ini ya Kak. Ringkasan pembayaran: '.$this->paymentUrl($order));
         }
+    }
+
+    /** Tautkan bukti yatim (N8 "pesanan tidak jelas") ke pesanan yang benar. */
+    public function assignProof(ShopPaymentProof $proof, ShopOrder $order, User $admin): void
+    {
+        if ($proof->status !== 'menunggu') {
+            throw ValidationException::withMessages(['proof' => 'Bukti ini sudah diproses.']);
+        }
+        $payment = $order->payments()->whereIn('status', ['pending', 'menunggu_verifikasi'])->latest('id')->first();
+        if (!$payment) throw ValidationException::withMessages(['order' => 'Pesanan ini belum punya tagihan yang menunggu bayar.']);
+        $proof->update(['payment_id' => $payment->id, 'order_id' => $order->id]);
+        $payment->update(['method' => 'bca_transfer', 'status' => 'menunggu_verifikasi']);
+        if (in_array($order->status, ['menunggu_bayar', 'menunggu_verifikasi'], true)) $this->setStatus($order, 'menunggu_verifikasi');
+        NotifyService::closeFor('N8', 0, $admin->id);
+        NotifyService::notify('N7', $order->id, [], 'p'.$proof->id);
+        NotifyService::timeline($order->id, 'payment', 'Bukti ditautkan admin ke pesanan ini', ['proof_id' => $proof->id], $admin->id);
     }
 
     public function markPaid(ShopPayment $payment, string $methodLabel, ?string $eventId = null): void
@@ -423,16 +464,28 @@ class ShopOrderService
 
             $tagihan = $order->documents()->where('payment_id', $payment->id)->where('title', 'Tagihan')->latest('version')->first();
             $this->issueDocument($order, $payment, 'Invoice', $tagihan, $methodLabel);
-            $order->status = $stockOk ? 'dibayar' : 'perlu_tindakan';
+            $order->status = $stockOk ? 'diproses' : 'bermasalah';
             $order->save();
         });
 
-        AuditLog::record('payment.paid', $payment, null, ['method' => $methodLabel, 'amount' => $payment->amount]);
+         AuditLog::record('payment.paid', $payment, null, ['method' => $methodLabel, 'amount' => $payment->amount]);
         $order->refresh();
+        NotifyService::closeFor('N7', $order->id);
+        NotifyService::closeFor('N8', $order->id);
+        NotifyService::timeline($order->id, 'payment', 'Pembayaran lunas ('.$methodLabel.')', ['amount' => (int) $payment->amount]);
+        NotifyService::notify($order->status === 'bermasalah' ? 'N10' : 'N9', $order->id);
+
+        $invoiceUrl = $this->paymentUrl($order);
         $this->notify($order, 'Pembayaran diterima', [
             "Pembayaran pesanan {$order->code} sebesar ".self::rp($payment->amount).' sudah kami terima. Invoice terlampir di halaman pesanan.',
-            $order->status === 'perlu_tindakan' ? 'Stok salah satu barang habis saat pembayaran masuk. Tim kami akan menghubungi Anda untuk alternatif atau pengembalian dana.' : 'Kami kabari lagi saat pesanan dikirim.',
-        ], $this->orderUrl($order), 'Lihat Invoice', "Pembayaran {$order->code} diterima. Invoice: ".$this->orderUrl($order));
+            $order->status === 'bermasalah' ? 'Stok salah satu barang habis saat pembayaran masuk. Tim kami akan menghubungi Anda untuk alternatif atau pengembalian dana.' : 'Kami kabari lagi saat pesanan dikirim.',
+        ], $invoiceUrl, 'Lihat Invoice', "Pembayaran {$order->code} diterima, terima kasih Kak! Invoice LUNAS: {$invoiceUrl}");
+        // 4.11: PDF Invoice dikirim di chat
+        $inv = $order->documents()->where('title', 'Invoice')->latest('version')->first();
+        if ($inv?->pdf_path && $order->wa_consent && $order->customer_phone) {
+            WaSender::document($order->customer_phone, 'Invoice LUNAS '.$order->code,
+                url('/api/shop/order/'.$order->code.'/invoice.pdf?token='.$order->payment_token), 'Invoice-'.$order->code.'.pdf', $order->id);
+        }
     }
 
     protected function voidOpenPayments(ShopOrder $order): void
@@ -507,7 +560,7 @@ class ShopOrderService
     public function advance(ShopOrder $order, string $to, array $data = []): ShopOrder
     {
         $allowed = [
-            'dibayar' => ['diproses'], 'perlu_tindakan' => ['diproses', 'dibatalkan'], 'diproses' => ['siap_kirim'],
+            'dibayar' => ['diproses'], 'perlu_tindakan' => ['diproses', 'dibatalkan'], 'bermasalah' => ['diproses', 'dibatalkan'], 'diproses' => ['siap_kirim'],
             'siap_kirim' => ['dikirim'], 'dikirim' => ['diterima'], 'diterima' => ['selesai'],
         ];
         if (!in_array($to, $allowed[$order->status] ?? [], true)) {
@@ -522,6 +575,9 @@ class ShopOrderService
         if ($to === 'diterima') $order->received_at = now();
         $order->save();
         $this->setStatus($order, $to);
+        if (in_array($to, ['siap_kirim', 'dikirim'], true)) NotifyService::closeFor('N9', $order->id, auth()->id());
+        if ($to === 'dikirim') NotifyService::closeFor('N11', $order->id, auth()->id());
+        if ($to === 'diterima') NotifyService::closeFor('N12', $order->id, auth()->id());
 
         $messages = [
             'diproses' => ['Pesanan sedang diproses', "Pesanan {$order->code} sedang kami siapkan."],
@@ -560,6 +616,10 @@ class ShopOrderService
             }
             $o->holds()->where('status', 'held')->update(['status' => 'released']);
             $this->setStatus($o, 'kedaluwarsa');
+            NotifyService::closeFor('N6', $o->id);
+            if ($o->customer_phone && $o->wa_consent) {
+                Ops::sendWa($o->customer_phone, "Kak, penawaran/tagihan pesanan {$o->code} sudah kedaluwarsa dan stok kami lepas. Kalau masih berminat, balas chat ini dan tim kami siapkan penawaran baru ya.", $o->id);
+            }
             $n++;
         }
         $n += ShopOrder::whereIn('status', ['menunggu_wa', 'wa_terhubung', 'menunggu_data'])->where('expires_at', '<', now())->update(['status' => 'kedaluwarsa']);
@@ -573,13 +633,18 @@ class ShopOrderService
     {
         $from = $order->status;
         $order->status = $status;
-        if ($status === 'menunggu_review_admin') $order->sla_due_at = now()->addHours((int) ShopSettings::get('sla_hours', 4));
+        if (in_array($status, ['menunggu_review_admin', 'menunggu_harga'], true)) $order->sla_due_at = now()->addHours((int) ShopSettings::get('sla_hours', 4));
         $order->save();
         AuditLog::record('order.status', $order, ['status' => $from], ['status' => $status]);
+        if ($from !== $status) {
+            NotifyService::timeline($order->id, 'status_change', 'Status: '.(self::LABELS[$status] ?? $status), ['from' => $from, 'to' => $status], auth()->id());
+        }
     }
 
     public function orderUrl(ShopOrder $order): string
     {
+       if (!$order->user_id) return $this->confirmUrl($order);
+
         return rtrim(env('FRONTEND_URL', 'https://www.livoralcr.com'), '/')."/profile/orders/{$order->code}";
     }
 
@@ -726,7 +791,7 @@ class ShopOrderService
     public function confirmOrder(ShopOrder $order, ?string $ip): ShopOrder
     {
         $order->confirmed_ip = $ip;
-        $result = $this->approveQuote($order);
+        $result = $this->approveQuote($order, false);
         // Kode unik 3 digit sebagai bagian dari total transfer
         if (!$result->unique_code) {
             $result->unique_code = random_int(1, 999);
@@ -738,22 +803,41 @@ class ShopOrderService
         NotifyService::closeFor('N4', $result->id);
         NotifyService::timeline($result->id, 'quote', 'Penawaran disetujui customer', ['ip' => $ip]);
 
+        if ($result->customer_phone && $result->wa_consent) {
+            $total = (int) $result->grand_total + (int) $result->unique_code;
+            WaSender::text($result->customer_phone, "Terima kasih Kak, pesanan {$result->code} sudah dikonfirmasi ✅\n\nTotal transfer: ".self::rp($total)." (sudah termasuk kode unik {$result->unique_code}).\nRingkasan & nomor rekening: ".$this->paymentUrl($result)."\n\nSetelah transfer, kirim foto bukti transfernya ke chat ini ya.", $result->id);
+        }
+
         return $result;
     }
 
-    /** Kirim penawaran lewat bot: ringkasan + PDF + link konfirmasi bertoken. */
+      /** Kirim penawaran lewat bot (3.9): ringkasan + PDF Proforma + link konfirmasi bertoken. */
     public function sendQuoteViaBot(ShopOrder $order, array $fees): ShopOrder
     {
-        $order = $this->sendQuote($order, $fees);
-        $doc = $order->documents()->where('title', 'Tagihan')->latest('version')->first();
-        $pdfUrl = $doc?->pdf_path ? url('/api/shop/documents/'.$doc->id.'/download') : null;
+        $order = $this->sendQuote($order, $fees, false, false);
+        $order->load('items');
+        $doc = $order->documents()->where('title', 'Tagihan')->where('status', 'belum_dibayar')->latest('version')->first();
+        $confirm = $this->confirmUrl($order);
         $lines = $order->items->map(fn ($i) => '- '.$i->title." x{$i->quantity}")->implode("\n");
         WaSender::text($order->customer_phone,
-            "Kak, penawaran resmi untuk pesanan {$order->code} sudah siap 🙏\n\n{$lines}\n\nTotal: ".self::rp($order->grand_total)." (sudah termasuk PPN 11%). Berlaku sampai ".$order->quote_expires_at->translatedFormat('d F Y').".\n\nCek detail & konfirmasi di sini: ".$this->confirmUrl($order), $order->id);
-        if ($pdfUrl) WaSender::document($order->customer_phone, "Proforma Invoice {$order->code}", $pdfUrl, 'Proforma-Invoice-'.$order->code.'.pdf', $order->id);
-        NotifyService::closeFor('N3', $order->id);
-        NotifyService::timeline($order->id, 'quote', 'Penawaran v'.$order->quote_version.' dikirim via WhatsApp');
+            "Kak, penawaran resmi untuk pesanan {$order->code} sudah siap 🙏\n\n{$lines}\n\nTotal: ".self::rp($order->grand_total).' (sudah termasuk PPN). Berlaku sampai '.$order->quote_expires_at->timezone('Asia/Jakarta')->translatedFormat('d F Y').".\n\nCek detail & konfirmasi di sini: {$confirm}", $order->id);
+        if ($doc?->pdf_path) {
+            WaSender::document($order->customer_phone, 'Proforma Invoice '.$order->code,
+                url('/api/shop/order/'.$order->code.'/proforma.pdf?token='.$order->confirm_token), 'Proforma-Invoice-'.$order->code.'.pdf', $order->id);
+        }
 
         return $order;
+    }
+
+    /** Stok ditahan sejak penawaran dikirim (3.8). */
+    protected function holdStock(ShopOrder $order): void
+    {
+        $order->loadMissing('items.item');
+        foreach ($order->items as $line) {
+            if ($line->fulfillment_type !== 'ready_stock' || !$line->item_id || !$line->item) continue;
+            $avail = StockHold::available($line->item, $order->id);
+            if ($avail !== null && $avail < $line->quantity) continue; // dicek ulang saat customer menyetujui
+            $order->holds()->create(['item_id' => $line->item_id, 'quantity' => $line->quantity, 'status' => 'held', 'expires_at' => $order->quote_expires_at]);
+        }
     }
 }

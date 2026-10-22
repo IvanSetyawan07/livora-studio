@@ -94,6 +94,15 @@ class TokenPageController extends Controller
             'items' => $order->items->map(fn ($i) => $i->only(['title', 'variant_name', 'quantity'])),
         ];
     }
+    
+    public function proformaPdf(string $code, Request $request)
+    {
+        $order = $this->find($code, (string) $request->query('token'), 'confirm_token');
+        $doc = $order->documents()->where('title', 'Tagihan')->whereIn('status', ['belum_dibayar', 'lunas'])->latest('version')->firstOrFail();
+        abort_unless($doc->pdf_path && Storage::disk('local')->exists($doc->pdf_path), 404);
+
+        return response()->download(Storage::disk('local')->path($doc->pdf_path), 'Proforma-Invoice-'.$order->code.'.pdf');
+    }
 
     /** GET /api/shop/order/{code}/invoice.pdf?token=... — unduh Invoice setelah lunas. */
     public function invoicePdf(string $code, Request $request)
