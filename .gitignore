@@ -41,3 +41,6 @@ vendor/
 client_secret.json
 .env
 assets-backup/
+
+# arsip zip untuk upload manual, jangan masuk repo
+*.zip
