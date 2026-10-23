@@ -17,10 +17,12 @@ class Guardrail
     private const PROMPT_LEAK = ['system prompt', 'aturan keras', 'kamu adalah livi', 'tool calling', 'function calling'];
 
     /**
-     * @param  array  $allowedAmounts  nominal yang boleh muncul (dari hasil tool)
+     * @param  array  $allowedAmounts  nominal yang boleh muncul (dari hasil tool / input admin)
+     * @param  bool  $discountVerified  true bila diskon yang dibahas BERASAL dari admin (cek harga),
+     *                                  sehingga kalimat "ada diskon ..." tidak dianggap janji liar
      * @return array{ok: bool, text: string, reason: ?string}
      */
-    public static function check(string $text, array $allowedAmounts = []): array
+    public static function check(string $text, array $allowedAmounts = [], bool $discountVerified = false): array
     {
         $lower = mb_strtolower($text);
 
@@ -38,8 +40,8 @@ class Guardrail
         foreach (self::PROMISE_WORDS as $w) {
             if (str_contains($lower, $w)) return self::block('kata_janji: '.$w);
         }
-        if (preg_match('/\b(diskon|potongan harga)\b.*\b(bisa|kasih|beri|kasihkan|ada)\b/i', $lower)
-            || preg_match('/\b(bisa|ada)\b.*\bdiskon\b/i', $lower)) {
+        if (!$discountVerified && (preg_match('/\b(diskon|potongan harga)\b.*\b(bisa|kasih|beri|kasihkan|ada)\b/i', $lower)
+            || preg_match('/\b(bisa|ada)\b.*\bdiskon\b/i', $lower))) {
             return self::block('janji_diskon');
         }
 

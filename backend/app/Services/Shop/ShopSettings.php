@@ -14,6 +14,8 @@ class ShopSettings
     public const DEFAULTS = [
         'bot_enabled' => true,
         'ai_answers_enabled' => true,
+        // true: pertanyaan harga SELALU dicek admin dulu (Livi: "sebentar ya, Livi cek dulu"). false: pakai harga terkonfirmasi di data produk.
+        'price_requires_admin' => true,
         'business_hours' => ['days' => [1, 2, 3, 4, 5, 6], 'start' => '09:00', 'end' => '17:00'],
         'blocklist' => [],
         'sla_hours' => 4,
@@ -23,9 +25,9 @@ class ShopSettings
         'templates' => [
             'greeting' => 'Halo, terima kasih sudah menghubungi Livora. Saya asisten otomatis (AI) Livora. Sebutkan kode pesanan Anda (contoh: LVR-AB12CD), atau ketik TIM untuk berbicara dengan tim kami.',
             'form_link' => 'Halo {nama}, pesanan {kode} sudah kami terima. Silakan lengkapi data pengiriman di: {link}' . "\n" . 'Ketik TIM kapan saja untuk berbicara dengan tim kami.',
-            'handoff' => 'Baik, saya hubungkan dengan tim Livora. Mohon tunggu sebentar, tim kami akan segera membalas di chat ini.',
-            'off_hours' => 'Terima kasih. Tim Livora sedang di luar jam kerja (Senin–Sabtu 09.00–17.00 WIB). Pesan Anda sudah kami catat dan akan dibalas di jam kerja berikutnya.',
-            'session_closed' => 'Sesi dengan tim Livora sudah selesai. Asisten otomatis kembali aktif. Ketik TIM bila perlu bantuan lagi.',
+            'handoff' => 'Baik Kak, Livi sambungkan ke tim Livora ya. Ditunggu sebentar, nanti tim kami balas langsung di chat ini 🙏',
+            'off_hours' => 'Makasih ya Kak 😊 Tim Livora lagi di luar jam kerja nih (Senin–Sabtu, 09.00–17.00 WIB). Pesan Kakak sudah Livi catat, dan tim kami bakal balas begitu jam kerja mulai ya.',
+            'session_closed' => 'Obrolan dengan tim Livora sudah selesai ya Kak. Livi aktif lagi di sini 😊 Kalau butuh tim lagi, tinggal ketik TIM.',
             'unknown' => 'Maaf, saya belum memahami pesan Anda. Ketik STATUS untuk cek pesanan, atau TIM untuk berbicara dengan tim kami.',
         ],
     ];

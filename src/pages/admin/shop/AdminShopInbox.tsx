@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Bot, Loader2, Lock, Send, StickyNote, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { adminShop } from "@/lib/shop";
+import PriceInquiryPanel from "@/components/shop/PriceInquiryPanel";
 
 const MODE: Record<string, { l: string; c: string }> = {
   menunggu_admin: { l: "Menunggu tim", c: "bg-amber-100 text-amber-900" },
@@ -12,6 +13,7 @@ const MODE: Record<string, { l: string; c: string }> = {
 const STATE: Record<string, string> = {
   sapaan: "Baru menyapa", menu: "Memilih menu", tanya_jawab: "Tanya jawab", kumpul_data: "Mengisi data",
   konfirmasi_data: "Konfirmasi data", pilih_kirim: "Memilih metode kirim", menunggu_penawaran: "Menunggu penawaran",
+  cek_harga: "Menunggu harga dari tim", setelah_harga: "Setelah info harga",
 };
 const REASON: Record<string, string> = {
   tim: "minta tim", admin: "minta admin", nego: "nego", komplain: "komplain", keluhan: "keluhan", rusak: "barang rusak",
@@ -104,6 +106,7 @@ export default function AdminShopInbox() {
                 <button type="button" onClick={() => pick(s.id)} className={`w-full border-b border-border p-3 text-left hover:bg-muted/50 ${selId === s.id ? "bg-muted" : ""}`}>
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate text-sm font-medium">{s.display_name}</span>
+                    {s.price_pending && <span className="shrink-0 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] text-rose-900">Cek harga</span>}
                     <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] ${MODE[s.mode]?.c}`}>{MODE[s.mode]?.l ?? s.mode}</span>
                   </div>
                   <p className="mt-0.5 truncate text-xs text-muted-foreground">{s.last_message}</p>
@@ -143,6 +146,7 @@ export default function AdminShopInbox() {
                 {c.pin_location && <a href={c.pin_location} target="_blank" rel="noopener noreferrer" className="underline">Pin lokasi</a>}
               </div>
             </div>
+            <PriceInquiryPanel conversationId={sel.id} windowOpen={windowOpen} onSent={() => { loadMsgs(sel.id); loadSessions(); }} />
             <div className="flex-1 space-y-2 overflow-y-auto bg-muted/30 p-4">
               {msgs.map((m) => (
                 <div key={m.id} className={`flex ${m.direction === "in" ? "justify-start" : "justify-end"}`}>

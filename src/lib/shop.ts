@@ -222,6 +222,9 @@ export const adminShop = {
   inboxMessages: (id: number) => api.get(`/admin/shop/inbox/${id}`).then((r) => r.data as any[]),
   inboxReply: (id: number, body: string, note = false) => api.post(`/admin/shop/inbox/${id}/reply`, { body, note }).then((r) => r.data),
   inboxAction: (id: number, action: string) => api.post(`/admin/shop/inbox/${id}/action`, { action }).then((r) => r.data),
+  priceInquiry: (id: number) => api.get(`/admin/shop/inbox/${id}/price-inquiry`).then((r) => r.data as { inquiry: any | null }),
+  answerPriceInquiry: (id: number, body: { inquiry_id: number; answers: Array<{ item_id: number; price: number; discount_type: string | null; discount_value: number | null; note: string | null }>; admin_note?: string | null }) =>
+    api.post(`/admin/shop/inbox/${id}/price-inquiry`, body).then((r) => r.data as { ok: boolean; relayed: boolean }),
   settings: () => api.get("/admin/shop/settings").then((r) => r.data as Record<string, any>),
   saveSettings: (body: Record<string, unknown>) => api.post("/admin/shop/settings", body).then((r) => r.data as Record<string, any>),
   health: () => api.get("/admin/shop/health").then((r) => r.data as Record<string, any>),

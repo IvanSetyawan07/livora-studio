@@ -10,7 +10,8 @@ export default function AdminShopPayments() {
   const [rows, setRows] = useState<any[] | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
   const confirm = useConfirm();
-  const load = useCallback(() => adminShop.proofs().then(setRows).catch((e) => { toast.error(e.message); setRows([]); }), []);
+  const load =
+   useCallback(() => adminShop.proofs().then(setRows).catch((e) => { toast.error(e.message); setRows([]); }), []);
   useEffect(() => { load(); }, [load]);
 
   // Bukti yang belum tertaut ke pesanan (mis. bot tidak yakin ini untuk pesanan yang mana)

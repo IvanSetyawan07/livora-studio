@@ -118,7 +118,9 @@ class WebhookController extends Controller
         // Mesin bot baru: Livi (state machine + AI + guardrail)
         $result = app(\App\Services\Shop\LiviBot::class)->handle($phone, $text, $type, $m, false);
         $orderId = DB::table('wa_conversations')->where('id', $conv->id)->value('order_id') ?: $orderId;
-        foreach ($result['replies'] as $reply) {
+        foreach (array_values($result['replies']) as $i => $reply) {
+            // Beberapa pesan beruntun diberi jeda singkat supaya terasa seperti manusia mengetik (dan urutannya terjaga)
+            if ($i > 0) usleep(random_int(700000, 1300000));
             $msg = is_array($reply) ? $reply : ['type' => 'text', 'body' => (string) $reply];
             \App\Services\Shop\WaSender::send($phone, $msg, $orderId, $conv->id);
         }

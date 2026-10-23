@@ -34,6 +34,7 @@ class NotifyService
         'N14' => ['Klaim/refund baru', 'perlu_tindakan', 'tinggi', ['production', 'finance'], 1440],
         'N15' => ['Gangguan sistem', 'sistem', 'mendesak', ['owner'], null],
         'N16' => ['Jendela chat tinggal 30 menit', 'info', 'tinggi', ['cs'], null],
+        'N17' => ['Customer minta cek harga', 'perlu_tindakan', 'tinggi', ['cs'], 30],
     ];
 
     /** Buat/perbarui notifikasi. $keyExtra membedakan versi (mis. versi penawaran). */
@@ -194,6 +195,7 @@ class NotifyService
         $code = $orderId ? (ShopOrder::find($orderId)?->code ?? '#'.$orderId) : '';
 
         return $vars['message'] ?? match ($type) {
+            'N17' => 'Customer menanyakan harga, mohon isi harga di Inbox.',
             'N1' => "Chat {$vars['phone']} butuh admin ({$vars['trigger']}).",
             'N2' => "Pesanan {$code} baru dibuat oleh bot.",
             'N3' => "Pesanan {$code} menunggu harga diisi.",
@@ -217,7 +219,7 @@ class NotifyService
     protected static function link(string $type, ?int $orderId, ?int $conversationId): string
     {
         return match ($type) {
-            'N1', 'N16' => '/admin/shop/inbox'.($conversationId ? '?c='.$conversationId : ''),
+            'N1', 'N16', 'N17' => '/admin/shop/inbox'.($conversationId ? '?c='.$conversationId : ''),
             'N7', 'N8' => '/admin/shop/payments',
             'N14' => '/admin/shop/aftercare',
             'N15' => '/admin/shop/health',

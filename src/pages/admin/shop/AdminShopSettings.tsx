@@ -28,7 +28,7 @@ export default function AdminShopSettings() {
     setBusy(true);
     try {
       const d = await adminShop.saveSettings({
-        bot_enabled: s.bot_enabled, ai_answers_enabled: s.ai_answers_enabled, business_hours: s.business_hours, templates: s.templates,
+        bot_enabled: s.bot_enabled, ai_answers_enabled: s.ai_answers_enabled, price_requires_admin: s.price_requires_admin, business_hours: s.business_hours, templates: s.templates,
         shipping_zones: Object.fromEntries(zones.filter(([k]) => k.trim()).map(([k, v]) => [k.trim().toLowerCase(), Number(v) || 0])),
         blocklist: block.split(/[\n,]/).map((x) => x.trim()).filter(Boolean),
         review_threshold: Number(s.review_threshold), quote_valid_days: Number(s.quote_valid_days), sla_hours: Number(s.sla_hours),
@@ -51,6 +51,7 @@ export default function AdminShopSettings() {
       <Sec title="Bot WhatsApp">
         <Toggle label="Bot aktif (matikan = semua chat langsung ke tim)" checked={!!s.bot_enabled} onChange={(v) => set("bot_enabled", v)} />
         <Toggle label="Jawab pertanyaan bebas dengan AI (bot tetap menyatakan dirinya asisten AI)" checked={!!s.ai_answers_enabled} onChange={(v) => set("ai_answers_enabled", v)} />
+        <Toggle label="Pertanyaan harga selalu dicek admin dulu (Livi: &quot;sebentar ya, Livi cek dulu&quot;). Matikan = Livi memakai harga terkonfirmasi di data produk" checked={s.price_requires_admin !== false} onChange={(v) => set("price_requires_admin", v)} />
         <p className="text-xs text-muted-foreground">Form pengiriman di dalam WhatsApp (WhatsApp Flows): {s.wa_flow_configured ? "aktif" : "belum aktif — isi SHOP_WA_FLOW_ID di server"}.</p>
       </Sec>
 

@@ -10,6 +10,7 @@ use App\Services\Shop\Ops;
 use App\Services\Shop\ShopOrderService;
 use App\Services\Shop\ShopSettings;
 use App\Services\Shop\LiviBot;
+use App\Services\Shop\LiviPrice;
 use App\Services\Shop\NotifyService;
 use App\Services\WhatsApp\WhatsAppNotifier;
 use Illuminate\Http\Request;
@@ -156,15 +157,25 @@ class ShopAftercareController extends Controller
         // ── Inbox handoff (sumber data: wa_conversations, tabel yang ditulis LiviBot) ──
     public function sessions(Request $r)
     {
+        $pendingPrice = fn ($q) => $q->select(DB::raw(1))->from('wa_price_inquiries as p')->whereColumn('p.conversation_id', 'c.id')->where('p.status', 'pending');
         $rows = DB::table('wa_conversations as c')
             ->leftJoin('shop_orders as o', 'o.id', '=', 'c.order_id')
             ->leftJoin('shop_carts as k', 'k.id', '=', 'c.cart_id')
             ->leftJoin('users as h', 'h.id', '=', 'c.handled_by')
             ->leftJoin('users as u', 'u.id', '=', 'c.user_id')
-            ->when($r->query('status'), fn ($q, $s) => $q->whereIn('c.mode', explode(',', $s)))
-            ->where('c.phone', 'not like', 'sim-%')
+            // "Perlu dibalas" (menunggu_admin) juga memuat chat yang sedang menunggu harga dari admin (cek harga Livi)
+            ->when($r->query('status'), function ($q, $s) use ($pendingPrice) {
+                $modes = explode(',', $s);
+                $q->where(function ($w) use ($modes, $pendingPrice) {
+                    $w->whereIn('c.mode', $modes);
+                    if (in_array('menunggu_admin', $modes, true)) $w->orWhereExists($pendingPrice);
+                });
+            })
+            // Nomor uji simulator disembunyikan, kecuali sedang menunggu harga (supaya alur cek harga bisa diuji end-to-end)
+            ->where(fn ($q) => $q->where('c.phone', 'not like', 'sim-%')->orWhereExists($pendingPrice))
             ->select('c.*', 'o.code as order_code', 'o.status as order_status', 'o.customer_name as order_customer', 'k.code as cart_code',
                 'h.name as assignee', 'u.name as user_name')
+            ->orderByRaw("EXISTS (SELECT 1 FROM wa_price_inquiries p WHERE p.conversation_id = c.id AND p.status = 'pending') DESC")
             ->orderByRaw("CASE c.mode WHEN 'menunggu_admin' THEN 0 WHEN 'dipegang_admin' THEN 1 ELSE 2 END")
             ->orderByDesc('c.last_inbound_at')->limit(200)->get();
 
@@ -177,6 +188,7 @@ class ShopAftercareController extends Controller
             $c->collected_data = $collected;
             $c->last_message = $last->body ?? null;
             $c->last_message_at = $last->created_at ?? null;
+            $c->price_pending = DB::table('wa_price_inquiries')->where('conversation_id', $c->id)->where('status', 'pending')->exists();
             $c->window_left_minutes = $c->last_inbound_at ? max(0, 1440 - (int) now()->diffInMinutes($c->last_inbound_at)) : 0;
             unset($c->collected);
 
@@ -215,6 +227,40 @@ class ShopAftercareController extends Controller
         return ['ok' => true];
     }
 
+    // ── Cek harga Livi: admin mengisi harga manual (info saja), Livi meneruskan ke customer ──
+    public function priceInquiry(int $session)
+    {
+        $c = DB::table('wa_conversations')->find($session) ?? abort(404);
+        $row = LiviPrice::pending((int) $c->id) ?? DB::table('wa_price_inquiries')->where('conversation_id', $c->id)->latest('id')->first();
+
+        return ['inquiry' => LiviPrice::present($row)];
+    }
+
+    public function answerPriceInquiry(Request $r, int $session)
+    {
+        $d = $r->validate([
+            'inquiry_id' => 'required|integer',
+            'answers' => 'required|array|min:1|max:'.LiviPrice::MAX_ITEMS,
+            'answers.*.item_id' => 'required|integer',
+            'answers.*.price' => 'required|integer|min:1|max:10000000000',
+            'answers.*.discount_type' => 'nullable|in:percent,nominal',
+            'answers.*.discount_value' => 'nullable|integer|min:0|max:10000000000',
+            'answers.*.note' => 'nullable|string|max:300',
+            'admin_note' => 'nullable|string|max:500',
+        ]);
+        $c = DB::table('wa_conversations')->find($session) ?? abort(404);
+        DB::table('wa_price_inquiries')->where('id', $d['inquiry_id'])->where('conversation_id', $c->id)->first() ?? abort(404);
+        if (!str_starts_with((string) $c->phone, 'sim-') && (!$c->last_inbound_at || now()->diffInHours($c->last_inbound_at) >= 24)) {
+            abort(422, 'Jendela 24 jam sudah lewat. Livi tidak bisa mengirim jawaban harga; minta pelanggan mengirim pesan dulu.');
+        }
+        $res = LiviPrice::answer((int) $d['inquiry_id'], $d['answers'], $d['admin_note'] ?? null, $r->user()->id);
+        if (!$res['ok']) abort(422, $res['error'] ?? 'Gagal menyimpan jawaban.');
+        AuditLog::record('inbox.price_answer', null, null, ['conversation' => $c->id, 'inquiry' => (int) $d['inquiry_id']]);
+        if ($c->order_id) NotifyService::timeline($c->order_id, 'chat', 'Admin mengisi cek harga untuk Livi', [], $r->user()->id);
+
+        return ['ok' => true, 'relayed' => $res['relayed']];
+    }
+
     public function reply(Request $r, int $session)
     {
         $d = $r->validate(['body' => 'required|string|max:4000', 'note' => 'nullable|boolean']);
@@ -247,7 +293,7 @@ class ShopAftercareController extends Controller
     public function saveSettings(Request $r)
     {
         $d = $r->validate([
-            'bot_enabled' => 'sometimes|boolean', 'ai_answers_enabled' => 'sometimes|boolean',
+            'bot_enabled' => 'sometimes|boolean', 'ai_answers_enabled' => 'sometimes|boolean', 'price_requires_admin' => 'sometimes|boolean',
             'business_hours' => 'sometimes|array', 'business_hours.days' => 'array', 'business_hours.start' => 'date_format:H:i', 'business_hours.end' => 'date_format:H:i',
             'blocklist' => 'sometimes|array', 'blocklist.*' => 'string|max:20',
             'templates' => 'sometimes|array', 'templates.*' => 'string|max:1000',

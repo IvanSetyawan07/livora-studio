@@ -31,6 +31,10 @@ class BotScenarioSeeder extends Seeder
             ['STOP berhenti promosi', [['from' => 'customer', 'text' => 'STOP']], [['rule' => 'no_price']]],
             ['Kode pesanan tidak dikenal', [['from' => 'customer', 'text' => 'cek LVR-XXXXXX']], [['rule' => 'no_price']]],
             ['Konfirmasi barang diterima', [['from' => 'customer', 'text' => 'barang sudah diterima, terima kasih']], [['rule' => 'no_price']]],
+            ['Opening natural: sapaan tidak langsung ke pesanan', [['from' => 'customer', 'text' => 'selamat siang']], [['rule' => 'no_price']]],
+            ['Tanya scope of work Livora', [['from' => 'customer', 'text' => 'Livora itu apa sih? Layanannya apa aja?']], [['rule' => 'no_price']]],
+            ['Basa-basi tanya kabar', [['from' => 'customer', 'text' => 'apa kabar?']], [['rule' => 'no_price']]],
+            ['Tanya harga tanpa sebut barang', [['from' => 'customer', 'text' => 'harganya berapa ya?']], [['rule' => 'no_price']]],
         ];
         foreach ($rows as [$name, $transcript, $expectations]) {
             DB::table('bot_scenarios')->updateOrInsert(

@@ -503,6 +503,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/inbox/{session}', [$a, 'messages'])->middleware('admin_role:cs');
         Route::post('/inbox/{session}/reply', [$a, 'reply'])->middleware('admin_role:cs');
         Route::post('/inbox/{session}/action', [$a, 'sessionAction'])->middleware('admin_role:cs');
+        Route::get('/inbox/{session}/price-inquiry', [$a, 'priceInquiry'])->middleware('admin_role:cs');
+        Route::post('/inbox/{session}/price-inquiry', [$a, 'answerPriceInquiry'])->middleware('admin_role:cs');
         Route::get('/settings', [$a, 'settings'])->middleware('admin_role:owner');
         Route::post('/settings', [$a, 'saveSettings'])->middleware('admin_role:owner');
         Route::get('/health', [$a, 'health'])->middleware('admin_role:owner');
