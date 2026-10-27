@@ -99,7 +99,7 @@ export default function InviteSettingsTab({ event, onSaved, onDeleted }: { event
           <Field label="Tanggal & jam (WIB)"><input type="datetime-local" className={input} value={f.event_date} onChange={(e) => set("event_date", e.target.value)} /></Field>
         </div>
         <Field label="Lokasi"><input className={input} value={f.location} onChange={(e) => set("location", e.target.value)} placeholder="Alamat lengkap / tautan Google Maps" /></Field>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.is_active} onChange={(e) => set("is_active", e.target.checked)} /> Acara aktif (Livi menjawab tamu & Sheet ditarik otomatis tiap 10 menit)</label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.is_active} onChange={(e) => set("is_active", e.target.checked)} /> Acara aktif (Livi menjawab tamu yang membalas undangan)</label>
       </section>
 
       <section className="space-y-4 rounded-xl border border-border bg-card p-5">
