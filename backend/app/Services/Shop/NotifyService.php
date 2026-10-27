@@ -123,7 +123,7 @@ class NotifyService
             $sent = DB::table('shop_order_events')->where('order_id', $o->id)->where('event', 'reminder')->where('label', 'like', 'Pengingat H-1 v'.$o->quote_version.'%')->exists();
             if (!$sent && $o->customer_phone && $o->wa_consent) {
                 $link = $o->status === 'penawaran' ? $service->confirmUrl($o) : $service->paymentUrl($o);
-                Ops::sendWa($o->customer_phone, 'Halo Kak, pengingat: '.($o->status === 'penawaran' ? 'penawaran' : 'tagihan')." pesanan {$o->code} berlaku sampai ".$o->quote_expires_at->timezone('Asia/Jakarta')->translatedFormat('d F Y H:i').". Detail: {$link}", $o->id);
+                Ops::sendWa($o->customer_phone, 'Halo Bapak/Ibu, pengingat: '.($o->status === 'penawaran' ? 'penawaran' : 'tagihan')." pesanan {$o->code} berlaku sampai ".$o->quote_expires_at->timezone('Asia/Jakarta')->translatedFormat('d F Y H:i').". Detail: {$link}", $o->id);
                 self::timeline($o->id, 'reminder', 'Pengingat H-1 v'.$o->quote_version.' dikirim ke customer');
             }
         }
@@ -135,7 +135,7 @@ class NotifyService
             }
             $sent = DB::table('shop_order_events')->where('order_id', $o->id)->where('event', 'reminder')->where('label', 'Pengingat H-1 pengiriman '.$tomorrow)->exists();
             if (!$sent && $o->customer_phone && $o->wa_consent) {
-                Ops::sendWa($o->customer_phone, "Halo Kak, pesanan {$o->code} dijadwalkan dikirim besok ({$tomorrow}). Mohon pastikan ada yang menerima ya.", $o->id);
+                Ops::sendWa($o->customer_phone, "Halo Bapak/Ibu, pesanan {$o->code} dijadwalkan dikirim besok ({$tomorrow}). Mohon pastikan ada yang menerima ya.", $o->id);
                 self::timeline($o->id, 'reminder', 'Pengingat H-1 pengiriman '.$tomorrow);
             }
         }

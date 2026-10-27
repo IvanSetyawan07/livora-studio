@@ -21,9 +21,9 @@ const REASON: Record<string, string> = {
   foto_masuk: "kirim foto", gambar_gagal_dibaca: "gambar gagal dibuka", minta_tim_saat_data: "minta tim saat isi data", buat_pesanan_gagal: "pesanan gagal dibuat",
 };
 const QUICK = [
-  "Terima kasih sudah menunggu Kak. Saya bantu cek dulu ya.",
+  "Terima kasih sudah menunggu Bapak/Ibu. Saya bantu cek dulu ya.",
   "Boleh dikirim foto ruangannya agar kami bisa menyarankan ukuran yang pas?",
-  "Baik Kak, harganya kami hitungkan dulu, nanti penawaran resmi kami kirim di chat ini.",
+  "Baik Bapak/Ibu, harganya kami hitungkan dulu, nanti penawaran resmi kami kirim di chat ini.",
   "Pembayaran sudah kami terima. Pesanan sedang diproses.",
 ];
 

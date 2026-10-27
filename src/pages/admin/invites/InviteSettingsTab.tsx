@@ -10,14 +10,14 @@ const toLocalInput = (iso?: string | null) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-const SAMPLE_FORMAT = `Halo Kak {nama} 👋
+const SAMPLE_FORMAT = `Halo Bapak/Ibu {nama} 👋
 
-Dengan senang hati kami mengundang Kakak ke {acara}.
+Dengan senang hati kami mengundang Bapak/Ibu ke {acara}.
 
 📅 {tanggal}
 📍 {lokasi}
 
-Konfirmasi kehadiran Kakak lewat tombol di bawah ya. Sampai jumpa di Livora! ✨`;
+Konfirmasi kehadiran Bapak/Ibu lewat tombol di bawah ya. Sampai jumpa di Livora! ✨`;
 
 const input = "mt-1 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-foreground";
 const area = "mt-1 w-full rounded-lg border border-border bg-background p-3 text-sm outline-none focus:border-foreground";

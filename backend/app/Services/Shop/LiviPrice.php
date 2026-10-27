@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 /**
  * Alur "cek harga lewat admin" untuk Livi.
  *
- *  1. Customer tanya harga → Livi: "Sebentar ya Kak, Livi cek dulu" → baris wa_price_inquiries (pending) + notifikasi N17.
+ *  1. Customer tanya harga → Livi: "Sebentar ya Bapak/Ibu, Livi cek dulu" → baris wa_price_inquiries (pending) + notifikasi N17.
  *  2. Admin mengisi harga manual di Inbox (info saja, BUKAN penawaran / pesanan).
  *  3. Livi meneruskan ke customer: satu pesan per barang (foto + harga + penjelasan diskon bila ada), lalu penutup.
  *
@@ -243,20 +243,20 @@ class LiviPrice
             $name = $f['nama'];
             if ($f['diskon']) {
                 $line = Arr::random([
-                    "Untuk {$name}, harga normalnya {$f['harga_normal']} ya Kak. Kabar baiknya, tim kami kasih diskon {$f['diskon']}, jadi harganya {$f['harga_setelah_diskon']} 🎉",
-                    "Ini {$name} ya Kak 😊 Harga normalnya {$f['harga_normal']}, dan sekarang ada diskon {$f['diskon']} sehingga jadi {$f['harga_setelah_diskon']} ✨",
+                    "Untuk {$name}, harga normalnya {$f['harga_normal']} ya Bapak/Ibu. Kabar baiknya, tim kami kasih diskon {$f['diskon']}, jadi harganya {$f['harga_setelah_diskon']} 🎉",
+                    "Ini {$name} ya Bapak/Ibu 😊 Harga normalnya {$f['harga_normal']}, dan sekarang ada diskon {$f['diskon']} sehingga jadi {$f['harga_setelah_diskon']} ✨",
                 ]);
                 if ($f['catatan_dari_tim']) $line .= "\n\nInfo dari tim: ".$f['catatan_dari_tim'];
             } else {
                 $line = Arr::random([
-                    "Untuk {$name}, harganya {$f['harga_normal']} ya Kak 😊",
-                    "Ini {$name} ya Kak, harganya {$f['harga_normal']} ✨",
+                    "Untuk {$name}, harganya {$f['harga_normal']} ya Bapak/Ibu 😊",
+                    "Ini {$name} ya Bapak/Ibu, harganya {$f['harga_normal']} ✨",
                 ]);
                 if ($f['catatan_dari_tim']) $line .= "\n\nInfo dari tim: ".$f['catatan_dari_tim'];
             }
             $caps[] = ['item_id' => $f['item_id'], 'caption' => $line];
         }
-        $closing = "Itu info harga dari tim kami ya Kak. Harga ini untuk gambaran dulu, bukan pesanan. Harga final (termasuk ongkir & PPN) tim kirim lewat penawaran resmi kalau Kakak lanjut pesan 🙏".($adminNote ? "\n\n".$adminNote : '')."\n\nGimana Kak, mau lanjut atau ada yang mau ditanyakan lagi?";
+        $closing = "Itu info harga dari tim kami ya Bapak/Ibu. Harga ini untuk gambaran dulu, bukan pesanan. Harga final (termasuk ongkir & PPN) tim kirim lewat penawaran resmi kalau Bapak/Ibu lanjut pesan 🙏".($adminNote ? "\n\n".$adminNote : '')."\n\nGimana Bapak/Ibu, mau lanjut atau ada yang mau ditanyakan lagi?";
 
         return ['items' => $caps, 'closing' => $closing];
     }

@@ -379,7 +379,7 @@ class ShopOrderService
         AuditLog::record($accept ? 'payment.proof_accepted' : 'payment.proof_rejected', $proof, null, ['reason' => $reason]);
 
         if (!$payment) { // bukti yatim ditolak: minta kirim ulang lewat chat
-            if ($proof->phone) Ops::sendWa($proof->phone, 'Bukti transfer Kakak belum bisa kami verifikasi. Alasan: '.($reason ?: '-').'. Mohon kirim ulang foto buktinya di chat ini ya, sebutkan kode pesanannya.', null, $admin->id);
+            if ($proof->phone) Ops::sendWa($proof->phone, 'Bukti transfer Bapak/Ibu belum bisa kami verifikasi. Alasan: '.($reason ?: '-').'. Mohon kirim ulang foto buktinya di chat ini ya, sebutkan kode pesanannya.', null, $admin->id);
             NotifyService::closeFor('N8', 0, $admin->id);
             return;
         }
@@ -398,7 +398,7 @@ class ShopOrderService
             $this->notify($order, 'Bukti transfer perlu dikirim ulang', [
                 "Bukti transfer pesanan {$order->code} belum bisa kami verifikasi.", 'Alasan: '.($reason ?: '-'),
             ], $this->paymentUrl($order), 'Lihat Ringkasan Pembayaran',
-                "Bukti transfer {$order->code} belum bisa kami verifikasi. Alasan: ".($reason ?: '-').'. Mohon kirim ulang foto buktinya di chat ini ya Kak. Ringkasan pembayaran: '.$this->paymentUrl($order));
+                "Bukti transfer {$order->code} belum bisa kami verifikasi. Alasan: ".($reason ?: '-').'. Mohon kirim ulang foto buktinya di chat ini ya Bapak/Ibu. Ringkasan pembayaran: '.$this->paymentUrl($order));
         }
     }
 
@@ -479,7 +479,7 @@ class ShopOrderService
         $this->notify($order, 'Pembayaran diterima', [
             "Pembayaran pesanan {$order->code} sebesar ".self::rp($payment->amount).' sudah kami terima. Invoice terlampir di halaman pesanan.',
             $order->status === 'bermasalah' ? 'Stok salah satu barang habis saat pembayaran masuk. Tim kami akan menghubungi Anda untuk alternatif atau pengembalian dana.' : 'Kami kabari lagi saat pesanan dikirim.',
-        ], $invoiceUrl, 'Lihat Invoice', "Pembayaran {$order->code} diterima, terima kasih Kak! Invoice LUNAS: {$invoiceUrl}");
+        ], $invoiceUrl, 'Lihat Invoice', "Pembayaran {$order->code} diterima, terima kasih Bapak/Ibu! Invoice LUNAS: {$invoiceUrl}");
         // 4.11: PDF Invoice dikirim di chat
         $inv = $order->documents()->where('title', 'Invoice')->latest('version')->first();
         if ($inv?->pdf_path && $order->wa_consent && $order->customer_phone) {
@@ -618,7 +618,7 @@ class ShopOrderService
             $this->setStatus($o, 'kedaluwarsa');
             NotifyService::closeFor('N6', $o->id);
             if ($o->customer_phone && $o->wa_consent) {
-                Ops::sendWa($o->customer_phone, "Kak, penawaran/tagihan pesanan {$o->code} sudah kedaluwarsa dan stok kami lepas. Kalau masih berminat, balas chat ini dan tim kami siapkan penawaran baru ya.", $o->id);
+                Ops::sendWa($o->customer_phone, "Bapak/Ibu, penawaran/tagihan pesanan {$o->code} sudah kedaluwarsa dan stok kami lepas. Kalau masih berminat, balas chat ini dan tim kami siapkan penawaran baru ya.", $o->id);
             }
             $n++;
         }
@@ -784,7 +784,7 @@ class ShopOrderService
         $order->save();
         NotifyService::notify('N4', $order->id, ['note' => $note], 'v'.$order->quote_version);
         NotifyService::timeline($order->id, 'quote', 'Customer minta revisi/nego', ['note' => $note]);
-        Ops::sendWa($order->customer_phone, "Catatan revisi untuk {$order->code} sudah saya teruskan ke tim kami ya Kak. Mereka akan menghubungi Kakak di sini.", $order->id);
+        Ops::sendWa($order->customer_phone, "Catatan revisi untuk {$order->code} sudah saya teruskan ke tim kami ya Bapak/Ibu. Mereka akan menghubungi Bapak/Ibu di sini.", $order->id);
     }
 
     /** Customer menekan "Konfirmasi Pesanan" di halaman bertoken: setujui penawaran + terbitkan Tagihan. */
@@ -805,7 +805,7 @@ class ShopOrderService
 
         if ($result->customer_phone && $result->wa_consent) {
             $total = (int) $result->grand_total + (int) $result->unique_code;
-            WaSender::text($result->customer_phone, "Terima kasih Kak, pesanan {$result->code} sudah dikonfirmasi ✅\n\nTotal transfer: ".self::rp($total)." (sudah termasuk kode unik {$result->unique_code}).\nRingkasan & nomor rekening: ".$this->paymentUrl($result)."\n\nSetelah transfer, kirim foto bukti transfernya ke chat ini ya.", $result->id);
+            WaSender::text($result->customer_phone, "Terima kasih Bapak/Ibu, pesanan {$result->code} sudah dikonfirmasi ✅\n\nTotal transfer: ".self::rp($total)." (sudah termasuk kode unik {$result->unique_code}).\nRingkasan & nomor rekening: ".$this->paymentUrl($result)."\n\nSetelah transfer, kirim foto bukti transfernya ke chat ini ya.", $result->id);
         }
 
         return $result;
@@ -820,7 +820,7 @@ class ShopOrderService
         $confirm = $this->confirmUrl($order);
         $lines = $order->items->map(fn ($i) => '- '.$i->title." x{$i->quantity}")->implode("\n");
         WaSender::text($order->customer_phone,
-            "Kak, penawaran resmi untuk pesanan {$order->code} sudah siap 🙏\n\n{$lines}\n\nTotal: ".self::rp($order->grand_total).' (sudah termasuk PPN). Berlaku sampai '.$order->quote_expires_at->timezone('Asia/Jakarta')->translatedFormat('d F Y').".\n\nCek detail & konfirmasi di sini: {$confirm}", $order->id);
+            "Bapak/Ibu, penawaran resmi untuk pesanan {$order->code} sudah siap 🙏\n\n{$lines}\n\nTotal: ".self::rp($order->grand_total).' (sudah termasuk PPN). Berlaku sampai '.$order->quote_expires_at->timezone('Asia/Jakarta')->translatedFormat('d F Y').".\n\nCek detail & konfirmasi di sini: {$confirm}", $order->id);
         if ($doc?->pdf_path) {
             WaSender::document($order->customer_phone, 'Proforma Invoice '.$order->code,
                 url('/api/shop/order/'.$order->code.'/proforma.pdf?token='.$order->confirm_token), 'Proforma-Invoice-'.$order->code.'.pdf', $order->id);

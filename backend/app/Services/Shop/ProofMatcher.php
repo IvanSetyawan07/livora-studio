@@ -42,7 +42,7 @@ class ProofMatcher
             NotifyService::notify('N7', $order->id, [], 'p'.$proofId);
 
             return ['outcome' => 'matched', 'order_id' => $order->id,
-                'replies' => [['type' => 'text', 'body' => "Bukti untuk pesanan {$order->code} sudah kami terima, tim kami cek dulu ya Kak 🙏"]]];
+                'replies' => [['type' => 'text', 'body' => "Bukti untuk pesanan {$order->code} sudah kami terima, tim kami cek dulu ya Bapak/Ibu 🙏"]]];
         }
 
         if (!$order && $candidates->count() > 1) {
@@ -50,14 +50,14 @@ class ProofMatcher
             NotifyService::notify('N8', null, ['reason' => 'bukti masuk dari '.$phone.' dan pesanan belum jelas'], 'p'.$proofId);
 
             return ['outcome' => 'ambiguous', 'order_id' => null,
-                'replies' => [['type' => 'list', 'body' => 'Bukti ini untuk pesanan yang mana ya Kak?', 'button' => 'Pilih pesanan', 'rows' => $rows]]];
+                'replies' => [['type' => 'list', 'body' => 'Bukti ini untuk pesanan yang mana ya Bapak/Ibu?', 'button' => 'Pilih pesanan', 'rows' => $rows]]];
         }
 
         $reason = !$order ? 'pesanan tidak jelas' : (($read['keyakinan'] ?? 'rendah') === 'rendah' ? 'gambar buram/terpotong' : 'nominal beda');
         NotifyService::notify('N8', $order?->id, ['reason' => $reason], 'p'.$proofId);
 
         return ['outcome' => 'unmatched', 'order_id' => $order?->id,
-            'replies' => [['type' => 'text', 'body' => 'Bukti sudah kami terima Kak, tapi saya belum bisa mencocokkannya otomatis. Tim kami bantu cek ya, mohon ditunggu sebentar 🙏']]];
+            'replies' => [['type' => 'text', 'body' => 'Bukti sudah kami terima Bapak/Ibu, tapi saya belum bisa mencocokkannya otomatis. Tim kami bantu cek ya, mohon ditunggu sebentar 🙏']]];
     }
 
     protected static function read(string $path): array

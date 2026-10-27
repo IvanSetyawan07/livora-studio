@@ -62,7 +62,7 @@ export default function InviteRsvp() {
         {page.image_url && <img src={page.image_url} alt={page.event} className="max-h-72 w-full object-cover" />}
         <div className="space-y-5 p-6">
           <div>
-            <p className="text-sm text-muted-foreground">Halo, {page.name}</p>
+            <p className="text-sm text-muted-foreground">Halo, Bapak/Ibu {page.name}</p>
             <h1 className="serif mt-1 text-2xl">{page.event}</h1>
           </div>
 
@@ -74,7 +74,7 @@ export default function InviteRsvp() {
           {answered ? (
             <div className="space-y-3 rounded-xl bg-muted p-4 text-center">
               <Check className="mx-auto h-6 w-6" />
-              <p className="font-medium">{page.rsvp === "hadir" ? "Terima kasih, kehadiran Kakak sudah kami catat!" : "Terima kasih sudah mengabari kami."}</p>
+              <p className="font-medium">{page.rsvp === "hadir" ? "Terima kasih, kehadiran Bapak/Ibu sudah kami catat!" : "Terima kasih sudah mengabari kami."}</p>
               {page.rsvp === "hadir" && (
                 <div className="space-y-1 border-t border-border pt-3">
                   {page.checked_in
@@ -86,7 +86,7 @@ export default function InviteRsvp() {
             </div>
           ) : (
             <div className="space-y-2">
-              <p className="text-sm font-medium">Apakah Kakak bisa hadir?</p>
+              <p className="text-sm font-medium">Apakah Bapak/Ibu bisa hadir?</p>
               <button type="button" disabled={!!busy} onClick={() => answer("hadir")} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-foreground text-sm text-background disabled:opacity-60">
                 {busy === "hadir" && <Loader2 className="h-4 w-4 animate-spin" />} Ya, saya hadir
               </button>

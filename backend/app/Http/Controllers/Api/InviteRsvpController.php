@@ -23,7 +23,7 @@ class InviteRsvpController extends Controller
         $e = $g->event;
 
         return [
-            'name' => $g->name,
+            'name' => InviteService::greetName((string) $g->name),
             'event' => $e->name,
             'date_text' => InviteService::dateText($e),
             'location' => $e->location,

@@ -11,7 +11,7 @@ namespace App\Services\Shop;
  */
 class Guardrail
 {
-    public const SAFE_REPLY = 'Maaf Kak, untuk hal itu biar tim kami yang memastikan langsung ya supaya akurat. Ada yang bisa saya bantu lagi soal furniture-nya?';
+    public const SAFE_REPLY = 'Maaf Bapak/Ibu, untuk hal itu biar tim kami yang memastikan langsung ya supaya akurat. Ada yang bisa saya bantu lagi soal furniture-nya?';
 
     private const PROMISE_WORDS = ['dijamin', 'pasti ada', 'pasti bisa', 'besok sampai', 'garansi sampai', 'sudah lunas', 'pembayaran sudah kami terima', 'sudah kami terima pembayaran'];
     private const PROMPT_LEAK = ['system prompt', 'aturan keras', 'kamu adalah livi', 'tool calling', 'function calling'];

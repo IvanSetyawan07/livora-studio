@@ -73,7 +73,7 @@ export default function PriceInquiryPanel({ conversationId, windowOpen, onSent }
     <section className={`border-b border-border p-3 ${pending ? "bg-amber-50/70" : "bg-muted/30"}`} aria-label="Cek harga dari Livi">
       <div className="flex flex-wrap items-center gap-2">
         <Tag className="h-4 w-4" />
-        <h2 className="text-sm font-semibold">{pending ? "Livi menunggu harga dari Kakak (tim)" : "Cek harga sudah dijawab"}</h2>
+        <h2 className="text-sm font-semibold">{pending ? "Livi menunggu harga dari tim" : "Cek harga sudah dijawab"}</h2>
         <span className="text-[11px] text-muted-foreground">Info saja, bukan penawaran/pesanan. Livi yang menyampaikan ke customer.</span>
       </div>
       {inq.question && <p className="mt-1 text-xs text-muted-foreground">Pertanyaan customer: “{inq.question}”</p>}

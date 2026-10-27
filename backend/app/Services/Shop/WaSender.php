@@ -69,8 +69,9 @@ class WaSender
         $msg['type'] = $type;
         $body = (string) ($msg['body'] ?? $msg['text'] ?? '');
         unset($msg['text']);
+        $body = \App\Services\Sapaan::normalize($body); // sapaan selalu "Bapak/Ibu", bukan "Kak"/"Kakak"
         $msg['body'] = mb_substr($body, 0, in_array($type, ['buttons', 'list'], true) ? 1024 : 4096);
-        if (isset($msg['footer'])) $msg['footer'] = mb_substr((string) $msg['footer'], 0, 60);
+        if (isset($msg['footer'])) $msg['footer'] = mb_substr(\App\Services\Sapaan::normalize((string) $msg['footer']), 0, 60);
 
         if ($type === 'buttons') {
             $out = [];
