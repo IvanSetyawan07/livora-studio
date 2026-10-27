@@ -1,0 +1,6861 @@
+{
+  "generated_at": "2026-10-26T03:58:44.915Z",
+  "source": "App.tsx",
+  "pages": [
+    {
+      "route": "/erd",
+      "name": "ERD",
+      "file": "pages/ERD.tsx",
+      "guard": "public",
+      "api": []
+    },
+    {
+      "route": "/",
+      "name": "Index",
+      "file": "pages/Index.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/taxonomies/furniture-types"
+        },
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/unread"
+        },
+        {
+          "method": "POST",
+          "path": "/logout"
+        },
+        {
+          "method": "PATCH",
+          "path": "/user/language"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "GET",
+          "path": "/cart/count"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/activities"
+        },
+        {
+          "method": "POST",
+          "path": "/my/consultations/activities/read"
+        }
+      ]
+    },
+    {
+      "route": "/about",
+      "name": "AboutPage",
+      "file": "pages/About.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/taxonomies/furniture-types"
+        },
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/unread"
+        },
+        {
+          "method": "POST",
+          "path": "/logout"
+        },
+        {
+          "method": "PATCH",
+          "path": "/user/language"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "GET",
+          "path": "/cart/count"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/activities"
+        },
+        {
+          "method": "POST",
+          "path": "/my/consultations/activities/read"
+        }
+      ]
+    },
+    {
+      "route": "/projects",
+      "name": "ProjectsPage",
+      "file": "pages/Projects.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/taxonomies/furniture-types"
+        },
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/unread"
+        },
+        {
+          "method": "POST",
+          "path": "/logout"
+        },
+        {
+          "method": "PATCH",
+          "path": "/user/language"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "GET",
+          "path": "/cart/count"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/activities"
+        },
+        {
+          "method": "POST",
+          "path": "/my/consultations/activities/read"
+        }
+      ]
+    },
+    {
+      "route": "/projects/:slug",
+      "name": "ProjectDetail",
+      "file": "pages/ProjectDetail.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/taxonomies/furniture-types"
+        },
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/unread"
+        },
+        {
+          "method": "POST",
+          "path": "/logout"
+        },
+        {
+          "method": "PATCH",
+          "path": "/user/language"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "GET",
+          "path": "/cart/count"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/activities"
+        },
+        {
+          "method": "POST",
+          "path": "/my/consultations/activities/read"
+        },
+        {
+          "method": "GET",
+          "path": "/projects/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/track/click"
+        },
+        {
+          "method": "POST",
+          "path": "/track/view"
+        },
+        {
+          "method": "GET",
+          "path": "/projects/{param}/layouts"
+        }
+      ]
+    },
+    {
+      "route": "/items/:slug",
+      "name": "ItemDetail",
+      "file": "pages/ItemDetail.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/taxonomies/furniture-types"
+        },
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/unread"
+        },
+        {
+          "method": "POST",
+          "path": "/logout"
+        },
+        {
+          "method": "PATCH",
+          "path": "/user/language"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "GET",
+          "path": "/cart/count"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/activities"
+        },
+        {
+          "method": "POST",
+          "path": "/my/consultations/activities/read"
+        },
+        {
+          "method": "GET",
+          "path": "/items/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/projects/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/track/click"
+        },
+        {
+          "method": "POST",
+          "path": "/track/view"
+        },
+        {
+          "method": "POST",
+          "path": "/wishlist"
+        },
+        {
+          "method": "DELETE",
+          "path": "/wishlist/{param}/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/wishlist"
+        }
+      ]
+    },
+    {
+      "route": "/furniture",
+      "name": "Furniture",
+      "file": "pages/Furniture.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/taxonomies/furniture-types"
+        },
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/unread"
+        },
+        {
+          "method": "POST",
+          "path": "/logout"
+        },
+        {
+          "method": "PATCH",
+          "path": "/user/language"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "GET",
+          "path": "/cart/count"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/activities"
+        },
+        {
+          "method": "POST",
+          "path": "/my/consultations/activities/read"
+        }
+      ]
+    },
+    {
+      "route": "/furniture/:kind/:slug",
+      "name": "FurnitureFilter",
+      "file": "pages/FurnitureFilter.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "GET",
+          "path": "/taxonomies/furniture-types"
+        },
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/unread"
+        },
+        {
+          "method": "POST",
+          "path": "/logout"
+        },
+        {
+          "method": "PATCH",
+          "path": "/user/language"
+        },
+        {
+          "method": "GET",
+          "path": "/cart/count"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/activities"
+        },
+        {
+          "method": "POST",
+          "path": "/my/consultations/activities/read"
+        }
+      ]
+    },
+    {
+      "route": "/catalog",
+      "name": "CatalogPage",
+      "file": "pages/CatalogPage.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/taxonomies/furniture-types"
+        },
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/unread"
+        },
+        {
+          "method": "POST",
+          "path": "/logout"
+        },
+        {
+          "method": "PATCH",
+          "path": "/user/language"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "GET",
+          "path": "/cart/count"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/activities"
+        },
+        {
+          "method": "POST",
+          "path": "/my/consultations/activities/read"
+        }
+      ]
+    },
+    {
+      "route": "/catalog/:category",
+      "name": "CatalogPage",
+      "file": "pages/CatalogPage.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/taxonomies/furniture-types"
+        },
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/unread"
+        },
+        {
+          "method": "POST",
+          "path": "/logout"
+        },
+        {
+          "method": "PATCH",
+          "path": "/user/language"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "GET",
+          "path": "/cart/count"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/activities"
+        },
+        {
+          "method": "POST",
+          "path": "/my/consultations/activities/read"
+        }
+      ]
+    },
+    {
+      "route": "/catalog/:category/:slug",
+      "name": "CatalogDetail",
+      "file": "pages/CatalogDetail.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/catalogs/{param}/item-layouts"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "POST",
+          "path": "/wishlist"
+        },
+        {
+          "method": "DELETE",
+          "path": "/wishlist/{param}/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/wishlist"
+        },
+        {
+          "method": "GET",
+          "path": "/taxonomies/furniture-types"
+        },
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/unread"
+        },
+        {
+          "method": "POST",
+          "path": "/logout"
+        },
+        {
+          "method": "PATCH",
+          "path": "/user/language"
+        },
+        {
+          "method": "GET",
+          "path": "/cart/count"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/activities"
+        },
+        {
+          "method": "POST",
+          "path": "/my/consultations/activities/read"
+        },
+        {
+          "method": "GET",
+          "path": "{param}/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "{param}/{param}/hotspots"
+        },
+        {
+          "method": "POST",
+          "path": "/track/click"
+        },
+        {
+          "method": "POST",
+          "path": "/track/view"
+        }
+      ]
+    },
+    {
+      "route": "/collection",
+      "name": "CollectionLanding",
+      "file": "pages/CollectionLanding.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/taxonomies/furniture-types"
+        },
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/unread"
+        },
+        {
+          "method": "POST",
+          "path": "/logout"
+        },
+        {
+          "method": "PATCH",
+          "path": "/user/language"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "GET",
+          "path": "/cart/count"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/activities"
+        },
+        {
+          "method": "POST",
+          "path": "/my/consultations/activities/read"
+        },
+        {
+          "method": "GET",
+          "path": "/collections"
+        }
+      ]
+    },
+    {
+      "route": "/collection/:slug",
+      "name": "CollectionDetail",
+      "file": "pages/CollectionDetail.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/taxonomies/furniture-types"
+        },
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/unread"
+        },
+        {
+          "method": "POST",
+          "path": "/logout"
+        },
+        {
+          "method": "PATCH",
+          "path": "/user/language"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "GET",
+          "path": "/cart/count"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/activities"
+        },
+        {
+          "method": "POST",
+          "path": "/my/consultations/activities/read"
+        },
+        {
+          "method": "POST",
+          "path": "/wishlist"
+        },
+        {
+          "method": "DELETE",
+          "path": "/wishlist/{param}/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/wishlist"
+        },
+        {
+          "method": "POST",
+          "path": "/track/click"
+        },
+        {
+          "method": "POST",
+          "path": "/track/view"
+        },
+        {
+          "method": "GET",
+          "path": "/collections/{param}"
+        }
+      ]
+    },
+    {
+      "route": "/collection/:slug/:category",
+      "name": "CollectionCategory",
+      "file": "pages/CollectionCategory.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/taxonomies/furniture-types"
+        },
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/unread"
+        },
+        {
+          "method": "POST",
+          "path": "/logout"
+        },
+        {
+          "method": "PATCH",
+          "path": "/user/language"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "GET",
+          "path": "/cart/count"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/activities"
+        },
+        {
+          "method": "POST",
+          "path": "/my/consultations/activities/read"
+        },
+        {
+          "method": "GET",
+          "path": "/collections/{param}"
+        }
+      ]
+    },
+    {
+      "route": "/appointment",
+      "name": "Appointment",
+      "file": "pages/Appointment.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/taxonomies/furniture-types"
+        },
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/unread"
+        },
+        {
+          "method": "POST",
+          "path": "/logout"
+        },
+        {
+          "method": "PATCH",
+          "path": "/user/language"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "GET",
+          "path": "/cart/count"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/activities"
+        },
+        {
+          "method": "POST",
+          "path": "/my/consultations/activities/read"
+        },
+        {
+          "method": "POST",
+          "path": "/consultations"
+        }
+      ]
+    },
+    {
+      "route": "/login",
+      "name": "Auth",
+      "file": "pages/Auth.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/login"
+        },
+        {
+          "method": "POST",
+          "path": "/register"
+        },
+        {
+          "method": "POST",
+          "path": "/auth/google/callback"
+        },
+        {
+          "method": "GET",
+          "path": "/taxonomies/furniture-types"
+        },
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/unread"
+        },
+        {
+          "method": "POST",
+          "path": "/logout"
+        },
+        {
+          "method": "PATCH",
+          "path": "/user/language"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "GET",
+          "path": "/cart/count"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/activities"
+        },
+        {
+          "method": "POST",
+          "path": "/my/consultations/activities/read"
+        },
+        {
+          "method": "POST",
+          "path": "/login/2fa"
+        },
+        {
+          "method": "POST",
+          "path": "/login/2fa/resend"
+        }
+      ]
+    },
+    {
+      "route": "/register",
+      "name": "Auth",
+      "file": "pages/Auth.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/login"
+        },
+        {
+          "method": "POST",
+          "path": "/register"
+        },
+        {
+          "method": "POST",
+          "path": "/auth/google/callback"
+        },
+        {
+          "method": "GET",
+          "path": "/taxonomies/furniture-types"
+        },
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/unread"
+        },
+        {
+          "method": "POST",
+          "path": "/logout"
+        },
+        {
+          "method": "PATCH",
+          "path": "/user/language"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "GET",
+          "path": "/cart/count"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/activities"
+        },
+        {
+          "method": "POST",
+          "path": "/my/consultations/activities/read"
+        },
+        {
+          "method": "POST",
+          "path": "/login/2fa"
+        },
+        {
+          "method": "POST",
+          "path": "/login/2fa/resend"
+        }
+      ]
+    },
+    {
+      "route": "/forgot-password",
+      "name": "ForgotPassword",
+      "file": "pages/PasswordReset.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/forgot-password"
+        },
+        {
+          "method": "POST",
+          "path": "/reset-password"
+        }
+      ]
+    },
+    {
+      "route": "/reset-password",
+      "name": "ResetPassword",
+      "file": "pages/PasswordReset.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/forgot-password"
+        },
+        {
+          "method": "POST",
+          "path": "/reset-password"
+        }
+      ]
+    },
+    {
+      "route": "/profile",
+      "name": "Profile",
+      "file": "pages/Profile.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "POST",
+          "path": "/logout"
+        },
+        {
+          "method": "GET",
+          "path": "/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/taxonomies/furniture-types"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/unread"
+        },
+        {
+          "method": "PATCH",
+          "path": "/user/language"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "GET",
+          "path": "/cart/count"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/activities"
+        },
+        {
+          "method": "POST",
+          "path": "/my/consultations/activities/read"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations"
+        },
+        {
+          "method": "GET",
+          "path": "/consultations/{param}"
+        },
+        {
+          "method": "PUT",
+          "path": "/me"
+        },
+        {
+          "method": "POST",
+          "path": "/me/password"
+        },
+        {
+          "method": "GET",
+          "path": "/wishlist"
+        },
+        {
+          "method": "DELETE",
+          "path": "/wishlist/{param}/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/consultations/{param}/cancel"
+        }
+      ]
+    },
+    {
+      "route": "/profile/:tab",
+      "name": "Profile",
+      "file": "pages/Profile.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "POST",
+          "path": "/logout"
+        },
+        {
+          "method": "GET",
+          "path": "/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/taxonomies/furniture-types"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/unread"
+        },
+        {
+          "method": "PATCH",
+          "path": "/user/language"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "GET",
+          "path": "/cart/count"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations/activities"
+        },
+        {
+          "method": "POST",
+          "path": "/my/consultations/activities/read"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations"
+        },
+        {
+          "method": "GET",
+          "path": "/consultations/{param}"
+        },
+        {
+          "method": "PUT",
+          "path": "/me"
+        },
+        {
+          "method": "POST",
+          "path": "/me/password"
+        },
+        {
+          "method": "GET",
+          "path": "/wishlist"
+        },
+        {
+          "method": "DELETE",
+          "path": "/wishlist/{param}/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/consultations/{param}/cancel"
+        }
+      ]
+    },
+    {
+      "route": "/profile/consultations/:id",
+      "name": "MyConsultationDetail",
+      "file": "pages/MyConsultationDetail.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/consultations/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/consultations/{param}/cancel"
+        },
+        {
+          "method": "POST",
+          "path": "/consultations/{param}/dp-proof"
+        },
+        {
+          "method": "POST",
+          "path": "/consultations/{param}/final-payment-proof"
+        },
+        {
+          "method": "POST",
+          "path": "/consultations/{param}/progress/{param}/comments"
+        },
+        {
+          "method": "POST",
+          "path": "/consultations/{param}/sign-agreement"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/stage-files/{param}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/stage-files/{param}/reject"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/request-final-payment"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/progress/{param}/comments"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/countersign"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/consultations/{param}/agreement/draft"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/agreement/content"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/agreement/generate"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/meterai/apply"
+        },
+        {
+          "method": "GET",
+          "path": "/consultations/{param}/messages"
+        },
+        {
+          "method": "POST",
+          "path": "/consultations/{param}/messages"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/consultations/{param}/messages"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/messages"
+        }
+      ]
+    },
+    {
+      "route": "/profile/orders/:code",
+      "name": "MyOrderDetail",
+      "file": "pages/MyOrderDetail.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/orders/{param}/approve-quote"
+        },
+        {
+          "method": "POST",
+          "path": "/orders/{param}/cancel"
+        },
+        {
+          "method": "GET",
+          "path": "/orders/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/orders/{param}/wa-link"
+        },
+        {
+          "method": "POST",
+          "path": "/orders/{param}/qris"
+        },
+        {
+          "method": "POST",
+          "path": "/orders/{param}/payment-proof"
+        },
+        {
+          "method": "POST",
+          "path": "/orders/{param}/claims"
+        },
+        {
+          "method": "POST",
+          "path": "/orders/{param}/refund"
+        },
+        {
+          "method": "POST",
+          "path": "/orders/{param}/changes/{param}"
+        }
+      ]
+    },
+    {
+      "route": "/cart",
+      "name": "Cart",
+      "file": "pages/Cart.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/shop/carts"
+        }
+      ]
+    },
+    {
+      "route": "/order/:code/whatsapp",
+      "name": "OrderWhatsApp",
+      "file": "pages/OrderWhatsApp.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/orders/{param}/wa-link"
+        }
+      ]
+    },
+    {
+      "route": "/order-form/:code",
+      "name": "OrderForm",
+      "file": "pages/OrderForm.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/order-form/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/order-form/{param}"
+        }
+      ]
+    },
+    {
+      "route": "/order/confirm/:code",
+      "name": "OrderConfirm",
+      "file": "pages/OrderConfirm.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/shop/order/{param}/confirm"
+        },
+        {
+          "method": "GET",
+          "path": "/shop/order/{param}/confirm"
+        },
+        {
+          "method": "POST",
+          "path": "/shop/order/{param}/revise"
+        }
+      ]
+    },
+    {
+      "route": "/order/pay/:code",
+      "name": "OrderPay",
+      "file": "pages/OrderPay.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/shop/order/{param}/pay"
+        }
+      ]
+    },
+    {
+      "route": "/sales/scan",
+      "name": "SalesScan",
+      "file": "pages/sales/SalesScan.tsx",
+      "guard": "role:sales,admin",
+      "api": []
+    },
+    {
+      "route": "/sales/items/:slug",
+      "name": "SalesItemDetail",
+      "file": "pages/sales/SalesItemDetail.tsx",
+      "guard": "role:sales,admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/sales/items/lookup/{param}"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard",
+      "name": "Dashboard",
+      "file": "pages/Dashboard.tsx",
+      "guard": "public",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "POST",
+          "path": "/logout"
+        },
+        {
+          "method": "GET",
+          "path": "/my/consultations"
+        }
+      ]
+    },
+    {
+      "route": "/admin/ai-marketing",
+      "name": "AiMarketingOverview",
+      "file": "pages/admin/ai-marketing/AiMarketingOverview.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/health"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/priorities"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/kpis"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/agents"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/reject"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/actions"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/approve-execute"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/reject"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/chat"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/totals"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-agent"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-provider"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/routing-strategy"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/quota"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/impact"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/activity"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/google/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/meta/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/meta-ads/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/cro/funnel-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/local-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/search-console-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/analytics/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/ads/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/leads/funnel"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/inspiration/library"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/content/inspiration/analyze"
+        }
+      ]
+    },
+    {
+      "route": "/admin/ai-marketing/insights",
+      "name": "AiMarketingInsights",
+      "file": "pages/admin/ai-marketing/AiMarketingInsights.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/health"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/priorities"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/kpis"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/agents"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/reject"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/actions"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/approve-execute"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/reject"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/chat"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/totals"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-agent"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-provider"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/routing-strategy"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/quota"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/impact"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/activity"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/google/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/meta/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/meta-ads/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/cro/funnel-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/local-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/search-console-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/analytics/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/ads/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/leads/funnel"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/inspiration/library"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/content/inspiration/analyze"
+        }
+      ]
+    },
+    {
+      "route": "/admin/ai-marketing/seo",
+      "name": "AiMarketingSeo",
+      "file": "pages/admin/ai-marketing/AiMarketingSeo.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/health"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/priorities"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/kpis"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/agents"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/reject"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/actions"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/approve-execute"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/reject"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/chat"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/totals"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-agent"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-provider"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/routing-strategy"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/quota"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/impact"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/activity"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/google/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/meta/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/meta-ads/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/cro/funnel-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/local-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/search-console-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/analytics/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/ads/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/leads/funnel"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/inspiration/library"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/content/inspiration/analyze"
+        }
+      ]
+    },
+    {
+      "route": "/admin/ai-marketing/content",
+      "name": "AiMarketingContent",
+      "file": "pages/admin/ai-marketing/AiMarketingContent.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/health"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/priorities"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/kpis"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/agents"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/reject"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/actions"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/approve-execute"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/reject"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/chat"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/totals"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-agent"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-provider"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/routing-strategy"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/quota"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/impact"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/activity"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/google/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/meta/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/meta-ads/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/cro/funnel-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/local-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/search-console-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/analytics/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/ads/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/leads/funnel"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/inspiration/library"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/content/inspiration/analyze"
+        }
+      ]
+    },
+    {
+      "route": "/admin/ai-marketing/ads",
+      "name": "AiMarketingAds",
+      "file": "pages/admin/ai-marketing/AiMarketingAds.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/health"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/priorities"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/kpis"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/agents"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/reject"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/actions"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/approve-execute"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/reject"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/chat"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/totals"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-agent"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-provider"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/routing-strategy"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/quota"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/impact"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/activity"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/google/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/meta/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/meta-ads/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/cro/funnel-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/local-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/search-console-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/analytics/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/ads/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/leads/funnel"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/inspiration/library"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/content/inspiration/analyze"
+        }
+      ]
+    },
+    {
+      "route": "/admin/ai-marketing/leads",
+      "name": "AiMarketingLeads",
+      "file": "pages/admin/ai-marketing/AiMarketingLeads.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/health"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/priorities"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/kpis"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/agents"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/reject"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/actions"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/approve-execute"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/reject"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/chat"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/totals"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-agent"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-provider"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/routing-strategy"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/quota"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/impact"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/activity"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/google/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/meta/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/meta-ads/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/cro/funnel-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/local-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/search-console-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/analytics/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/ads/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/leads/funnel"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/inspiration/library"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/content/inspiration/analyze"
+        }
+      ]
+    },
+    {
+      "route": "/admin/ai-marketing/cro",
+      "name": "AiMarketingCro",
+      "file": "pages/admin/ai-marketing/AiMarketingCro.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/health"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/priorities"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/kpis"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/agents"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/reject"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/actions"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/approve-execute"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/reject"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/chat"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/totals"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-agent"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-provider"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/routing-strategy"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/quota"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/impact"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/activity"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/google/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/meta/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/meta-ads/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/cro/funnel-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/local-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/search-console-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/analytics/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/ads/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/leads/funnel"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/inspiration/library"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/content/inspiration/analyze"
+        }
+      ]
+    },
+    {
+      "route": "/admin/ai-marketing/ai-center/recommendations",
+      "name": "AiMarketingRecommendations",
+      "file": "pages/admin/ai-marketing/AiMarketingRecommendations.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/health"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/priorities"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/kpis"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/agents"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/reject"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/actions"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/approve-execute"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/reject"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/chat"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/totals"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-agent"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-provider"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/routing-strategy"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/quota"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/impact"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/activity"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/google/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/meta/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/meta-ads/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/cro/funnel-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/local-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/search-console-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/analytics/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/ads/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/leads/funnel"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/inspiration/library"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/content/inspiration/analyze"
+        }
+      ]
+    },
+    {
+      "route": "/admin/ai-marketing/ai-center/actions",
+      "name": "AiMarketingActions",
+      "file": "pages/admin/ai-marketing/AiMarketingActions.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/health"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/priorities"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/kpis"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/agents"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/reject"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/actions"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/approve-execute"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/reject"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/chat"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/totals"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-agent"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-provider"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/routing-strategy"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/quota"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/impact"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/activity"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/google/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/meta/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/meta-ads/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/cro/funnel-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/local-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/search-console-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/analytics/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/ads/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/leads/funnel"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/inspiration/library"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/content/inspiration/analyze"
+        }
+      ]
+    },
+    {
+      "route": "/admin/ai-marketing/campaigns",
+      "name": "AiMarketingCampaigns",
+      "file": "pages/admin/ai-marketing/AiMarketingCampaigns.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/health"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/priorities"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/kpis"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/agents"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/reject"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/actions"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/approve-execute"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/reject"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/chat"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/totals"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-agent"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-provider"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/routing-strategy"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/quota"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/impact"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/activity"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/google/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/meta/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/meta-ads/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/cro/funnel-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/local-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/search-console-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/analytics/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/ads/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/leads/funnel"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/inspiration/library"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/content/inspiration/analyze"
+        }
+      ]
+    },
+    {
+      "route": "/admin/ai-marketing/campaigns/:id",
+      "name": "AiMarketingCampaignDetail",
+      "file": "pages/admin/ai-marketing/AiMarketingCampaignDetail.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/health"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/priorities"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/kpis"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/agents"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/reject"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/actions"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/approve-execute"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/reject"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/chat"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/totals"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-agent"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-provider"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/routing-strategy"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/quota"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/impact"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/activity"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/google/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/meta/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/meta-ads/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/cro/funnel-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/local-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/search-console-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/analytics/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/ads/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/leads/funnel"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/inspiration/library"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/content/inspiration/analyze"
+        }
+      ]
+    },
+    {
+      "route": "/admin/ai-marketing/impact",
+      "name": "AiMarketingImpact",
+      "file": "pages/admin/ai-marketing/AiMarketingImpact.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/health"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/priorities"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/kpis"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/agents"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/reject"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/actions"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/approve-execute"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/reject"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/chat"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/totals"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-agent"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-provider"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/routing-strategy"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/quota"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/impact"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/activity"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/google/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/meta/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/meta-ads/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/cro/funnel-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/local-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/search-console-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/analytics/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/ads/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/leads/funnel"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/inspiration/library"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/content/inspiration/analyze"
+        }
+      ]
+    },
+    {
+      "route": "/admin/ai-marketing/usage",
+      "name": "AiMarketingUsage",
+      "file": "pages/admin/ai-marketing/AiMarketingUsage.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/health"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/priorities"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/kpis"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/agents"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/reject"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/actions"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/approve-execute"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/reject"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/chat"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/totals"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-agent"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-provider"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/routing-strategy"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/quota"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/impact"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/activity"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/google/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/meta/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/meta-ads/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/cro/funnel-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/local-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/search-console-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/analytics/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/ads/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/leads/funnel"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/inspiration/library"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/content/inspiration/analyze"
+        }
+      ]
+    },
+    {
+      "route": "/admin/ai-marketing/providers",
+      "name": "AiMarketingProviders",
+      "file": "pages/admin/ai-marketing/AiMarketingProviders.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/health"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/priorities"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/kpis"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/agents"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/reject"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/actions"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/approve-execute"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/reject"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/chat"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/totals"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-agent"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-provider"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/routing-strategy"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/quota"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/impact"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/activity"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/google/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/meta/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/meta-ads/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/cro/funnel-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/local-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/search-console-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/analytics/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/ads/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/leads/funnel"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/inspiration/library"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/content/inspiration/analyze"
+        }
+      ]
+    },
+    {
+      "route": "/admin/ai-marketing/approvals",
+      "name": "AiMarketingApprovals",
+      "file": "pages/admin/ai-marketing/AiMarketingApprovals.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/health"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/priorities"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/kpis"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/agents"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/reject"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/actions"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/approve-execute"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/reject"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/chat"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/totals"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-agent"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-provider"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/routing-strategy"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/quota"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/impact"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/activity"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/google/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/meta/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/meta-ads/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/cro/funnel-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/local-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/search-console-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/analytics/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/ads/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/leads/funnel"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/inspiration/library"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/content/inspiration/analyze"
+        }
+      ]
+    },
+    {
+      "route": "/admin/ai-marketing/activity",
+      "name": "AiMarketingActivity",
+      "file": "pages/admin/ai-marketing/AiMarketingActivity.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/health"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/priorities"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/kpis"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/agents"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/reject"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/actions"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/approve-execute"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/reject"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/chat"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/totals"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-agent"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-provider"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/routing-strategy"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/quota"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/impact"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/activity"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/google/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/meta/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/meta-ads/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/cro/funnel-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/local-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/search-console-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/analytics/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/ads/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/leads/funnel"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/inspiration/library"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/content/inspiration/analyze"
+        }
+      ]
+    },
+    {
+      "route": "/admin/ai-marketing/settings",
+      "name": "AiMarketingSettings",
+      "file": "pages/admin/ai-marketing/AiMarketingSettings.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/health"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/priorities"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/dashboard/kpis"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/agents"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/recommendations/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/recommendations/{param}/reject"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/actions"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/approve-execute"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/actions/{param}/reject"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/chat"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/totals"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-agent"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/usage/by-provider"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/routing-strategy"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/quota"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/providers/preference"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/campaigns/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/impact"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/insights/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/activity"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/google/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/google/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/meta/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/status"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/integrations/meta-ads/authorize-url"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/integrations/meta-ads/disconnect"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/cro/funnel-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/local-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/seo/search-console-summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/analytics/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/ads/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/summary"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/leads/funnel"
+        },
+        {
+          "method": "GET",
+          "path": "/ai/content/inspiration/library"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/content/inspiration/analyze"
+        }
+      ]
+    },
+    {
+      "route": "/admin/consultations",
+      "name": "AdminConsultations",
+      "file": "pages/admin/AdminConsultations.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/consultations"
+        }
+      ]
+    },
+    {
+      "route": "/admin/consultations/:id",
+      "name": "AdminConsultationDetail",
+      "file": "pages/admin/AdminConsultationDetail.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/consultations/{param}"
+        },
+        {
+          "method": "PUT",
+          "path": "/admin/consultations/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/reject"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/schedule-meeting"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/start-meeting"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/request-dp"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/mark-paid"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/upload-agreement"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/progress"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/complete"
+        },
+        {
+          "method": "GET",
+          "path": "/consultations/{param}/messages"
+        },
+        {
+          "method": "POST",
+          "path": "/consultations/{param}/messages"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/consultations/{param}/messages"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/messages"
+        },
+        {
+          "method": "POST",
+          "path": "/consultations/{param}/dp-proof"
+        },
+        {
+          "method": "POST",
+          "path": "/consultations/{param}/final-payment-proof"
+        },
+        {
+          "method": "POST",
+          "path": "/consultations/{param}/progress/{param}/comments"
+        },
+        {
+          "method": "POST",
+          "path": "/consultations/{param}/sign-agreement"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/stage-files/{param}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/stage-files/{param}/reject"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/request-final-payment"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/progress/{param}/comments"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/countersign"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/consultations/{param}/agreement/draft"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/agreement/content"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/agreement/generate"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/consultations/{param}/meterai/apply"
+        }
+      ]
+    },
+    {
+      "route": "/admin/wishlists",
+      "name": "AdminWishlists",
+      "file": "pages/admin/AdminWishlists.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/wishlists"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/wishlists/user/{param}/message"
+        }
+      ]
+    },
+    {
+      "route": "/admin/support",
+      "name": "AdminSupportChat",
+      "file": "pages/admin/AdminSupportChat.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/support/sessions"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/support/sessions/{param}/messages"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/support/sessions/{param}/accept"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/support/sessions/{param}/messages"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/support/sessions/{param}/close"
+        },
+        {
+          "method": "DELETE",
+          "path": "/admin/support/sessions/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/support/sessions/{param}/reject"
+        }
+      ]
+    },
+    {
+      "route": "/admin/catalogs",
+      "name": "CatalogListAdmin",
+      "file": "pages/admin/CatalogListAdmin.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/catalogs"
+        },
+        {
+          "method": "DELETE",
+          "path": "/admin/catalogs/{param}"
+        }
+      ]
+    },
+    {
+      "route": "/admin/catalogs/create",
+      "name": "CatalogFormAdmin",
+      "file": "pages/admin/CatalogFormAdmin.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/catalogs/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/catalogs/{param}/hotspots"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/catalogs/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/catalogs"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/translations/{param}/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/translations/{param}/{param}/auto"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/translations/{param}/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "POST",
+          "path": "{param}/{param}/hotspots"
+        },
+        {
+          "method": "PUT",
+          "path": "{param}/{param}/hotspots/{param}"
+        },
+        {
+          "method": "DELETE",
+          "path": "{param}/{param}/hotspots/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/catalogs/{param}/item-layouts"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/catalogs/{param}/item-layouts"
+        },
+        {
+          "method": "GET",
+          "path": "{param}/{param}/scenes"
+        },
+        {
+          "method": "POST",
+          "path": "{param}/{param}/scenes"
+        },
+        {
+          "method": "POST",
+          "path": "{param}/{param}/scenes/{param}"
+        },
+        {
+          "method": "DELETE",
+          "path": "{param}/{param}/scenes/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "{param}/{param}/scenes/reorder"
+        }
+      ]
+    },
+    {
+      "route": "/admin/catalogs/:id/edit",
+      "name": "CatalogFormAdmin",
+      "file": "pages/admin/CatalogFormAdmin.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/catalogs/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/catalogs/{param}/hotspots"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/catalogs/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/catalogs"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/translations/{param}/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/translations/{param}/{param}/auto"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/translations/{param}/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "POST",
+          "path": "{param}/{param}/hotspots"
+        },
+        {
+          "method": "PUT",
+          "path": "{param}/{param}/hotspots/{param}"
+        },
+        {
+          "method": "DELETE",
+          "path": "{param}/{param}/hotspots/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/catalogs/{param}/item-layouts"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/catalogs/{param}/item-layouts"
+        },
+        {
+          "method": "GET",
+          "path": "{param}/{param}/scenes"
+        },
+        {
+          "method": "POST",
+          "path": "{param}/{param}/scenes"
+        },
+        {
+          "method": "POST",
+          "path": "{param}/{param}/scenes/{param}"
+        },
+        {
+          "method": "DELETE",
+          "path": "{param}/{param}/scenes/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "{param}/{param}/scenes/reorder"
+        }
+      ]
+    },
+    {
+      "route": "/admin",
+      "name": "AdminOverview",
+      "file": "pages/admin/AdminOverview.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/analytics/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/consultations"
+        }
+      ]
+    },
+    {
+      "route": "/admin/projects",
+      "name": "AdminProjects",
+      "file": "pages/admin/AdminProjects.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/projects"
+        },
+        {
+          "method": "GET",
+          "path": "/taxonomies/scopes"
+        },
+        {
+          "method": "DELETE",
+          "path": "/admin/projects/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/translations/{param}/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/translations/{param}/{param}/auto"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/translations/{param}/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/projects/{param}/photos"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "DELETE",
+          "path": "/admin/photos/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/projects/{param}/layouts"
+        },
+        {
+          "method": "DELETE",
+          "path": "/admin/layouts/{param}"
+        },
+        {
+          "method": "DELETE",
+          "path": "/admin/rooms/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/rooms/{param}/hotspots"
+        }
+      ]
+    },
+    {
+      "route": "/admin/items",
+      "name": "AdminItems",
+      "file": "pages/admin/AdminItems.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "GET",
+          "path": "/taxonomies/furniture-types"
+        },
+        {
+          "method": "GET",
+          "path": "/taxonomies/themes"
+        },
+        {
+          "method": "GET",
+          "path": "/taxonomies/categories"
+        },
+        {
+          "method": "GET",
+          "path": "/collections"
+        },
+        {
+          "method": "DELETE",
+          "path": "/admin/items/{param}"
+        }
+      ]
+    },
+    {
+      "route": "/admin/items/:id/experience",
+      "name": "AdminItemExperience",
+      "file": "pages/admin/AdminItemExperience.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/items/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/items/{param}/variants"
+        },
+        {
+          "method": "DELETE",
+          "path": "/admin/variants/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/items/{param}/gallery"
+        },
+        {
+          "method": "DELETE",
+          "path": "/admin/gallery/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/items/{param}/gallery/reorder"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/items/{param}/lifestyle"
+        },
+        {
+          "method": "DELETE",
+          "path": "/admin/lifestyle/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/items/{param}/story"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/items/{param}/story"
+        },
+        {
+          "method": "DELETE",
+          "path": "/admin/story-cards/{param}"
+        }
+      ]
+    },
+    {
+      "route": "/admin/items/:slug/detail",
+      "name": "AdminItemDetail",
+      "file": "pages/admin/AdminItemDetail.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/items/lookup/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/items/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/translations/{param}/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/translations/{param}/{param}/auto"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/translations/{param}/{param}"
+        }
+      ]
+    },
+    {
+      "route": "/admin/scan",
+      "name": "AdminScan",
+      "file": "pages/admin/AdminScan.tsx",
+      "guard": "admin",
+      "api": []
+    },
+    {
+      "route": "/admin/collections",
+      "name": "AdminCollections",
+      "file": "pages/admin/AdminCollections.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/collections"
+        },
+        {
+          "method": "GET",
+          "path": "/items"
+        },
+        {
+          "method": "GET",
+          "path": "/collections/{param}"
+        },
+        {
+          "method": "DELETE",
+          "path": "/admin/collections/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/collections/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/collections"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/collections/{param}/story"
+        },
+        {
+          "method": "DELETE",
+          "path": "/admin/collection-packages/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/collection-packages/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/collections/{param}/packages"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/translations/{param}/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/translations/{param}/{param}/auto"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/translations/{param}/{param}"
+        }
+      ]
+    },
+    {
+      "route": "/admin/taxonomies",
+      "name": "AdminTaxonomies",
+      "file": "pages/admin/AdminTaxonomies.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/taxonomies/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/taxonomies/{param}"
+        },
+        {
+          "method": "PUT",
+          "path": "/admin/taxonomies/{param}/{param}"
+        },
+        {
+          "method": "DELETE",
+          "path": "/admin/taxonomies/{param}/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/taxonomy-banners"
+        },
+        {
+          "method": "DELETE",
+          "path": "/admin/taxonomy-banners/{param}"
+        },
+        {
+          "method": "PUT",
+          "path": "/admin/taxonomy-banners/{param}"
+        }
+      ]
+    },
+    {
+      "route": "/admin/landing",
+      "name": "AdminLanding",
+      "file": "pages/admin/AdminLanding.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/projects"
+        },
+        {
+          "method": "PUT",
+          "path": "/admin/landing/highlights"
+        }
+      ]
+    },
+    {
+      "route": "/admin/analytics",
+      "name": "AdminAnalytics",
+      "file": "pages/admin/AdminAnalytics.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/analytics/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/analytics/users"
+        }
+      ]
+    },
+    {
+      "route": "/admin/banners",
+      "name": "AdminBanners",
+      "file": "pages/admin/AdminBanners.tsx",
+      "guard": "admin",
+      "api": []
+    },
+    {
+      "route": "/admin/users",
+      "name": "AdminUsers",
+      "file": "pages/admin/AdminUsers.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/users"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/users/{param}/activities"
+        }
+      ]
+    },
+    {
+      "route": "/admin/marketing",
+      "name": "AdminMarketing",
+      "file": "pages/admin/AdminMarketing.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/marketing/audience"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/marketing/send-test"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/marketing/campaigns/draft"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/marketing/send"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/catalog/images"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/marketing/upload-image"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/marketing/preview"
+        }
+      ]
+    },
+    {
+      "route": "/admin/shop/orders",
+      "name": "AdminShopOrders",
+      "file": "pages/admin/shop/AdminShopOrders.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/wa-connected"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/send-form"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/quote-preview"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/quote"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/advance"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/cancel"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/proofs"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/proofs/{param}/review"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/proofs/{param}/assign"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/items"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/database/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/documents/find"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/admins"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/admins/{param}/role"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/audit"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders/{param}/extras"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/production"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/bast"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/project"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/projects"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/changes"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/refunds"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/claims"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/claims/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/refunds"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/refunds/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/reply"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/action"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox/{param}/price-inquiry"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/price-inquiry"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/settings"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/settings"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/health"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/health/failed/{param}/retry"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/health/failed/{param}/dismiss"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/funnel"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/bot/simulate"
+        }
+      ]
+    },
+    {
+      "route": "/admin/shop/orders/:code",
+      "name": "AdminShopOrderDetail",
+      "file": "pages/admin/shop/AdminShopOrderDetail.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/wa-connected"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/send-form"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/quote-preview"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/quote"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/advance"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/cancel"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/proofs"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/proofs/{param}/review"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/proofs/{param}/assign"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/items"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/database/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/documents/find"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/admins"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/admins/{param}/role"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/audit"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders/{param}/extras"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/production"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/bast"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/project"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/projects"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/changes"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/refunds"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/claims"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/claims/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/refunds"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/refunds/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/reply"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/action"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox/{param}/price-inquiry"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/price-inquiry"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/settings"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/settings"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/health"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/health/failed/{param}/retry"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/health/failed/{param}/dismiss"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/funnel"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/bot/simulate"
+        }
+      ]
+    },
+    {
+      "route": "/admin/shop/payments",
+      "name": "AdminShopPayments",
+      "file": "pages/admin/shop/AdminShopPayments.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/wa-connected"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/send-form"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/quote-preview"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/quote"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/advance"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/cancel"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/proofs"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/proofs/{param}/review"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/proofs/{param}/assign"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/items"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/database/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/documents/find"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/admins"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/admins/{param}/role"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/audit"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders/{param}/extras"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/production"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/bast"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/project"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/projects"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/changes"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/refunds"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/claims"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/claims/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/refunds"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/refunds/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/reply"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/action"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox/{param}/price-inquiry"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/price-inquiry"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/settings"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/settings"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/health"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/health/failed/{param}/retry"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/health/failed/{param}/dismiss"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/funnel"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/bot/simulate"
+        }
+      ]
+    },
+    {
+      "route": "/admin/shop/database",
+      "name": "AdminShopDatabase",
+      "file": "pages/admin/shop/AdminShopDatabase.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/wa-connected"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/send-form"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/quote-preview"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/quote"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/advance"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/cancel"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/proofs"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/proofs/{param}/review"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/proofs/{param}/assign"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/items"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/database/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/documents/find"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/admins"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/admins/{param}/role"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/audit"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders/{param}/extras"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/production"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/bast"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/project"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/projects"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/changes"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/refunds"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/claims"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/claims/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/refunds"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/refunds/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/reply"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/action"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox/{param}/price-inquiry"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/price-inquiry"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/settings"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/settings"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/health"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/health/failed/{param}/retry"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/health/failed/{param}/dismiss"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/funnel"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/bot/simulate"
+        }
+      ]
+    },
+    {
+      "route": "/admin/roles",
+      "name": "AdminRoles",
+      "file": "pages/admin/AdminRoles.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/roles"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/roles/permissions"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/admins/{param}/role"
+        }
+      ]
+    },
+    {
+      "route": "/admin/shop/scan",
+      "name": "AdminShopScan",
+      "file": "pages/admin/shop/AdminShopScan.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/wa-connected"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/send-form"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/quote-preview"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/quote"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/advance"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/cancel"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/proofs"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/proofs/{param}/review"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/proofs/{param}/assign"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/items"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/database/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/documents/find"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/admins"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/admins/{param}/role"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/audit"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders/{param}/extras"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/production"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/bast"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/project"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/projects"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/changes"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/refunds"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/claims"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/claims/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/refunds"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/refunds/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/reply"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/action"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox/{param}/price-inquiry"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/price-inquiry"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/settings"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/settings"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/health"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/health/failed/{param}/retry"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/health/failed/{param}/dismiss"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/funnel"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/bot/simulate"
+        }
+      ]
+    },
+    {
+      "route": "/admin/shop/inbox",
+      "name": "AdminShopInbox",
+      "file": "pages/admin/shop/AdminShopInbox.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/wa-connected"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/send-form"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/quote-preview"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/quote"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/advance"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/cancel"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/proofs"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/proofs/{param}/review"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/proofs/{param}/assign"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/items"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/database/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/documents/find"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/admins"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/admins/{param}/role"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/audit"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders/{param}/extras"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/production"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/bast"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/project"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/projects"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/changes"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/refunds"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/claims"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/claims/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/refunds"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/refunds/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/reply"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/action"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox/{param}/price-inquiry"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/price-inquiry"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/settings"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/settings"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/health"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/health/failed/{param}/retry"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/health/failed/{param}/dismiss"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/funnel"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/bot/simulate"
+        }
+      ]
+    },
+    {
+      "route": "/admin/shop/aftercare",
+      "name": "AdminShopAftercare",
+      "file": "pages/admin/shop/AdminShopAftercare.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/wa-connected"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/send-form"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/quote-preview"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/quote"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/advance"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/cancel"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/proofs"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/proofs/{param}/review"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/proofs/{param}/assign"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/items"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/database/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/documents/find"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/admins"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/admins/{param}/role"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/audit"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders/{param}/extras"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/production"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/bast"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/project"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/projects"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/changes"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/refunds"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/claims"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/claims/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/refunds"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/refunds/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/reply"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/action"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox/{param}/price-inquiry"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/price-inquiry"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/settings"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/settings"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/health"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/health/failed/{param}/retry"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/health/failed/{param}/dismiss"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/funnel"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/bot/simulate"
+        }
+      ]
+    },
+    {
+      "route": "/admin/shop/settings",
+      "name": "AdminShopSettings",
+      "file": "pages/admin/shop/AdminShopSettings.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/wa-connected"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/send-form"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/quote-preview"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/quote"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/advance"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/cancel"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/proofs"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/proofs/{param}/review"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/proofs/{param}/assign"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/items"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/database/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/documents/find"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/admins"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/admins/{param}/role"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/audit"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders/{param}/extras"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/production"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/bast"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/project"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/projects"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/changes"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/refunds"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/claims"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/claims/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/refunds"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/refunds/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/reply"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/action"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox/{param}/price-inquiry"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/price-inquiry"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/settings"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/settings"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/health"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/health/failed/{param}/retry"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/health/failed/{param}/dismiss"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/funnel"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/bot/simulate"
+        }
+      ]
+    },
+    {
+      "route": "/admin/shop/health",
+      "name": "AdminShopHealth",
+      "file": "pages/admin/shop/AdminShopHealth.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/wa-connected"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/send-form"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/quote-preview"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/quote"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/advance"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/cancel"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/proofs"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/proofs/{param}/review"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/proofs/{param}/assign"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/items"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/database/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/documents/find"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/admins"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/admins/{param}/role"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/audit"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders/{param}/extras"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/production"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/bast"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/project"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/projects"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/changes"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/refunds"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/claims"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/claims/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/refunds"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/refunds/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/reply"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/action"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox/{param}/price-inquiry"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/price-inquiry"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/settings"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/settings"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/health"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/health/failed/{param}/retry"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/health/failed/{param}/dismiss"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/funnel"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/bot/simulate"
+        }
+      ]
+    },
+    {
+      "route": "/admin/shop/bot-simulator",
+      "name": "AdminShopBotSimulator",
+      "file": "pages/admin/shop/AdminShopBotSimulator.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/shop/bot/conversation"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/bot/chat"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/bot/reset"
+        }
+      ]
+    },
+    {
+      "route": "/admin/shop/board",
+      "name": "AdminShopBoard",
+      "file": "pages/admin/shop/AdminShopBoard.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/wa-connected"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/send-form"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/quote-preview"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/quote"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/advance"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/cancel"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/proofs"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/proofs/{param}/review"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/proofs/{param}/assign"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/items"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/database/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/documents/find"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/admins"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/admins/{param}/role"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/audit"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/orders/{param}/extras"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/production"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/bast"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/project"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/projects"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/changes"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/orders/{param}/refunds"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/claims"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/claims/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/refunds"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/refunds/{param}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox/{param}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/reply"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/action"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/inbox/{param}/price-inquiry"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/inbox/{param}/price-inquiry"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/settings"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/settings"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/health"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/health/failed/{param}/retry"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/health/failed/{param}/dismiss"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/funnel"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/bot/simulate"
+        }
+      ]
+    },
+    {
+      "route": "/admin/shop/bot-logs",
+      "name": "AdminBotLogs",
+      "file": "pages/admin/shop/AdminBotLogs.tsx",
+      "guard": "admin",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/admin/shop/bot/logs"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/shop/bot/scenarios"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/bot/logs/{param}/bad"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/shop/bot/scenarios/run"
+        }
+      ]
+    },
+    {
+      "route": "/*",
+      "name": "NotFound",
+      "file": "pages/NotFound.tsx",
+      "guard": "public",
+      "api": []
+    }
+  ]
+}

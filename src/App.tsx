@@ -49,6 +49,7 @@ const OrderConfirm = lazy(() => import("./pages/OrderConfirm"));
 const OrderPay = lazy(() => import("./pages/OrderPay"));
 const AdminShopScan = lazy(() => import("./pages/admin/shop/AdminShopScan"));
 const AdminRoles = lazy(() => import("./pages/admin/AdminRoles"));
+const AdminC4 = lazy(() => import("./pages/admin/AdminC4"));
 const AdminShopDatabase = lazy(() => import("./pages/admin/shop/AdminShopDatabase"));
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
@@ -187,6 +188,7 @@ function App() {
                 <Route path="shop/orders/:code" element={<AdminShopOrderDetail />} />
                 <Route path="shop/payments" element={<AdminShopPayments />} />
                 <Route path="shop/database" element={<AdminShopDatabase />} />
+                <Route path="c4" element={<AdminC4 />} />
                 <Route path="roles" element={<AdminRoles />} />
                 <Route path="shop/scan" element={<AdminShopScan />} />
                 <Route path="shop/inbox" element={<AdminShopInbox />} />
