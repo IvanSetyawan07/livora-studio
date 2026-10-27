@@ -129,6 +129,7 @@ export default function AdminInvites() {
 
   const sendMany = async (list: InviteGuest[], force = false) => {
     if (!event || !list.length) return;
+    if (event.bulk_ready) return sendBulk(list, force); // Fonnte (nomor sendiri) diprioritaskan; Meta hanya cadangan
     if (!event.wa_ready && !window.confirm("WhatsApp Livi belum tersambung ke Meta. Pesan hanya dicatat, tidak benar-benar terkirim. Lanjut?")) return;
     if (!window.confirm(`Kirim undangan ke ${list.length} tamu lewat nomor Livi?`)) return;
     let ok = 0; const fails: string[] = [];
@@ -242,7 +243,7 @@ export default function AdminInvites() {
         </div>
       } />
 
-      {event && !event.wa_ready && <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">WhatsApp Livi (+62 851-9683-9261) belum tersambung ke Meta, jadi kirim otomatis hanya tercatat. Pakai "Kirim manual" atau isi kredensial Meta di server.</div>}
+      {event && !event.wa_ready && !event.bulk_ready && <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">WhatsApp Livi (+62 851-9683-9261) belum tersambung ke Meta, jadi kirim otomatis hanya tercatat. Pakai "Kirim manual" atau isi kredensial Meta di server.</div>}
 
       {st && (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
