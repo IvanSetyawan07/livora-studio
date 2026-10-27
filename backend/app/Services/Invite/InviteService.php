@@ -122,9 +122,13 @@ P;
 
         $ok = WaSender::send($phone, $msg);
         if (!$ok) {
-            $note = DB::table('wa_messages')->where('phone', $phone)->where('direction', 'out')->latest('id')->value('error_note');
+            $raw = (string) DB::table('wa_messages')->where('phone', $phone)->where('direction', 'out')->latest('id')->value('error_note');
+            $code = preg_match('/code (\d+)/', $raw, $mm) ? (int) $mm[1] : null;
+            $friendly = MetaErrorTranslator::translate($code, $raw ?: null, [
+                'template' => $e->wa_template_name, 'lang' => $e->wa_template_lang ?: 'id',
+            ]);
 
-            return self::fail($g, $note ?: 'Gagal terkirim, cek Kesehatan sistem.', $mode);
+            return self::fail($g, $friendly, $mode, $raw ?: null);
         }
         $g->update(['status' => 'terkirim', 'send_channel' => 'otomatis', 'sent_at' => now(), 'error_note' => null]);
 
