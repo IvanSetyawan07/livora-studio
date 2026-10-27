@@ -42,15 +42,21 @@ class LiviLlm
         }
 
         try {
-            $res = Http::timeout(30)->withHeaders([
-                'x-goog-api-key' => config('services.gemini.api_key'), 'content-type' => 'application/json',
-            ])->post('https://generativelanguage.googleapis.com/v1beta/models/'.config('services.gemini.model').':generateContent', [
-                'system_instruction' => ['parts' => [['text' => $system]]],
-                'contents' => $contents,
-                'generationConfig' => ['responseMimeType' => 'application/json', 'maxOutputTokens' => $maxTokens, 'temperature' => $temperature],
-            ]);
+            $res = null;
+            for ($try = 0; $try < 3; $try++) {
+                $res = Http::timeout(30)->withHeaders([
+                    'x-goog-api-key' => config('services.gemini.api_key'), 'content-type' => 'application/json',
+                ])->post('https://generativelanguage.googleapis.com/v1beta/models/'.config('services.gemini.model').':generateContent', [
+                    'system_instruction' => ['parts' => [['text' => $system]]],
+                    'contents' => $contents,
+                    'generationConfig' => ['responseMimeType' => 'application/json', 'maxOutputTokens' => $maxTokens, 'temperature' => $temperature],
+                ]);
+                // Kuota per menit habis (429) atau Gemini sedang sibuk (500/503): tunggu sebentar lalu coba lagi.
+                if ($res->successful() || !in_array($res->status(), [429, 500, 503], true) || $try === 2) break;
+                sleep($try === 0 ? 3 : 8);
+            }
             if (!$res->successful()) {
-                Log::warning('LiviLlm: Gemini gagal', ['status' => $res->status()]);
+                Log::warning('LiviLlm: Gemini gagal', ['status' => $res->status(), 'pesan' => mb_substr((string) $res->json('error.message'), 0, 300)]);
 
                 return null;
             }
