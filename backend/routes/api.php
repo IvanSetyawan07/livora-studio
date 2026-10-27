@@ -550,6 +550,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/events/{event}/guests/{guest}/manual-link', [$i, 'manualLink']);
         Route::post('/events/{event}/guests/{guest}/mark-sent', [$i, 'markSent']);
         Route::post('/events/{event}/pull-sheet', [$i, 'pullSheet']);
+        Route::post('/events/{event}/check-template', [$i, 'checkTemplate']);
         Route::get('/events/{event}/chat', [$i, 'chatHistory']);
         Route::post('/events/{event}/chat', [$i, 'chat']);
         Route::delete('/events/{event}/chat', [$i, 'clearChat']);

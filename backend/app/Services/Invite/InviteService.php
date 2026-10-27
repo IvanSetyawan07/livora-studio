@@ -131,9 +131,11 @@ P;
         return ['ok' => true, 'error' => null, 'mode' => $mode];
     }
 
-    protected static function fail(InviteGuest $g, string $error, string $mode): array
+     protected static function fail(InviteGuest $g, string $error, string $mode, ?string $raw = null): array
     {
-        $g->update(['status' => 'gagal', 'error_note' => mb_substr($error, 0, 500)]);
+        // Pesan Indonesia di depan, error asli Meta tetap disimpan di belakangnya.
+        $note = $raw && $raw !== $error ? $error.' [Meta: '.$raw.']' : $error;
+        $g->update(['status' => 'gagal', 'error_note' => mb_substr($note, 0, 500)]);
 
         return ['ok' => false, 'error' => $error, 'mode' => $mode];
     }

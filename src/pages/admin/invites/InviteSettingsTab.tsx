@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { ImagePlus, Loader2, Trash2 } from "lucide-react";
+import { CheckCircle2, ImagePlus, Loader2, Trash2, XCircle } from "lucide-react";
 import { toast } from "sonner";
-import { invites, inviteError, type InviteEvent } from "@/lib/invites";
+import { invites, inviteError, type InviteEvent, type TemplateCheck } from "@/lib/invites";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const toLocalInput = (iso?: string | null) => {
@@ -42,6 +42,8 @@ export default function InviteSettingsTab({ event, onSaved, onDeleted }: { event
   const [saving, setSaving] = useState(false);
   const [imgBusy, setImgBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [tpl, setTpl] = useState<TemplateCheck | null>(null);
+  const [tplBusy, setTplBusy] = useState(false);
 
   useEffect(() => {
     if (!event) return;
@@ -54,7 +56,11 @@ export default function InviteSettingsTab({ event, onSaved, onDeleted }: { event
     });
   }, [event]);
 
-  const set = (k: keyof typeof f, v: string | boolean) => setF((p) => ({ ...p, [k]: v }));
+  const set = (k: keyof typeof f, v: string | boolean) => {
+    // Hasil cek template jadi tidak berlaku kalau nama/bahasa/tombol diubah.
+    if (k === "wa_template_name" || k === "wa_template_lang" || k === "template_has_buttons") setTpl(null);
+    setF((p) => ({ ...p, [k]: v }));
+  };
 
   const save = async () => {
     if (!f.name.trim()) return toast.error("Nama acara wajib diisi");
@@ -83,6 +89,27 @@ export default function InviteSettingsTab({ event, onSaved, onDeleted }: { event
     if (!event) return;
     setImgBusy(true);
     try { onSaved(await invites.removeEventImage(event.id)); } catch (e) { toast.error(inviteError(e)); } finally { setImgBusy(false); }
+  };
+
+  const checkTemplate = async () => {
+    if (!event) return toast.error("Simpan acara dulu sebelum cek template");
+    if (!f.wa_template_name.trim()) return toast.error("Isi nama template dulu");
+    setTplBusy(true);
+    setTpl(null);
+    try {
+      const r = await invites.checkTemplate(event.id, {
+        name: f.wa_template_name.trim(),
+        lang: f.wa_template_lang.trim() || "id",
+        has_buttons: f.template_has_buttons,
+      });
+      setTpl(r);
+      if (r.ok) toast.success("Template siap dipakai");
+      else toast.error(r.message);
+    } catch (e) {
+      toast.error(inviteError(e));
+    } finally {
+      setTplBusy(false);
+    }
   };
 
   const destroy = async () => {
@@ -133,6 +160,42 @@ export default function InviteSettingsTab({ event, onSaved, onDeleted }: { event
           <Field label="Kode bahasa"><input className={input} value={f.wa_template_lang} onChange={(e) => set("wa_template_lang", e.target.value)} /></Field>
           <label className="flex items-end gap-2 pb-2 text-sm"><input type="checkbox" checked={f.template_has_buttons} onChange={(e) => set("template_has_buttons", e.target.checked)} /> Template punya 2 tombol Hadir/Tidak</label>
         </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="button" disabled={tplBusy || !event} onClick={checkTemplate} className="inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-sm disabled:opacity-60">
+            {tplBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Cek template
+          </button>
+          <span className="text-xs text-muted-foreground">Memeriksa langsung ke Meta, tidak mengirim pesan apa pun.</span>
+        </div>
+
+        {tpl && (
+          <div className={`space-y-3 rounded-lg border p-4 text-sm ${tpl.ok ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-rose-300 bg-rose-50 text-rose-900"}`}>
+            <div className="flex items-start gap-2">
+              {tpl.ok ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> : <XCircle className="mt-0.5 h-4 w-4 shrink-0" />}
+              <p className="font-medium">{tpl.message}</p>
+            </div>
+            {tpl.found && (
+              <dl className="grid gap-x-6 gap-y-1 text-xs sm:grid-cols-3">
+                <div><dt className="opacity-70">Status</dt><dd className="font-medium">{tpl.status ?? "-"}</dd></div>
+                <div><dt className="opacity-70">Kategori</dt><dd className="font-medium">{tpl.category ?? "-"}</dd></div>
+                <div>
+                  <dt className="opacity-70">Bahasa tersedia</dt>
+                  <dd className="font-medium">{tpl.languages.map((l) => `${l.language} (${l.status})`).join(", ") || "-"}</dd>
+                </div>
+              </dl>
+            )}
+            {tpl.checks.length > 0 && (
+              <ul className="space-y-1 text-xs">
+                {tpl.checks.map((c) => (
+                  <li key={c.key} className="flex items-start gap-1.5">
+                    {c.ok ? <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" /> : <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />}
+                    <span>{c.detail}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="space-y-4 rounded-xl border border-border bg-card p-5">

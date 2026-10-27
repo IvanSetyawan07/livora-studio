@@ -52,7 +52,17 @@ export type InviteGuest = {
 
 export type InviteChatMessage = { id?: number; role: "user" | "assistant"; content: string };
 export type SendResult = { id: number; name: string; ok: boolean; error: string | null; mode?: string };
-
+export type TemplateCheck = {
+  ok: boolean;
+  found: boolean;
+  status: string | null;
+  category: string | null;
+  languages: { language: string; status: string }[];
+  lang_matched: boolean;
+  checks: { key: string; ok: boolean; detail: string }[];
+  message: string;
+  code?: string;
+};
 const base = "/admin/invites";
 const form = (field: string, files: File[]) => {
   const fd = new FormData();
@@ -94,6 +104,8 @@ export const invites = {
     api.post<{ results: SendResult[] }>(`${base}/events/${eventId}/guests/send`, { ids, force }, { timeout: 180000 }).then((r) => r.data.results),
   manualLink: (eventId: number, id: number) => api.get<{ url: string; message: string }>(`${base}/events/${eventId}/guests/${id}/manual-link`).then((r) => r.data),
   markSent: (eventId: number, id: number) => api.post<InviteGuest>(`${base}/events/${eventId}/guests/${id}/mark-sent`).then((r) => r.data),
+   checkTemplate: (eventId: number, body: { name: string; lang: string; has_buttons: boolean }) =>
+    api.post<TemplateCheck>(`${base}/events/${eventId}/check-template`, body, { timeout: 30000 }).then((r) => r.data),
   pullSheet: (eventId: number) => api.post<{ added: number; updated: number; skipped: number; filled: number }>(`${base}/events/${eventId}/pull-sheet`).then((r) => r.data),
 
   chatHistory: (eventId: number) => api.get<InviteChatMessage[]>(`${base}/events/${eventId}/chat`).then((r) => r.data),

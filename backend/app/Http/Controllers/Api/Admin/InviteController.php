@@ -360,6 +360,23 @@ class InviteController extends Controller
         return $r;
     }
 
+    // ───────────── Cek template Meta ─────────────
+
+    /** POST {name?, lang?, has_buttons?} cek template langsung ke Meta (tidak mengirim pesan). */
+    public function checkTemplate(Request $request, InviteEvent $event)
+    {
+        $d = $request->validate([
+            'name' => ['nullable', 'string', 'max:120', 'regex:/^[a-z0-9_]+$/'],
+            'lang' => 'nullable|string|max:10',
+            'has_buttons' => 'nullable|boolean',
+        ]);
+
+        return app(\App\Services\Invite\TemplateChecker::class)->check(
+            $d['name'] ?? (string) $event->wa_template_name,
+            $d['lang'] ?? ($event->wa_template_lang ?: 'id'),
+            (bool) ($d['has_buttons'] ?? $event->template_has_buttons),
+        );
+    }
     // ───────────── Chat AI admin ─────────────
 
     public function chatHistory(InviteEvent $event)

@@ -142,6 +142,7 @@ return [
             'access_token' => env('META_WHATSAPP_ACCESS_TOKEN'),
             'phone_number_id' => env('META_WHATSAPP_PHONE_NUMBER_ID'),
             'api_version' => env('META_WHATSAPP_API_VERSION', 'v21.0'),
+            'business_account_id' => env('META_WHATSAPP_BUSINESS_ACCOUNT_ID'),
         ],
     ],
     'support_chat' => [
