@@ -225,14 +225,23 @@ class InviteController extends Controller
     {
         $d = $request->validate(['ids' => 'required|array|min:1|max:15', 'ids.*' => 'integer', 'mode' => 'nullable|in:format,ai', 'overwrite' => 'nullable|boolean']);
         abort_if(trim((string) $event->description_format) === '', 422, 'Isi "Format deskripsi" di tab Pengaturan acara dulu.');
-        set_time_limit(120);
+        set_time_limit(180);
         $mode = $d['mode'] ?? 'ai';
         $done = 0;
         $aiFailed = 0;
+        // Jeda antar panggilan AI supaya tidak kena batas kuota per menit Gemini (429). Atur lewat ShopSettings "gemini_delay_ms".
+        $delayMs = max(0, (int) \App\Services\Shop\ShopSettings::get('gemini_delay_ms', 2500));
+        $firstCall = true;
         foreach (InviteGuest::with('event')->where('event_id', $event->id)->whereIn('id', $d['ids'])->get() as $g) {
             if (!($d['overwrite'] ?? false) && trim((string) $g->description) !== '') continue;
-            $text = $mode === 'ai' ? InviteService::aiDescription($event, $g) : null;
-            if ($mode === 'ai' && $text === null) $aiFailed++;
+            $text = null;
+            if ($mode === 'ai') {
+                if (!$firstCall) usleep($delayMs * 1000);
+                $firstCall = false;
+                $text = InviteService::aiDescription($event, $g);
+                // AI gagal: biarkan deskripsi kosong (bukan diisi format) supaya bisa diulang dengan "isi yang kosong".
+                if ($text === null) { $aiFailed++; continue; }
+            }
             $g->update(['description' => $text ?? mb_substr(InviteService::fillFormat($event, $g), 0, 1000),
                 'status' => in_array($g->status, ['terkirim', 'dibalas'], true) ? $g->status : 'draft']);
             $done++;

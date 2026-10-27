@@ -91,13 +91,13 @@ export default function AdminInvites() {
     const overwrite = selected.some((g) => g.description) ? window.confirm("Sebagian tamu sudah punya deskripsi. Timpa dengan yang baru?\n\nOK = timpa, Batal = hanya isi yang kosong.") : false;
     let done = 0, aiFailed = 0;
     try {
-      for (const part of chunk(selected.map((g) => g.id), 15)) {
+      for (const part of chunk(selected.map((g) => g.id), 5)) {
         setBusy(`Menulis deskripsi ${done}/${selected.length}…`);
         const r = await invites.generate(event.id, part, mode, overwrite);
         done += part.length; aiFailed += r.ai_failed;
       }
-      toast.success(`Deskripsi dibuat untuk ${selected.length} tamu`);
-      if (aiFailed) toast.warning(`${aiFailed} tamu memakai format biasa karena AI tidak menjawab.`);
+            toast.success(`Deskripsi dibuat untuk ${selected.length - aiFailed} tamu`);
+      if (aiFailed) toast.warning(`${aiFailed} tamu belum terisi karena AI sedang sibuk. Klik "Buat deskripsi" lagi (pilih Batal pada konfirmasi) untuk mengulang yang kosong.`);
     } catch (e) { toast.error(inviteError(e)); }
     setBusy(null); loadGuests();
   };
