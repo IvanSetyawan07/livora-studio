@@ -130,6 +130,8 @@ return [
 
         'fonnte' => [
             'token' => env('FONNTE_TOKEN'),
+            // Kata rahasia di URL webhook balasan chat (Sebar Undangan). Kosong = webhook mati.
+            'webhook_secret' => env('FONNTE_WEBHOOK_SECRET'),
         ],
 
         'twilio' => [

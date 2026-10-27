@@ -46,6 +46,7 @@ const AdminShopBotSimulator = lazy(() => import("./pages/admin/shop/AdminShopBot
 const AdminShopBoard = lazy(() => import("./pages/admin/shop/AdminShopBoard"));
 const AdminBotLogs = lazy(() => import("./pages/admin/shop/AdminBotLogs"));
 const AdminInvites = lazy(() => import("./pages/admin/invites/AdminInvites"));
+const InviteRsvp = lazy(() => import("./pages/InviteRsvp"));
 const OrderConfirm = lazy(() => import("./pages/OrderConfirm"));
 const OrderPay = lazy(() => import("./pages/OrderPay"));
 const AdminShopScan = lazy(() => import("./pages/admin/shop/AdminShopScan"));
@@ -93,7 +94,6 @@ const AiMarketingCampaignDetail = lazy(() => import("./pages/admin/ai-marketing/
 const AiMarketingImpact = lazy(() => import("./pages/admin/ai-marketing/AiMarketingImpact"));
 const AiMarketingUsage = lazy(() => import("./pages/admin/ai-marketing/AiMarketingUsage"));
 const AiMarketingProviders = lazy(() => import("./pages/admin/ai-marketing/AiMarketingProviders"));
-
 const queryClient = new QueryClient();
 
 function App() {
@@ -135,6 +135,7 @@ function App() {
               <Route path="/cart" element={<Cart />} />
               <Route path="/order/:code/whatsapp" element={<OrderWhatsApp />} />
               <Route path="/order-form/:code" element={<OrderForm />} />
+              <Route path="/rsvp/:token" element={<InviteRsvp />} />
               <Route path="/order/confirm/:code" element={<OrderConfirm />} />
               <Route path="/order/pay/:code" element={<OrderPay />} />
               <Route element={<RequireRole roles={["sales", "admin"]} />}>

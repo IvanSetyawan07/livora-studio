@@ -101,7 +101,9 @@ class InviteController extends Controller
             'by_status' => $q()->selectRaw('status, count(*) as c')->groupBy('status')->pluck('c', 'status'),
             'by_category' => $q()->selectRaw('category, count(*) as c')->groupBy('category')->pluck('c', 'category'),
             'rsvp' => $q()->whereNotNull('rsvp')->selectRaw('rsvp, count(*) as c')->groupBy('rsvp')->pluck('c', 'rsvp'),
-        ], 'wa_ready' => \App\Services\Shop\WaSender::configured(), 'ai_ready' => \App\Services\Shop\LiviLlm::available()];
+            'checked_in' => $q()->whereNotNull('checked_in_at')->count(),
+                ], 'wa_ready' => \App\Services\Shop\WaSender::configured(), 'ai_ready' => \App\Services\Shop\LiviLlm::available(),
+            'bulk_ready' => InviteService::bulkConfigured()];
     }
 
     // ───────────── Tamu ─────────────
@@ -340,11 +342,47 @@ class InviteController extends Controller
     }
 
     /** GET tautan wa.me + teks untuk kirim manual dari HP admin. */
+        /**
+     * POST {ids: [maks 100], force: bool} kirim MASSAL lewat nomor WhatsApp admin sendiri (Fonnte).
+     * Satu request = satu antrean di Fonnte; jeda antar pesan diatur di sana.
+     */
+    public function sendBulk(Request $request, InviteEvent $event)
+    {
+        $d = $request->validate(['ids' => 'required|array|min:1|max:100', 'ids.*' => 'integer', 'force' => 'nullable|boolean']);
+        abort_unless(InviteService::bulkConfigured(), 422, 'Kirim massal belum aktif: isi FONNTE_TOKEN di .env server.');
+        $force = (bool) ($d['force'] ?? false);
+        $results = [];
+        $ready = collect();
+
+        foreach (InviteGuest::with('event')->where('event_id', $event->id)->whereIn('id', $d['ids'])->get() as $g) {
+            $r = ['id' => $g->id, 'name' => $g->name];
+            if (!$force && in_array($g->status, ['terkirim', 'dibalas'], true)) {
+                $results[] = $r + ['ok' => false, 'error' => 'Sudah pernah dikirim.']; continue;
+            }
+            if (!$force && $g->status === 'draft') {
+                $results[] = $r + ['ok' => false, 'error' => 'Belum disetujui. Setujui dulu deskripsinya.']; continue;
+            }
+            if (User::where('phone', $g->phone)->whereNotNull('wa_opt_out_at')->exists()) {
+                $g->update(['status' => 'gagal', 'error_note' => 'Nomor ini sudah berhenti menerima pesan promosi (STOP).']);
+                $results[] = $r + ['ok' => false, 'error' => 'Sudah berhenti menerima pesan promosi.']; continue;
+            }
+            $ready->push($g);
+        }
+
+        if ($ready->isNotEmpty()) {
+            $out = InviteService::sendBulk($ready);
+            foreach ($ready as $g) $results[] = ['id' => $g->id, 'name' => $g->name, 'ok' => $out['ok'], 'error' => $out['error']];
+        }
+
+        return ['results' => $results];
+    }
+
+    /** GET tautan wa.me + teks untuk kirim manual dari HP admin. */
     public function manualLink(InviteEvent $event, InviteGuest $guest)
     {
         abort_unless($guest->event_id === $event->id, 404);
 
-        return ['url' => InviteService::manualLink($guest), 'message' => InviteService::messageFor($guest->load('event'))];
+        return ['url' => InviteService::manualLink($guest), 'message' => InviteService::messageFor($guest->load('event'), true)];
     }
 
     public function markSent(InviteEvent $event, InviteGuest $guest)
@@ -354,7 +392,30 @@ class InviteController extends Controller
 
         return $this->slim($guest->fresh('event'));
     }
+    // ───────────── Check-in hari acara ─────────────
 
+    /** POST {value: bool} tandai tamu sudah datang (true) atau batalkan (false). */
+    public function checkIn(Request $request, InviteEvent $event, InviteGuest $guest)
+    {
+        abort_unless($guest->event_id === $event->id, 404);
+        InviteService::checkIn($guest, $request->boolean('value', true));
+
+        return $this->slim($guest->fresh('event'));
+    }
+
+    /** POST {code} isi QR (tautan /rsvp/{token} atau token saja) → check-in. */
+    public function checkInScan(Request $request, InviteEvent $event)
+    {
+        $code = trim($request->validate(['code' => 'required|string|max:500'])['code']);
+        $token = preg_match('#/rsvp/([A-Za-z0-9]{20,40})#', $code, $m) ? $m[1] : $code;
+        $guest = InviteGuest::with('event')->where('event_id', $event->id)->where('rsvp_token', $token)->first();
+        abort_unless($guest, 404, 'QR tidak dikenali untuk acara ini.');
+
+        $already = (bool) $guest->checked_in_at;
+        InviteService::checkIn($guest);
+
+        return ['guest' => $this->slim($guest->fresh('event')), 'already' => $already];
+    }
     // ───────────── Google Sheet ─────────────
 
     public function pullSheet(InviteEvent $event)

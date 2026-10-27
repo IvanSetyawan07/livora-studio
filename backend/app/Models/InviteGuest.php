@@ -9,9 +9,18 @@ class InviteGuest extends Model
 {
     protected $guarded = ['id'];
 
-    protected $casts = ['sent_at' => 'datetime', 'rsvp_at' => 'datetime'];
+    protected $casts = ['sent_at' => 'datetime', 'rsvp_at' => 'datetime', 'checked_in_at' => 'datetime'];
 
     protected $appends = ['image_url'];
+     /** Token RSVP bersifat rahasia per tamu; tidak perlu ikut ke JSON admin. */
+    protected $hidden = ['rsvp_token'];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $g) {
+            if (!$g->rsvp_token) $g->rsvp_token = \Illuminate\Support\Str::random(32);
+        });
+    }
 
     public function event()
     {

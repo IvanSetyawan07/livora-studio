@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCheck, FileUp, ImagePlus, Images, Loader2, MessageCircle, Pencil, Plus, RefreshCw, Send, Sparkles, Trash2, Upload, X } from "lucide-react";
+import { CheckCheck, FileUp, ImagePlus, Images, Loader2, Megaphone, MessageCircle, Pencil, Plus, RefreshCw, Send, Sparkles, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { invites, inviteError, type InviteCategory, type InviteEvent, type InviteGuest, type InviteStatus } from "@/lib/invites";
 import InviteSettingsTab from "./InviteSettingsTab";
 import InviteChatTab from "./InviteChatTab";
+import InviteCheckInTab from "./InviteCheckInTab";
 
 const STATUS: Record<InviteStatus, { l: string; c: string }> = {
   draft: { l: "Draf", c: "bg-muted text-muted-foreground" },
@@ -35,7 +36,7 @@ function parseRows(raw: string): { name: string; phone: string; category?: strin
   return out;
 }
 
-type Tab = "tamu" | "acara" | "chat";
+type Tab = "tamu" | "checkin" | "acara" | "chat";
 
 export default function AdminInvites() {
   const [events, setEvents] = useState<InviteEvent[] | null>(null);
@@ -47,6 +48,7 @@ export default function AdminInvites() {
   const [q, setQ] = useState("");
   const [fCat, setFCat] = useState("");
   const [fStatus, setFStatus] = useState("");
+  const [fRsvp, setFRsvp] = useState("");
   const [edit, setEdit] = useState<InviteGuest | "new" | null>(null);
   const [importing, setImporting] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -73,11 +75,28 @@ export default function AdminInvites() {
   useEffect(() => { loadGuests(); }, [loadGuests]);
 
   const refresh = async () => { await Promise.all([loadGuests(), loadEvents(eventId ?? undefined)]); };
+  // Muat ulang senyap: tanpa spinner dan tanpa menghapus tamu yang sedang dipilih.
+  const silentRefresh = useCallback(async () => {
+    if (!eventId) return;
+    try {
+      const [g, ev] = await Promise.all([invites.guests(eventId), invites.events()]);
+      setGuests(g);
+      setEvents(ev);
+    } catch { /* abaikan, dicoba lagi di putaran berikutnya */ }
+  }, [eventId]);
 
+  // Jawaban RSVP dan check-in baru muncul sendiri tiap 30 detik (berhenti saat sedang mengedit/mengirim atau tab browser tersembunyi).
+  useEffect(() => {
+    if (!eventId || (tab !== "tamu" && tab !== "checkin") || busy || edit || importing || creating) return;
+    const t = setInterval(() => { if (!document.hidden) void silentRefresh(); }, 30000);
+    return () => clearInterval(t);
+  }, [eventId, tab, busy, edit, importing, creating, silentRefresh]);
   const shown = useMemo(() => {
     const s = q.trim().toLowerCase();
-    return guests.filter((g) => (!fCat || g.category === fCat) && (!fStatus || g.status === fStatus) && (!s || g.name.toLowerCase().includes(s) || g.phone.includes(s)));
-  }, [guests, q, fCat, fStatus]);
+   return guests.filter((g) => (!fCat || g.category === fCat) && (!fStatus || g.status === fStatus)
+      && (!fRsvp || (fRsvp === "belum" ? !g.rsvp : g.rsvp === fRsvp))
+      && (!s || g.name.toLowerCase().includes(s) || g.phone.includes(s)));
+  }, [guests, q, fCat, fStatus, fRsvp]);
 
   const selected = useMemo(() => guests.filter((g) => sel.has(g.id)), [guests, sel]);
   const allShownSelected = shown.length > 0 && shown.every((g) => sel.has(g.id));
@@ -125,7 +144,24 @@ export default function AdminInvites() {
     if (fails.length) toast.error(`${fails.length} gagal. ${fails.slice(0, 2).join(" | ")}${fails.length > 2 ? " …" : ""}`, { duration: 10000 });
     refresh();
   };
-
+  // Kirim massal lewat nomor WhatsApp admin sendiri (Fonnte). Server yang mengantre & memberi jeda, tab boleh ditutup.
+  const sendBulk = async (list: InviteGuest[], force = false) => {
+    if (!event || !list.length) return;
+    if (!event.bulk_ready) return void toast.error("Kirim massal belum aktif: isi FONNTE_TOKEN di .env server, lalu hubungkan nomor WhatsApp kamu di Fonnte.");
+    if (!window.confirm(`Kirim undangan ke ${list.length} tamu sekaligus lewat nomor WhatsApp yang tersambung di Fonnte?\n\nPesan dikirim bergantian dengan jeda acak 8-20 detik, jadi ${list.length} tamu butuh sekitar ${Math.ceil((list.length * 14) / 60)} menit. Tab ini boleh ditutup.`)) return;
+    let ok = 0; const fails: string[] = [];
+    try {
+      for (const part of chunk(list.map((g) => g.id), 50)) {
+        setBusy(`Menyerahkan ke antrean ${ok + fails.length}/${list.length}…`);
+        const res = await invites.sendBulk(event.id, part, force);
+        res.forEach((r) => (r.ok ? ok++ : fails.push(`${r.name}: ${r.error}`)));
+      }
+    } catch (e) { toast.error(inviteError(e)); }
+    setBusy(null);
+    if (ok) toast.success(`${ok} undangan masuk antrean kirim. Status akan "Terkirim"; jawaban hadir/tidak masuk otomatis lewat tautan RSVP.`, { duration: 8000 });
+    if (fails.length) toast.error(`${fails.length} gagal. ${fails.slice(0, 2).join(" | ")}${fails.length > 2 ? " …" : ""}`, { duration: 10000 });
+    refresh();
+  };
   const removeMany = async () => {
     if (!event || !selected.length || !window.confirm(`Hapus ${selected.length} tamu terpilih?`)) return;
     try { await invites.deleteGuests(event.id, selected.map((g) => g.id)); toast.success("Tamu dihapus"); } catch (e) { toast.error(inviteError(e)); }
@@ -209,24 +245,25 @@ export default function AdminInvites() {
       {event && !event.wa_ready && <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">WhatsApp Livi (+62 851-9683-9261) belum tersambung ke Meta, jadi kirim otomatis hanya tercatat. Pakai "Kirim manual" atau isi kredensial Meta di server.</div>}
 
       {st && (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
           <Stat label="Total tamu" v={st.total} />
           <Stat label="Siap kirim" v={st.by_status.siap ?? 0} />
           <Stat label="Terkirim" v={(st.by_status.terkirim ?? 0) + (st.by_status.dibalas ?? 0)} />
           <Stat label="Hadir" v={st.rsvp.hadir ?? 0} good />
           <Stat label="Tidak hadir" v={st.rsvp.tidak ?? 0} />
+        <Stat label="Sudah datang" v={st.checked_in ?? 0} good />
         </div>
       )}
 
       <div className="flex gap-1 border-b border-border" role="tablist">
-        {([["tamu", "Daftar tamu"], ["acara", "Pengaturan acara"], ["chat", "Chat AI"]] as [Tab, string][]).map(([k, l]) => (
+        {([["tamu", "Daftar tamu"], ["checkin", "Check-in"], ["acara", "Pengaturan acara"], ["chat", "Chat AI"]] as [Tab, string][]).map(([k, l]) => (
           <button key={k} role="tab" aria-selected={tab === k} type="button" onClick={() => setTab(k)} className={`-mb-px border-b-2 px-4 py-2 text-sm ${tab === k ? "border-foreground font-medium" : "border-transparent text-muted-foreground"}`}>{l}</button>
         ))}
       </div>
 
       {tab === "acara" && <InviteSettingsTab event={event} onSaved={(e) => loadEvents(e.id)} onDeleted={() => { setEventId(null); loadEvents(); }} />}
       {tab === "chat" && event && <InviteChatTab eventId={event.id} />}
-
+      {tab === "checkin" && event && <InviteCheckInTab event={event} guests={guests} onChanged={silentRefresh} />}
       {tab === "tamu" && event && (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -242,6 +279,8 @@ export default function AdminInvites() {
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama / nomor…" aria-label="Cari" className={`${inp} max-w-xs`} />
             <select aria-label="Kategori" value={fCat} onChange={(e) => setFCat(e.target.value)} className="h-10 rounded-lg border border-border bg-background px-2 text-sm"><option value="">Semua kategori</option>{Object.entries(CAT).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
             <select aria-label="Status" value={fStatus} onChange={(e) => setFStatus(e.target.value)} className="h-10 rounded-lg border border-border bg-background px-2 text-sm"><option value="">Semua status</option>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.l}</option>)}</select>
+            <select aria-label="Kehadiran" value={fRsvp} onChange={(e) => setFRsvp(e.target.value)} className="h-10 rounded-lg border border-border bg-background px-2 text-sm"><option value="">Semua kehadiran</option><option value="hadir">Hadir</option><option value="tidak">Tidak hadir</option><option value="belum">Belum menjawab</option></select>
+            
           </div>
 
           {(selected.length > 0 || busy) && (
@@ -253,6 +292,7 @@ export default function AdminInvites() {
                   <button type="button" className={btn} onClick={() => generate("format")}>Isi dari format</button>
                   <button type="button" className={btn} onClick={() => approve(selected.map((g) => g.id))}><CheckCheck className="h-4 w-4" /> Setujui</button>
                   <button type="button" className={`${btn} bg-foreground text-background hover:bg-foreground/90`} onClick={() => sendMany(selected.filter((g) => g.status === "siap" || g.status === "gagal"))}><Send className="h-4 w-4" /> Kirim ({selected.filter((g) => g.status === "siap" || g.status === "gagal").length})</button>
+                  <button type="button" className={btn} onClick={() => sendBulk(selected.filter((g) => g.status === "siap" || g.status === "gagal"))} title="Kirim sekaligus lewat nomor WhatsApp sendiri (Fonnte)"><Megaphone className="h-4 w-4" /> Kirim massal ({selected.filter((g) => g.status === "siap" || g.status === "gagal").length})</button>
                   <button type="button" className={`${btn} text-destructive`} onClick={removeMany}><Trash2 className="h-4 w-4" /></button>
                 </>
               )}
@@ -286,6 +326,7 @@ export default function AdminInvites() {
                       <select aria-label={`Kehadiran ${g.name}`} value={g.rsvp ?? ""} onChange={(e) => setRsvp(g, e.target.value)} className="h-8 rounded-lg border border-border bg-background px-1 text-xs">
                         <option value="">-</option><option value="hadir">Hadir</option><option value="tidak">Tidak</option>
                       </select>
+                    {g.checked_in_at && <p className="mt-1 text-[11px] text-emerald-700">✓ Sudah datang</p>}
                     </td>
                     <td className="p-3">
                       <div className="flex justify-end gap-1">
@@ -299,7 +340,7 @@ export default function AdminInvites() {
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-muted-foreground">Menampilkan {shown.length} dari {guests.length} tamu. Alur: isi/buat deskripsi → cek → Setujui → Kirim. Tombol kirim di baris hanya aktif setelah disetujui.</p>
+          <p className="text-xs text-muted-foreground">Menampilkan {shown.length} dari {guests.length} tamu. Alur: isi/buat deskripsi → cek → Setujui → Kirim (otomatis Livi / massal nomor sendiri / manual per tamu). Tombol kirim di baris hanya aktif setelah disetujui. Pesan manual & massal memuat tautan RSVP pribadi; saat tamu menjawab di sana, kolom Hadir? terisi sendiri (klik ↻ untuk memuat ulang).</p>
         </div>
       )}
 

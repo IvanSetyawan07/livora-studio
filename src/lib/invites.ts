@@ -8,6 +8,7 @@ export type InviteStats = {
   by_status: Record<string, number>;
   by_category: Record<string, number>;
   rsvp: Record<string, number>;
+  checked_in: number;
 };
 
 export type InviteEvent = {
@@ -29,6 +30,7 @@ export type InviteEvent = {
   stats: InviteStats;
   wa_ready: boolean;
   ai_ready: boolean;
+  bulk_ready: boolean;
 };
 
 export type InviteGuest = {
@@ -42,10 +44,11 @@ export type InviteGuest = {
   image_path: string | null;
   image_url: string | null;
   status: InviteStatus;
-  send_channel: "otomatis" | "manual" | null;
+  send_channel: "otomatis" | "manual" | "massal" | null;
   sent_at: string | null;
   rsvp: "hadir" | "tidak" | null;
   rsvp_at: string | null;
+  checked_in_at: string | null;
   error_note: string | null;
   notes: string | null;
 };
@@ -70,6 +73,13 @@ const form = (field: string, files: File[]) => {
   return fd;
 };
 const multipart = { headers: { "Content-Type": "multipart/form-data" } };
+  export type RsvpPage = { name: string; event: string; date_text: string; location: string | null; image_url: string | null;   rsvp: "hadir" | "tidak" | null; checked_in: boolean };
+
+  /** Halaman RSVP publik (tanpa login) — dipakai tamu lewat tautan pribadinya. */
+  export const inviteRsvp = {
+    get: (token: string) => api.get<RsvpPage>(`/invite/rsvp/${token}`).then((r) => r.data),
+    answer: (token: string, rsvp: "hadir" | "tidak") => api.post<{ ok: boolean; rsvp: "hadir" | "tidak" }>(`/invite/rsvp/${token}`, { rsvp }).then((r) => r.data),
+  };
 
 /** Pesan error yang ramah dari respons Laravel. */
 export const inviteError = (e: any): string => {
@@ -102,7 +112,11 @@ export const invites = {
     api.post<{ matched: number; unmatched: string[] }>(`${base}/events/${eventId}/guests/images`, form("images[]", files), { ...multipart, timeout: 120000 }).then((r) => r.data),
   send: (eventId: number, ids: number[], force = false) =>
     api.post<{ results: SendResult[] }>(`${base}/events/${eventId}/guests/send`, { ids, force }, { timeout: 180000 }).then((r) => r.data.results),
-  manualLink: (eventId: number, id: number) => api.get<{ url: string; message: string }>(`${base}/events/${eventId}/guests/${id}/manual-link`).then((r) => r.data),
+    sendBulk: (eventId: number, ids: number[], force = false) =>
+    api.post<{ results: SendResult[] }>(`${base}/events/${eventId}/guests/send-bulk`, { ids, force }, { timeout: 60000 }).then((r) => r.data.results),
+    checkIn: (eventId: number, id: number, value = true) => api.post<InviteGuest>(`${base}/events/${eventId}/guests/${id}/check-in`, { value }).then((r) => r.data),
+  checkInScan: (eventId: number, code: string) => api.post<{ guest: InviteGuest; already: boolean }>(`${base}/events/${eventId}/check-in-scan`, { code }).then((r) => r.data),
+    manualLink: (eventId: number, id: number) => api.get<{ url: string; message: string }>(`${base}/events/${eventId}/guests/${id}/manual-link`).then((r) => r.data),
   markSent: (eventId: number, id: number) => api.post<InviteGuest>(`${base}/events/${eventId}/guests/${id}/mark-sent`).then((r) => r.data),
    checkTemplate: (eventId: number, body: { name: string; lang: string; has_buttons: boolean }) =>
     api.post<TemplateCheck>(`${base}/events/${eventId}/check-template`, body, { timeout: 30000 }).then((r) => r.data),

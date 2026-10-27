@@ -431,6 +431,11 @@ Route::post('/funnel', function (\Illuminate\Http\Request $r) {
     if (in_array($event, ['konsultasi_klik'], true)) \App\Services\Shop\Ops::funnel($event, null, optional($r->user('sanctum'))->id, ['path' => substr((string) $r->input('path'), 0, 120)], substr((string) $r->input('session'), 0, 64));
     return ['ok' => true];
 })->middleware('throttle:30,1');
+// Balasan chat tamu undangan lewat Fonnte (dilindungi kata rahasia di URL)
+Route::post('/webhooks/fonnte/{secret}', [\App\Http\Controllers\Api\InviteFonnteWebhookController::class, 'handle'])->middleware('throttle:120,1');
+// RSVP undangan (publik, bertoken per tamu)
+Route::get('/invite/rsvp/{token}', [\App\Http\Controllers\Api\InviteRsvpController::class, 'show'])->middleware('throttle:30,1');
+Route::post('/invite/rsvp/{token}', [\App\Http\Controllers\Api\InviteRsvpController::class, 'store'])->middleware('throttle:10,1');
 Route::get('/order-form/{code}', [\App\Http\Controllers\Api\Shop\OrderFormController::class, 'show'])->middleware('throttle:30,1');
 Route::post('/order-form/{code}', [\App\Http\Controllers\Api\Shop\OrderFormController::class, 'submit'])->middleware('throttle:10,1');
 
@@ -543,6 +548,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/events/{event}/guests/approve', [$i, 'approve']);
         Route::post('/events/{event}/guests/images', [$i, 'bulkImages']);
         Route::post('/events/{event}/guests/send', [$i, 'send']);
+        Route::post('/events/{event}/guests/send-bulk', [$i, 'sendBulk']);
+        Route::post('/events/{event}/guests/{guest}/check-in', [$i, 'checkIn']);
+        Route::post('/events/{event}/check-in-scan', [$i, 'checkInScan']);
         Route::put('/events/{event}/guests/{guest}', [$i, 'updateGuest']);
         Route::delete('/events/{event}/guests/{guest}', [$i, 'destroyGuest']);
         Route::post('/events/{event}/guests/{guest}/image', [$i, 'guestImage']);
