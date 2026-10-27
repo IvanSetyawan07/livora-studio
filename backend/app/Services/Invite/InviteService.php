@@ -21,9 +21,23 @@ class InviteService
         if (!$e->event_date) return '';
         $days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
         $months = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-        $d = $e->event_date;
+                $d = $e->event_date->copy()->timezone('Asia/Jakarta'); // database UTC → tampil WIB
 
         return $days[$d->dayOfWeek].', '.$d->day.' '.$months[$d->month].' '.$d->year.' pukul '.$d->format('H.i').' WIB';
+    }
+        /** Pendaftar dari Sheet memakai gambar umum, jadi deskripsinya langsung diisi dari format dan berstatus siap. */
+    public static function autoFillSheetGuests(InviteEvent $e): int
+    {
+        if (trim((string) $e->description_format) === '') return 0;
+        $n = 0;
+        InviteGuest::with('event')->where('event_id', $e->id)->where('source', 'sheet')->where('status', 'draft')
+            ->where(fn ($q) => $q->whereNull('description')->orWhere('description', ''))->get()
+            ->each(function ($g) use ($e, &$n) {
+                $g->update(['description' => mb_substr(self::fillFormat($e, $g), 0, 1000), 'status' => 'siap']);
+                $n++;
+            });
+
+        return $n;
     }
 
     /** Ganti placeholder {nama} {acara} {tanggal} {lokasi} pada format. */

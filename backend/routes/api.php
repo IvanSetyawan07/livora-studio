@@ -526,6 +526,35 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/bot/scenarios/run', [$b, 'runScenarios'])->middleware('admin_role:owner');
     });
 
+        // Sebar Undangan (WhatsApp)
+    Route::prefix('admin/invites')->middleware('admin')->group(function () {
+        $i = \App\Http\Controllers\Api\Admin\InviteController::class;
+        Route::get('/events', [$i, 'events']);
+        Route::post('/events', [$i, 'storeEvent']);
+        Route::put('/events/{event}', [$i, 'updateEvent']);
+        Route::delete('/events/{event}', [$i, 'destroyEvent']);
+        Route::post('/events/{event}/image', [$i, 'eventImage']);
+        Route::delete('/events/{event}/image', [$i, 'removeEventImage']);
+        Route::get('/events/{event}/guests', [$i, 'guests']);
+        Route::post('/events/{event}/guests', [$i, 'storeGuest']);
+        Route::post('/events/{event}/guests/import', [$i, 'importGuests']);
+        Route::post('/events/{event}/guests/delete', [$i, 'bulkDelete']);
+        Route::post('/events/{event}/guests/generate', [$i, 'generate']);
+        Route::post('/events/{event}/guests/approve', [$i, 'approve']);
+        Route::post('/events/{event}/guests/images', [$i, 'bulkImages']);
+        Route::post('/events/{event}/guests/send', [$i, 'send']);
+        Route::put('/events/{event}/guests/{guest}', [$i, 'updateGuest']);
+        Route::delete('/events/{event}/guests/{guest}', [$i, 'destroyGuest']);
+        Route::post('/events/{event}/guests/{guest}/image', [$i, 'guestImage']);
+        Route::delete('/events/{event}/guests/{guest}/image', [$i, 'removeGuestImage']);
+        Route::get('/events/{event}/guests/{guest}/manual-link', [$i, 'manualLink']);
+        Route::post('/events/{event}/guests/{guest}/mark-sent', [$i, 'markSent']);
+        Route::post('/events/{event}/pull-sheet', [$i, 'pullSheet']);
+        Route::get('/events/{event}/chat', [$i, 'chatHistory']);
+        Route::post('/events/{event}/chat', [$i, 'chat']);
+        Route::delete('/events/{event}/chat', [$i, 'clearChat']);
+    });
+    
     // Notifikasi admin N1–N16 (lonceng, Tugas Saya)
     $n = \App\Http\Controllers\Api\Admin\NotificationController::class;
     Route::get('/admin/notifications', [$n, 'index'])->middleware('admin');

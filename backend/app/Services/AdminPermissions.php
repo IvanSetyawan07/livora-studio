@@ -31,6 +31,7 @@ class AdminPermissions
         'shop_aftercare' => 'Klaim & refund',
         'shop_inbox'     => 'Inbox WhatsApp',
         'shop_database'  => 'Database toko',
+        'invites'        => 'Sebar Undangan',
         'shop_system'    => 'Pengaturan, kesehatan & bot toko',
     ];
 
@@ -39,7 +40,7 @@ class AdminPermissions
             'catalog' => 'view', 'projects' => 'view', 'landing' => 'none', 'users' => 'view',
             'consultations' => 'edit', 'wishlists' => 'view', 'support' => 'edit', 'analytics' => 'none',
             'marketing' => 'none', 'shop_orders' => 'edit', 'shop_payments' => 'view', 'shop_aftercare' => 'view',
-            'shop_inbox' => 'edit', 'shop_database' => 'view', 'shop_system' => 'none',
+            'shop_inbox' => 'edit', 'shop_database' => 'view', 'shop_system' => 'none', 'invites' => 'edit',
         ],
         'finance' => [
             'catalog' => 'view', 'projects' => 'none', 'landing' => 'none', 'users' => 'none',
@@ -61,6 +62,7 @@ class AdminPermissions
         'admin/shop/proofs' => 'shop_payments',
         'admin/shop/claims' => 'shop_aftercare', 'admin/shop/refunds' => 'shop_aftercare',
         'admin/shop/inbox' => 'shop_inbox',
+        'admin/invites' => 'invites',
         'admin/shop/database' => 'shop_database', 'admin/shop/admins' => 'shop_database',
         'admin/shop' => 'shop_system',
         'admin/projects' => 'projects', 'admin/layouts' => 'projects', 'admin/rooms' => 'projects',

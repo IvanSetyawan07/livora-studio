@@ -45,6 +45,7 @@ const AdminShopHealth = lazy(() => import("./pages/admin/shop/AdminShopHealth"))
 const AdminShopBotSimulator = lazy(() => import("./pages/admin/shop/AdminShopBotSimulator"));
 const AdminShopBoard = lazy(() => import("./pages/admin/shop/AdminShopBoard"));
 const AdminBotLogs = lazy(() => import("./pages/admin/shop/AdminBotLogs"));
+const AdminInvites = lazy(() => import("./pages/admin/invites/AdminInvites"));
 const OrderConfirm = lazy(() => import("./pages/OrderConfirm"));
 const OrderPay = lazy(() => import("./pages/OrderPay"));
 const AdminShopScan = lazy(() => import("./pages/admin/shop/AdminShopScan"));
@@ -198,7 +199,7 @@ function App() {
                 <Route path="shop/bot-simulator" element={<AdminShopBotSimulator />} />
                 <Route path="shop/board" element={<AdminShopBoard />} />
                 <Route path="shop/bot-logs" element={<AdminBotLogs />} />
-
+                <Route path="invites" element={<AdminInvites />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

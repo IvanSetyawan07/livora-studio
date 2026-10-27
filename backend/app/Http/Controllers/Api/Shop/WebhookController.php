@@ -115,6 +115,9 @@ class WebhookController extends Controller
             return;
         }
 
+// Sebar Undangan: tombol Hadir/Tidak + tanya jawab tamu undangan
+        if ($this->handleInvite($conv, $phone, $type, $text, $m)) return;
+
         // Mesin bot baru: Livi (state machine + AI + guardrail)
         $result = app(\App\Services\Shop\LiviBot::class)->handle($phone, $text, $type, $m, false);
         $orderId = DB::table('wa_conversations')->where('id', $conv->id)->value('order_id') ?: $orderId;
@@ -126,17 +129,35 @@ class WebhookController extends Controller
         }
     }
 
-    protected function ensureConversation(string $phone, ?string $name): object
+        /** True bila pesan sudah ditangani alur undangan (RSVP atau pertanyaan soal acara). */
+    protected function handleInvite(object $conv, string $phone, string $type, string $text, array $m): bool
     {
-        $conv = DB::table('wa_conversations')->where('phone', $phone)->first();
-        if ($conv) return $conv;
-        DB::table('wa_conversations')->insert([
-            'phone' => $phone, 'state' => 'sapaan', 'mode' => 'bot', 'wa_name' => $name ? mb_substr($name, 0, 120) : null,
-            'user_id' => \App\Models\User::where('phone', $phone)->value('id'),
-            'last_inbound_at' => now(), 'created_at' => now(), 'updated_at' => now(),
-        ]);
+        $replyId = (string) ($m['_reply']['id'] ?? '');
+        $touch = fn () => DB::table('wa_conversations')->where('id', $conv->id)->update(['last_inbound_at' => now(), 'updated_at' => now()]);
 
-        return DB::table('wa_conversations')->where('phone', $phone)->first();
+        if (str_starts_with($replyId, \App\Services\Invite\InviteService::RSVP_YES) || str_starts_with($replyId, \App\Services\Invite\InviteService::RSVP_NO)) {
+            $reply = \App\Services\Invite\InviteService::handleRsvpReply($phone, $replyId);
+            if (!$reply) return false;
+            $touch();
+            \App\Services\Shop\WaSender::text($phone, $reply);
+
+            return true;
+        }
+
+        // Hanya saat bot yang memegang chat dan belum di tengah alur pesanan
+        if ($type !== 'text' || $text === '' || $conv->mode !== 'bot' || !in_array($conv->state, ['sapaan', 'menu', 'tanya_jawab'], true)) return false;
+        $guest = \App\Services\Invite\InviteService::activeGuest($phone);
+        if (!$guest) return false;
+        $res = \App\Services\Invite\InviteService::answerGuest($guest, $text);
+        if (!$res) return false;
+
+        $touch();
+        \App\Services\Shop\WaSender::text($phone, $res['reply']);
+        if ($res['handoff']) {
+            (new \App\Services\Shop\BotTools($phone, $conv))->call('request_handoff', ['reason' => 'undangan', 'summary' => 'Tamu undangan '.$guest->name.' bertanya: '.mb_substr($text, 0, 200)]);
+        }
+
+        return true;
     }
 
     protected function handleFlowReply(string $phone, array $data): void

@@ -169,7 +169,9 @@ class WaSender
         $payload = match ($msg['type'] ?? 'text') {
             'buttons' => [
                 'messaging_product' => 'whatsapp', 'to' => $phone, 'type' => 'interactive',
-                'interactive' => $interactive(['type' => 'button', 'body' => ['text' => $msg['body']],
+                    'interactive' => $interactive(['type' => 'button',
+                    'header' => !empty($msg['header_image']) ? ['type' => 'image', 'image' => ['link' => $msg['header_image']]] : null,
+                    'body' => ['text' => $msg['body']],
                     'action' => ['buttons' => array_map(fn ($b) => ['type' => 'reply', 'reply' => ['id' => $b['id'], 'title' => $b['title']]], $msg['buttons'])]]),
             ],
             'list' => [
