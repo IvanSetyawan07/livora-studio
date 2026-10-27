@@ -52,13 +52,34 @@ S;
 
     /** Selalu ditambahkan ke persona, termasuk bila Owner menyimpan persona sendiri di Pengaturan. */
     public const PERSONA_ADDENDUM = <<<'A'
-CATATAN TAMBAHAN (berlaku di atas aturan lain):
-- Scope of work Livora ada di DATA.profil_livora. Bila customer bertanya Livora itu apa / layanannya apa, jelaskan ramah dan ringkas dengan kata-katamu sendiri, sesuaikan dengan pertanyaannya.
-- Lewat WhatsApp kamu fokus Loose Furniture (kenalan produk, cek harga lewat tim, mencatat pesanan). Untuk Decorative Interior, Interior Contractor & Architecture, atau Material/Fitting: jelaskan singkat, lalu tawarkan konsultasi dengan tim (handoff true bila customer mau lanjut) atau booking lewat halaman Appointment di website. Jangan menjanjikan harga atau jadwal untuk layanan itu.
-- Ngobrol dulu: tanggapi sapaan, kabar, atau cerita customer dengan hangat sebelum membahas barang. Jangan menggiring ke pesanan bila customer belum menunjukkan niat memesan; boleh bertanya balik secara natural (mis. ruangan mana yang mau dilengkapi).
+CATATAN TAMBAHAN (berlaku di atas aturan lain, termasuk aturan nomor 4 di atas):
+
+CARA BERPIKIR
+- Sebelum menjawab, tangkap dulu tiga hal: (a) apa yang sebenarnya diinginkan customer, (b) suasana hatinya (antusias, bingung, buru-buru, ragu, kecewa), (c) percakapan sudah sampai mana (baca riwayat chat). Jawab sesuai ketiganya, bukan sekadar menanggapi kata kunci.
+- Pahami maksud di balik kalimatnya. "Mau lihat sofa" berarti customer sedang menjelajah: sambut, tawarkan 2-3 pilihan dari DATA.produk atau DATA.katalog_ringkas (sebut nama dan alasan yang nyata), lalu tanyakan satu hal yang mengerucutkan (untuk ruang apa, ukuran, gaya, warna).
+- Pertanyaan umum soal interior dan furnitur (memilih ukuran sofa, merawat material, memadukan warna, menata ruang kecil) boleh dijawab dengan pengetahuan umum yang benar, hangat dan praktis, lalu dikaitkan dengan koleksi atau layanan Livora bila relevan. Fakta spesifik Livora (harga, stok, waktu produksi, diskon, kemampuan custom, jadwal) HANYA dari DATA.
+
+CARA MENGOBROL
+- Tanggapi dulu cerita atau perasaan customer dengan tulus dan spesifik (sebut hal yang ia ceritakan), baru beri informasi. Bila ia ragu, bantu membandingkan, jangan menekan untuk membeli.
+- Satu giliran, satu fokus. Ajukan paling banyak SATU pertanyaan di akhir, hanya yang membantu langkah berikutnya. Jangan menginterogasi.
+- Tulis seperti orang mengetik di WhatsApp: paragraf pendek, 2-5 kalimat, boleh lebih panjang saat menjelaskan. Hindari poin-poin dan format kaku kecuali customer meminta daftar.
+- Jangan mengulang kalimat, pembuka, atau penutup yang sudah kamu pakai di riwayat chat. Jangan menyalin ulang pertanyaan customer. Tidak ada jawaban cetakan.
+- Cerminkan gaya customer: santai atau formal, singkat atau detail. Customer berbahasa Inggris dibalas bahasa Inggris.
+- Akui batas dengan jujur tapi tetap membantu: misalnya "harga pastinya perlu dicek tim, tapi dari yang Livi tahu ..." lalu beri informasi berguna yang ada.
+- Kamu asisten AI yang cerdas dan hangat; tidak perlu pura-pura manusia, dan tidak perlu mengulang bahwa kamu bot kecuali ditanya.
+
+PENGETAHUAN
+- Seluruh pengetahuan Livora ada di DATA.pengetahuan_livora, ringkasan katalog di DATA.katalog_ringkas, produk yang relevan dengan pesan ini di DATA.produk. Rekomendasikan produk dengan menyebut nama dan alasan nyata (gaya, material, dimensi dari DATA). Jangan mengarang spesifikasi.
+- Bila customer bertanya layanan selain Loose Furniture (desain interior, kontraktor, material), jelaskan nilai dan alurnya dengan kata-katamu sendiri dari DATA.pengetahuan_livora, lalu arahkan ke My Consultation di livoralcr.com atau ke tim.
+- Bila customer bertanya Livora itu apa, ceritakan sesuai pertanyaannya (ringkas, tidak menyalin teks), lalu tanyakan apa yang sedang ia cari.
 - Bila DATA.kontak_pertama true, perkenalan sudah dikirim terpisah: langsung jawab, jangan menyapa ulang.
 - Bila DATA.cek_harga_sedang_berjalan true, harga sedang dicek tim: jangan menyebut angka harga apa pun, bilang masih ditunggu dari tim.
 - Harga dari tim (info_harga_dari_tim) adalah gambaran, bukan penawaran atau pesanan. Harga final termasuk ongkir & PPN dikirim tim lewat penawaran resmi.
+
+KAPAN MENYERAHKAN KE TIM (handoff true): jarang, bukan jalan pintas
+- Hanya bila: customer meminta bicara dengan tim atau manusia; komplain atau marah; minta nego atau diskon; butuh pekerjaan custom atau project yang perlu survei; atau butuh fakta Livora yang jelas tidak ada di DATA DAN kamu sudah membantu semampunya (menggali kebutuhan dan memberi informasi yang ada).
+- Sebelum menyerahkan, kumpulkan konteks (kebutuhan, ruangan, gaya, kapan butuh) supaya tim tidak bertanya ulang, lalu jelaskan dengan hangat apa yang akan tim lakukan.
+- Pertanyaan yang bisa dijawab dari pengetahuan umum atau DATA tidak boleh dilempar ke tim.
 A;
 
     protected array $toolsCalled = [];
@@ -719,9 +740,14 @@ A;
         $fails = (int) $conv->fail_count + 1;
         if (!$simulate) DB::table('wa_conversations')->where('id', $conv->id)->update(['fail_count' => $fails, 'updated_at' => now()]);
         $conv->fail_count = $fails;
-        if ($fails >= 2) return $this->doHandoff($conv, $phone, 'gagal_paham', $simulate, $started);
+        if ($fails >= 4) return $this->doHandoff($conv, $phone, 'gagal_paham', $simulate, $started);
 
-        return $this->result($this->lead($conv, [$this->t('Maaf Kak, saya kurang menangkap maksudnya. Boleh diulang dengan kata lain? Atau ketik TIM untuk bicara dengan tim kami.')]), $conv, 'gagal_paham', 'fallback', $started);
+        // $ai === null: AI tidak membalas (gangguan atau dimatikan). Jangan menyalahkan customer.
+        $msg = $ai === null
+            ? 'Maaf Kak, Livi lagi agak lambat nih 🙏 Boleh kirim ulang pesannya sebentar lagi? Atau kalau mau langsung ditemani tim, ketik TIM ya.'
+            : 'Hmm, Livi belum nangkep maksud yang ini. Boleh diceritakan sedikit lagi, misalnya ruangan atau barang yang Kakak cari? Kalau mau langsung ngobrol dengan tim, ketik TIM ya.';
+
+        return $this->result($this->lead($conv, [$this->t($msg)]), $conv, 'gagal_paham', 'fallback', $started);
     }
 
     protected function doHandoff(object $conv, string $phone, string $trigger, bool $simulate, float $started, ?string $prefix = null): array
@@ -759,11 +785,11 @@ A;
         }
         $words = collect(preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower($text)))->filter(fn ($w) => mb_strlen($w) >= 4)->unique()->take(4);
         foreach ($words as $w) {
-            foreach (Item::where('title', 'like', '%'.$w.'%')->limit(2)->get() as $it) {
-                $info = $tools->call('get_product_info', ['item_id' => $it->id, 'query' => '']);
-                if ($info['found'] ?? false) $push($info);
-                if (count($products) >= 5) break 2;
-            }
+            foreach (LivoraKnowledge::findItems($text, 5) as $it) {
+            $info = $tools->call('get_product_info', ['item_id' => $it->id, 'query' => '']);
+            if ($info['found'] ?? false) $push($info);
+            if (count($products) >= 5) break;
+        }
         }
         $orders = ShopOrder::where('customer_phone', $phone)->whereNotIn('status', ['selesai', 'dibatalkan', 'kedaluwarsa'])->latest()->limit(3)->get(['code', 'status'])
             ->map(fn ($o) => ['kode' => $o->code, 'status' => ShopOrderService::LABELS[$o->status] ?? $o->status])->all();
@@ -789,7 +815,7 @@ A;
             }
         }
 
-        return ['state' => $conv->state, 'profil_livora' => self::SCOPE_TEXT, 'kontak_pertama' => $this->isFirstContact($conv),
+                return ['state' => $conv->state, 'pengetahuan_livora' => LivoraKnowledge::text(), 'katalog_ringkas' => LivoraKnowledge::catalogOverview(), 'kontak_pertama' => $this->isFirstContact($conv),
             'produk' => array_values($products), 'info_harga_dari_tim' => $infoHarga, 'cek_harga_sedang_berjalan' => $pending,
             'pesanan_aktif_nomor_ini' => $orders, 'jam_kerja_aktif' => ShopSettings::withinBusinessHours()];
     }
@@ -909,7 +935,7 @@ A;
 
     protected function history(string $phone): array
     {
-        $rows = DB::table('wa_messages')->where('phone', $phone)->where('is_note', false)->latest('id')->limit(11)->get()->reverse()->values();
+        $rows = DB::table('wa_messages')->where('phone', $phone)->where('is_note', false)->latest('id')->limit(21)->get()->reverse()->values();
         if ($rows->isNotEmpty() && $rows->last()->direction === 'in') $rows = $rows->slice(0, -1)->values();
 
         return $rows->map(fn ($m) => ['role' => $m->direction === 'in' ? 'user' : 'assistant', 'content' => (string) $m->body])->values()->all();
