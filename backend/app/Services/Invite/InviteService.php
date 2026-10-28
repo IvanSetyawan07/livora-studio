@@ -195,34 +195,37 @@ P;
             return ['ok' => false, 'error' => $err];
         }
 
-        $items = $guests->map(function (InviteGuest $g) {
-            $item = ['target' => self::cleanPhone($g->phone) ?? $g->phone, 'message' => self::messageFor($g, true), 'delay' => '8-20'];
-            if ($g->image_url) $item['url'] = $g->image_url; // butuh paket Fonnte yang mendukung media; hapus baris ini kalau paket belum support
-            return $item;
-        })->values()->all();
+        $errors = [];
+        foreach ($guests->values()->chunk(10) as $chunk) {
+            $items = $chunk->map(function (InviteGuest $g) {
+                $item = ['target' => self::cleanPhone($g->phone) ?? $g->phone, 'message' => self::messageFor($g, true), 'delay' => '8-20'];
+                if ($g->image_url) $item['url'] = $g->image_url;
+                return $item;
+            })->values()->all();
 
-        try {
-                        $res = Http::withOptions(['connect_timeout' => 5])->timeout(60)
-                // Ulangi hanya bila gagal tersambung ke Fonnte (pesan belum terkirim, jadi tidak ada kirim ganda).
-                ->retry(5, 1500, fn ($e) => $e instanceof \Illuminate\Http\Client\ConnectionException
-                    && preg_match('/Connection timed out|Could not resolve|Failed to connect|Couldn\'t connect/i', $e->getMessage()))
-                ->withHeaders(['Authorization' => $token])->asForm()
-                ->post('https://api.fonnte.com/send', ['data' => json_encode($items, JSON_UNESCAPED_UNICODE), 'countryCode' => '62']);
-            $body = $res->json() ?? [];
-            if (!$res->successful() || ($body['status'] ?? true) === false) {
-                $err = 'Fonnte menolak: '.($body['reason'] ?? 'HTTP '.$res->status());
+            $err = null;
+            try {
+                $res = Http::timeout(30)->withHeaders(['Authorization' => $token])->asForm()
+                    ->post('https://api.fonnte.com/send', ['data' => json_encode($items, JSON_UNESCAPED_UNICODE), 'countryCode' => '62']);
+                $body = $res->json() ?? [];
+                if (!$res->successful() || ($body['status'] ?? true) === false) {
+                    $err = 'Fonnte menolak: '.($body['reason'] ?? 'HTTP '.$res->status());
+                }
+            } catch (\Throwable $e) {
+                $err = 'Fonnte tidak bisa dihubungi: '.$e->getMessage();
             }
-        } catch (\Throwable $e) {
-            $err = 'Fonnte tidak bisa dihubungi: '.$e->getMessage();
+
+            if ($err) {
+                foreach ($chunk as $g) self::fail($g, $err, 'massal');
+                $errors[] = $err;
+                continue;
+            }
+
+            foreach ($chunk as $g) $g->update(['status' => 'terkirim', 'send_channel' => 'massal', 'sent_at' => now(), 'error_note' => null]);
+            usleep(500000);
         }
 
-        if (isset($err)) {
-            foreach ($guests as $g) self::fail($g, $err, 'massal');
-
-            return ['ok' => false, 'error' => $err];
-        }
-
-        foreach ($guests as $g) $g->update(['status' => 'terkirim', 'send_channel' => 'massal', 'sent_at' => now(), 'error_note' => null]);
+        if ($errors) return ['ok' => false, 'error' => count($errors).' batch gagal: '.$errors[0]];
 
         return ['ok' => true, 'error' => null];
     }
