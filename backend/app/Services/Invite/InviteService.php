@@ -202,7 +202,11 @@ P;
         })->values()->all();
 
         try {
-            $res = Http::timeout(30)->withHeaders(['Authorization' => $token])->asForm()
+                        $res = Http::withOptions(['connect_timeout' => 5])->timeout(60)
+                // Ulangi hanya bila gagal tersambung ke Fonnte (pesan belum terkirim, jadi tidak ada kirim ganda).
+                ->retry(5, 1500, fn ($e) => $e instanceof \Illuminate\Http\Client\ConnectionException
+                    && preg_match('/Connection timed out|Could not resolve|Failed to connect|Couldn\'t connect/i', $e->getMessage()))
+                ->withHeaders(['Authorization' => $token])->asForm()
                 ->post('https://api.fonnte.com/send', ['data' => json_encode($items, JSON_UNESCAPED_UNICODE), 'countryCode' => '62']);
             $body = $res->json() ?? [];
             if (!$res->successful() || ($body['status'] ?? true) === false) {
