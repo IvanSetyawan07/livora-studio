@@ -23,6 +23,7 @@ export default function AdminMarketing() {
   const [query, setQuery] = useState("");
   const [target, setTarget] = useState<RecipientTarget>("all");
   const [selected, setSelected] = useState<Record<number, boolean>>({});
+  const [extraEmails, setExtraEmails] = useState("");
 
   // Campaign fields
   const [campaignName, setCampaignName] = useState("");
@@ -57,6 +58,10 @@ export default function AdminMarketing() {
   }, [audience, query]);
 
   const selectedIds = Object.keys(selected).filter((k) => selected[+k]).map(Number);
+  const extraCount = extraEmails
+    .split(/[\r\n,;]+/)
+    .map((s) => s.trim())
+    .filter(Boolean).length;
 
   const toggleAll = () => {
     if (filtered.every((u) => selected[u.id])) {
@@ -90,7 +95,7 @@ export default function AdminMarketing() {
       alert("Lengkapi CTA label dan URL, atau matikan opsi CTA.");
       return false;
     }
-    if (!forTest && target === "selected" && selectedIds.length === 0) {
+    if (!forTest && target === "selected" && selectedIds.length === 0 && extraCount === 0) {
       alert("Pilih minimal satu penerima.");
       return false;
     }
@@ -110,6 +115,7 @@ export default function AdminMarketing() {
     signature,
     target,
     user_ids: target === "selected" ? selectedIds : [],
+    extra_emails: extraEmails,
   });
 
   const sendTest = async () => {
@@ -137,8 +143,8 @@ export default function AdminMarketing() {
 
   const send = async () => {
     if (!validate(false)) return;
-    const total = target === "all" ? audience.length : selectedIds.length;
-    if (!confirm(`Kirim email ke ${target === "all" ? total : selectedIds.length} penerima?`)) return;
+    const total = (target === "all" ? audience.length : selectedIds.length) + extraCount;
+    if (!confirm(`Kirim email ke ${total} penerima?`)) return;
 
     setSending(true);
     setResult(null);
@@ -298,6 +304,24 @@ export default function AdminMarketing() {
                   {t === "all" ? "All Subscribers" : t === "selected" ? `Selected (${selectedIds.length})` : "Segment"}
                 </button>
               ))}
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-xs uppercase tracking-[0.15em] text-muted-foreground mb-2">
+                Email tambahan {extraCount > 0 && `(${extraCount})`}
+              </label>
+              <textarea
+                value={extraEmails}
+                onChange={(e) => setExtraEmails(e.target.value)}
+                rows={3}
+                placeholder={"Sisca <sisca@smdv.com>\nnama@email.com"}
+                className="w-full px-3 py-2 border border-border rounded bg-background text-sm"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Untuk penerima yang belum punya akun. Satu per baris, atau pisahkan dengan koma. Format: email@x.com
+                atau Nama &lt;email@x.com&gt;. Untuk mengirim hanya ke email tambahan, pilih tab Selected tanpa
+                mencentang user.
+              </p>
             </div>
 
             {target === "selected" && (

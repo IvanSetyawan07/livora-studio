@@ -256,7 +256,7 @@ P;
                 return self::fail($g, 'Tamu belum chat 24 jam terakhir, jadi wajib pakai template Meta. Isi nama template di pengaturan acara, atau kirim manual.', 'template');
             }
             $components = [];
-            if ($img) $components[] = ['type' => 'header', 'parameters' => [['type' => 'image', 'image' => ['link' => $img]]]];
+            if ($img && str_ends_with((string) $e->wa_template_name, '_img')) $components[] = ['type' => 'header', 'parameters' => [['type' => 'image', 'image' => ['link' => $img]]]];
             $components[] = ['type' => 'body', 'parameters' => [['type' => 'text', 'text' => $g->name]]];
             if ($e->template_has_buttons) {
                 $components[] = ['type' => 'button', 'sub_type' => 'quick_reply', 'index' => '0', 'parameters' => [['type' => 'payload', 'payload' => self::RSVP_YES.$g->id]]];
