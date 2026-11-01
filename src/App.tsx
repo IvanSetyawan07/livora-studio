@@ -189,6 +189,7 @@ function App() {
                 <Route path="shop/payments" element={<AdminShopPayments />} />
                 <Route path="shop/database" element={<AdminShopDatabase />} />
                 <Route path="roles" element={<AdminRoles />} />
+                <Route path="shop/offline" element={<AdminShopOffline />} />
                 <Route path="shop/scan" element={<AdminShopScan />} />
                 <Route path="shop/inbox" element={<AdminShopInbox />} />
                 <Route path="shop/aftercare" element={<AdminShopAftercare />} />

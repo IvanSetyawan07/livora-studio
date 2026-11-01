@@ -154,7 +154,8 @@ class ShopOrderService
                 $line = $order->items()->latest('id')->first();
                 if (isset($row['unit_price'])) {
                     $line->unit_price = max(0, (int) $row['unit_price']);
-                    $line->unit_discount = min($line->unit_discount, $line->unit_price);
+                    $line->unit_discount = 0; // harga showroom = harga final yang ditetapkan admin
+                    $line->discount_label = null;
                     $line->save();
                 }
             }
