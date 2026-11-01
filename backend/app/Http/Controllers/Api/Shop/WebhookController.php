@@ -115,6 +115,9 @@ class WebhookController extends Controller
             return;
         }
 
+        // Undangan acara: tombol Hadir/Tidak, lalu pertanyaan tamu soal acara dijawab dari info acara
+        if ($this->handleInvitation($phone, $text, $type, $m, $conv)) return;
+
         // Mesin bot baru: Livi (state machine + AI + guardrail)
         $result = app(\App\Services\Shop\LiviBot::class)->handle($phone, $text, $type, $m, false);
         $orderId = DB::table('wa_conversations')->where('id', $conv->id)->value('order_id') ?: $orderId;
@@ -124,6 +127,26 @@ class WebhookController extends Controller
             $msg = is_array($reply) ? $reply : ['type' => 'text', 'body' => (string) $reply];
             \App\Services\Shop\WaSender::send($phone, $msg, $orderId, $conv->id);
         }
+    }
+
+    protected function handleInvitation(string $phone, string $text, string $type, array $m, object $conv): bool
+    {
+        $svc = \App\Services\Invite\InviteService::class;
+        $replyId = (string) ($m['_reply']['id'] ?? '');
+        if ($replyId !== '' && ($reply = $svc::handleRsvpReply($phone, $replyId))) {
+            \App\Services\Shop\WaSender::send($phone, ['type' => 'text', 'body' => $reply], null, $conv->id);
+            return true;
+        }
+        if ($type !== 'text' || trim($text) === '' || in_array($conv->mode, ['menunggu_admin', 'dipegang_admin'], true)) return false;
+        $guest = $svc::activeGuest($phone);
+        if (!$guest) return false;
+        $ans = $svc::answerGuest($guest, $text);
+        if (!$ans) return false;
+        \App\Services\Shop\WaSender::send($phone, ['type' => 'text', 'body' => $ans['reply']], null, $conv->id);
+        if ($ans['handoff']) {
+            DB::table('wa_conversations')->where('id', $conv->id)->update(['mode' => 'menunggu_admin', 'updated_at' => now()]);
+        }
+        return true;
     }
 
     protected function ensureConversation(string $phone, ?string $name): object

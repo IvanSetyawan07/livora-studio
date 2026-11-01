@@ -32,6 +32,7 @@ class AdminPermissions
         'shop_inbox'     => 'Inbox WhatsApp',
         'shop_database'  => 'Database toko',
         'shop_system'    => 'Pengaturan, kesehatan & bot toko',
+        'invitations'    => 'Sebar undangan',
     ];
 
     public const DEFAULTS = [
@@ -39,19 +40,19 @@ class AdminPermissions
             'catalog' => 'view', 'projects' => 'view', 'landing' => 'none', 'users' => 'view',
             'consultations' => 'edit', 'wishlists' => 'view', 'support' => 'edit', 'analytics' => 'none',
             'marketing' => 'none', 'shop_orders' => 'edit', 'shop_payments' => 'view', 'shop_aftercare' => 'view',
-            'shop_inbox' => 'edit', 'shop_database' => 'view', 'shop_system' => 'none',
+            'shop_inbox' => 'edit', 'shop_database' => 'view', 'shop_system' => 'none', 'invitations' => 'edit',
         ],
         'finance' => [
             'catalog' => 'view', 'projects' => 'none', 'landing' => 'none', 'users' => 'none',
             'consultations' => 'view', 'wishlists' => 'none', 'support' => 'none', 'analytics' => 'view',
             'marketing' => 'none', 'shop_orders' => 'view', 'shop_payments' => 'edit', 'shop_aftercare' => 'edit',
-            'shop_inbox' => 'none', 'shop_database' => 'view', 'shop_system' => 'none',
+            'shop_inbox' => 'none', 'shop_database' => 'view', 'shop_system' => 'none', 'invitations' => 'none',
         ],
         'production' => [
             'catalog' => 'view', 'projects' => 'edit', 'landing' => 'none', 'users' => 'none',
             'consultations' => 'view', 'wishlists' => 'none', 'support' => 'none', 'analytics' => 'none',
             'marketing' => 'none', 'shop_orders' => 'edit', 'shop_payments' => 'none', 'shop_aftercare' => 'edit',
-            'shop_inbox' => 'none', 'shop_database' => 'none', 'shop_system' => 'none',
+            'shop_inbox' => 'none', 'shop_database' => 'none', 'shop_system' => 'none', 'invitations' => 'none',
         ],
     ];
 
@@ -71,6 +72,7 @@ class AdminPermissions
         'admin/wishlists' => 'wishlists',
         'admin/support' => 'support',
         'admin/analytics' => 'analytics',
+        'admin/invitations' => 'invitations',
         'admin/marketing' => 'marketing', 'ai' => 'marketing',
     ];
 

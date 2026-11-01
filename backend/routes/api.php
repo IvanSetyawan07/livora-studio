@@ -526,6 +526,29 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/bot/scenarios/run', [$b, 'runScenarios'])->middleware('admin_role:owner');
     });
 
+    // Sebar Undangan (acara, tamu, deskripsi AI, kirim WA, Google Sheet, chat AI)
+    Route::middleware('admin')->prefix('admin/invitations')->group(function () {
+        $i = \App\Http\Controllers\Api\Admin\InvitationController::class;
+        Route::get('/events', [$i, 'events']);
+        Route::post('/events', [$i, 'saveEvent']);
+        Route::post('/events/{event}', [$i, 'saveEvent']);
+        Route::delete('/events/{event}', [$i, 'deleteEvent']);
+        Route::get('/events/{event}/guests', [$i, 'guests']);
+        Route::post('/events/{event}/guests', [$i, 'saveGuest']);
+        Route::post('/events/{event}/guests/bulk', [$i, 'bulkGuests']);
+        Route::post('/events/{event}/guests/delete', [$i, 'deleteGuests']);
+        Route::post('/events/{event}/guests/{guest}', [$i, 'saveGuest'])->scopeBindings();
+        Route::delete('/events/{event}/guests/{guest}/image', [$i, 'removeGuestImage'])->scopeBindings();
+        Route::get('/events/{event}/guests/{guest}/manual', [$i, 'manualLink'])->scopeBindings();
+        Route::post('/events/{event}/guests/{guest}/manual-sent', [$i, 'markManualSent'])->scopeBindings();
+        Route::post('/events/{event}/pull-sheet', [$i, 'pullSheet']);
+        Route::post('/events/{event}/generate', [$i, 'generate']);
+        Route::post('/events/{event}/send', [$i, 'send']);
+        Route::get('/events/{event}/chat', [$i, 'chatHistory']);
+        Route::post('/events/{event}/chat', [$i, 'chat']);
+        Route::delete('/events/{event}/chat', [$i, 'clearChat']);
+    });
+
     // Notifikasi admin N1–N16 (lonceng, Tugas Saya)
     $n = \App\Http\Controllers\Api\Admin\NotificationController::class;
     Route::get('/admin/notifications', [$n, 'index'])->middleware('admin');
