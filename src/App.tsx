@@ -49,6 +49,7 @@ const AdminInvitations = lazy(() => import("./pages/admin/AdminInvitations"));
 const OrderConfirm = lazy(() => import("./pages/OrderConfirm"));
 const OrderPay = lazy(() => import("./pages/OrderPay"));
 const AdminShopScan = lazy(() => import("./pages/admin/shop/AdminShopScan"));
+const AdminShopOffline = lazy(() => import("./pages/admin/shop/AdminShopOffline"));
 const AdminRoles = lazy(() => import("./pages/admin/AdminRoles"));
 const AdminShopDatabase = lazy(() => import("./pages/admin/shop/AdminShopDatabase"));
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
