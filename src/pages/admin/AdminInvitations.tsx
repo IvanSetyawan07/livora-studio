@@ -88,6 +88,18 @@ export default function AdminInvitations() {
   );
 }
 
+function Sec({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  return <section className="rounded-2xl border border-border bg-card p-4"><h3 className="font-medium">{title}</h3>{hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}<div className="mt-3 space-y-3">{children}</div></section>;
+}
+
+function B({ k, busy, onClick, children, primary }: { k: string; busy: string | null; onClick: () => void; children: React.ReactNode; primary?: boolean }) {
+  return (
+    <button type="button" disabled={!!busy} onClick={onClick} className={`inline-flex h-9 items-center gap-2 rounded-full px-4 text-sm disabled:opacity-50 ${primary ? "bg-foreground text-background" : "border border-border"}`}>
+      {busy === k ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{children}
+    </button>
+  );
+}
+
 /* ---------------- Daftar tamu ---------------- */
 function GuestsTab({ event, onChanged }: { event: Ev; onChanged: () => void }) {
   const [guests, setGuests] = useState<Guest[] | null>(null);
@@ -165,11 +177,6 @@ function GuestsTab({ event, onChanged }: { event: Ev; onChanged: () => void }) {
     } catch (e) { toast.error(errMsg(e, "Gagal membuka WhatsApp")); }
   };
 
-  const B = ({ k, onClick, children, primary }: any) => (
-    <button type="button" disabled={!!busy} onClick={onClick} className={`inline-flex h-9 items-center gap-2 rounded-full px-4 text-sm disabled:opacity-50 ${primary ? "bg-foreground text-background" : "border border-border"}`}>
-      {busy === k ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{children}
-    </button>
-  );
 
   return (
     <div className="mt-4">
@@ -183,17 +190,17 @@ function GuestsTab({ event, onChanged }: { event: Ev; onChanged: () => void }) {
         </select>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        <B k="add" onClick={() => setEdit("new")}><Plus className="h-4 w-4" /> Tambah tamu</B>
-        <B k="imp" onClick={() => setImportOpen(true)}><Upload className="h-4 w-4" /> Tempel / impor daftar</B>
-        <B k="sheet" onClick={pull}><RefreshCw className="h-4 w-4" /> Tarik data Google Sheet</B>
+        <B busy={busy} k="add" onClick={() => setEdit("new")}><Plus className="h-4 w-4" /> Tambah tamu</B>
+        <B busy={busy} k="imp" onClick={() => setImportOpen(true)}><Upload className="h-4 w-4" /> Tempel / impor daftar</B>
+        <B busy={busy} k="sheet" onClick={pull}><RefreshCw className="h-4 w-4" /> Tarik data Google Sheet</B>
       </div>
       {sel.size > 0 && (
         <div className="sticky top-2 z-10 mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card p-3 shadow-sm">
           <span className="text-sm">{sel.size} dipilih</span>
-          <B k="format" onClick={() => generate("format")}>Isi dari format</B>
-          <B k="ai" onClick={() => generate("ai")}><Wand className="h-4 w-4" /> Tulis dengan AI</B>
-          <B k="send" primary onClick={sendAuto}><Send className="h-4 w-4" /> Kirim otomatis (Livi)</B>
-          <B k="del" onClick={remove}><Trash2 className="h-4 w-4" /> Hapus</B>
+          <B busy={busy} k="format" onClick={() => generate("format")}>Isi dari format</B>
+          <B busy={busy} k="ai" onClick={() => generate("ai")}><Wand className="h-4 w-4" /> Tulis dengan AI</B>
+          <B busy={busy} k="send" primary onClick={sendAuto}><Send className="h-4 w-4" /> Kirim otomatis (Livi)</B>
+          <B busy={busy} k="del" onClick={remove}><Trash2 className="h-4 w-4" /> Hapus</B>
         </div>
       )}
 
@@ -356,10 +363,6 @@ function EventTab({ event, onSaved, onDeleted }: { event: Ev; onSaved: () => voi
     if (!window.confirm(`Hapus acara "${event.name}" beserta seluruh tamunya?`)) return;
     await api.delete(`/admin/invitations/events/${event.id}`); toast.success("Acara dihapus"); onDeleted();
   };
-
-  const Sec = ({ title, hint, children }: any) => (
-    <section className="rounded-2xl border border-border bg-card p-4"><h3 className="font-medium">{title}</h3>{hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}<div className="mt-3 space-y-3">{children}</div></section>
-  );
 
   return (
     <div className="mt-4 grid gap-4 lg:grid-cols-2">
