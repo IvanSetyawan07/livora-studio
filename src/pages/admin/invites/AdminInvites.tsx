@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCheck, FileUp, ImagePlus, Images, Loader2, Megaphone, MessageCircle, Pencil, Plus, RefreshCw, Send, Sparkles, Trash2, Upload, X } from "lucide-react";
+import { CheckCheck, FileDown, FileUp, ImagePlus, Images, Loader2, Megaphone, MessageCircle, Pencil, Plus, RefreshCw, Send, Sparkles, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { invites, inviteError, type InviteCategory, type InviteEvent, type InviteGuest, type InviteStatus } from "@/lib/invites";
 import InviteSettingsTab from "./InviteSettingsTab";
 import InviteChatTab from "./InviteChatTab";
 import InviteCheckInTab from "./InviteCheckInTab";
+import { exportGuestsExcel } from "./exportGuestsExcel";
 
 const STATUS: Record<InviteStatus, { l: string; c: string }> = {
   draft: { l: "Draf", c: "bg-muted text-muted-foreground" },
@@ -169,6 +170,15 @@ export default function AdminInvites() {
     refresh();
   };
 
+  // Ekspor mengikuti tampilan saat ini (filter & pencarian), bukan hanya yang dicentang.
+  const exportExcel = () => {
+    if (!event || !shown.length) return;
+    try {
+      exportGuestsExcel(shown, event.name);
+      toast.success(`${shown.length} tamu diekspor ke Excel`);
+    } catch (e) { toast.error(inviteError(e)); }
+  };
+
   const pullSheet = async () => {
     if (!event) return;
     setBusy("Menarik data Google Sheet…");
@@ -270,6 +280,7 @@ export default function AdminInvites() {
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" className={btn} onClick={() => setEdit("new")}><Plus className="h-4 w-4" /> Tambah tamu</button>
             <button type="button" className={btn} onClick={() => setImporting(true)}><FileUp className="h-4 w-4" /> Impor Excel/CSV</button>
+            <button type="button" className={btn} onClick={exportExcel} disabled={!shown.length} title="Unduh tamu yang sedang tampil (ikut filter & pencarian) sebagai .xlsx"><FileDown className="h-4 w-4" /> Ekspor Excel</button>
             <button type="button" className={btn} onClick={pullSheet} disabled={!event.sheet_csv_url || !!busy} title={event.sheet_csv_url ? "" : "Isi tautan Sheet di Pengaturan acara"}><RefreshCw className="h-4 w-4" /> Tarik dari Sheet</button>
             <input ref={bulkImg} type="file" accept="image/png,image/jpeg" multiple className="hidden" onChange={(e) => uploadMany(e.target.files)} />
             <button type="button" className={btn} onClick={() => bulkImg.current?.click()} disabled={!!busy} title="Nama file = nama tamu, mis. Budi Santoso.jpg"><Images className="h-4 w-4" /> Unggah gambar massal</button>
