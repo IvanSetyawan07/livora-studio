@@ -2,3 +2,4 @@
 - Owner-editable shop settings go through `ShopSettings` (shop_settings table, JSON, falls back to config) — changes apply without deploy.
 - All outbound shop WhatsApp goes through `Ops::sendWa` so every message is logged and failures land in the retry queue.
 - All backend migrations and queries must be MariaDB-safe; production uses MariaDB, so avoid PostgreSQL-only SQL and prefer Laravel's database abstractions.
+- Event invitations (guests, WA send, RSVP, guest Q&A, admin AI chat) live in `App\Services\Invite\InviteService`; webhook checks RSVP/guest questions before LiviBot so shop bot logic stays untouched.
