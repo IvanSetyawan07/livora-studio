@@ -479,6 +479,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/orders/{code}/advance', [$c, 'advance'])->middleware('admin_role:production');
         Route::post('/orders/{code}/cancel', [$c, 'cancel'])->middleware('admin_role:cs');
         Route::post('/orders', [$c, 'storeManual'])->middleware('admin_role:cs');
+        Route::post('/offline', [$c, 'storeOffline'])->middleware('admin_role:cs,finance');
         Route::get('/proofs', [$c, 'proofQueue'])->middleware('admin_role:finance');
         Route::get('/proofs/{proof}/file', [$c, 'proofFile'])->middleware('admin_role:finance');
         Route::post('/proofs/{proof}/review', [$c, 'reviewProof'])->middleware('admin_role:finance');
