@@ -125,6 +125,74 @@ class ShopOrderService
         return $order->load('items');
     }
 
+    /**
+     * Pembelian offline di showroom: admin memilih item, menetapkan harga, lalu
+     * langsung menerbitkan dokumen. paid=true → Invoice lunas + stok berkurang.
+     * paid=false → Proforma Invoice (Tagihan) menunggu pembayaran.
+     */
+    public function createOffline(array $data, User $admin): array
+    {
+        $phone = !empty($data['customer_phone']) ? WhatsAppNotifier::normalizePhone($data['customer_phone']) : null;
+        $order = DB::transaction(function () use ($data, $admin, $phone) {
+            $user = $phone ? User::where('phone', $phone)->orWhere('phone', $data['customer_phone'])->first() : null;
+            $order = ShopOrder::create([
+                'code' => ShopOrder::generateCode(),
+                'user_id' => $user?->id,
+                'status' => 'data_lengkap',
+                'source' => 'offline',
+                'customer_name' => $data['customer_name'],
+                'customer_phone' => $phone,
+                'customer_email' => $data['customer_email'] ?? $user?->email,
+                'note' => $data['note'] ?? null,
+                'shipping' => !empty($data['address']) ? ['address' => $data['address']] : null,
+                'wa_consent' => false,
+                'created_by' => $admin->id,
+            ]);
+            foreach ($data['items'] as $row) {
+                $item = Item::findOrFail($row['item_id']);
+                $this->addLine($order, $item, $row['variant_id'] ?? null, null, (int) $row['quantity'], $row['note'] ?? null);
+                $line = $order->items()->latest('id')->first();
+                if (isset($row['unit_price'])) {
+                    $line->unit_price = max(0, (int) $row['unit_price']);
+                    $line->unit_discount = 0; // harga showroom = harga final yang ditetapkan admin
+                    $line->discount_label = null;
+                    $line->save();
+                }
+            }
+            $order->order_type = $order->items()->pluck('fulfillment_type')->unique()->count() > 1 ? 'mixed' : $order->items()->value('fulfillment_type');
+            foreach (['shipping_fee', 'installation_fee', 'other_fee'] as $f) $order->{$f} = max(0, (int) ($data[$f] ?? 0));
+            foreach (['extra_discount_type', 'extra_discount_value', 'extra_discount_reason'] as $f) $order->{$f} = $data[$f] ?? null;
+            InvoiceCalculator::apply($order->load('items'));
+            $order->quote_version = 1;
+            $order->quote_sent_at = now();
+            $order->quote_expires_at = now()->addDays(7);
+            $order->save();
+
+            $payment = $order->payments()->create(['amount' => $order->grand_total, 'status' => 'pending', 'expires_at' => $order->quote_expires_at]);
+            $this->issueDocument($order, $payment, 'Tagihan');
+            $this->holdStock($order);
+            $order->status = 'menunggu_bayar';
+            $order->save();
+
+            return $order;
+        });
+        AuditLog::record('order.created_offline', $order, null, ['code' => $order->code, 'total' => $order->grand_total]);
+        NotifyService::timeline($order->id, 'order', 'Pembelian offline dibuat di showroom ('.self::rp($order->grand_total).')', [], $admin->id);
+
+        if (!empty($data['paid'])) {
+            $payment = $order->payments()->where('status', 'pending')->latest('id')->first();
+            $this->markPaid($payment, $data['payment_method'] ?? 'Tunai');
+            $order->refresh();
+            if (($data['fulfillment'] ?? 'bawa_pulang') === 'bawa_pulang' && $order->status === 'diproses' && !$order->hasMto()) {
+                $this->setStatus($order, 'selesai');
+            }
+        }
+        $order->refresh();
+        $doc = $order->documents()->latest('id')->first();
+
+        return ['order' => $order, 'document' => $doc];
+    }
+
     protected function addLine(ShopOrder $order, Item $item, ?int $variantId, ?string $variantName, int $qty, ?string $note): void
     {
         $price = (int) round((float) $item->price);

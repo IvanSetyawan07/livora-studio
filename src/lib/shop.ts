@@ -183,6 +183,7 @@ export const adminShop = {
   sendQuote: (code: string, body: Record<string, unknown>) => api.post(`/admin/shop/orders/${code}/quote`, body).then((r) => r.data),
   advance: (code: string, body: Record<string, unknown>) => api.post(`/admin/shop/orders/${code}/advance`, body).then((r) => r.data),
   cancel: (code: string, reason: string) => api.post(`/admin/shop/orders/${code}/cancel`, { reason }).then((r) => r.data),
+  createOffline: (body: Record<string, unknown>) => api.post<{ code: string; status: string; grand_total: number; document: { id: number; title: string; number: string } | null }>("/admin/shop/offline", body).then((r) => r.data),
   createManual: (body: Record<string, unknown>) => api.post<{ code: string }>("/admin/shop/orders", body).then((r) => r.data),
   proofs: () => api.get("/admin/shop/proofs").then((r) => r.data),
   reviewProof: (id: number, accept: boolean, reason?: string) => api.post(`/admin/shop/proofs/${id}/review`, { accept, reason }).then((r) => r.data),

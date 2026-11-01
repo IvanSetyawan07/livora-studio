@@ -203,6 +203,34 @@ class ShopOrderController extends Controller
         return response()->json(['code' => $order->code], 201);
     }
 
+    public function storeOffline(Request $request)
+    {
+        $data = $request->validate([
+            'customer_name' => 'required|string|max:120', 'customer_phone' => 'nullable|string|max:20',
+            'customer_email' => 'nullable|email', 'address' => 'nullable|string|max:500', 'note' => 'nullable|string|max:1000',
+            'items' => 'required|array|min:1|max:30', 'items.*.item_id' => 'required|integer|exists:items,id',
+            'items.*.variant_id' => 'nullable|integer', 'items.*.quantity' => 'required|integer|min:1|max:99',
+            'items.*.unit_price' => 'required|integer|min:0', 'items.*.note' => 'nullable|string|max:500',
+            'shipping_fee' => 'nullable|integer|min:0', 'installation_fee' => 'nullable|integer|min:0', 'other_fee' => 'nullable|integer|min:0',
+            'extra_discount_type' => 'nullable|in:percent,amount', 'extra_discount_value' => 'nullable|numeric|min:0',
+            'extra_discount_reason' => 'nullable|string|max:255',
+            'paid' => 'required|boolean', 'payment_method' => 'nullable|in:Tunai,Transfer Bank,Debit/Kredit (EDC),QRIS',
+            'fulfillment' => 'required|in:bawa_pulang,diantar',
+        ]);
+        if (!empty($data['extra_discount_value'])) {
+            if (!in_array($this->role($request), ['owner', 'finance'], true)) {
+                return response()->json(['message' => 'Hanya Owner atau Keuangan yang boleh memberi diskon tambahan.'], 403);
+            }
+            if (blank($data['extra_discount_reason'] ?? null)) return response()->json(['message' => 'Alasan diskon wajib diisi.'], 422);
+        }
+        $r = $this->service->createOffline($data, $request->user());
+
+        return response()->json([
+            'code' => $r['order']->code, 'status' => $r['order']->status, 'grand_total' => (int) $r['order']->grand_total,
+            'document' => $r['document'] ? ['id' => $r['document']->id, 'title' => $r['document']->title, 'number' => $r['document']->number] : null,
+        ], 201);
+    }
+
     public function document(ShopDocument $document)
     {
         abort_unless($document->pdf_path && Storage::disk('local')->exists($document->pdf_path), 404);
@@ -222,7 +250,7 @@ class ShopOrderController extends Controller
     {
         $term = trim((string) $request->query('q'));
 
-        return Item::query()->when($term, fn ($q) => $q->where('title', 'like', "%$term%")->orWhere('code', 'like', "%$term%"))
+        return Item::query()->when($term, fn ($q) => $q->where(fn ($w) => $w->where('title', 'like', "%$term%")->orWhere('code', 'like', "%$term%")->orWhere('slug', $term)))
             ->limit(20)->get(['id', 'title', 'code', 'image', 'price', 'stock', 'fulfillment_type']);
     }
 
