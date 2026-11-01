@@ -165,7 +165,6 @@ class ShopOrderService
             $order->quote_version = 1;
             $order->quote_sent_at = now();
             $order->quote_expires_at = now()->addDays(7);
-            $order->confirmed_at = now();
             $order->save();
 
             $payment = $order->payments()->create(['amount' => $order->grand_total, 'status' => 'pending', 'expires_at' => $order->quote_expires_at]);
