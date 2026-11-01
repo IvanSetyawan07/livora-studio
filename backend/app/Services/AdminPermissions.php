@@ -31,8 +31,8 @@ class AdminPermissions
         'shop_aftercare' => 'Klaim & refund',
         'shop_inbox'     => 'Inbox WhatsApp',
         'shop_database'  => 'Database toko',
-        'invites'        => 'Sebar Undangan',
         'shop_system'    => 'Pengaturan, kesehatan & bot toko',
+        'invitations'    => 'Sebar undangan',
     ];
 
     public const DEFAULTS = [
@@ -40,19 +40,19 @@ class AdminPermissions
             'catalog' => 'view', 'projects' => 'view', 'landing' => 'none', 'users' => 'view',
             'consultations' => 'edit', 'wishlists' => 'view', 'support' => 'edit', 'analytics' => 'none',
             'marketing' => 'none', 'shop_orders' => 'edit', 'shop_payments' => 'view', 'shop_aftercare' => 'view',
-            'shop_inbox' => 'edit', 'shop_database' => 'view', 'shop_system' => 'none', 'invites' => 'edit',
+            'shop_inbox' => 'edit', 'shop_database' => 'view', 'shop_system' => 'none', 'invitations' => 'edit',
         ],
         'finance' => [
             'catalog' => 'view', 'projects' => 'none', 'landing' => 'none', 'users' => 'none',
             'consultations' => 'view', 'wishlists' => 'none', 'support' => 'none', 'analytics' => 'view',
             'marketing' => 'none', 'shop_orders' => 'view', 'shop_payments' => 'edit', 'shop_aftercare' => 'edit',
-            'shop_inbox' => 'none', 'shop_database' => 'view', 'shop_system' => 'none',
+            'shop_inbox' => 'none', 'shop_database' => 'view', 'shop_system' => 'none', 'invitations' => 'none',
         ],
         'production' => [
             'catalog' => 'view', 'projects' => 'edit', 'landing' => 'none', 'users' => 'none',
             'consultations' => 'view', 'wishlists' => 'none', 'support' => 'none', 'analytics' => 'none',
             'marketing' => 'none', 'shop_orders' => 'edit', 'shop_payments' => 'none', 'shop_aftercare' => 'edit',
-            'shop_inbox' => 'none', 'shop_database' => 'none', 'shop_system' => 'none',
+            'shop_inbox' => 'none', 'shop_database' => 'none', 'shop_system' => 'none', 'invitations' => 'none',
         ],
     ];
 
@@ -62,7 +62,6 @@ class AdminPermissions
         'admin/shop/proofs' => 'shop_payments',
         'admin/shop/claims' => 'shop_aftercare', 'admin/shop/refunds' => 'shop_aftercare',
         'admin/shop/inbox' => 'shop_inbox',
-        'admin/invites' => 'invites',
         'admin/shop/database' => 'shop_database', 'admin/shop/admins' => 'shop_database',
         'admin/shop' => 'shop_system',
         'admin/projects' => 'projects', 'admin/layouts' => 'projects', 'admin/rooms' => 'projects',
@@ -73,6 +72,7 @@ class AdminPermissions
         'admin/wishlists' => 'wishlists',
         'admin/support' => 'support',
         'admin/analytics' => 'analytics',
+        'admin/invitations' => 'invitations',
         'admin/marketing' => 'marketing', 'ai' => 'marketing',
     ];
 

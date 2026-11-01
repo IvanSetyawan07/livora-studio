@@ -431,11 +431,6 @@ Route::post('/funnel', function (\Illuminate\Http\Request $r) {
     if (in_array($event, ['konsultasi_klik'], true)) \App\Services\Shop\Ops::funnel($event, null, optional($r->user('sanctum'))->id, ['path' => substr((string) $r->input('path'), 0, 120)], substr((string) $r->input('session'), 0, 64));
     return ['ok' => true];
 })->middleware('throttle:30,1');
-// Balasan chat tamu undangan lewat Fonnte (dilindungi kata rahasia di URL)
-Route::post('/webhooks/fonnte/{secret}', [\App\Http\Controllers\Api\InviteFonnteWebhookController::class, 'handle'])->middleware('throttle:120,1');
-// RSVP undangan (publik, bertoken per tamu)
-Route::get('/invite/rsvp/{token}', [\App\Http\Controllers\Api\InviteRsvpController::class, 'show'])->middleware('throttle:30,1');
-Route::post('/invite/rsvp/{token}', [\App\Http\Controllers\Api\InviteRsvpController::class, 'store'])->middleware('throttle:10,1');
 Route::get('/order-form/{code}', [\App\Http\Controllers\Api\Shop\OrderFormController::class, 'show'])->middleware('throttle:30,1');
 Route::post('/order-form/{code}', [\App\Http\Controllers\Api\Shop\OrderFormController::class, 'submit'])->middleware('throttle:10,1');
 
@@ -531,39 +526,29 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/bot/scenarios/run', [$b, 'runScenarios'])->middleware('admin_role:owner');
     });
 
-        // Sebar Undangan (WhatsApp)
-    Route::prefix('admin/invites')->middleware('admin')->group(function () {
-        $i = \App\Http\Controllers\Api\Admin\InviteController::class;
+    // Sebar Undangan (acara, tamu, deskripsi AI, kirim WA, Google Sheet, chat AI)
+    Route::middleware('admin')->prefix('admin/invitations')->group(function () {
+        $i = \App\Http\Controllers\Api\Admin\InvitationController::class;
         Route::get('/events', [$i, 'events']);
-        Route::post('/events', [$i, 'storeEvent']);
-        Route::put('/events/{event}', [$i, 'updateEvent']);
-        Route::delete('/events/{event}', [$i, 'destroyEvent']);
-        Route::post('/events/{event}/image', [$i, 'eventImage']);
-        Route::delete('/events/{event}/image', [$i, 'removeEventImage']);
+        Route::post('/events', [$i, 'saveEvent']);
+        Route::post('/events/{event}', [$i, 'saveEvent']);
+        Route::delete('/events/{event}', [$i, 'deleteEvent']);
         Route::get('/events/{event}/guests', [$i, 'guests']);
-        Route::post('/events/{event}/guests', [$i, 'storeGuest']);
-        Route::post('/events/{event}/guests/import', [$i, 'importGuests']);
-        Route::post('/events/{event}/guests/delete', [$i, 'bulkDelete']);
-        Route::post('/events/{event}/guests/generate', [$i, 'generate']);
-        Route::post('/events/{event}/guests/approve', [$i, 'approve']);
-        Route::post('/events/{event}/guests/images', [$i, 'bulkImages']);
-        Route::post('/events/{event}/guests/send', [$i, 'send']);
-        Route::post('/events/{event}/guests/send-bulk', [$i, 'sendBulk']);
-        Route::post('/events/{event}/guests/{guest}/check-in', [$i, 'checkIn']);
-        Route::post('/events/{event}/check-in-scan', [$i, 'checkInScan']);
-        Route::put('/events/{event}/guests/{guest}', [$i, 'updateGuest']);
-        Route::delete('/events/{event}/guests/{guest}', [$i, 'destroyGuest']);
-        Route::post('/events/{event}/guests/{guest}/image', [$i, 'guestImage']);
-        Route::delete('/events/{event}/guests/{guest}/image', [$i, 'removeGuestImage']);
-        Route::get('/events/{event}/guests/{guest}/manual-link', [$i, 'manualLink']);
-        Route::post('/events/{event}/guests/{guest}/mark-sent', [$i, 'markSent']);
+        Route::post('/events/{event}/guests', [$i, 'saveGuest']);
+        Route::post('/events/{event}/guests/bulk', [$i, 'bulkGuests']);
+        Route::post('/events/{event}/guests/delete', [$i, 'deleteGuests']);
+        Route::post('/events/{event}/guests/{guest}', [$i, 'saveGuest'])->scopeBindings();
+        Route::delete('/events/{event}/guests/{guest}/image', [$i, 'removeGuestImage'])->scopeBindings();
+        Route::get('/events/{event}/guests/{guest}/manual', [$i, 'manualLink'])->scopeBindings();
+        Route::post('/events/{event}/guests/{guest}/manual-sent', [$i, 'markManualSent'])->scopeBindings();
         Route::post('/events/{event}/pull-sheet', [$i, 'pullSheet']);
-        Route::post('/events/{event}/check-template', [$i, 'checkTemplate']);
+        Route::post('/events/{event}/generate', [$i, 'generate']);
+        Route::post('/events/{event}/send', [$i, 'send']);
         Route::get('/events/{event}/chat', [$i, 'chatHistory']);
         Route::post('/events/{event}/chat', [$i, 'chat']);
         Route::delete('/events/{event}/chat', [$i, 'clearChat']);
     });
-    
+
     // Notifikasi admin N1–N16 (lonceng, Tugas Saya)
     $n = \App\Http\Controllers\Api\Admin\NotificationController::class;
     Route::get('/admin/notifications', [$n, 'index'])->middleware('admin');

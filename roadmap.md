@@ -45,3 +45,5 @@ Blockers requiring external setup: production WhatsApp gateway credentials and e
 - [x] 2FA email admin + remember device 30 hari
 - [ ] Server: jalankan semua migrasi + pasang cron scheduler (menunggu akses server)
 - [ ] Isi kredensial: Midtrans, Meta WhatsApp, email SMTP, rekening bank, zona ongkir (menunggu user)
+- [x] Sebar Undangan: daftar tamu, deskripsi AI, kirim otomatis/manual, RSVP, tarik Google Sheet, Livi jawab tamu, chat AI admin
+- [ ] Pembelian offline di showroom (scan QR / pilih item → rincian harga → cetak invoice) — usulan sistem dulu, tunggu persetujuan user

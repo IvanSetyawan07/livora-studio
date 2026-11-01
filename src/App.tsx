@@ -45,13 +45,11 @@ const AdminShopHealth = lazy(() => import("./pages/admin/shop/AdminShopHealth"))
 const AdminShopBotSimulator = lazy(() => import("./pages/admin/shop/AdminShopBotSimulator"));
 const AdminShopBoard = lazy(() => import("./pages/admin/shop/AdminShopBoard"));
 const AdminBotLogs = lazy(() => import("./pages/admin/shop/AdminBotLogs"));
-const AdminInvites = lazy(() => import("./pages/admin/invites/AdminInvites"));
-const InviteRsvp = lazy(() => import("./pages/InviteRsvp"));
+const AdminInvitations = lazy(() => import("./pages/admin/AdminInvitations"));
 const OrderConfirm = lazy(() => import("./pages/OrderConfirm"));
 const OrderPay = lazy(() => import("./pages/OrderPay"));
 const AdminShopScan = lazy(() => import("./pages/admin/shop/AdminShopScan"));
 const AdminRoles = lazy(() => import("./pages/admin/AdminRoles"));
-const AdminC4 = lazy(() => import("./pages/admin/AdminC4"));
 const AdminShopDatabase = lazy(() => import("./pages/admin/shop/AdminShopDatabase"));
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
@@ -94,6 +92,7 @@ const AiMarketingCampaignDetail = lazy(() => import("./pages/admin/ai-marketing/
 const AiMarketingImpact = lazy(() => import("./pages/admin/ai-marketing/AiMarketingImpact"));
 const AiMarketingUsage = lazy(() => import("./pages/admin/ai-marketing/AiMarketingUsage"));
 const AiMarketingProviders = lazy(() => import("./pages/admin/ai-marketing/AiMarketingProviders"));
+
 const queryClient = new QueryClient();
 
 function App() {
@@ -135,7 +134,6 @@ function App() {
               <Route path="/cart" element={<Cart />} />
               <Route path="/order/:code/whatsapp" element={<OrderWhatsApp />} />
               <Route path="/order-form/:code" element={<OrderForm />} />
-              <Route path="/rsvp/:token" element={<InviteRsvp />} />
               <Route path="/order/confirm/:code" element={<OrderConfirm />} />
               <Route path="/order/pay/:code" element={<OrderPay />} />
               <Route element={<RequireRole roles={["sales", "admin"]} />}>
@@ -190,7 +188,6 @@ function App() {
                 <Route path="shop/orders/:code" element={<AdminShopOrderDetail />} />
                 <Route path="shop/payments" element={<AdminShopPayments />} />
                 <Route path="shop/database" element={<AdminShopDatabase />} />
-                <Route path="c4" element={<AdminC4 />} />
                 <Route path="roles" element={<AdminRoles />} />
                 <Route path="shop/scan" element={<AdminShopScan />} />
                 <Route path="shop/inbox" element={<AdminShopInbox />} />
@@ -200,7 +197,8 @@ function App() {
                 <Route path="shop/bot-simulator" element={<AdminShopBotSimulator />} />
                 <Route path="shop/board" element={<AdminShopBoard />} />
                 <Route path="shop/bot-logs" element={<AdminBotLogs />} />
-                <Route path="invites" element={<AdminInvites />} />
+                <Route path="invitations" element={<AdminInvitations />} />
+
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

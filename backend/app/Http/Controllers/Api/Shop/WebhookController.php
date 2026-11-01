@@ -115,8 +115,8 @@ class WebhookController extends Controller
             return;
         }
 
-// Sebar Undangan: tombol Hadir/Tidak + tanya jawab tamu undangan
-        if ($this->handleInvite($conv, $phone, $type, $text, $m)) return;
+        // Undangan acara: tombol Hadir/Tidak, lalu pertanyaan tamu soal acara dijawab dari info acara
+        if ($this->handleInvitation($phone, $text, $type, $m, $conv)) return;
 
         // Mesin bot baru: Livi (state machine + AI + guardrail)
         $result = app(\App\Services\Shop\LiviBot::class)->handle($phone, $text, $type, $m, false);
@@ -128,60 +128,38 @@ class WebhookController extends Controller
             \App\Services\Shop\WaSender::send($phone, $msg, $orderId, $conv->id);
         }
     }
-        /** Ambil/buat percakapan WA untuk nomor ini, lalu catat pesan masuk terakhir. */
-    protected function ensureConversation(string $phone, ?string $profileName): object
+
+    protected function handleInvitation(string $phone, string $text, string $type, array $m, object $conv): bool
     {
-        $profile = $profileName ? mb_substr($profileName, 0, 120) : null;
-        $row = DB::table('wa_conversations')->where('phone', $phone)->first();
-        if (!$row) {
-            DB::table('wa_conversations')->insert([
-                'phone' => $phone, 'state' => 'sapaan', 'mode' => 'bot', 'wa_name' => $profile,
-                'user_id' => \App\Models\User::where('phone', $phone)->value('id'),
-                'last_inbound_at' => now(), 'created_at' => now(), 'updated_at' => now(),
-            ]);
-
-            return DB::table('wa_conversations')->where('phone', $phone)->first();
-        }
-        $upd = ['last_inbound_at' => now(), 'updated_at' => now()];
-        if ($profile && !$row->wa_name) $upd['wa_name'] = $profile;
-        if (!$row->user_id && ($uid = \App\Models\User::where('phone', $phone)->value('id'))) $upd['user_id'] = $uid;
-        DB::table('wa_conversations')->where('id', $row->id)->update($upd);
-        foreach ($upd as $k => $v) $row->{$k} = $v;
-
-        return $row;
-    }
-
-    /** True bila pesan sudah ditangani alur undangan (RSVP atau pertanyaan soal acara). */
-
-        /** True bila pesan sudah ditangani alur undangan (RSVP atau pertanyaan soal acara). */
-    protected function handleInvite(object $conv, string $phone, string $type, string $text, array $m): bool
-    {
+        $svc = \App\Services\Invite\InviteService::class;
         $replyId = (string) ($m['_reply']['id'] ?? '');
-        $touch = fn () => DB::table('wa_conversations')->where('id', $conv->id)->update(['last_inbound_at' => now(), 'updated_at' => now()]);
-
-        if (str_starts_with($replyId, \App\Services\Invite\InviteService::RSVP_YES) || str_starts_with($replyId, \App\Services\Invite\InviteService::RSVP_NO)) {
-            $reply = \App\Services\Invite\InviteService::handleRsvpReply($phone, $replyId);
-            if (!$reply) return false;
-            $touch();
-            \App\Services\Shop\WaSender::text($phone, $reply);
-
+        if ($replyId !== '' && ($reply = $svc::handleRsvpReply($phone, $replyId))) {
+            \App\Services\Shop\WaSender::send($phone, ['type' => 'text', 'body' => $reply], null, $conv->id);
             return true;
         }
-
-        // Hanya saat bot yang memegang chat dan belum di tengah alur pesanan
-        if ($type !== 'text' || $text === '' || $conv->mode !== 'bot' || !in_array($conv->state, ['sapaan', 'menu', 'tanya_jawab'], true)) return false;
-        $guest = \App\Services\Invite\InviteService::activeGuest($phone);
+        if ($type !== 'text' || trim($text) === '' || in_array($conv->mode, ['menunggu_admin', 'dipegang_admin'], true)) return false;
+        $guest = $svc::activeGuest($phone);
         if (!$guest) return false;
-        $res = \App\Services\Invite\InviteService::answerGuest($guest, $text);
-        if (!$res) return false;
-
-        $touch();
-        \App\Services\Shop\WaSender::text($phone, $res['reply']);
-        if ($res['handoff']) {
-            (new \App\Services\Shop\BotTools($phone, $conv))->call('request_handoff', ['reason' => 'undangan', 'summary' => 'Tamu undangan '.$guest->name.' bertanya: '.mb_substr($text, 0, 200)]);
+        $ans = $svc::answerGuest($guest, $text);
+        if (!$ans) return false;
+        \App\Services\Shop\WaSender::send($phone, ['type' => 'text', 'body' => $ans['reply']], null, $conv->id);
+        if ($ans['handoff']) {
+            DB::table('wa_conversations')->where('id', $conv->id)->update(['mode' => 'menunggu_admin', 'updated_at' => now()]);
         }
-
         return true;
+    }
+
+    protected function ensureConversation(string $phone, ?string $name): object
+    {
+        $conv = DB::table('wa_conversations')->where('phone', $phone)->first();
+        if ($conv) return $conv;
+        DB::table('wa_conversations')->insert([
+            'phone' => $phone, 'state' => 'sapaan', 'mode' => 'bot', 'wa_name' => $name ? mb_substr($name, 0, 120) : null,
+            'user_id' => \App\Models\User::where('phone', $phone)->value('id'),
+            'last_inbound_at' => now(), 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        return DB::table('wa_conversations')->where('phone', $phone)->first();
     }
 
     protected function handleFlowReply(string $phone, array $data): void

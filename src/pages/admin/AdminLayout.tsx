@@ -69,7 +69,7 @@ const nav = [
   { to: "/admin/shop/settings", key: "shopSettings", feature: "shop_system", label: "Pengaturan toko", icon: Settings2 },
   { to: "/admin/shop/bot-simulator", key: "shopBot", feature: "shop_system", label: "Simulator bot", icon: Bot },
   { to: "/admin/shop/bot-logs", key: "shopBotLogs", feature: "shop_system", label: "Log AI & uji", icon: FileText },
-  { to: "/admin/invites", key: "invites", feature: "invites", label: "Sebar Undangan", icon: Send },
+  { to: "/admin/invitations", key: "invitations", feature: "invitations", label: "Sebar undangan", icon: Send },
   { to: "/admin/wishlists", key: "wishlists", feature: "wishlists", icon: Bookmark },
   { to: "/admin/support", key: "support", feature: "support", icon: MessageCircle },
   { to: "/admin/analytics", key: "analytics", feature: "analytics", icon: BarChart3 },
