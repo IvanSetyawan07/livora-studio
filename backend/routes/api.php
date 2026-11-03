@@ -465,6 +465,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/orders/{code}/changes/{change}', [\App\Http\Controllers\Api\Shop\OrderController::class, 'respondChange']);
 
     Route::prefix('admin/shop')->middleware('admin')->group(function () {
+        Route::post('/orders/{code}/confirm-offline-payment', [$c, 'confirmOfflinePayment'])->middleware('admin_role:cs,finance');
         $c = \App\Http\Controllers\Api\Admin\ShopOrderController::class;
         Route::get('/summary', [$c, 'summary']);
         Route::get('/orders', [$c, 'index']);

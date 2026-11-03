@@ -133,6 +133,16 @@ class ShopOrderService
     public function createOffline(array $data, User $admin): array
     {
         $phone = !empty($data['customer_phone']) ? WhatsAppNotifier::normalizePhone($data['customer_phone']) : null;
+        $need = [];
+foreach ($data['items'] as $row) $need[$row['item_id']] = ($need[$row['item_id']] ?? 0) + (int) $row['quantity'];
+foreach ($need as $itemId => $qty) {
+    $item = Item::findOrFail($itemId);
+    if (($item->fulfillment_type ?? 'ready_stock') !== 'ready_stock') continue;
+    $avail = StockHold::available($item);
+    if ($avail !== null && $avail < $qty) {
+        throw ValidationException::withMessages(['items' => "Stok {$item->title} tidak mencukupi (tersisa {$avail})."]);
+    }
+}
         $order = DB::transaction(function () use ($data, $admin, $phone) {
             $user = $phone ? User::where('phone', $phone)->orWhere('phone', $data['customer_phone'])->first() : null;
             $order = ShopOrder::create([
@@ -185,6 +195,7 @@ class ShopOrderService
             $order->refresh();
             if (($data['fulfillment'] ?? 'bawa_pulang') === 'bawa_pulang' && $order->status === 'diproses' && !$order->hasMto()) {
                 $this->setStatus($order, 'selesai');
+                NotifyService::closeFor('N9', $order->id, $admin->id);
             }
         }
         $order->refresh();
@@ -555,6 +566,28 @@ class ShopOrderService
                 url('/api/shop/order/'.$order->code.'/invoice.pdf?token='.$order->payment_token), 'Invoice-'.$order->code.'.pdf', $order->id);
         }
     }
+    /** Admin mengonfirmasi pembayaran pesanan offline (tunai/transfer/EDC) tanpa bukti unggahan. */
+public function confirmOfflinePayment(ShopOrder $order, string $method, User $admin, bool $handedOver = false): ShopOrder
+{
+    if ($order->source !== 'offline' || !in_array($order->status, ['menunggu_bayar', 'menunggu_verifikasi'], true)) {
+        throw ValidationException::withMessages(['status' => 'Pesanan ini tidak bisa dikonfirmasi lunas.']);
+    }
+    $payment = $this->openPayment($order);
+    if (!$payment) {
+        throw ValidationException::withMessages(['status' => 'Tidak ada tagihan yang menunggu pembayaran.']);
+    }
+    $payment->verified_by = $admin->id;
+    $this->markPaid($payment, $method);
+    $order->refresh();
+
+    // Barang dibawa pulang di tempat → langsung selesai (sama seperti createOffline paid=true)
+    if ($handedOver && $order->status === 'diproses' && !$order->hasMto()) {
+        $this->setStatus($order, 'selesai');
+    }
+    AuditLog::record('order.offline_payment_confirmed', $order, null, ['method' => $method, 'handed_over' => $handedOver]);
+
+    return $order;
+}
 
     protected function voidOpenPayments(ShopOrder $order): void
     {

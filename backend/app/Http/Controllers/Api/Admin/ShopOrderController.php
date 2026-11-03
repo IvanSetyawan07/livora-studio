@@ -50,6 +50,17 @@ class ShopOrderController extends Controller
 
         return $q->paginate(30)->through(fn ($o) => $this->present($o, $request));
     }
+    public function confirmOfflinePayment(Request $request, string $code)
+{
+    $data = $request->validate([
+        'method' => 'required|in:Tunai,Transfer Bank,Debit/Kredit (EDC),QRIS',
+        'handed_over' => 'nullable|boolean',
+    ]);
+    $order = ShopOrder::where('code', $code)->firstOrFail();
+    $this->service->confirmOfflinePayment($order, $data['method'], $request->user(), (bool) ($data['handed_over'] ?? false));
+
+    return $this->show($request, $code);
+}
 
     public function show(Request $request, string $code)
     {

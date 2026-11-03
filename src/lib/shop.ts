@@ -174,6 +174,8 @@ export const submitOrderForm = (code: string, token: string, body: Record<string
 
 // ── Admin ──
 export const adminShop = {
+  confirmOfflinePayment: (code: string, body: { method: string; handed_over?: boolean }) =>
+  api.post(`/admin/shop/orders/${code}/confirm-offline-payment`, body).then((r) => r.data),
   summary: () => api.get<Record<string, number>>("/admin/shop/summary").then((r) => r.data),
   orders: (params: { status?: string; q?: string; page?: number; per_page?: number }) => api.get("/admin/shop/orders", { params }).then((r) => r.data),
   order: (code: string) => api.get(`/admin/shop/orders/${code}`).then((r) => r.data),

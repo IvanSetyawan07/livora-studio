@@ -58,6 +58,7 @@ export default function AdminShopOrderDetail() {
             }, "Tautan form dikirim & disalin")}>{busy === "form" && <Loader2 className="h-4 w-4 animate-spin" />} Kirim form data</button>
           )}
           {o.form_url && <button type="button" className="btn" onClick={() => { navigator.clipboard.writeText(o.form_url); toast.success("Tautan form disalin"); }}><Copy className="h-4 w-4" /> Salin tautan form</button>}
+          {o.source === "offline" && ["menunggu_bayar", "menunggu_verifikasi"].includes(o.status) && <OfflinePayButtons o={o} busy={busy} run={run} />}
           {NEXT[o.status] && <AdvanceButton o={o} busy={busy} run={run} />}
           {CANCELABLE.includes(o.status) && (
             <button type="button" className="btn text-red-600" disabled={!!busy} onClick={async () => {
@@ -79,7 +80,7 @@ export default function AdminShopOrderDetail() {
           <h3 className="mt-4 font-semibold">Pengiriman</h3>
           {s ? (
             <div className="mt-1 space-y-0.5 text-muted-foreground">
-              <p className="text-foreground">{s.method === "pickup" ? "Ambil di showroom" : `${s.recipient} · ${s.phone}`}</p>
+              <p className="text-foreground">{s.method === "pickup" ? "Ambil di showroom" : s.recipient ? `${s.recipient} · ${s.phone}` : s.address ?? "-"}</p>
               {s.method !== "pickup" && <p>{[s.street, s.rt && `RT ${s.rt}`, s.rw && `RW ${s.rw}`, s.village, s.district, s.city, s.province, s.postal_code].filter(Boolean).join(", ")}</p>}
               {s.landmark && <p>Patokan: {s.landmark}</p>}
               {s.map_url && <a href={s.map_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline">Google Maps <ExternalLink className="h-3 w-3" /></a>}
@@ -183,6 +184,20 @@ function AdvanceButton({ o, busy, run }: { o: any; busy: string | null; run: (k:
         onClick={() => run("adv", () => adminShop.advance(o.code, { to: n.to, courier: courier || undefined, tracking_number: tracking || undefined, delivery_date: date || undefined }), "Status diperbarui")}>
         {busy === "adv" && <Loader2 className="h-4 w-4 animate-spin" />} {n.label}
       </button>
+    </div>
+  );
+}
+function OfflinePayButtons({ o, busy, run }: { o: any; busy: string | null; run: (k: string, fn: () => Promise<any>, ok: string) => void }) {
+  const [method, setMethod] = useState("Tunai");
+  const pay = (handed: boolean) =>
+    run("offpay", () => adminShop.confirmOfflinePayment(o.code, { method, handed_over: handed }), "Pembayaran dikonfirmasi");
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <select className="h-10 rounded-lg border border-border bg-background px-3 text-sm" aria-label="Metode bayar" value={method} onChange={(e) => setMethod(e.target.value)}>
+        {["Tunai", "Transfer Bank", "Debit/Kredit (EDC)", "QRIS"].map((m) => <option key={m}>{m}</option>)}
+      </select>
+      <button type="button" className="btn btn-dark" disabled={!!busy} onClick={() => pay(true)}>Lunas · dibawa pulang (selesai)</button>
+      <button type="button" className="btn" disabled={!!busy} onClick={() => pay(false)}>Lunas · diantar (diproses)</button>
     </div>
   );
 }
