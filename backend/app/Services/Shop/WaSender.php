@@ -26,7 +26,7 @@ class WaSender
      * Kirim satu pesan keluar. $msg: ['type' => text|buttons|list|image|document|template, ...]
      * Selalu dicatat ke wa_messages (arah out) agar Simulator & inbox admin melihatnya.
      */
-    public static function send(string $phone, array $msg, ?int $orderId = null, ?int $conversationId = null): bool
+    public static function send(string $phone, array $msg, ?int $orderId = null, ?int $conversationId = null, ?int $sentBy = null): bool
     {
         $phone = WhatsAppNotifier::normalizePhone($phone);
         $conversationId ??= DB::table('wa_conversations')->where('phone', $phone)->value('id');
@@ -44,6 +44,7 @@ class WaSender
                 'phone' => $phone, 'order_id' => $orderId, 'conversation_id' => $conversationId,
                 'direction' => 'out', 'type' => mb_substr($msg['type'] ?? 'text', 0, 20), 'body' => $body,
                 'payload' => json_encode($msg), 'status' => $ok ? 'sent' : 'failed',
+                'sent_by' => $sentBy, 'media_path' => $msg['media_path'] ?? null,
                 'created_at' => now(), 'updated_at' => now(),
             ];
             if (\Illuminate\Support\Facades\Schema::hasColumn('wa_messages', 'error_note')) $row['error_note'] = $error;
@@ -149,12 +150,34 @@ class WaSender
             if (!$meta->successful() || !($url = $meta->json('url'))) return null;
             $bin = Http::timeout(30)->withToken($c['access_token'])->get($url);
             if (!$bin->successful()) return null;
-            $path = 'wa-media/'.$mediaId.'.jpg';
+            $ext = match ($meta->json('mime_type')) { 'image/png' => 'png', 'image/webp' => 'webp', default => 'jpg' };
+            $path = 'wa-media/'.$mediaId.'.'.$ext;
             Storage::disk('local')->put($path, $bin->body());
 
             return $path;
         } catch (\Throwable $e) {
             Log::warning('Unduh media WA gagal', ['error' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
+    /** Unggah gambar dari disk privat ke Meta, lalu kembalikan media id untuk dikirim. */
+    public static function uploadMedia(string $path): ?string
+    {
+        if (!self::configured()) return null;
+        $c = config('services.whatsapp.meta');
+        try {
+            $res = Http::timeout(30)->withToken($c['access_token'])
+                ->attach('file', Storage::disk('local')->get($path), basename($path))
+                ->post('https://graph.facebook.com/'.($c['api_version'] ?? 'v21.0').'/'.$c['phone_number_id'].'/media', [
+                    'messaging_product' => 'whatsapp',
+                    'type' => Storage::disk('local')->mimeType($path),
+                ]);
+
+            return $res->successful() ? $res->json('id') : null;
+        } catch (\Throwable $e) {
+            Log::warning('Unggah media WA gagal', ['error' => $e->getMessage()]);
 
             return null;
         }
@@ -178,7 +201,11 @@ class WaSender
                     'action' => ['button' => $msg['button'], 'sections' => [['title' => 'Pilihan', 'rows' => $msg['rows']]]]]),
             ],
             'image' => ['messaging_product' => 'whatsapp', 'to' => $phone, 'type' => 'image',
-                'image' => ['link' => $msg['url'], 'caption' => $msg['body'] ?? '']],
+                'image' => array_filter([
+                    'id' => $msg['media_id'] ?? null,
+                    'link' => isset($msg['media_id']) ? null : ($msg['url'] ?? null),
+                    'caption' => ($msg['body'] ?? '') !== '' ? $msg['body'] : null,
+                ])],
             'document' => ['messaging_product' => 'whatsapp', 'to' => $phone, 'type' => 'document',
                 'document' => ['link' => $msg['url'], 'caption' => $msg['body'] ?? '', 'filename' => $msg['filename']]],
             'template' => ['messaging_product' => 'whatsapp', 'to' => $phone, 'type' => 'template', 'template' => $msg['template']],

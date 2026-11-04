@@ -224,6 +224,19 @@ export const adminShop = {
   inbox: (status?: string) => api.get("/admin/shop/inbox", { params: { status } }).then((r) => r.data as any[]),
   inboxMessages: (id: number) => api.get(`/admin/shop/inbox/${id}`).then((r) => r.data as any[]),
   inboxReply: (id: number, body: string, note = false) => api.post(`/admin/shop/inbox/${id}/reply`, { body, note }).then((r) => r.data),
+  /** Kirim gambar (JPG/PNG) ke pelanggan, dengan keterangan opsional. */
+  inboxReplyMedia: (id: number, file: File, body: string) => {
+    const f = new FormData();
+    f.append("media", file);
+    f.append("body", body);
+    return api.post(`/admin/shop/inbox/${id}/reply`, f, { headers: { "Content-Type": "multipart/form-data" } }).then((r) => r.data);
+  },
+  /** Ambil berkas privat (gambar chat) dengan token login, lalu kembalikan blob-nya. */
+  fileBlob: async (path: string): Promise<Blob> => {
+    const res = await fetch(`${API_BASE_URL}/admin/shop/file?path=${encodeURIComponent(path)}`, { headers: { Authorization: `Bearer ${authStorage.getToken()}` } });
+    if (!res.ok) throw new Error("Gambar tidak dapat dibuka");
+    return res.blob();
+  },
   inboxAction: (id: number, action: string) => api.post(`/admin/shop/inbox/${id}/action`, { action }).then((r) => r.data),
   priceInquiry: (id: number) => api.get(`/admin/shop/inbox/${id}/price-inquiry`).then((r) => r.data as { inquiry: any | null }),
   answerPriceInquiry: (id: number, body: { inquiry_id: number; answers: Array<{ item_id: number; price: number; discount_type: string | null; discount_value: number | null; note: string | null }>; admin_note?: string | null }) =>

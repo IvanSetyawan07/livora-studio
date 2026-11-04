@@ -100,13 +100,16 @@ class WebhookController extends Controller
         }
         if ($type === 'location') $text = '[lokasi] '.($m['location']['latitude'] ?? '').','.($m['location']['longitude'] ?? '');
         if (in_array($type, ['image', 'document'], true)) $text = '['.$type.'] '.($m[$type]['caption'] ?? '');
+        // Gambar masuk diunduh sekali di sini: dipakai inbox admin dan cek bukti bayar LiviBot
+        $mediaPath = ($type === 'image' && !empty($m['image']['id'])) ? \App\Services\Shop\WaSender::downloadMedia($m['image']['id']) : null;
+        $m['_media_path'] = $mediaPath;
 
         $conv = $this->ensureConversation($phone, $m['_profile_name'] ?? null);
         $orderId = $conv->order_id ?: ($conv->cart_id ? null : ShopOrder::where('customer_phone', $phone)->latest()->value('id'));
         DB::table('wa_messages')->insert([
             'message_id' => $m['id'] ?? null, 'wa_message_id' => $m['id'] ?? null, 'phone' => $phone, 'order_id' => $orderId,
             'conversation_id' => $conv->id, 'direction' => 'in',
-            'type' => $type, 'body' => $text, 'raw' => json_encode($m), 'created_at' => now(), 'updated_at' => now(),
+            'type' => $type, 'body' => $text, 'media_path' => $mediaPath, 'raw' => json_encode($m), 'created_at' => now(), 'updated_at' => now(),
         ]);
 
         // Balasan WhatsApp Flow (form pengiriman di dalam WA)

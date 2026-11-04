@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Bot, Loader2, Lock, Send, StickyNote, UserRound } from "lucide-react";
+import { Bot, ImagePlus, Loader2, Lock, Send, StickyNote, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { adminShop } from "@/lib/shop";
 import PriceInquiryPanel from "@/components/shop/PriceInquiryPanel";
@@ -27,6 +27,24 @@ const QUICK = [
   "Pembayaran sudah kami terima. Pesanan sedang diproses.",
 ];
 
+/** Gambar chat dimuat lewat fetch + token (tidak bisa lewat <img src> biasa). */
+function PrivateImage({ path }: { path: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let url: string | null = null;
+    let alive = true;
+    adminShop.fileBlob(path)
+      .then((b) => { if (alive) { url = URL.createObjectURL(b); setSrc(url); } })
+      .catch(() => { if (alive) setFailed(true); });
+    return () => { alive = false; if (url) URL.revokeObjectURL(url); };
+  }, [path]);
+  if (failed) return <span className="block text-xs italic opacity-70">Gambar tidak dapat dibuka</span>;
+  if (!src) return <span className="block text-xs opacity-70">Memuat gambar…</span>;
+
+  return <img src={src} alt="Gambar WhatsApp" loading="lazy" className="mb-1 max-h-72 w-auto rounded-lg" />;
+}
+
 export default function AdminShopInbox() {
   const [sp, setSp] = useSearchParams();
   const wantedId = Number(sp.get("c")) || null; // tautan notifikasi N1/N16: /admin/shop/inbox?c=<id>
@@ -36,7 +54,9 @@ export default function AdminShopInbox() {
   const [msgs, setMsgs] = useState<any[]>([]);
   const [text, setText] = useState("");
   const [note, setNote] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const sel = sessions?.find((s) => s.id === selId) ?? null;
 
@@ -59,6 +79,7 @@ export default function AdminShopInbox() {
 
   const pick = (id: number | null) => {
     setSelId(id);
+    setFile(null);
     const n = new URLSearchParams(sp);
     id ? n.set("c", String(id)) : n.delete("c");
     setSp(n, { replace: true });
@@ -73,12 +94,15 @@ export default function AdminShopInbox() {
     } catch (e: any) { toast.error(e.message); }
   };
   const send = async () => {
-    if (!sel || !text.trim()) return;
+    if (!sel || (!text.trim() && !file)) return;
     setBusy(true);
     try {
-      const r = await adminShop.inboxReply(sel.id, text, note);
+      const r = file
+        ? await adminShop.inboxReplyMedia(sel.id, file, text)
+        : await adminShop.inboxReply(sel.id, text, note);
       if (r.ok === false) toast.error("Pesan gagal terkirim. Cek menu Kesehatan sistem.");
       setText("");
+      setFile(null);
       await Promise.all([loadMsgs(sel.id), loadSessions()]);
     } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
   };
@@ -151,8 +175,10 @@ export default function AdminShopInbox() {
               {msgs.map((m) => (
                 <div key={m.id} className={`flex ${m.direction === "in" ? "justify-start" : "justify-end"}`}>
                   <div className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${m.is_note ? "border border-dashed border-amber-400 bg-amber-50 text-amber-900" : m.direction === "in" ? "bg-card" : "bg-foreground text-background"}`}>
-                    {m.is_note && <p className="mb-1 flex items-center gap-1 text-[10px] font-medium"><StickyNote className="h-3 w-3" /> Catatan internal</p>}
-                    {m.body}
+                    {!!m.is_note && <p className="mb-1 flex items-center gap-1 text-[10px] font-medium"><StickyNote className="h-3 w-3" /> Catatan internal</p>}
+                    {m.media_path && <PrivateImage path={m.media_path} />}
+                    {m.type === "image" && !m.media_path && <span className="block text-xs italic opacity-70">Gambar tidak tersedia</span>}
+                    {m.type === "image" ? (m.body ?? "").replace(/^\[image\] ?/, "") : m.body}
                     <p className="mt-1 text-[10px] opacity-60">
                       {new Date(m.created_at).toLocaleString("id-ID", { timeStyle: "short", dateStyle: "short" })}
                       {m.direction === "in" ? ` · ${sel.display_name}` : m.sender ? ` · ${m.sender}` : !m.is_note ? " · bot Livi / sistem" : ""}
@@ -169,12 +195,27 @@ export default function AdminShopInbox() {
               </div>
               {!windowOpen && !note && <p className="mb-2 flex items-center gap-1 text-xs text-muted-foreground"><Lock className="h-3 w-3" /> Lewat 24 jam: WhatsApp hanya mengizinkan pesan template. Minta pelanggan mengirim pesan dulu, atau tulis catatan internal.</p>}
               {sel.mode === "bot" && !note && <p className="mb-2 text-xs text-muted-foreground">Chat ini masih ditangani bot. Mengirim balasan akan otomatis mengambil chat dan membuat bot diam.</p>}
+              {file && (
+                <p className="mb-2 flex items-center justify-between rounded-lg bg-muted px-3 py-2 text-xs">
+                  <span className="truncate">Lampiran: {file.name}</span>
+                  <button type="button" onClick={() => setFile(null)} className="ml-2 shrink-0 underline">Hapus</button>
+                </p>
+              )}
+              <input ref={fileRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={(e) => {
+                const f = e.target.files?.[0] ?? null;
+                e.target.value = "";
+                if (!f) return;
+                if (f.size > 5 * 1024 * 1024) { toast.error("Ukuran gambar maksimal 5 MB."); return; }
+                setFile(f);
+              }} />
               <div className="flex gap-2">
-                <button type="button" onClick={() => setNote(!note)} aria-pressed={note} title="Catatan internal" className={`h-11 w-11 shrink-0 rounded-lg border ${note ? "border-amber-400 bg-amber-50" : "border-border"}`}><StickyNote className="mx-auto h-4 w-4" /></button>
-                <textarea value={text} onChange={(e) => setText(e.target.value)} rows={1} placeholder={note ? "Catatan internal (tidak terkirim ke pelanggan)" : "Tulis balasan…"} aria-label="Balasan"
+                <button type="button" onClick={() => { setNote(!note); setFile(null); }} aria-pressed={note} title="Catatan internal" className={`h-11 w-11 shrink-0 rounded-lg border ${note ? "border-amber-400 bg-amber-50" : "border-border"}`}><StickyNote className="mx-auto h-4 w-4" /></button>
+                <button type="button" onClick={() => fileRef.current?.click()} disabled={!windowOpen || note} aria-label="Lampirkan gambar" title="Gambar JPG/PNG, maks 5 MB" className="h-11 w-11 shrink-0 rounded-lg border border-border disabled:opacity-40"><ImagePlus className="mx-auto h-4 w-4" /></button>
+                <textarea value={text} onChange={(e) => setText(e.target.value)} rows={1}
+                  placeholder={note ? "Catatan internal (tidak terkirim ke pelanggan)" : file ? "Keterangan gambar (opsional)…" : "Tulis balasan…"} aria-label="Balasan"
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
                   className="min-h-11 flex-1 resize-none rounded-lg border border-border bg-background px-3 py-2.5 text-sm" />
-                <button type="button" disabled={busy || !text.trim() || (!windowOpen && !note)} onClick={send} aria-label="Kirim" className="h-11 w-11 shrink-0 rounded-lg bg-foreground text-background disabled:opacity-40">{busy ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : <Send className="mx-auto h-4 w-4" />}</button>
+                <button type="button" disabled={busy || (!text.trim() && !file) || (!windowOpen && !note)} onClick={send} aria-label="Kirim" className="h-11 w-11 shrink-0 rounded-lg bg-foreground text-background disabled:opacity-40">{busy ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : <Send className="mx-auto h-4 w-4" />}</button>
               </div>
             </div>
           </div>

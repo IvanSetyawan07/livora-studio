@@ -12,6 +12,7 @@ use App\Services\Shop\ShopSettings;
 use App\Services\Shop\LiviBot;
 use App\Services\Shop\LiviPrice;
 use App\Services\Shop\NotifyService;
+use App\Services\Shop\WaSender;
 use App\Services\WhatsApp\WhatsAppNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -84,7 +85,7 @@ class ShopAftercareController extends Controller
     public function file(Request $r)
     {
         $path = (string) $r->query('path');
-        abort_unless(preg_match('#^shop-(bast|claims|refunds)/[A-Za-z0-9._-]+$#', $path) && Storage::disk('local')->exists($path), 404);
+        abort_unless(preg_match('#^(shop-(bast|claims|refunds)|wa-media)/[A-Za-z0-9._-]+$#', $path) && Storage::disk('local')->exists($path), 404);
 
         return Storage::disk('local')->response($path);
     }
@@ -201,8 +202,9 @@ class ShopAftercareController extends Controller
         $c = DB::table('wa_conversations')->find($session) ?? abort(404);
 
         return DB::table('wa_messages')->leftJoin('users', 'users.id', '=', 'wa_messages.sent_by')->where('wa_messages.phone', $c->phone)
-            ->select('wa_messages.id', 'direction', 'type', 'body', 'is_note', 'wa_messages.status', 'wa_messages.created_at', 'wa_messages.sent_by', 'users.name as sender')
-            ->latest('wa_messages.id')->limit(200)->get()->reverse()->values();
+            ->select('wa_messages.id', 'direction', 'type', 'body', 'is_note', 'wa_messages.status', 'wa_messages.created_at', 'wa_messages.sent_by', 'wa_messages.media_path', 'users.name as sender')
+            ->latest('wa_messages.id')->limit(200)->get()->reverse()->values()
+            ->map(fn ($m) => tap($m, fn ($x) => $x->is_note = (bool) $x->is_note));
     }
 
     public function sessionAction(Request $r, int $session)
@@ -263,11 +265,20 @@ class ShopAftercareController extends Controller
 
     public function reply(Request $r, int $session)
     {
-        $d = $r->validate(['body' => 'required|string|max:4000', 'note' => 'nullable|boolean']);
+        $d = $r->validate([
+            'body' => 'nullable|string|max:4000',
+            'note' => 'nullable|boolean',
+            'media' => 'nullable|file|mimes:jpg,jpeg,png|max:5120', // WhatsApp menerima JPEG/PNG, maks 5 MB
+        ]);
+        $body = trim((string) ($d['body'] ?? ''));
+        $hasMedia = $r->hasFile('media');
+        abort_if($body === '' && !$hasMedia, 422, 'Isi pesan atau lampirkan gambar.');
+        abort_if($hasMedia && $r->boolean('note'), 422, 'Catatan internal tidak bisa berisi gambar.');
+
         $c = DB::table('wa_conversations')->find($session) ?? abort(404);
         if ($r->boolean('note')) {
             DB::table('wa_messages')->insert(['phone' => $c->phone, 'order_id' => $c->order_id, 'conversation_id' => $c->id, 'direction' => 'out', 'type' => 'note',
-                'body' => $d['body'], 'is_note' => true, 'sent_by' => $r->user()->id, 'created_at' => now(), 'updated_at' => now()]);
+                'body' => $body, 'is_note' => true, 'sent_by' => $r->user()->id, 'created_at' => now(), 'updated_at' => now()]);
 
             return ['ok' => true];
         }
@@ -279,8 +290,16 @@ class ShopAftercareController extends Controller
             DB::table('wa_conversations')->where('id', $c->id)->update(['mode' => 'dipegang_admin', 'handled_by' => $r->user()->id, 'handled_at' => now(), 'updated_at' => now()]);
             NotifyService::closeConversation($c->id, $r->user()->id);
         }
-        $ok = Ops::sendWa($c->phone, $d['body'], $c->order_id, $r->user()->id);
-        AuditLog::record('inbox.reply', null, null, ['conversation' => $c->id]);
+
+        if ($hasMedia) {
+            $path = $r->file('media')->store('wa-media', 'local');
+            $mediaId = WaSender::uploadMedia($path);
+            abort_unless($mediaId, 422, 'Gambar gagal diunggah ke WhatsApp. Coba lagi.');
+            $ok = WaSender::send($c->phone, ['type' => 'image', 'body' => $body, 'media_id' => $mediaId, 'media_path' => $path], $c->order_id, $c->id, $r->user()->id);
+        } else {
+            $ok = Ops::sendWa($c->phone, $body, $c->order_id, $r->user()->id);
+        }
+        AuditLog::record('inbox.reply', null, null, ['conversation' => $c->id, 'media' => $hasMedia]);
 
         return ['ok' => $ok];
     }
