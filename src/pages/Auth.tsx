@@ -439,6 +439,8 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
                       <div className="relative">
                         <input
                           type="email"
+                          name="email"
+                          autoComplete="email"
                           placeholder="Enter your email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
@@ -455,6 +457,8 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
                       <div className="relative">
                         <input
                           type={showPassword ? "text" : "password"}
+                          name="password"
+                          autoComplete="current-password"
                           placeholder="Enter your password"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
@@ -1089,6 +1093,8 @@ export default function Auth() {
                         <label className="block text-[13px] font-medium text-neutral-700">Email</label>
                         <input
                           type="email"
+                          name="email"
+                          autoComplete="email"
                           placeholder="mail@abc.com"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
@@ -1102,6 +1108,8 @@ export default function Auth() {
                         <div className="relative">
                           <input
                             type={showPassword ? "text" : "password"}
+                            name="password"
+                            autoComplete="current-password"
                             placeholder="••••••••"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}

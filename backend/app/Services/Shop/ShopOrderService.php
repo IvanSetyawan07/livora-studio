@@ -187,7 +187,7 @@ foreach ($need as $itemId => $qty) {
             return $order;
         });
         AuditLog::record('order.created_offline', $order, null, ['code' => $order->code, 'total' => $order->grand_total]);
-        NotifyService::timeline($order->id, 'order', 'Pembelian offline dibuat di showroom ('.self::rp($order->grand_total).')', [], $admin->id);
+        NotifyService::timeline($orderd->id, 'order', 'Pembelian offline dibuat di showroom ('.self::rp($order->grand_total).')', [], $admin->id);
 
         if (!empty($data['paid'])) {
             $payment = $order->payments()->where('status', 'pending')->latest('id')->first();
