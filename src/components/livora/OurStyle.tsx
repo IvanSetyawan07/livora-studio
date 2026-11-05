@@ -116,7 +116,7 @@ export function OurStyle() {
         <h2 className="serif mt-4 text-[16vw] font-light leading-[0.85] text-background sm:text-[9vw]">
           {t("style.heading")}
         </h2>
-        <p className="mt-6 max-w-md text-sm font-light text-background/60">
+        <p className="mt-10 max-w-md text-sm font-light text-background/60">
           {t("style.subtitle")}
         </p>
       </div>
