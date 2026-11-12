@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use App\Services\ImageOptimizer;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Mengonversi gambar PNG/JPG lama di storage publik menjadi WebP berkualitas tinggi
@@ -48,24 +47,27 @@ class OptimizeStorageImages extends Command
         $maxDim = max(600, min(2560, (int) $this->option('max')));
         $deleteOld = !$this->option('keep');
 
+        $this->line('DB aktif: '.DB::getDatabaseName().' | storage public: '.storage_path('app/public'));
+
         $converted = 0;
         $found = 0;
         $skipped = 0;
 
         foreach ($this->targets as [$table, $cols, $prefixStorage]) {
-            if (!Schema::hasTable($table)) continue;
-
             foreach ($cols as $col) {
-                if (!Schema::hasColumn($table, $col)) continue;
-
-                $rows = DB::table($table)
-                    ->whereNotNull($col)
-                    ->where(fn ($q) => $q->where($col, 'like', '%.png')->orWhere($col, 'like', '%.jpg')->orWhere($col, 'like', '%.jpeg'))
-                    ->get(['id', $col]);
+                try {
+                    $rows = DB::table($table)->whereNotNull($col)->get(['id', $col]);
+                } catch (\Throwable $e) {
+                    continue;
+                }
 
                 foreach ($rows as $row) {
+                    $val = trim((string) $row->{$col});
+                    if ($val === '' || !preg_match('/\.(png|jpe?g)$/i', $val)) {
+                        continue;
+                    }
+
                     $found++;
-                    $val = (string) $row->{$col};
                     $reason = null;
                     $newRel = ImageOptimizer::convertExisting($val, $maxDim, $quality, $deleteOld, $reason);
                     if (!$newRel) {
@@ -80,6 +82,11 @@ class OptimizeStorageImages extends Command
                     $this->line("[{$table}.{$col}#{$row->id}] {$val} -> {$dbVal}");
                 }
             }
+        }
+
+        if ($found === 0) {
+            $sample = DB::table('projects')->limit(4)->pluck('hero_image')->all();
+            $this->warn('Tidak ada nilai kolom berakhiran .png/.jpg/.jpeg. Contoh isi projects.hero_image: '.json_encode($sample));
         }
 
         $this->info("Ditemukan: {$found} baris | Dikonversi: {$converted} | Dilewati: {$skipped} (quality {$quality}, max {$maxDim}px).");
