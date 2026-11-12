@@ -10,14 +10,21 @@ import sofas from "@/assets/landing-furniture/sofa.webp";
 import tables from "@/assets/landing-furniture/table.webp";
 import newArrival from "@/assets/landing-furniture/new-arrival.webp";
 import furnitureImg from "@/assets/furniture-hompage.webp";
+import accessoriesSm from "@/assets/_opt/fur-accecories-600.webp";
+import bedsSm from "@/assets/_opt/fur-bed-600.webp";
+import chairsSm from "@/assets/_opt/fur-chair-600.webp";
+import sofasSm from "@/assets/_opt/fur-sofa-600.webp";
+import tablesSm from "@/assets/_opt/fur-table-600.webp";
+import newArrivalSm from "@/assets/_opt/fur-new-arrival-600.webp";
+import furnitureImgSm from "@/assets/_opt/furniture-hompage-800.webp";
 
 const categories = [
-  { id: 1, label: "New arrivals", slug: "new-arrivals", image: newArrival },
-  { id: 2, label: "Sofas", slug: "sofas", image: sofas },
-  { id: 3, label: "Chairs", slug: "chairs", image: chairs },
-  { id: 4, label: "Tables", slug: "tables", image: tables },
-  { id: 5, label: "Beds", slug: "beds", image: beds },
-  { id: 6, label: "Accessories", slug: "accessories", image: accessories },
+  { id: 1, label: "New arrivals", slug: "new-arrivals", image: newArrival, sm: newArrivalSm, w: 1126, h: 1397 },
+  { id: 2, label: "Sofas", slug: "sofas", image: sofas, sm: sofasSm, w: 1786, h: 2215 },
+  { id: 3, label: "Chairs", slug: "chairs", image: chairs, sm: chairsSm, w: 1792, h: 2215 },
+  { id: 4, label: "Tables", slug: "tables", image: tables, sm: tablesSm, w: 927, h: 1517 },
+  { id: 5, label: "Beds", slug: "beds", image: beds, sm: bedsSm, w: 1536, h: 2543 },
+  { id: 6, label: "Accessories", slug: "accessories", image: accessories, sm: accessoriesSm, w: 1760, h: 2197 },
 ];
 
 // Custom easing function
@@ -165,10 +172,13 @@ const FurnitureCollectionCard = () => {
             >
               <img
                 src={furnitureImg}
+                srcSet={`${furnitureImgSm} 800w, ${furnitureImg} 1448w`}
+                sizes="(max-width: 768px) 95vw, 58vw"
                 alt="Curated furniture collection"
-                width={1280}
-                height={896}
+                width={1448}
+                height={1086}
                 loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
               />
             </Link>
@@ -366,8 +376,14 @@ const WhatAreYouLookingForSection = () => {
                   >
                     <div className="relative w-full pt-[125%]">
                       <img
-                        src={category.image}
+                        src={category.sm}
+                        srcSet={`${category.sm} 600w, ${category.image} ${category.w}w`}
+                        sizes="(max-width: 1024px) 30vw, 16vw"
                         alt={category.label}
+                        width={category.w}
+                        height={category.h}
+                        loading="lazy"
+                        decoding="async"
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     </div>
@@ -446,8 +462,14 @@ const WhatAreYouLookingForSection = () => {
                       >
                         <div className="relative w-full pt-[125%]">
                           <img
-                            src={category.image}
+                            src={category.sm}
+                            srcSet={`${category.sm} 600w, ${category.image} ${category.w}w`}
+                            sizes="224px"
                             alt={category.label}
+                            width={category.w}
+                            height={category.h}
+                            loading="lazy"
+                            decoding="async"
                             className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           />
                         </div>

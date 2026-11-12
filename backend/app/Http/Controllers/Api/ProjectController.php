@@ -90,7 +90,6 @@ class ProjectController extends Controller
     private function handleImage(Request $r, $field, $folder)
     {
         if (!$r->hasFile($field)) return null;
-        $path = $r->file($field)->store($folder, 'public');
-        return '/storage/'.$path;
+        return \App\Services\ImageOptimizer::storePublicWebp($r->file($field), $folder);
     }
 }

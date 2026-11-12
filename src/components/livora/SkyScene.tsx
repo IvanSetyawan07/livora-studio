@@ -9,10 +9,18 @@ import skyToHouse from "@/assets/hero-update.webp";
 import cloud1 from "@/assets/cloud/cloud1.webp";
 import cloud5 from "@/assets/cloud/cloud5.webp";
 import cloud6 from "@/assets/cloud/cloud6.webp";
+import skyToHouseSm from "@/assets/_opt/hero-update-800.webp";
+import cloud1Sm from "@/assets/_opt/cloud1-560.webp";
+import cloud2Sm from "@/assets/_opt/cloud2-560.webp";
+import cloud3Sm from "@/assets/_opt/cloud3-560.webp";
+import cloud4Sm from "@/assets/_opt/cloud4-560.webp";
+import cloud5Sm from "@/assets/_opt/cloud5-560.webp";
+import cloud6Sm from "@/assets/_opt/cloud6-560.webp";
 
 type CloudItem = {
   id: number;
   src: string;
+  sm: string;
   name: string;
   layer: "drift-front" | "drift-mid" | "drift-back";
   left: string;
@@ -27,6 +35,7 @@ const CLOUDS: CloudItem[] = [
   {
     id: 1,
     src: cloud5,
+    sm: cloud5Sm,
     name: "left-main-bright",
     layer: "drift-front",
     left: "13.8%",
@@ -39,6 +48,7 @@ const CLOUDS: CloudItem[] = [
   {
     id: 2,
     src: cloud6,
+    sm: cloud6Sm,
     name: "upper-mid-thin-back",
     layer: "drift-back",
     left: "46.8%",
@@ -51,6 +61,7 @@ const CLOUDS: CloudItem[] = [
   {
     id: 3,
     src: cloud4,
+    sm: cloud4Sm,
     name: "center-soft-back",
     layer: "drift-back",
     left: "43.5%",
@@ -63,6 +74,7 @@ const CLOUDS: CloudItem[] = [
   {
     id: 4,
     src: cloud1,
+    sm: cloud1Sm,
     name: "top-right-bright-main",
     layer: "drift-front",
     left: "82.5%",
@@ -75,6 +87,7 @@ const CLOUDS: CloudItem[] = [
   {
     id: 5,
     src: cloud2,
+    sm: cloud2Sm,
     name: "right-mid-thin",
     layer: "drift-mid",
     left: "64.5%",
@@ -87,6 +100,7 @@ const CLOUDS: CloudItem[] = [
   {
     id: 6,
     src: cloud3,
+    sm: cloud3Sm,
     name: "upper-left-small-back",
     layer: "drift-back",
     left: "27.8%",
@@ -100,18 +114,23 @@ const CLOUDS: CloudItem[] = [
 
 export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
   const root = useRef<HTMLDivElement>(null);
+  const heroImgRef = useRef<HTMLImageElement>(null);
   const [assetsReady, setAssetsReady] = useState(false);
 
-  // ── Tunggu gambar utama benar-benar loaded sebelum ScrollTrigger dibuat ──
+  // ── Tunggu gambar utama DOM selesai dimuat sebelum ScrollTrigger dibuat (tanpa unduhan ganda) ──
   useEffect(() => {
-    const img = new Image();
-    img.src = skyToHouse;
-    if (img.complete) {
+    const img = heroImgRef.current;
+    if (!img || img.complete) {
       setAssetsReady(true);
-    } else {
-      img.onload = () => setAssetsReady(true);
-      img.onerror = () => setAssetsReady(true);
+      return;
     }
+    const done = () => setAssetsReady(true);
+    img.addEventListener("load", done, { once: true });
+    img.addEventListener("error", done, { once: true });
+    return () => {
+      img.removeEventListener("load", done);
+      img.removeEventListener("error", done);
+    };
   }, []);
 
   // ── Entrance: "Livora" letters + subtitle ──
@@ -245,7 +264,6 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
             scaleX: 1.35,
             scaleY: 1.35,
             opacity: 0,
-            filter: "blur(6px)",
             ease: "power2.in",
           },
           0
@@ -296,14 +314,18 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
         <div className="absolute inset-0 overflow-hidden">
           <div className="scene-img absolute left-0 top-0 h-[200%] w-full will-change-transform">
             <img
+              ref={heroImgRef}
               src={skyToHouse}
+              srcSet={`${skyToHouseSm} 800w, ${skyToHouse} 1448w`}
+              sizes="100vw"
               alt=""
               aria-hidden
               draggable={false}
               fetchPriority="high"
-              decoding="async"
-              width={1920}
-              height={2160}
+              loading="eager"
+              decoding="sync"
+              width={1448}
+              height={1086}
               className="h-full w-full select-none object-cover"
             />
           </div>
@@ -325,10 +347,14 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
                 <div className={`${cloud.layer} will-change-transform`}>
                   <img
                     src={cloud.src}
+                    srcSet={`${cloud.sm} 560w, ${cloud.src} 1254w`}
+                    sizes="(max-width: 640px) 36vw, 32vw"
                     alt=""
                     aria-hidden
                     draggable={false}
                     decoding="async"
+                    width={1254}
+                    height={1254}
                     className="block h-auto w-full max-w-none select-none"
                     style={{
                       opacity: cloud.opacity,

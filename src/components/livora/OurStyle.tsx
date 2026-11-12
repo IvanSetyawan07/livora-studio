@@ -7,13 +7,18 @@ import tropical from "@/assets/style-tropical.webp";
 import industrial from "@/assets/style-industrial.webp";
 import japandi from "@/assets/style-japandi.webp";
 import scandinavian from "@/assets/style-scandinavian.webp";
+import europeanSm from "@/assets/_opt/style-european-800.webp";
+import tropicalSm from "@/assets/_opt/style-tropical-800.webp";
+import industrialSm from "@/assets/_opt/style-industrial-800.webp";
+import japandiSm from "@/assets/_opt/style-japandi-800.webp";
+import scandinavianSm from "@/assets/_opt/style-scandinavian-800.webp";
 
 const STYLES = [
-  { img: european, words: ["Modern.", "Quiet.", "European."], name: "European" },
-  { img: tropical, words: ["Lush.", "Warm.", "Tropical Modern"], name: "Tropical Modern" },
-  { img: industrial, words: ["Raw.", "Bold.", "Industrial."], name: "Industrial" },
-  { img: japandi, words: ["Warm.", "Minimal.", "Japandi."], name: "Japandi" },
-  { img: scandinavian, words: ["Light.", "Soft.", "Scandinavian."], name: "Scandinavian" },
+  { img: european, sm: europeanSm, w: 1280, h: 896, words: ["Modern.", "Quiet.", "European."], name: "European" },
+  { img: tropical, sm: tropicalSm, w: 1280, h: 1024, words: ["Lush.", "Warm.", "Tropical Modern"], name: "Tropical Modern" },
+  { img: industrial, sm: industrialSm, w: 1280, h: 1024, words: ["Raw.", "Bold.", "Industrial."], name: "Industrial" },
+  { img: japandi, sm: japandiSm, w: 1280, h: 1024, words: ["Warm.", "Minimal.", "Japandi."], name: "Japandi" },
+  { img: scandinavian, sm: scandinavianSm, w: 1280, h: 1024, words: ["Light.", "Soft.", "Scandinavian."], name: "Scandinavian" },
 ];
 
 export function OurStyle() {
@@ -131,8 +136,13 @@ export function OurStyle() {
             <div className="absolute inset-0 overflow-hidden">
               <img
                 src={s.img}
+                srcSet={`${s.sm} 800w, ${s.img} ${s.w}w`}
+                sizes="(max-width: 640px) 100vw, 62vw"
                 alt={`${s.name} interior by Livora`}
                 loading="lazy"
+                decoding="async"
+                width={s.w}
+                height={s.h}
                 className="style-img h-full w-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-foreground/85 via-foreground/25 to-transparent" />

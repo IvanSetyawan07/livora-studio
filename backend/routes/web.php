@@ -24,8 +24,16 @@ Route::get('/storage/{path}', function ($path) {
     }
     return response()->file($fullPath, [
         'Access-Control-Allow-Origin' => '*',
+        'Cache-Control' => 'public, max-age=31536000, immutable',
+        'Expires' => gmdate('D, d M Y H:i:s', time() + 31536000) . ' GMT',
     ]);
-})->where('path', '.*');
+})->where('path', '.*')->withoutMiddleware([
+    \App\Http\Middleware\EncryptCookies::class,
+    \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+    \Illuminate\Session\Middleware\StartSession::class,
+    \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+    \App\Http\Middleware\VerifyCsrfToken::class,
+]);
 
 // Target redirect Google OAuth (AI Marketing — Search Console dkk). Sengaja
 // di web.php, BUKAN routes/api.php, supaya URL-nya persis

@@ -377,6 +377,8 @@ export const Projects = () => {
             alt={`${p.name} — ${p.category}${p.location ? `, ${p.location}` : ""}`}
             loading="lazy"
             decoding="async"
+            width={900}
+            height={1125}
             className="card-photo w-[116%] h-full object-cover max-w-none transition-transform duration-700 group-hover:scale-[1.04]"
           />
 

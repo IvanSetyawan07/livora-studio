@@ -37,17 +37,17 @@ class CollectionController extends Controller
     public function store(Request $r) {
         $data = $this->validateData($r);
         $data['slug'] = $this->uniqueSlug($data['name']);
-        if ($r->hasFile('hero_banner'))    $data['hero_banner']    = '/storage/'.$r->file('hero_banner')->store('collections','public');
-        if ($r->hasFile('card_banner'))    $data['card_banner']    = '/storage/'.$r->file('card_banner')->store('collections','public');
-        if ($r->hasFile('featured_image')) $data['featured_image'] = '/storage/'.$r->file('featured_image')->store('collections','public');
+        if ($r->hasFile('hero_banner'))    $data['hero_banner']    = \App\Services\ImageOptimizer::storePublicWebp($r->file('hero_banner'), 'collections');
+        if ($r->hasFile('card_banner'))    $data['card_banner']    = \App\Services\ImageOptimizer::storePublicWebp($r->file('card_banner'), 'collections');
+        if ($r->hasFile('featured_image')) $data['featured_image'] = \App\Services\ImageOptimizer::storePublicWebp($r->file('featured_image'), 'collections');
         return Collection::create($data);
     }
 
     public function update(Request $r, Collection $collection) {
         $data = $this->validateData($r);
-        if ($r->hasFile('hero_banner'))    $data['hero_banner']    = '/storage/'.$r->file('hero_banner')->store('collections','public');
-        if ($r->hasFile('card_banner'))    $data['card_banner']    = '/storage/'.$r->file('card_banner')->store('collections','public');
-        if ($r->hasFile('featured_image')) $data['featured_image'] = '/storage/'.$r->file('featured_image')->store('collections','public');
+        if ($r->hasFile('hero_banner'))    $data['hero_banner']    = \App\Services\ImageOptimizer::storePublicWebp($r->file('hero_banner'), 'collections');
+        if ($r->hasFile('card_banner'))    $data['card_banner']    = \App\Services\ImageOptimizer::storePublicWebp($r->file('card_banner'), 'collections');
+        if ($r->hasFile('featured_image')) $data['featured_image'] = \App\Services\ImageOptimizer::storePublicWebp($r->file('featured_image'), 'collections');
         $collection->update($data);
         return $collection->fresh();
     }
@@ -66,7 +66,7 @@ class CollectionController extends Controller
             'story_banner' => 'nullable|file|image',
         ]);
         if ($r->hasFile('story_banner')) {
-            $data['story_banner'] = '/storage/'.$r->file('story_banner')->store('collections','public');
+            $data['story_banner'] = \App\Services\ImageOptimizer::storePublicWebp($r->file('story_banner'), 'collections');
         }
         $data['collection_id'] = $collection->id;
         $story = CollectionStory::updateOrCreate(['collection_id' => $collection->id], $data);
@@ -87,7 +87,7 @@ class CollectionController extends Controller
         unset($data['item_ids']);
         $data['collection_id'] = $collection->id;
         $data['slug'] = Str::slug($data['name']).'-'.uniqid();
-        if ($r->hasFile('banner')) $data['banner'] = '/storage/'.$r->file('banner')->store('collections','public');
+        if ($r->hasFile('banner')) $data['banner'] = \App\Services\ImageOptimizer::storePublicWebp($r->file('banner'), 'collections');
         $pkg = CollectionPackage::create($data);
         if ($itemIds) $pkg->items()->sync($itemIds);
         return $pkg->load('items.type');
@@ -104,7 +104,7 @@ class CollectionController extends Controller
         ]);
         $itemIds = $data['item_ids'] ?? null;
         unset($data['item_ids']);
-        if ($r->hasFile('banner')) $data['banner'] = '/storage/'.$r->file('banner')->store('collections','public');
+        if ($r->hasFile('banner')) $data['banner'] = \App\Services\ImageOptimizer::storePublicWebp($r->file('banner'), 'collections');
         $package->update($data);
         if ($itemIds !== null) $package->items()->sync($itemIds);
         return $package->load('items.type');

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import logoLivora from "@/assets/logo-livora.webp";
+import logoLivora from "@/assets/_opt/logo-livora-160.webp";
 
 export const PRELOADER_READY_EVENT = "livora:preloader:ready";
 
@@ -26,12 +26,12 @@ export default function HeroPreloader() {
     setFading(false);
     setTextExit(false);
 
-    const tIn = setTimeout(() => setTextVisible(true), 250);
+    const tIn = setTimeout(() => setTextVisible(true), 40);
 
     let cancelled = false;
     const start = performance.now();
-    const MIN_MS = 1400; // biar animasi teks sempat terlihat
-    const MAX_MS = 3500; // hard cap – jangan pernah stuck
+    const MIN_MS = 450; // transisi dipercepat agar hero cepat tampil & LCP rendah
+    const MAX_MS = 1350; // hard cap – jangan pernah stuck
 
     const notifyReady = () => {
       if (preloaderDone) return;
@@ -55,8 +55,8 @@ export default function HeroPreloader() {
           if (cancelled) return;
           setFading(true);
           notifyReady();
-          setTimeout(() => !cancelled && setVisible(false), 600);
-        }, 500);
+          setTimeout(() => !cancelled && setVisible(false), 320);
+        }, 260);
       }, wait);
     };
 
@@ -65,10 +65,8 @@ export default function HeroPreloader() {
     const imagesReady = () =>
       new Promise<void>((resolve) => {
         requestAnimationFrame(() => {
-          const imgs = Array.from(document.images).filter(
-            (img) =>
-              !img.complete &&
-              img.getBoundingClientRect().top < window.innerHeight * 1.5,
+          const imgs = Array.from(document.querySelectorAll<HTMLImageElement>('img[fetchpriority="high"]')).filter(
+            (img) => !img.complete,
           );
           if (imgs.length === 0) return resolve();
           let left = imgs.length;
@@ -77,7 +75,7 @@ export default function HeroPreloader() {
             img.addEventListener("load", done, { once: true });
             img.addEventListener("error", done, { once: true });
           });
-          setTimeout(resolve, 2500);
+          setTimeout(resolve, 1100);
         });
       });
 
@@ -97,7 +95,7 @@ export default function HeroPreloader() {
   return (
     <div
       aria-hidden
-      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-background transition-opacity duration-700 ${
+      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-background transition-opacity duration-300 ${
         fading ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
     >
@@ -106,11 +104,14 @@ export default function HeroPreloader() {
           <img
             src={logoLivora}
             alt="Livora"
+            width={56}
+            height={56}
+            decoding="sync"
             style={{
               width: "56px",
               height: "56px",
               flexShrink: 0,
-              animation: "spin-logo 2.4s linear infinite",
+              animation: "spin-logo 1.6s linear infinite",
             }}
           />
 
@@ -133,8 +134,8 @@ export default function HeroPreloader() {
                   : "inset(0 0% 0 100%)",
                 opacity: textVisible ? 1 : 0,
                 transition: textExit
-                  ? "clip-path 0.5s cubic-bezier(0.22,1,0.36,1), opacity 0.5s ease"
-                  : "clip-path 0.8s cubic-bezier(0.22,1,0.36,1), opacity 0.6s ease",
+                  ? "clip-path 0.28s cubic-bezier(0.22,1,0.36,1), opacity 0.28s ease"
+                  : "clip-path 0.45s cubic-bezier(0.22,1,0.36,1), opacity 0.35s ease",
               }}
             >
               <div
@@ -179,7 +180,7 @@ export default function HeroPreloader() {
               width: "100%",
               background: "currentColor",
               transformOrigin: "left",
-              animation: "loader-line 1.8s ease-out forwards",
+              animation: "loader-line 0.7s ease-out forwards",
             }}
           />
         </div>

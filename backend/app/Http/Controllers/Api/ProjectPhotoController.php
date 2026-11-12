@@ -23,7 +23,7 @@ class ProjectPhotoController extends Controller
             'item_ids' => 'nullable|array',
             'item_ids.*' => 'integer|exists:items,id',
         ]);
-        $data['image'] = '/storage/'.$r->file('image')->store('project_photos', 'public');
+        $data['image'] = \App\Services\ImageOptimizer::storePublicWebp($r->file('image'), 'project_photos');
         $itemIds = $data['item_ids'] ?? [];
         unset($data['item_ids']);
         $photo = $project->photos()->create($data);
@@ -42,7 +42,7 @@ class ProjectPhotoController extends Controller
             'item_ids.*' => 'integer|exists:items,id',
         ]);
         if ($r->hasFile('image')) {
-            $data['image'] = '/storage/'.$r->file('image')->store('project_photos', 'public');
+            $data['image'] = \App\Services\ImageOptimizer::storePublicWebp($r->file('image'), 'project_photos');
         }
         $itemIds = $data['item_ids'] ?? null;
         unset($data['item_ids']);

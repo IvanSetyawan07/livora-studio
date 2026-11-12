@@ -81,7 +81,7 @@ class ItemController extends Controller
         $themes = $data['theme_ids'] ?? []; $cats = $data['category_ids'] ?? [];
         unset($data['theme_ids'], $data['category_ids']);
         $data['slug'] = $this->uniqueSlug($data['title']);
-        if ($r->hasFile('image')) $data['image'] = '/storage/'.$r->file('image')->store('items','public');
+        if ($r->hasFile('image')) $data['image'] = \App\Services\ImageOptimizer::storePublicWebp($r->file('image'), 'items');
         $item = Item::create($data);
         $item->themes()->sync($themes);
         $item->categories()->sync($cats);
@@ -93,7 +93,7 @@ class ItemController extends Controller
         $data = $this->validateData($r);
         $themes = $data['theme_ids'] ?? null; $cats = $data['category_ids'] ?? null;
         unset($data['theme_ids'], $data['category_ids']);
-        if ($r->hasFile('image')) $data['image'] = '/storage/'.$r->file('image')->store('items','public');
+        if ($r->hasFile('image')) $data['image'] = \App\Services\ImageOptimizer::storePublicWebp($r->file('image'), 'items');
         $item->update($data);
         if ($themes !== null) $item->themes()->sync($themes);
         if ($cats !== null)   $item->categories()->sync($cats);

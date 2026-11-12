@@ -88,9 +88,9 @@ class CatalogController extends Controller
         try {
             // Upload cover image
             if ($request->hasFile('cover_image')) {
-                $path = $request->file('cover_image')->store(
-                    "catalog/{$validated['slug']}",
-                    'public'
+                $path = \App\Services\ImageOptimizer::storeWebp(
+                    $request->file('cover_image'),
+                    "catalog/{$validated['slug']}"
                 );
                 $validated['cover_image'] = $path;
             }
@@ -187,9 +187,9 @@ class CatalogController extends Controller
                 if ($catalog->cover_image) {
                     Storage::disk('public')->delete($catalog->cover_image);
                 }
-                $path = $request->file('cover_image')->store(
-                    "catalog/{$catalog->slug}",
-                    'public'
+                $path = \App\Services\ImageOptimizer::storeWebp(
+                    $request->file('cover_image'),
+                    "catalog/{$catalog->slug}"
                 );
                 $validated['cover_image'] = $path;
             }

@@ -125,6 +125,6 @@ class ProjectSpaceController extends Controller
     private function upload(Request $r, string $field, string $folder): ?string
     {
         if (!$r->hasFile($field)) return null;
-        return '/storage/'.$r->file($field)->store($folder, 'public');
+        return \App\Services\ImageOptimizer::storePublicWebp($r->file($field), $folder);
     }
 }

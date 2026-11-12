@@ -4,6 +4,11 @@
     Header set Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
     Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, X-XSRF-TOKEN, X-Locale, Idempotency-Key, Accept"
     Header set Access-Control-Allow-Credentials "true"
+
+    <FilesMatch "\.(webp|png|jpg|jpeg|svg|woff2|avif)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+        Header set Access-Control-Allow-Origin "*"
+    </FilesMatch>
 </IfModule>
 
 RewriteEngine On

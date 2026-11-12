@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "name": "LIVORA",
+  "legal_name": "PT. Langgeng Cipta Ruang",
+  "url": "https://www.livoralcr.com/",
+  "description": "Studio arsitek, desain interior, dan custom furniture di Jakarta Selatan.",
+  "language": ["id", "en"],
+  "resources": [
+    {
+      "name": "Daftar Proyek",
+      "type": "application/json",
+      "url": "https://api.livoralcr.com/api/projects"
+    },
+    {
+      "name": "Katalog Furniture",
+      "type": "application/json",
+      "url": "https://api.livoralcr.com/api/items"
+    },
+    {
+      "name": "Koleksi",
+      "type": "application/json",
+      "url": "https://api.livoralcr.com/api/collections"
+    },
+    {
+      "name": "Katalog Digital",
+      "type": "application/json",
+      "url": "https://api.livoralcr.com/api/catalogs"
+    }
+  ]
+}

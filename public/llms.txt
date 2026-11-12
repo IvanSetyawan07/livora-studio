@@ -1,0 +1,17 @@
+# LIVORA (PT. Langgeng Cipta Ruang)
+
+> Studio arsitek, desain interior, dan custom furniture berbasis di Jakarta Selatan untuk hunian, apartemen, villa, kantor, dan ruang komersial.
+
+## Halaman Utama
+- [Beranda](https://www.livoralcr.com/): Pengenalan filosofi desain, gaya interior (European, Tropical Modern, Industrial, Japandi, Scandinavian), lingkup pekerjaan, proyek pilihan, dan katalog furniture.
+- [Portofolio Proyek](https://www.livoralcr.com/projects): Daftar proyek arsitektur dan desain interior yang dikerjakan Livora.
+- [Katalog Furniture](https://www.livoralcr.com/furniture): Koleksi loose furniture (sofa, kursi, meja, tempat tidur, dan aksesori).
+- [Katalog Digital](https://www.livoralcr.com/catalog): Buku katalog digital interaktif dengan tag produk.
+- [Koleksi](https://www.livoralcr.com/collections): Kurasi koleksi ruang dan gaya Livora.
+- [Konsultasi & Appointment](https://www.livoralcr.com/appointment): Jadwalkan konsultasi desain atau kunjungan showroom di Jl. Bangka Raya No. 45, Jakarta Selatan.
+- [Tentang Livora](https://www.livoralcr.com/about): Profil perusahaan, layanan satu pintu, dan kontak resmi.
+
+## Kontak & Lokasi
+- Alamat Showroom: Jl. Bangka Raya No. 45, Pela Mampang, Mampang Prapatan, Jakarta Selatan
+- WhatsApp: +62 821-2043-307
+- API Katalog Publik: https://api.livoralcr.com/api/items

@@ -125,6 +125,10 @@ export const Scope = () => {
                 >
                   <img
                     src={item.image}
+                    srcSet={`${item.imageSm} 800w, ${item.image} ${item.width}w`}
+                    sizes="(max-width: 768px) 92vw, 34vw"
+                    width={item.width}
+                    height={item.height}
                     alt={tr(index)?.title ?? item.title}
                     loading="lazy"
                     decoding="async"

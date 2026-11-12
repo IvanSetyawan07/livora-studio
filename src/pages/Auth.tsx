@@ -959,6 +959,17 @@ export default function Auth() {
   useEffect(() => {
     const w = window as any;
 
+    // Muat Google Identity Services secara dinamis hanya saat halaman Auth dibuka
+    // (tidak membebani landing page).
+    if (!w.google?.accounts?.id && !document.querySelector('script[data-gsi-loader]')) {
+      const s = document.createElement("script");
+      s.src = "https://accounts.google.com/gsi/client";
+      s.async = true;
+      s.defer = true;
+      s.dataset.gsiLoader = "1";
+      document.head.appendChild(s);
+    }
+
     const tryInit = () => {
       if (!w.google?.accounts?.id) return false;
 
