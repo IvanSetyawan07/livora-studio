@@ -220,6 +220,16 @@ class SupportChatController extends Controller
             'text'   => 'Permintaan untuk berbicara dengan customer service sudah dikirim. Mohon tunggu sebentar, tim kami akan segera bergabung ke percakapan ini.',
         ]);
 
+        $who = $session->name ?: optional($session->user)->name ?: 'Visitor #'.($session->visitor_number ?? $session->id);
+        $reason = trim((string) ($data['reason'] ?? ''));
+        \App\Services\Shop\NotifyService::notify('N18', null, [
+            'sender_name' => $who,
+            'source_label' => 'Live Chat Website',
+            'reason' => $reason !== '' ? $reason : 'Meminta berbicara dengan CS',
+            'body' => "Live chat website dari {$who}".($reason !== '' ? " ({$reason})" : '').' menunggu balasan admin.',
+            'link' => '/admin/support?session='.$session->id,
+        ], 'support-'.$session->id);
+
         return response()->json($this->payload($session->fresh('messages')));
     }
 
@@ -245,6 +255,8 @@ class SupportChatController extends Controller
             'sender' => 'system',
             'text'   => 'Sesi live chat berakhir karena tidak ada aktivitas. Kamu kembali terhubung dengan Livora Concierge (AI). Ketik "customer service" kapan saja untuk terhubung lagi dengan tim kami.',
         ]);
+
+        \App\Services\Shop\NotifyService::closeByEventKey('N18:0:support-'.$session->id);
 
         return response()->json($this->payload($session->fresh('messages')));
     }

@@ -23,6 +23,76 @@ class WaSender
     }
 
     /**
+     * Kirim pesan langsung ke Meta Cloud API tanpa menulis ke wa_conversations/wa_messages.
+     * Dipakai untuk alert internal admin agar nomor admin tidak masuk ke inbox pelanggan.
+     *
+     * @return array{0: bool, 1: ?string}
+     */
+    public static function sendDirectMeta(string $phone, array $msg): array
+    {
+        if (!self::configured()) return [false, 'Konfigurasi Meta WhatsApp (provider/token/phone_number_id) belum lengkap di server.'];
+
+        return self::toMeta(WhatsAppNotifier::normalizePhone($phone), $msg);
+    }
+
+    /**
+     * Ambil informasi nomor WA bot yang aktif di Meta Graph API (di-cache 5 menit).
+     * Membantu owner mengecek nomor bot sebenarnya vs nomor link di keranjang website.
+     */
+    public static function metaPhoneInfo(bool $refresh = false): array
+    {
+        $linkNumber = WhatsAppNotifier::normalizePhone((string) (ShopSettings::get('bot_wa_number') ?: config('services.shop.whatsapp_number', '')));
+        $defaultNumber = WhatsAppNotifier::normalizePhone((string) config('services.shop.whatsapp_number', ''));
+        $base = [
+            'configured' => self::configured(),
+            'provider' => config('services.whatsapp.provider') ?: 'none',
+            'link_number' => $linkNumber,
+            'uses_fallback_307' => empty(ShopSettings::get('bot_wa_number')) && $linkNumber === $defaultNumber,
+            'display_phone_number' => null,
+            'normalized_bot_number' => null,
+            'verified_name' => null,
+            'quality_rating' => null,
+            'mismatch' => false,
+            'error' => null,
+        ];
+
+        if (!self::configured()) return $base;
+
+        $cacheKey = 'wa_meta_phone_info';
+        if ($refresh) \Illuminate\Support\Facades\Cache::forget($cacheKey);
+
+        $meta = \Illuminate\Support\Facades\Cache::remember($cacheKey, 300, function () {
+            $c = config('services.whatsapp.meta', []);
+            $version = $c['api_version'] ?? 'v21.0';
+            try {
+                $res = Http::timeout(8)->withToken($c['access_token'])
+                    ->get("https://graph.facebook.com/{$version}/{$c['phone_number_id']}", [
+                        'fields' => 'display_phone_number,verified_name,quality_rating',
+                    ]);
+                if ($res->successful()) {
+                    return [
+                        'display_phone_number' => $res->json('display_phone_number'),
+                        'verified_name' => $res->json('verified_name'),
+                        'quality_rating' => $res->json('quality_rating'),
+                        'error' => null,
+                    ];
+                }
+                return ['error' => 'HTTP '.$res->status().': '.($res->json('error.message') ?? 'Gagal cek Meta')];
+            } catch (\Throwable $e) {
+                return ['error' => 'Koneksi Meta gagal: '.$e->getMessage()];
+            }
+        });
+
+        $normBot = !empty($meta['display_phone_number']) ? WhatsAppNotifier::normalizePhone((string) $meta['display_phone_number']) : null;
+        $mismatch = $normBot !== null && $linkNumber !== '' && $normBot !== $linkNumber;
+
+        return array_merge($base, $meta, [
+            'normalized_bot_number' => $normBot,
+            'mismatch' => $mismatch,
+        ]);
+    }
+
+    /**
      * Kirim satu pesan keluar. $msg: ['type' => text|buttons|list|image|document|template, ...]
      * Selalu dicatat ke wa_messages (arah out) agar Simulator & inbox admin melihatnya.
      */

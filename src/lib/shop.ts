@@ -241,8 +241,13 @@ export const adminShop = {
   priceInquiry: (id: number) => api.get(`/admin/shop/inbox/${id}/price-inquiry`).then((r) => r.data as { inquiry: any | null }),
   answerPriceInquiry: (id: number, body: { inquiry_id: number; answers: Array<{ item_id: number; price: number; discount_type: string | null; discount_value: number | null; note: string | null }>; admin_note?: string | null }) =>
     api.post(`/admin/shop/inbox/${id}/price-inquiry`, body).then((r) => r.data as { ok: boolean; relayed: boolean }),
-  settings: () => api.get("/admin/shop/settings").then((r) => r.data as Record<string, any>),
+  settings: (refresh = false) => api.get("/admin/shop/settings", { params: refresh ? { refresh: 1 } : undefined }).then((r) => r.data as Record<string, any>),
   saveSettings: (body: Record<string, unknown>) => api.post("/admin/shop/settings", body).then((r) => r.data as Record<string, any>),
+  testAdminAlert: (phone?: string) =>
+    api.post("/admin/shop/settings/test-alert", phone ? { phone } : {}).then((r) => r.data as {
+      ok: boolean; error: string | null;
+      results: Array<{ phone: string; ok: boolean; mode: string; error: string | null }>;
+    }),
   health: () => api.get("/admin/shop/health").then((r) => r.data as Record<string, any>),
   retryFailed: (id: number) => api.post(`/admin/shop/health/failed/${id}/retry`).then((r) => r.data),
   dismissFailed: (id: number) => api.post(`/admin/shop/health/failed/${id}/dismiss`).then((r) => r.data),

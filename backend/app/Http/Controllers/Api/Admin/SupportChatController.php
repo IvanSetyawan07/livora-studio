@@ -78,6 +78,7 @@ class SupportChatController extends Controller
             'text'   => 'Customer service Livora (' . $request->user()->name . ') telah bergabung. Silakan lanjutkan percakapan.',
         ]);
         $session->update(['last_message_at' => now()]);
+        \App\Services\Shop\NotifyService::closeByEventKey('N18:0:support-'.$session->id, $request->user()->id);
 
         return response()->json($this->sessionData($session->fresh('admin')));
     }
@@ -106,6 +107,7 @@ class SupportChatController extends Controller
             'unread_user'     => $session->unread_user + 1,
             'unread_admin'    => 0,
         ]);
+        \App\Services\Shop\NotifyService::closeByEventKey('N18:0:support-'.$session->id, $request->user()->id);
 
         return response()->json($this->messageData($msg));
     }
@@ -123,6 +125,7 @@ class SupportChatController extends Controller
             'text'   => 'Percakapan dengan customer service telah ditutup. Livora Concierge (AI) siap membantu lagi kapan saja.',
         ]);
         $session->update(['last_message_at' => now()]);
+        \App\Services\Shop\NotifyService::closeByEventKey('N18:0:support-'.$session->id, $request->user()->id);
 
         return response()->json($this->sessionData($session->fresh()));
     }
@@ -145,6 +148,7 @@ public function reject(Request $request, SupportSession $session)
         'text'   => 'Permintaan untuk terhubung dengan customer service belum bisa kami proses saat ini. Kamu kembali dilayani oleh Livora Concierge (AI) — ketik "customer service" kapan saja untuk mencoba lagi.',
     ]);
     $session->update(['last_message_at' => now()]);
+    \App\Services\Shop\NotifyService::closeByEventKey('N18:0:support-'.$session->id, $request->user()->id);
 
     return response()->json($this->sessionData($session->fresh()));
 }
@@ -152,6 +156,7 @@ public function reject(Request $request, SupportSession $session)
 /** DELETE /api/admin/support/sessions/{session} */
 public function destroy(SupportSession $session)
 {
+    \App\Services\Shop\NotifyService::closeByEventKey('N18:0:support-'.$session->id);
     $session->messages()->delete();
     $session->delete();
 

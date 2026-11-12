@@ -87,6 +87,18 @@ class WebhookController extends Controller
     {
         if (DB::table('wa_messages')->where('message_id', $m['id'] ?? '')->exists()) return; // idempoten
         $phone = WhatsAppNotifier::normalizePhone($m['from'] ?? '');
+
+        // Nomor admin (mis. 307): jendela 24 jam dibuka saat admin membalas alert, namun bot tidak menjawabnya
+        if (\App\Services\Shop\ShopSettings::get('ignore_admin_inbound', true) && \App\Services\Shop\AdminWaAlert::isAdminPhone($phone)) {
+            $msgId = (string) ($m['id'] ?? '');
+            if ($msgId !== '' && !\Illuminate\Support\Facades\Cache::add("wa_admin_in:{$msgId}", 1, 3600)) {
+                return;
+            }
+            \Illuminate\Support\Facades\Cache::put("admin_wa_window:{$phone}", now()->timestamp, now()->addHours(24));
+
+            return;
+        }
+
         $type = $m['type'] ?? 'text';
         $text = trim($m['text']['body'] ?? $m['button']['text'] ?? '');
         // Balasan interaktif: ambil id + judul agar LiviBot mengenali pilihan secara pasti
@@ -147,7 +159,13 @@ class WebhookController extends Controller
         if (!$ans) return false;
         \App\Services\Shop\WaSender::send($phone, ['type' => 'text', 'body' => $ans['reply']], null, $conv->id);
         if ($ans['handoff']) {
-            DB::table('wa_conversations')->where('id', $conv->id)->update(['mode' => 'menunggu_admin', 'updated_at' => now()]);
+            DB::table('wa_conversations')->where('id', $conv->id)->update(['mode' => 'menunggu_admin', 'handoff_reason' => 'undangan_acara', 'handoff_at' => now(), 'updated_at' => now()]);
+            \App\Services\Shop\NotifyService::notify('N1', null, [
+                'phone' => $phone,
+                'trigger' => 'undangan_acara',
+                'source_label' => 'Undangan WA Bot',
+                'body' => 'Tamu undangan '.($conv->wa_name ?: '+'.$phone)." butuh admin: {$text}",
+            ], 'c'.$conv->id.'-'.time(), $conv->id);
         }
         return true;
     }

@@ -509,6 +509,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/inbox/{session}/price-inquiry', [$a, 'answerPriceInquiry'])->middleware('admin_role:cs');
         Route::get('/settings', [$a, 'settings'])->middleware('admin_role:owner');
         Route::post('/settings', [$a, 'saveSettings'])->middleware('admin_role:owner');
+        Route::post('/settings/test-alert', [$a, 'testAdminAlert'])->middleware('admin_role:owner');
         Route::get('/health', [$a, 'health'])->middleware('admin_role:owner');
         Route::post('/health/failed/{id}/retry', [$a, 'retryFailed'])->middleware('admin_role:owner');
         Route::post('/health/failed/{id}/dismiss', [$a, 'dismissFailed'])->middleware('admin_role:owner');

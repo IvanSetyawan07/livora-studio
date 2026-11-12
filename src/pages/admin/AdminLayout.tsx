@@ -1,81 +1,23 @@
-import { QrCode as QrCodeIcon } from "lucide-react";
-import AdminNotificationsBell from "@/components/admin/AdminNotificationsBell";
-import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { api } from "@/lib/api";
+import { AnimatePresence, MotionConfig, motion } from "framer-motion";
+import { Eye, X } from "lucide-react";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 import { clearSession, rememberIntendedPath } from "@/lib/authGuard";
+import AdminNotificationCenter from "@/components/admin/layout/AdminNotificationCenter";
+import AdminSidebar from "@/components/admin/layout/AdminSidebar";
+import AdminTopbar from "@/components/admin/layout/AdminTopbar";
+import { matchNav } from "@/components/admin/layout/adminNav";
+import { AdminDialogProvider } from "@/components/admin/kit";
 import LanguageSwitcher from "@/components/livora/LanguageSwitcher";
-import NotificationBell from "@/components/livora/NotificationBell.tsx";
 import {
   getAdminActivities,
   getAdminActivitiesUnread,
   markAdminActivitiesRead,
 } from "@/lib/adminConsultations";
 import type { ConsultationActivity } from "@/lib/consultations";
-import {
-  LayoutDashboard,
-  FolderKanban,
-  Sofa,
-  Tags,
-  Star,
-  BarChart3,
-  Image as ImageIcon,
-  LogOut,
-  BookOpen,
-  Users,
-  MessageCircle,
-  Bookmark,
-  Mail,
-  Menu,
-  X,
-  Home,
-  ShoppingBag, Store,
-  Wallet,
-  Database,
-  Inbox,
-  LifeBuoy,
-  Settings2,
-  Activity,
-  Bot,
-  ShieldCheck,
-  Eye,
-  FileText,
-  Send,
-} from "lucide-react";
-
-const nav = [
-  { to: "/admin", end: true, key: "overview", icon: LayoutDashboard },
-  { to: "/admin/roles", key: "roles", label: "Peran & hak akses", icon: ShieldCheck, owner: true },
-  { to: "/admin/projects", key: "projects", feature: "projects", icon: FolderKanban },
-  { to: "/admin/items", key: "items", feature: "catalog", icon: Sofa },
-  { to: "/admin/scan", key: "scan", feature: "catalog", icon: QrCodeIcon },
-  { to: "/admin/collections", key: "collections", feature: "catalog", icon: BookOpen },
-  { to: "/admin/catalogs", key: "catalogs", feature: "catalog", icon: BookOpen },
-  { to: "/admin/taxonomies", key: "taxonomies", feature: "catalog", icon: Tags },
-  { to: "/admin/landing", key: "landing", feature: "landing", icon: Star },
-  { to: "/admin/banners", key: "banners", feature: "landing", icon: ImageIcon },
-  { to: "/admin/users", key: "users", feature: "users", icon: Users },
-  { to: "/admin/consultations", key: "consultations", feature: "consultations", icon: MessageCircle },
-  { to: "/admin/shop/board", key: "shopBoard", feature: "shop_orders", label: "Pantau Proses", icon: Activity },
-  { to: "/admin/shop/offline", key: "shopOffline", feature: "shop_orders", label: "Pembelian showroom", icon: Store },
-  { to: "/admin/shop/orders", key: "shopOrders", feature: "shop_orders", label: "Pesanan", icon: ShoppingBag },
-  { to: "/admin/shop/inbox", key: "shopInbox", feature: "shop_inbox", label: "Inbox WhatsApp", icon: Inbox },
-  { to: "/admin/shop/payments", key: "shopPayments", feature: "shop_payments", label: "Verifikasi bayar", icon: Wallet },
-  { to: "/admin/shop/aftercare", key: "shopAftercare", feature: "shop_aftercare", label: "Klaim & Refund", icon: LifeBuoy },
-  { to: "/admin/shop/database", key: "shopDatabase", feature: "shop_database", label: "Database toko", icon: Database },
-  { to: "/admin/shop/scan", key: "shopScan", feature: "shop_orders", label: "Scan dokumen", icon: QrCodeIcon },
-  { to: "/admin/shop/health", key: "shopHealth", feature: "shop_system", label: "Kesehatan & funnel", icon: Activity },
-  { to: "/admin/shop/settings", key: "shopSettings", feature: "shop_system", label: "Pengaturan toko", icon: Settings2 },
-  { to: "/admin/shop/bot-simulator", key: "shopBot", feature: "shop_system", label: "Simulator bot", icon: Bot },
-  { to: "/admin/shop/bot-logs", key: "shopBotLogs", feature: "shop_system", label: "Log AI & uji", icon: FileText },
-  { to: "/admin/invitations", key: "invitations", feature: "invitations", label: "Sebar undangan", icon: Send },
-  { to: "/admin/wishlists", key: "wishlists", feature: "wishlists", icon: Bookmark },
-  { to: "/admin/support", key: "support", feature: "support", icon: MessageCircle },
-  { to: "/admin/analytics", key: "analytics", feature: "analytics", icon: BarChart3 },
-  { to: "/admin/marketing", key: "marketing", feature: "marketing", icon: Mail },
-];
 
 export default function AdminLayout() {
   const navigate = useNavigate();
@@ -109,9 +51,24 @@ export default function AdminLayout() {
     return () => clearInterval(h);
   }, [navigate, t]);
 
+  // Tutup drawer mobile saat pindah halaman + scroll ke atas.
   useEffect(() => {
     setOpen(false);
+    window.scrollTo({ top: 0 });
   }, [location.pathname]);
+
+  // Kunci scroll body & tutup dengan Esc saat drawer terbuka.
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!user) return;
@@ -152,145 +109,105 @@ export default function AdminLayout() {
 
   const isOwner = !perm || perm.role === "owner";
   const levelOf = (f?: string) => (!f || isOwner ? "edit" : perm?.permissions?.[f] ?? "none");
-  const visibleNav = nav.filter((n: any) => (n.owner ? isOwner : levelOf(n.feature) !== "none"));
-  const current = [...nav].sort((a, b) => b.to.length - a.to.length).find((n: any) => n.to !== "/admin" && location.pathname.startsWith(n.to)) as any;
-  const currentLevel = current ? (current.owner ? (isOwner ? "edit" : "none") : levelOf(current.feature)) : "edit";
+  const current = matchNav(location.pathname)?.item;
+  const currentLevel = current && current.to !== "/admin"
+    ? (current.owner ? (isOwner ? "edit" : "none") : levelOf(current.feature))
+    : "edit";
 
   const sidebar = (
-    <div className="flex h-full flex-col">
-      <div className="p-6 border-b border-border">
-        <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-          Livora
-        </p>
-        <h1 className="serif text-2xl mt-1">{t("admin.panel")}</h1>
-      </div>
-
-      <div className="px-3 pt-3">
-        <button
-          onClick={() => navigate("/")}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded text-sm border border-border hover:bg-muted text-foreground/80"
-        >
-          <Home className="w-4 h-4" /> {t("admin.back_to_site")}
-        </button>
-      </div>
-
-      <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-        {visibleNav.map((n) => (
-          <NavLink
-            key={n.to}
-            to={n.to}
-            end={n.end}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded text-sm transition-colors ${
-                isActive
-                  ? "bg-foreground text-background"
-                  : "text-foreground/80 hover:bg-muted"
-              }`
-            }
-          >
-            <n.icon className="w-4 h-4 shrink-0" />
-            {t(`admin.nav.${n.key}`, { defaultValue: (n as { label?: string }).label ?? n.key })}
-          </NavLink>
-        ))}
-      </nav>
-
-      <div className="p-3 border-t border-border space-y-2">
-        <div className="px-3 py-1 text-xs text-muted-foreground">
-          <p className="text-foreground truncate">{user.name}</p>
-          <p className="truncate">{user.email}</p>
-        </div>
-        <div className="px-1">
-          <LanguageSwitcher isLoggedIn variant="segmented" />
-        </div>
-        <button
-          onClick={logout}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded text-sm hover:bg-muted text-foreground/80"
-        >
-          <LogOut className="w-4 h-4" /> {t("admin.logout")}
-        </button>
-      </div>
-    </div>
+    <AdminSidebar
+      user={user}
+      isOwner={isOwner}
+      levelOf={levelOf}
+      badges={{ consultations: unreadActivities }}
+      onLogout={logout}
+      panelLabel={t("admin.panel")}
+      backLabel={t("admin.back_to_site")}
+      logoutLabel={t("admin.logout")}
+    />
   );
 
   return (
-    <div className="min-h-screen bg-background lg:flex">
-      {/* Mobile top bar */}
-      <header className="lg:hidden sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-border bg-card px-4 py-3">
-        <button
-          onClick={() => setOpen(true)}
-          aria-label={t("admin.menu")}
-          className="p-2 -ml-2 rounded hover:bg-muted"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-        <p className="serif text-lg truncate">{t("admin.panel")}</p>
-        <div className="flex items-center gap-1">
-          <AdminNotificationsBell />
-          <NotificationBell
-            activities={activities}
-            unreadCount={unreadActivities}
-            readField="admin_read_at"
-            onOpen={handleBellOpen}
-            onItemClick={(a) => navigate(`/admin/consultations/${a.consultation_id}`)}
-            label="Notifications"
-          />
-          <LanguageSwitcher isLoggedIn />
-        </div>
-      </header>
+    <MotionConfig reducedMotion="user">
+      <AdminDialogProvider>
+      <div className="min-h-screen bg-background lg:flex">
+        {/* Desktop sticky sidebar */}
+        <aside className="sticky top-0 hidden h-screen w-72 shrink-0 border-r border-border bg-card lg:flex">
+          {sidebar}
+        </aside>
 
-      {/* Mobile drawer */}
-      {open && (
-        <div className="lg:hidden fixed inset-0 z-50 flex">
-          <div
-            className="absolute inset-0 bg-black/50 animate-fade-in"
-            onClick={() => setOpen(false)}
-          />
-          <aside className="relative w-72 max-w-[85vw] h-full bg-card border-r border-border animate-slide-in-right">
-            <button
-              onClick={() => setOpen(false)}
-              aria-label="Close"
-              className="absolute right-3 top-4 p-2 rounded hover:bg-muted"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            {sidebar}
-          </aside>
-        </div>
-      )}
-
-      {/* Desktop sticky sidebar */}
-      <aside className="hidden lg:flex w-64 shrink-0 border-r border-border bg-card sticky top-0 h-screen">
-        {sidebar}
-      </aside>
-
-      <main className="flex-1 min-w-0 overflow-x-hidden">
-        <div className="hidden lg:flex justify-end px-6 pt-4">
-          <NotificationBell
-            activities={activities}
-            unreadCount={unreadActivities}
-            readField="admin_read_at"
-            onOpen={handleBellOpen}
-            onItemClick={(a) => navigate(`/admin/consultations/${a.consultation_id}`)}
-            label="Notifications"
-          />
-        </div>
-        <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-10">
-          {currentLevel === "none" ? (
-            <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
-              Peran Anda tidak memiliki akses ke halaman ini. Hubungi Owner bila perlu akses.
+        {/* Mobile drawer */}
+        <AnimatePresence>
+          {open && (
+            <div className="fixed inset-0 z-50 flex lg:hidden">
+              <motion.div
+                className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setOpen(false)}
+              />
+              <motion.aside
+                className="relative h-full w-80 max-w-[85vw] border-r border-border bg-card shadow-2xl"
+                initial={{ x: "-100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "-100%" }}
+                transition={{ type: "spring", stiffness: 380, damping: 38 }}
+              >
+                <button
+                  onClick={() => setOpen(false)}
+                  aria-label="Close"
+                  className="absolute right-3 top-5 z-10 rounded-lg p-2 transition-colors hover:bg-muted"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+                {sidebar}
+              </motion.aside>
             </div>
-          ) : (
-            <>
-              {currentLevel === "view" && (
-                <div className="mb-4 flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-4 py-2.5 text-sm text-muted-foreground">
-                  <Eye className="h-4 w-4 shrink-0" /> Mode lihat saja — peran Anda tidak bisa mengubah data di halaman ini.
-                </div>
-              )}
-              <Outlet />
-            </>
           )}
+        </AnimatePresence>
+
+        <div className="min-w-0 flex-1">
+          <AdminTopbar onMenu={() => setOpen(true)} menuLabel={t("admin.menu")}>
+            <AdminNotificationCenter
+              activities={activities}
+              unreadActivities={unreadActivities}
+              onOpenActivities={handleBellOpen}
+              onActivityClick={(a) => navigate(`/admin/consultations/${a.consultation_id}`)}
+            />
+            <div className="lg:hidden">
+              <LanguageSwitcher isLoggedIn />
+            </div>
+          </AdminTopbar>
+
+          <main className="overflow-x-hidden">
+            <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-10">
+              {currentLevel === "none" ? (
+                <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+                  Peran Anda tidak memiliki akses ke halaman ini. Hubungi Owner bila perlu akses.
+                </div>
+              ) : (
+                <>
+                  {currentLevel === "view" && (
+                    <div className="mb-4 flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-4 py-2.5 text-sm text-muted-foreground">
+                      <Eye className="h-4 w-4 shrink-0" /> Mode lihat saja — peran Anda tidak bisa mengubah data di halaman ini.
+                    </div>
+                  )}
+                  <motion.div
+                    key={location.pathname}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <Outlet />
+                  </motion.div>
+                </>
+              )}
+            </div>
+          </main>
         </div>
-      </main>
-    </div>
+      </div>
+      </AdminDialogProvider>
+    </MotionConfig>
   );
 }

@@ -304,15 +304,25 @@ class ShopAftercareController extends Controller
         return ['ok' => $ok];
     }
     // ── Pengaturan (Owner) ──
-    public function settings()
+    public function settings(Request $r)
     {
-        return ShopSettings::all() + ['wa_flow_configured' => \App\Services\Shop\WhatsAppFlow::configured()];
+        return ShopSettings::all() + [
+            'wa_flow_configured' => \App\Services\Shop\WhatsAppFlow::configured(),
+            'bot_status' => \App\Services\Shop\WaSender::metaPhoneInfo($r->boolean('refresh')),
+        ];
     }
 
     public function saveSettings(Request $r)
     {
         $d = $r->validate([
             'bot_enabled' => 'sometimes|boolean', 'ai_answers_enabled' => 'sometimes|boolean', 'price_requires_admin' => 'sometimes|boolean',
+            'bot_wa_number' => 'sometimes|nullable|string|max:25',
+            'admin_alert_enabled' => 'sometimes|boolean',
+            'admin_alert_phones' => 'sometimes|array|max:10', 'admin_alert_phones.*' => 'string|max:25',
+            'admin_alert_template' => 'sometimes|string|max:120',
+            'admin_alert_template_lang' => 'sometimes|string|max:15',
+            'admin_alert_template_has_url_btn' => 'sometimes|boolean',
+            'ignore_admin_inbound' => 'sometimes|boolean',
             'business_hours' => 'sometimes|array', 'business_hours.days' => 'array', 'business_hours.start' => 'date_format:H:i', 'business_hours.end' => 'date_format:H:i',
             'blocklist' => 'sometimes|array', 'blocklist.*' => 'string|max:20',
             'templates' => 'sometimes|array', 'templates.*' => 'string|max:1000',
@@ -321,12 +331,29 @@ class ShopAftercareController extends Controller
             'sla_hours' => 'sometimes|integer|min:1|max:168', 'warranty_days' => 'sometimes|integer|min:0|max:3650',
             'return_days' => 'sometimes|integer|min:0|max:90', 'retention_days' => 'sometimes|integer|min:30|max:3650',
         ]);
+        if (array_key_exists('bot_wa_number', $d)) {
+            $rawBot = trim((string) ($d['bot_wa_number'] ?? ''));
+            $d['bot_wa_number'] = $rawBot === '' ? '' : WhatsAppNotifier::normalizePhone($rawBot);
+        }
+        if (isset($d['admin_alert_phones'])) {
+            $d['admin_alert_phones'] = array_values(array_unique(array_filter(array_map(fn ($p) => WhatsAppNotifier::normalizePhone((string) $p), $d['admin_alert_phones']))));
+        }
         if (isset($d['blocklist'])) $d['blocklist'] = array_values(array_filter(array_map(fn ($p) => WhatsAppNotifier::normalizePhone($p), $d['blocklist'])));
         $before = array_intersect_key(ShopSettings::all(), $d);
         ShopSettings::set($d);
         AuditLog::record('settings.updated', null, $before, $d);
 
-        return ShopSettings::all();
+        return ShopSettings::all() + [
+            'wa_flow_configured' => \App\Services\Shop\WhatsAppFlow::configured(),
+            'bot_status' => \App\Services\Shop\WaSender::metaPhoneInfo(),
+        ];
+    }
+
+    public function testAdminAlert(Request $r)
+    {
+        $d = $r->validate(['phone' => 'nullable|string|max:25']);
+
+        return \App\Services\Shop\AdminWaAlert::sendTest($d['phone'] ?? null);
     }
 
     // ── Kesehatan ──

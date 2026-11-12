@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2, Send, Check, X, Headset, Trash2 } from "lucide-react";
 import {
@@ -30,11 +31,13 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default function AdminSupportChat() {
+  const [searchParams] = useSearchParams();
+  const wantedSession = Number(searchParams.get("session")) || null;
   const [filter, setFilter] = useState("all");
   const [sessions, setSessions] = useState<AdminSupportSession[]>([]);
   const [pending, setPending] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [activeId, setActiveId] = useState<number | null>(null);
+  const [activeId, setActiveId] = useState<number | null>(() => wantedSession);
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -43,6 +46,10 @@ export default function AdminSupportChat() {
 
   const active = useMemo(() => sessions.find((s) => s.id === activeId) ?? null, [sessions, activeId]);
   const lastId = messages.length ? messages[messages.length - 1].id : 0;
+
+  useEffect(() => {
+    if (wantedSession) setActiveId(wantedSession);
+  }, [wantedSession]);
 
   const loadSessions = async () => {
     try {

@@ -18,7 +18,7 @@ class NotifyService
 {
     /** type => [judul, kind, priority, penerima (peran), batas waktu (menit, null = tanpa)] */
     public const DEFS = [
-        'N1' => ['Chat butuh admin', 'perlu_tindakan', 'mendesak', ['cs'], 15],
+        'N1' => ['Chat butuh admin', 'perlu_tindakan', 'mendesak', ['cs'], 5],
         'N2' => ['Pesanan baru dibuat bot', 'info', 'normal', ['cs'], null],
         'N3' => ['Pesanan perlu harga', 'perlu_tindakan', 'tinggi', ['cs', 'finance'], 240],
         'N4' => ['Customer minta revisi/nego', 'perlu_tindakan', 'tinggi', ['cs'], 240],
@@ -35,6 +35,7 @@ class NotifyService
         'N15' => ['Gangguan sistem', 'sistem', 'mendesak', ['owner'], null],
         'N16' => ['Jendela chat tinggal 30 menit', 'info', 'tinggi', ['cs'], null],
         'N17' => ['Customer minta cek harga', 'perlu_tindakan', 'tinggi', ['cs'], 30],
+        'N18' => ['Live chat web butuh admin', 'perlu_tindakan', 'mendesak', ['cs'], 5],
     ];
 
     /** Buat/perbarui notifikasi. $keyExtra membedakan versi (mis. versi penawaran). */
@@ -68,19 +69,32 @@ class NotifyService
             'status' => 'open', 'due_at' => $dueMin ? now()->addMinutes($dueMin) : null, 'updated_at' => now(),
         ];
         try {
+            $isNewOrReopened = false;
             $exists = DB::table('admin_notifications')->where('event_key', $eventKey)->first();
-                        if ($exists) {
+            if ($exists) {
                 if ($exists->status === 'open') {
                     DB::table('admin_notifications')->where('id', $exists->id)->update($data);
                 } elseif ($kind === 'perlu_tindakan' && $exists->status === 'done') {
                     DB::table('admin_notifications')->where('id', $exists->id)->update($data + [
                         'status' => 'open', 'reminder_count' => 0, 'escalated_at' => null, 'done_by' => null, 'done_at' => null, 'read_by' => null,
                     ]);
+                    $isNewOrReopened = true;
                 }
             } else {
                 DB::table('admin_notifications')->insert($data + ['event_key' => $eventKey, 'created_at' => now()]);
+                $isNewOrReopened = true;
             }
             if ($orderId) self::timeline($orderId, 'notification', $title, ['type' => $type, 'body' => $body]);
+
+            if ($isNewOrReopened) {
+                $scopeKey = $conversationId ? "conv-{$type}-{$conversationId}" : ($keyExtra !== '' ? $keyExtra : "{$type}-".($orderId ?? 0));
+                AdminWaAlert::notifyFromNotification($type, $title, $body, $link, $scopeKey, [
+                    'sender' => $vars['sender_name'] ?? $vars['phone'] ?? null,
+                    'source' => $vars['source_label'] ?? null,
+                    'reason' => $vars['reason'] ?? $vars['trigger'] ?? $body,
+                    'phone' => $vars['phone'] ?? null,
+                ]);
+            }
         } catch (\Throwable $e) {
             Log::warning('Notifikasi gagal dibuat', ['type' => $type, 'error' => $e->getMessage()]);
         }
@@ -106,10 +120,18 @@ class NotifyService
     }
 
     /** Pemeriksa batas waktu: 50% pengingat (maks 3x, jam kerja), 100% eskalasi ke Owner. */
-        public static function closeConversation(int $conversationId, ?int $byUserId = null, array $types = ['N1', 'N16']): void
+    public static function closeConversation(int $conversationId, ?int $byUserId = null, array $types = ['N1', 'N16']): void
     {
         DB::table('admin_notifications')
             ->whereIn('type', $types)->where('conversation_id', $conversationId)->where('status', 'open')
+            ->update(['status' => 'done', 'done_by' => $byUserId, 'done_at' => now(), 'updated_at' => now()]);
+    }
+
+    /** Tutup notifikasi berdasarkan event_key persis (mis. N18:0:support-12 saat CS menerima chat web). */
+    public static function closeByEventKey(string $eventKey, ?int $byUserId = null): void
+    {
+        DB::table('admin_notifications')
+            ->where('event_key', $eventKey)->where('status', 'open')
             ->update(['status' => 'done', 'done_by' => $byUserId, 'done_at' => now(), 'updated_at' => now()]);
     }
 
@@ -172,6 +194,7 @@ class NotifyService
                     'escalated_at' => now(), 'due_at' => null, 'updated_at' => now(),
                 ]);
                 self::emailUrgent($n, $roles);
+                AdminWaAlert::escalate($n);
             } elseif ($elapsed >= $total / 2 && $n->reminder_count < 3 && ShopSettings::withinBusinessHours()) {
                 DB::table('admin_notifications')->where('id', $n->id)->update([
                     'reminder_count' => $n->reminder_count + 1, 'updated_at' => now(),
@@ -212,6 +235,7 @@ class NotifyService
             'N14' => "Klaim/refund baru untuk {$code}.",
             'N15' => 'Gangguan sistem: '.($vars['reason'] ?? '-'),
             'N16' => "Jendela chat 24 jam dengan {$vars['phone']} tinggal ±30 menit.",
+            'N18' => 'Pengunjung live chat website meminta berbicara dengan customer service.',
             default => $type,
         };
     }
@@ -220,6 +244,7 @@ class NotifyService
     {
         return match ($type) {
             'N1', 'N16', 'N17' => '/admin/shop/inbox'.($conversationId ? '?c='.$conversationId : ''),
+            'N18' => '/admin/support',
             'N7', 'N8' => '/admin/shop/payments',
             'N14' => '/admin/shop/aftercare',
             'N15' => '/admin/shop/health',

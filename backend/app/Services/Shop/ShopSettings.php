@@ -16,6 +16,13 @@ class ShopSettings
         'ai_answers_enabled' => true,
         // true: pertanyaan harga SELALU dicek admin dulu (Livi: "sebentar ya, Livi cek dulu"). false: pakai harga terkonfirmasi di data produk.
         'price_requires_admin' => true,
+        'bot_wa_number' => '',
+        'admin_alert_enabled' => false,
+        'admin_alert_phones' => ['628212043307'],
+        'admin_alert_template' => 'admin_chat_butuh_balasan',
+        'admin_alert_template_lang' => 'id',
+        'admin_alert_template_has_url_btn' => false,
+        'ignore_admin_inbound' => true,
         'business_hours' => ['days' => [1, 2, 3, 4, 5, 6], 'start' => '09:00', 'end' => '17:00'],
         'blocklist' => [],
         'sla_hours' => 4,
