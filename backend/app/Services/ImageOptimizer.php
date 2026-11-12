@@ -60,25 +60,45 @@ class ImageOptimizer
      * Konversi berkas yang sudah ada di disk 'public' menjadi .webp.
      * Mengembalikan path relatif baru di disk 'public', atau null bila gagal/dilewati.
      */
-    public static function convertExisting(string $relPath, int $maxDim = 1920, int $quality = 88, bool $deleteOriginal = true): ?string
+    public static function convertExisting(string $relPath, int $maxDim = 1920, int $quality = 88, bool $deleteOriginal = true, ?string &$reason = null): ?string
     {
         $disk = Storage::disk('public');
         $relPath = ltrim(preg_replace('#^/?storage/#', '', $relPath) ?? $relPath, '/');
-        if ($relPath === '' || !$disk->exists($relPath)) return null;
+        if ($relPath === '') {
+            $reason = 'path kosong';
+            return null;
+        }
+        if (!$disk->exists($relPath)) {
+            $reason = 'file tidak ada di '.$disk->path($relPath);
+            return null;
+        }
 
         $ext = strtolower(pathinfo($relPath, PATHINFO_EXTENSION));
-        if (!in_array($ext, ['png', 'jpg', 'jpeg'], true)) return null;
+        if (!in_array($ext, ['png', 'jpg', 'jpeg'], true)) {
+            $reason = 'ekstensi bukan png/jpg';
+            return null;
+        }
 
+        @ini_set('memory_limit', '512M');
         $full = $disk->path($relPath);
         $webpBytes = self::encodeToWebp($full, $ext, $maxDim, $quality);
-        if ($webpBytes === null) return null;
+        if ($webpBytes === null) {
+            $reason = 'gagal encode GD (cek memory_limit atau format gambar)';
+            return null;
+        }
 
         $newRel = preg_replace('/\.[^.]+$/', '.webp', $relPath);
-        if (!$newRel || $newRel === $relPath) return null;
+        if (!$newRel || $newRel === $relPath) {
+            $reason = 'nama tujuan sama';
+            return null;
+        }
 
         // Jangan ganti bila ukuran hasil tidak lebih kecil
         $origSize = @filesize($full) ?: 0;
-        if ($origSize > 0 && strlen($webpBytes) >= $origSize) return null;
+        if ($origSize > 0 && strlen($webpBytes) >= $origSize) {
+            $reason = 'hasil webp tidak lebih kecil dari asli';
+            return null;
+        }
 
         $disk->put($newRel, $webpBytes);
         if ($deleteOriginal) {

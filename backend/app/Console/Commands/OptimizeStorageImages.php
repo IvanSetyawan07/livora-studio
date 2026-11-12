@@ -49,6 +49,8 @@ class OptimizeStorageImages extends Command
         $deleteOld = !$this->option('keep');
 
         $converted = 0;
+        $found = 0;
+        $skipped = 0;
 
         foreach ($this->targets as [$table, $cols, $prefixStorage]) {
             if (!Schema::hasTable($table)) continue;
@@ -62,9 +64,15 @@ class OptimizeStorageImages extends Command
                     ->get(['id', $col]);
 
                 foreach ($rows as $row) {
+                    $found++;
                     $val = (string) $row->{$col};
-                    $newRel = ImageOptimizer::convertExisting($val, $maxDim, $quality, $deleteOld);
-                    if (!$newRel) continue;
+                    $reason = null;
+                    $newRel = ImageOptimizer::convertExisting($val, $maxDim, $quality, $deleteOld, $reason);
+                    if (!$newRel) {
+                        $skipped++;
+                        $this->warn("Lewati [{$table}.{$col}#{$row->id}] {$val}: ".($reason ?? 'alasan tidak diketahui'));
+                        continue;
+                    }
 
                     $dbVal = $prefixStorage ? '/storage/'.$newRel : $newRel;
                     DB::table($table)->where('id', $row->id)->update([$col => $dbVal]);
@@ -74,7 +82,7 @@ class OptimizeStorageImages extends Command
             }
         }
 
-        $this->info("Selesai: {$converted} gambar dikonversi ke WebP (quality {$quality}, max {$maxDim}px).");
+        $this->info("Ditemukan: {$found} baris | Dikonversi: {$converted} | Dilewati: {$skipped} (quality {$quality}, max {$maxDim}px).");
 
         return self::SUCCESS;
     }
