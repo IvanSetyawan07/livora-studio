@@ -26,8 +26,8 @@ type Props = { open: boolean; onClose: () => void };
 
 export default function SearchOverlay({ open, onClose }: Props) {
   const [q, setQ] = useState("");
-  const items = useAllItems();
-  const projects = useAllProjects();
+  const items = useAllItems(open);
+  const projects = useAllProjects(open);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 

@@ -21,6 +21,26 @@ type NavLink = {
 
 type FurnitureType = { id: number; name: string; slug: string; image?: string | null };
 
+let cachedFurnitureTypes: FurnitureType[] | null = null;
+let furnitureTypesPromise: Promise<FurnitureType[]> | null = null;
+
+function loadFurnitureTypes(): Promise<FurnitureType[]> {
+  if (cachedFurnitureTypes) return Promise.resolve(cachedFurnitureTypes);
+  if (!furnitureTypesPromise) {
+    furnitureTypesPromise = api
+      .get<FurnitureType[]>("/taxonomies/furniture-types")
+      .then((r) => {
+        cachedFurnitureTypes = r.data ?? [];
+        return cachedFurnitureTypes;
+      })
+      .catch(() => {
+        furnitureTypesPromise = null;
+        return [];
+      });
+  }
+  return furnitureTypesPromise;
+}
+
 type OverlayView = "main" | "furniture";
 
 export const Navbar = () => {
@@ -146,31 +166,27 @@ export const Navbar = () => {
     }
   }, [overlayView]);
 
-  // Furniture taxonomy for the FURNITUR drill-down panel.
+  // Furniture taxonomy & thumbnails for the FURNITUR drill-down panel (lazy-loaded when menu opens).
   useEffect(() => {
-    api
-      .get<FurnitureType[]>("/taxonomies/furniture-types")
-      .then((r) => setFurnitureTypes(r.data ?? []))
-      .catch(() => setFurnitureTypes([]));
-  }, []);
-
-  useEffect(() => {
+    if (!open) return;
+    loadFurnitureTypes().then(setFurnitureTypes);
     getAllThumbnails().then(setThumbnails);
     const unsub = subscribeThumbnails(() => getAllThumbnails().then(setThumbnails));
-    const onFocus = () => getAllThumbnails().then(setThumbnails);
-    window.addEventListener("focus", onFocus);
     return () => {
       unsub();
-      window.removeEventListener("focus", onFocus);
     };
-    
-  }, []);
+  }, [open]);
+
   useEffect(() => {
-  api
-    .get("/me")
-    .then((r) => setAuthUser({ name: r.data?.name ?? "Account", email: r.data?.email, role: r.data?.role }))
-    .catch(() => setAuthUser(null));
-}, []);
+    if (!authStorage.getToken()) {
+      setAuthUser(null);
+      return;
+    }
+    api
+      .get("/me")
+      .then((r) => setAuthUser({ name: r.data?.name ?? "Account", email: r.data?.email, role: r.data?.role }))
+      .catch(() => setAuthUser(null));
+  }, []);
 
   // Poll unread consultation messages for logged-in users
   useEffect(() => {

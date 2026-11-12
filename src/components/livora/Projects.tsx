@@ -144,8 +144,10 @@ export const Projects = () => {
         let trackBaseLeft = 0;
         let focalPoint = window.innerWidth * 0.55;
         let maxFocusDistance = window.innerWidth * 0.7;
+        let isSettled = false;
 
         const updateMetrics = () => {
+          isSettled = false;
           const currentX = gsap.getProperty(track, "x") as number;
           gsap.set(track, { x: 0 });
 
@@ -195,39 +197,42 @@ export const Projects = () => {
         // 60fps pakai gsap.ticker.deltaRatio() supaya konsisten di semua
         // device, berapa pun refresh rate-nya.
         const LERP_BASE = 0.14;
+        let lastTrackX = NaN;
 
         const measure = () => {
           const currentTrackX = gsap.getProperty(track, "x") as number;
+          const active = st.isActive;
+          if (!active && isSettled && currentTrackX === lastTrackX) {
+            return;
+          }
+          lastTrackX = currentTrackX;
+
           const vw = window.innerWidth;
           const focal = vw * FOCUS_RATIO;
           const span = (cards[0]?.offsetWidth || vw * 0.4) * 1.15;
 
-          const velocity = Math.abs(st.getVelocity()) || 0;
+          const velocity = active ? Math.abs(st.getVelocity()) || 0 : 0;
           const energy = clamp01(velocity / 2600);
 
           const dr = gsap.ticker.deltaRatio(60);
           const lerpAmount = 1 - Math.pow(1 - LERP_BASE, dr);
 
-          let bestIdx = 0;
-          let minAbsDist = Infinity;
+          let allConverged = energy < 0.001;
 
           for (let i = 0; i < cardsData.length; i++) {
             const data = cardsData[i];
             const cardScreenX = trackBaseLeft + currentTrackX + data.baseX;
-            const distToFocus = cardScreenX - focal;
-            const absDist = Math.abs(distToFocus);
-
-            if (absDist < minAbsDist) {
-              minAbsDist = absDist;
-              bestIdx = i;
-            }
-
             const signed = (cardScreenX - focal) / span;
             const dist = Math.abs(signed);
             const fTarget = easeFocus(clamp01(1 - dist));
 
-            // FIX #1 diterapkan di sini — lerp sekarang frame-rate independent
-            data.cur.f += (fTarget - data.cur.f) * lerpAmount;
+            const diff = fTarget - data.cur.f;
+            if (Math.abs(diff) > 0.0005) {
+              allConverged = false;
+              data.cur.f += diff * lerpAmount;
+            } else {
+              data.cur.f = fTarget;
+            }
             const f = data.cur.f;
 
             const scale = gsap.utils.interpolate(0.84, 1.10, f) + energy * 0.01;
@@ -247,8 +252,13 @@ export const Projects = () => {
             data.setRotation(0);
             data.setX(subX);
 
-            data.el.style.zIndex = String(50 + Math.round(f * 50));
+            const nextZ = String(50 + Math.round(f * 50));
+            if (data.el.style.zIndex !== nextZ) {
+              data.el.style.zIndex = nextZ;
+            }
           }
+
+          isSettled = !active && allConverged;
         };
 
         gsap.ticker.add(measure);

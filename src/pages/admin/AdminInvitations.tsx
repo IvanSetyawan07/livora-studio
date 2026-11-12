@@ -262,8 +262,18 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 function GuestDialog({ event, guest, onClose, onSaved }: { event: Ev; guest: Guest | null; onClose: () => void; onSaved: () => void }) {
   const [f, setF] = useState({ name: guest?.name ?? "", phone: guest?.phone ?? "", category: guest?.category ?? "pelanggan", description: guest?.description ?? "", rsvp: guest?.rsvp ?? "", notes: guest?.notes ?? "" });
   const [file, setFile] = useState<File | null>(null);
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const preview = useMemo(() => (file ? URL.createObjectURL(file) : guest?.image_url ?? null), [file, guest]);
+  useEffect(() => {
+    if (!file) {
+      setFileUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setFileUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+  const preview = fileUrl ?? guest?.image_url ?? null;
   const base = `/admin/invitations/events/${event.id}/guests`;
 
   const save = async () => {
@@ -348,7 +358,17 @@ function EventTab({ event, onSaved, onDeleted }: { event: Ev; onSaved: () => voi
     sheet_csv_url: event.sheet_csv_url ?? "", sheet_name_column: event.sheet_name_column ?? "", sheet_phone_column: event.sheet_phone_column ?? "", is_active: event.is_active,
   });
   const [img, setImg] = useState<File | null>(null);
+  const [imgUrl, setImgUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    if (!img) {
+      setImgUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(img);
+    setImgUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [img]);
   const set = (k: string, v: any) => setF((p) => ({ ...p, [k]: v }));
 
   const save = async () => {
@@ -373,7 +393,7 @@ function EventTab({ event, onSaved, onDeleted }: { event: Ev; onSaved: () => voi
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.is_active} onChange={(e) => set("is_active", e.target.checked)} /> Acara aktif (Livi menjawab pertanyaan tamu)</label>
         <div className="text-sm">Gambar umum <span className="text-xs text-muted-foreground">(dipakai tamu yang tidak punya gambar pribadi, mis. pendaftar Form)</span>
           <div className="mt-1 flex items-center gap-3">
-            {(img || event.default_image_url) && <img src={img ? URL.createObjectURL(img) : event.default_image_url!} alt="" className="h-20 w-20 rounded-xl object-cover" />}
+            {(imgUrl || event.default_image_url) && <img src={imgUrl ?? event.default_image_url!} alt="" className="h-20 w-20 rounded-xl object-cover" />}
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border px-4 py-2 text-xs"><ImagePlus className="h-4 w-4" /> Pilih gambar<input type="file" accept="image/*" className="hidden" onChange={(e) => setImg(e.target.files?.[0] ?? null)} /></label>
           </div>
         </div>

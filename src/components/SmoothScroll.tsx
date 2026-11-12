@@ -20,12 +20,11 @@ const SmoothScroll = () => {
 
     lenis.on("scroll", ScrollTrigger.update);
 
-    let rafId: number;
-    const raf = (time: number) => {
-      lenis.raf(time);
-      rafId = requestAnimationFrame(raf);
+    const update = (time: number) => {
+      lenis.raf(time * 1000);
     };
-    rafId = requestAnimationFrame(raf);
+    gsap.ticker.add(update);
+    gsap.ticker.lagSmoothing(0);
 
     // Pause Lenis when a full-screen overlay locks body scroll,
     // otherwise wheel events keep scrolling the page behind it.
@@ -38,7 +37,7 @@ const SmoothScroll = () => {
     observer.observe(document.body, { attributes: true, attributeFilter: ["style", "class"] });
 
     return () => {
-      cancelAnimationFrame(rafId);
+      gsap.ticker.remove(update);
       observer.disconnect();
       lenis.destroy();
     };

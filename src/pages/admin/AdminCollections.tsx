@@ -697,7 +697,17 @@ function ImageUpload({
   file: File | null;
   setFile: (f: File | null) => void;
 }) {
-  const preview = file ? URL.createObjectURL(file) : existing;
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!file) {
+      setBlobUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setBlobUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+  const preview = blobUrl ?? existing;
   return (
     <div>
       <span className="block text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">

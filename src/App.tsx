@@ -6,29 +6,35 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
-import ProjectDetail from "./pages/ProjectDetail.tsx";
-import ProjectsPage from "./pages/Projects.tsx";
-import ItemDetail from "./pages/ItemDetail.tsx";
-import AboutPage from "./pages/About.tsx";
-import Auth from "./pages/Auth";
-import { ForgotPassword, ResetPassword } from "./pages/PasswordReset";
-import Profile from "./pages/Profile.tsx";
-import MyConsultationDetail from "./pages/MyConsultationDetail.tsx";
 import { ChatWidget } from "./components/livora/ChatWidget.tsx";
 import ScrollToTop from "./components/ScrollToTop.tsx";
 import SmoothScroll from "./components/SmoothScroll.tsx";
 import HeroPreloader from "./components/livora/HeroPreloader.tsx";
-import Furniture from "./pages/Furniture.tsx";
-import FurnitureFilter from "./pages/FurnitureFilter.tsx";
 import { CartDrawer } from "@/components/livora/CartDrawer.tsx";
 import { CartProvider } from "./context/CartContext.tsx";
-import CatalogPage from "./pages/CatalogPage";
-import CatalogDetail from "./pages/CatalogDetail"; // ← tambah ini
-import CollectionLanding from "./pages/CollectionLanding.tsx";
-import CollectionDetail from "./pages/CollectionDetail.tsx";
-import CollectionCategory from "./pages/CollectionCategory.tsx";
-import Appointment from "./pages/Appointment.tsx";
 import RequireRole from "./components/RequireRole.tsx";
+
+const ProjectDetail = lazy(() => import("./pages/ProjectDetail.tsx"));
+const ProjectsPage = lazy(() => import("./pages/Projects.tsx"));
+const ItemDetail = lazy(() => import("./pages/ItemDetail.tsx"));
+const AboutPage = lazy(() => import("./pages/About.tsx"));
+const Auth = lazy(() => import("./pages/Auth"));
+const ForgotPassword = lazy(() =>
+  import("./pages/PasswordReset").then((m) => ({ default: m.ForgotPassword }))
+);
+const ResetPassword = lazy(() =>
+  import("./pages/PasswordReset").then((m) => ({ default: m.ResetPassword }))
+);
+const Profile = lazy(() => import("./pages/Profile.tsx"));
+const MyConsultationDetail = lazy(() => import("./pages/MyConsultationDetail.tsx"));
+const Furniture = lazy(() => import("./pages/Furniture.tsx"));
+const FurnitureFilter = lazy(() => import("./pages/FurnitureFilter.tsx"));
+const CatalogPage = lazy(() => import("./pages/CatalogPage"));
+const CatalogDetail = lazy(() => import("./pages/CatalogDetail"));
+const CollectionLanding = lazy(() => import("./pages/CollectionLanding.tsx"));
+const CollectionDetail = lazy(() => import("./pages/CollectionDetail.tsx"));
+const CollectionCategory = lazy(() => import("./pages/CollectionCategory.tsx"));
+const Appointment = lazy(() => import("./pages/Appointment.tsx"));
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Cart = lazy(() => import("./pages/Cart"));

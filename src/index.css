@@ -4,7 +4,6 @@
 @tailwind components;
 @tailwind utilities;
 
-html { scroll-behavior: smooth; }
 section[id] { scroll-margin-top: 96px; }
 
 @layer base {
@@ -86,7 +85,6 @@ section[id] { scroll-margin-top: 96px; }
 
 @layer base {
   * { @apply border-border; }
-  html { scroll-behavior: smooth; }
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, sans-serif;

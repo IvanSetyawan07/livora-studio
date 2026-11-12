@@ -32,6 +32,11 @@ class SupportSession extends Model
         return $this->hasMany(SupportMessage::class)->orderBy('id');
     }
 
+    public function latestMessage()
+    {
+        return $this->hasOne(SupportMessage::class)->latestOfMany('id');
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);

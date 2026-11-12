@@ -15,14 +15,14 @@ class SupportChatController extends Controller
         $status = $request->query('status');
 
         $sessions = SupportSession::query()
-            ->with(['admin:id,name', 'user:id,name'])
+            ->with(['admin:id,name', 'user:id,name', 'latestMessage'])
             ->when($status && $status !== 'all', fn ($q) => $q->where('status', $status))
             ->orderByRaw("CASE status WHEN 'pending_cs' THEN 0 WHEN 'active' THEN 1 WHEN 'bot' THEN 2 ELSE 3 END")
             ->orderByDesc('last_message_at')
             ->limit(120)
             ->get()
             ->map(function (SupportSession $s) {
-                $last = $s->messages()->latest('id')->first();
+                $last = $s->latestMessage;
                 return [
                     'id'              => $s->id,
                     'status'          => $s->status,

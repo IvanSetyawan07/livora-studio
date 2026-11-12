@@ -116,9 +116,13 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
 
   // ── Entrance: "Livora" letters + subtitle ──
   useEffect(() => {
-    if (!ready) return;
-
     const ctx = gsap.context(() => {
+      if (!ready) {
+        gsap.set(".hero-letter", { yPercent: 115, opacity: 0 });
+        gsap.set(".hero-sub, .hero-scroll", { opacity: 0, y: 20 });
+        return;
+      }
+
       gsap
         .timeline()
         .fromTo(
@@ -145,7 +149,7 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
           "-=0.5"
         );
 
-      gsap.to(".drift-front", {
+      const driftFront = gsap.to(".drift-front", {
         xPercent: 0.8,
         yPercent: -0.35,
         duration: 12,
@@ -154,7 +158,7 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
         yoyo: true,
       });
 
-      gsap.to(".drift-mid", {
+      const driftMid = gsap.to(".drift-mid", {
         xPercent: -0.55,
         yPercent: 0.25,
         duration: 15,
@@ -163,13 +167,31 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
         yoyo: true,
       });
 
-      gsap.to(".drift-back", {
+      const driftBack = gsap.to(".drift-back", {
         xPercent: 0.35,
         yPercent: -0.18,
         duration: 18,
         ease: "sine.inOut",
         repeat: -1,
         yoyo: true,
+      });
+
+      // Pause infinite cloud drift when SkyScene is scrolled completely out of view
+      gsap.registerPlugin(ScrollTrigger);
+      ScrollTrigger.create({
+        trigger: root.current,
+        start: "top bottom",
+        end: "bottom top",
+        onLeave: () => {
+          driftFront.pause();
+          driftMid.pause();
+          driftBack.pause();
+        },
+        onEnterBack: () => {
+          driftFront.play();
+          driftMid.play();
+          driftBack.play();
+        },
       });
     }, root);
 
@@ -278,6 +300,8 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
               alt=""
               aria-hidden
               draggable={false}
+              fetchPriority="high"
+              decoding="async"
               width={1920}
               height={2160}
               className="h-full w-full select-none object-cover"
@@ -289,7 +313,7 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
           {CLOUDS.map((cloud) => (
             <div
               key={cloud.id}
-              className={`cloud-${cloud.id} absolute`}
+              className={`cloud-${cloud.id} absolute will-change-transform`}
               style={{
                 left: cloud.left,
                 top: cloud.top,
@@ -298,12 +322,13 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
               }}
             >
               <div className="-translate-x-1/2 -translate-y-1/2">
-                <div className={cloud.layer}>
+                <div className={`${cloud.layer} will-change-transform`}>
                   <img
                     src={cloud.src}
                     alt=""
                     aria-hidden
                     draggable={false}
+                    decoding="async"
                     className="block h-auto w-full max-w-none select-none"
                     style={{
                       opacity: cloud.opacity,
@@ -317,7 +342,7 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
           ))}
         </div>
 
-        <div className="hero-title absolute inset-0 z-20 flex flex-col items-center justify-center px-6">
+        <div className="hero-title absolute inset-0 z-20 flex flex-col items-center justify-center px-6 will-change-transform">
           <h1 className="serif flex overflow-hidden text-[22vw] font-light leading-[0.85] text-background sm:text-[14vw]">
             {"Livora".split("").map((c, i) => (
               <span key={i} className="hero-letter block" style={{ textShadow: "0 2px 16px rgba(0,0,0,0.08)" }}>
@@ -353,7 +378,7 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
                 ))}
               </div>
 
-              <p className="interior-body mt-8 max-w-md text-sm font-light leading-relaxed text-background/80 opacity-0 transition-opacity duration-20 ease-in-out sm:text-base">
+              <p className="interior-body mt-8 max-w-md text-sm font-light leading-relaxed text-background/80 opacity-0 sm:text-base">
                 Create your dream space with us — a single point of contact for design, supply and
                 construction.
               </p>

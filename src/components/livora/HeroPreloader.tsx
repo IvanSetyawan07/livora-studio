@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
 import logoLivora from "@/assets/logo-livora.webp";
+
+export const PRELOADER_READY_EVENT = "livora:preloader:ready";
+
+let preloaderDone = false;
+
+export function isPreloaderDone(): boolean {
+  return preloaderDone;
+}
 
 /**
  * Global Hero Preloader
@@ -9,7 +16,6 @@ import logoLivora from "@/assets/logo-livora.webp";
  * lalu fade-out halus supaya hero terbuka mulus.
  */
 export default function HeroPreloader() {
-  const location = useLocation();
   const [visible, setVisible] = useState(true);
   const [fading, setFading] = useState(false);
   const [textVisible, setTextVisible] = useState(false);
@@ -27,6 +33,17 @@ export default function HeroPreloader() {
     const MIN_MS = 1400; // biar animasi teks sempat terlihat
     const MAX_MS = 3500; // hard cap – jangan pernah stuck
 
+    const notifyReady = () => {
+      if (preloaderDone) return;
+      preloaderDone = true;
+      try {
+        sessionStorage.setItem("livora_loaded", "1");
+      } catch {
+        /* ignore */
+      }
+      window.dispatchEvent(new Event(PRELOADER_READY_EVENT));
+    };
+
     const ready = () => {
       if (cancelled) return;
       const elapsed = performance.now() - start;
@@ -37,6 +54,7 @@ export default function HeroPreloader() {
         setTimeout(() => {
           if (cancelled) return;
           setFading(true);
+          notifyReady();
           setTimeout(() => !cancelled && setVisible(false), 600);
         }, 500);
       }, wait);
@@ -46,19 +64,21 @@ export default function HeroPreloader() {
 
     const imagesReady = () =>
       new Promise<void>((resolve) => {
-        const imgs = Array.from(document.images).filter(
-          (img) =>
-            !img.complete &&
-            img.getBoundingClientRect().top < window.innerHeight * 1.5,
-        );
-        if (imgs.length === 0) return resolve();
-        let left = imgs.length;
-        const done = () => --left <= 0 && resolve();
-        imgs.forEach((img) => {
-          img.addEventListener("load", done, { once: true });
-          img.addEventListener("error", done, { once: true });
+        requestAnimationFrame(() => {
+          const imgs = Array.from(document.images).filter(
+            (img) =>
+              !img.complete &&
+              img.getBoundingClientRect().top < window.innerHeight * 1.5,
+          );
+          if (imgs.length === 0) return resolve();
+          let left = imgs.length;
+          const done = () => --left <= 0 && resolve();
+          imgs.forEach((img) => {
+            img.addEventListener("load", done, { once: true });
+            img.addEventListener("error", done, { once: true });
+          });
+          setTimeout(resolve, 2500);
         });
-        setTimeout(resolve, 2500);
       });
 
     Promise.race([

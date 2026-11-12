@@ -112,7 +112,7 @@ export default function CatalogPage() {
     );
     els.forEach((el) => obs.observe(el));
     return () => obs.disconnect();
-  });
+  }, [catalogItems, activeCat.slug, activeTax, visibleCount]);
 
   // Filtered items untuk grid
   const filteredItems = useMemo(() => {

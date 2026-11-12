@@ -153,18 +153,41 @@ const mergeBySlug = (a: Item[], b: Item[]) => {
   return out;
 };
 
-export const useAllItems = () => {
-  const [list, setList] = useState<Item[]>(staticItems);
+let cachedAllItems: Item[] = staticItems;
+let itemsFetched = false;
+const itemListeners = new Set<() => void>();
+
+const notifyItemListeners = () => itemListeners.forEach((fn) => fn());
+
+const fetchAllItemsOnce = () => {
+  if (itemsFetched) return;
+  itemsFetched = true;
+
+  api
+    .get<ApiItem[]>("/items")
+    .then((r) => {
+      const mapped = r.data.map(mapApiItem);
+      mapped.forEach((it) => itemCache.set(it.slug, it));
+      cachedAllItems = mergeBySlug(staticItems, mapped);
+      notifyItemListeners();
+    })
+    .catch(() => {
+      itemsFetched = false;
+    });
+};
+
+export const useAllItems = (enabled = true) => {
+  const [, setTick] = useState(0);
   useEffect(() => {
-    api.get<ApiItem[]>("/items")
-      .then((r) => {
-        const mapped = r.data.map(mapApiItem);
-        mapped.forEach((it) => itemCache.set(it.slug, it)); // simpan ke cache
-        setList(mergeBySlug(staticItems, mapped));
-      })
-      .catch(() => {});
-  }, []);
-  return list;
+    if (!enabled) return;
+    const rerender = () => setTick((t) => t + 1);
+    itemListeners.add(rerender);
+    fetchAllItemsOnce();
+    return () => {
+      itemListeners.delete(rerender);
+    };
+  }, [enabled]);
+  return cachedAllItems;
 };
 
 export const useItemBySlug = (slug?: string) => {

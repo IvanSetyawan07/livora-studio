@@ -79,6 +79,17 @@ export default function CatalogFormAdmin() {
   const [activeTab, setActiveTab] = useState<"basic" | "gallery" | "hotspots">("basic");
 
   const coverImageInputRef = useRef<HTMLInputElement>(null);
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!form.coverImage) {
+      setCoverPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(form.coverImage);
+    setCoverPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [form.coverImage]);
 
   useEffect(() => {
     if (!catalogId) {
@@ -452,9 +463,13 @@ export default function CatalogFormAdmin() {
                     <img src={form.coverImageUrl} alt="Cover" className="max-h-32 mx-auto rounded" />
                   </div>
                 )}
-                {form.coverImage && (
+                {coverPreviewUrl && (
                   <div className="mb-4">
-                    <img src={URL.createObjectURL(form.coverImage)} alt="Cover preview" className="max-h-32 mx-auto rounded" />
+                    <img
+                      src={coverPreviewUrl}
+                      alt="Cover preview"
+                      className="max-h-32 mx-auto rounded"
+                    />
                   </div>
                 )}
                 <button

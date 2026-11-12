@@ -106,14 +106,15 @@ const fetchAll = () => {
     notify();
   }).catch(() => {});
 };
-export const useAllProjects = () => {
+export const useAllProjects = (enabled = true) => {
   const [, setTick] = useState(0);
   useEffect(() => {
+    if (!enabled) return;
     const rerender = () => setTick((t) => t + 1);
     listeners.add(rerender);
     fetchAll();
     return () => { listeners.delete(rerender); };
-  }, []);
+  }, [enabled]);
   return cachedAll;
 };
 

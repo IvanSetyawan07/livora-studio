@@ -35,4 +35,19 @@ export default defineConfig(({ mode }) => ({
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("@react-pdf")) return "vendor-pdf";
+          if (id.includes("node_modules/three")) return "vendor-three";
+          if (id.includes("recharts") || id.includes("d3-")) return "vendor-charts";
+          if (id.includes("@xyflow")) return "vendor-flow";
+          if (id.includes("gsap") || id.includes("lenis")) return "vendor-gsap";
+          if (id.includes("framer-motion")) return "vendor-motion";
+        },
+      },
+    },
+  },
 }));

@@ -23,33 +23,49 @@ class AnalyticsController extends Controller
         if ($from->gt($to)) {
             [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
         }
+        // Cap maximum reporting window to 366 days to prevent unbounded timeline loops
+        if ($from->diffInDays($to) > 366) {
+            $from = $to->copy()->subDays(365)->startOfDay();
+        }
         return [$from, $to];
     }
 
-    private function titleFor(string $type, $id): string
+    /**
+     * Batch-load titles for a given type and array of IDs in a single query.
+     *
+     * @param array<int, int|string> $ids
+     * @return array<int|string, string>
+     */
+    private function titlesFor(string $type, array $ids): array
     {
+        $ids = array_values(array_unique(array_filter($ids)));
+        if (!$ids) return [];
+
         return match ($type) {
-            'item'       => Item::find($id)?->title ?? '—',
-            'project'    => Project::find($id)?->title ?? '—',
-            'collection' => Collection::find($id)?->name ?? '—',
-            'catalog'    => Catalog::find($id)?->title ?? Catalog::find($id)?->name ?? '—',
-            default      => '—',
+            'item'       => Item::whereIn('id', $ids)->get(['id', 'title'])->pluck('title', 'id')->all(),
+            'project'    => Project::whereIn('id', $ids)->get(['id', 'title'])->pluck('title', 'id')->all(),
+            'collection' => Collection::whereIn('id', $ids)->get(['id', 'name'])->pluck('name', 'id')->all(),
+            'catalog'    => Catalog::whereIn('id', $ids)->get()->mapWithKeys(fn ($c) => [$c->id => $c->title ?? $c->name ?? '—'])->all(),
+            default      => [],
         };
     }
 
     private function topBy(string $type, Carbon $from, Carbon $to, int $limit = 10)
     {
-        return DB::table('item_clicks')
+        $rows = DB::table('item_clicks')
             ->select('target_id', DB::raw('COUNT(*) as clicks'))
             ->where('target_type', $type)
             ->whereBetween('clicked_at', [$from, $to])
             ->groupBy('target_id')
-            ->orderByDesc('clicks')->limit($limit)->get()
-            ->map(fn($r) => [
-                'id'     => $r->target_id,
-                'title'  => $this->titleFor($type, $r->target_id),
-                'clicks' => (int) $r->clicks,
-            ])->values();
+            ->orderByDesc('clicks')->limit($limit)->get();
+
+        $titles = $this->titlesFor($type, $rows->pluck('target_id')->all());
+
+        return $rows->map(fn($r) => [
+            'id'     => $r->target_id,
+            'title'  => $titles[$r->target_id] ?? '—',
+            'clicks' => (int) $r->clicks,
+        ])->values();
     }
 
     public function overview(Request $request)
@@ -105,7 +121,7 @@ class AnalyticsController extends Controller
         }
         $timeline = array_values($timeline);
 
-        $viewStats = DB::table('item_views')
+        $rawViewStats = DB::table('item_views')
             ->select('target_type','target_id',
                 DB::raw('COUNT(*) as views'),
                 DB::raw('AVG(duration_seconds) as avg_seconds'),
@@ -113,11 +129,17 @@ class AnalyticsController extends Controller
             )
             ->whereBetween('viewed_at', [$from, $to])
             ->groupBy('target_type','target_id')
-            ->orderByDesc('views')->limit(15)->get()
-            ->map(function ($v) {
-                $v->title = $this->titleFor($v->target_type, $v->target_id);
-                return $v;
-            });
+            ->orderByDesc('views')->limit(15)->get();
+
+        $viewTitlesByType = [];
+        foreach ($rawViewStats->groupBy('target_type') as $vType => $vGroup) {
+            $viewTitlesByType[$vType] = $this->titlesFor((string) $vType, $vGroup->pluck('target_id')->all());
+        }
+
+        $viewStats = $rawViewStats->map(function ($v) use ($viewTitlesByType) {
+            $v->title = $viewTitlesByType[$v->target_type][$v->target_id] ?? '—';
+            return $v;
+        });
 
         $totalClicks = (int) DB::table('item_clicks')->whereBetween('clicked_at', [$from, $to])->count();
         $totalViews  = (int) DB::table('item_views')->whereBetween('viewed_at', [$from, $to])->count();

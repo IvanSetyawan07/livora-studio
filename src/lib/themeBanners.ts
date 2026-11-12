@@ -55,14 +55,13 @@ export function ensureBannersLoaded(): Promise<Store> {
   return loadingPromise;
 }
 
-// Mulai load begitu module ini di-import.
-ensureBannersLoaded();
-
 /* ---------- Multi-banner API (dibaca dari cache in-memory) ---------- */
 export function getBanners(key: string): ThemeBanner[] {
+  if (!loaded) void ensureBannersLoaded();
   return cache[key] ?? [];
 }
 export function getAllBannersList(): Store {
+  if (!loaded) void ensureBannersLoaded();
   return cache;
 }
 export async function addBanner(key: string, banner: ThemeBanner) {
@@ -103,6 +102,7 @@ export async function removeBannerAt(key: string, index: number) {
 
 /* ---------- Backward-compatible single-banner API ---------- */
 export function getAllBanners(): Record<string, ThemeBanner> {
+  if (!loaded) void ensureBannersLoaded();
   const out: Record<string, ThemeBanner> = {};
   for (const k of Object.keys(cache)) {
     if (cache[k][0]) out[k] = cache[k][0];
@@ -110,10 +110,12 @@ export function getAllBanners(): Record<string, ThemeBanner> {
   return out;
 }
 export function getBanner(key: string): ThemeBanner | undefined {
+  if (!loaded) void ensureBannersLoaded();
   return cache[key]?.[0];
 }
 
 export function subscribeBanners(cb: () => void): () => void {
+  if (!loaded) void ensureBannersLoaded();
   window.addEventListener(EVENT, cb);
   return () => window.removeEventListener(EVENT, cb);
 }

@@ -26,8 +26,10 @@ class WishlistController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
-        return $items->map(function (Wishlist $w) {
-            $entity = $this->resolveEntity($w->wishlistable_type, $w->wishlistable_id);
+        $entityMap = $this->resolveEntitiesBatch($items);
+
+        return $items->map(function (Wishlist $w) use ($entityMap) {
+            $entity = $entityMap[$w->wishlistable_type . ':' . $w->wishlistable_id] ?? null;
             return [
                 'id'   => $w->id,
                 'type' => $w->wishlistable_type,
@@ -73,6 +75,47 @@ class WishlistController extends Controller
         return response()->json(['message' => 'Removed from wishlist']);
     }
 
+    private function formatEntityModel($model): array
+    {
+        return [
+            'id'    => $model->id,
+            'name'  => $model->name ?? $model->title ?? null,
+            'slug'  => $model->slug ?? null,
+            'image' => $model->thumbnail ?? $model->image ?? $model->cover_image ?? $model->card_banner ?? $model->hero_image ?? null,
+        ];
+    }
+
+    /**
+     * Batch-resolve wishlist entities by type to eliminate N+1 queries.
+     *
+     * @param \Illuminate\Support\Collection<int, Wishlist> $rows
+     * @return array<string, array>
+     */
+    private function resolveEntitiesBatch($rows): array
+    {
+        $byType = $rows->groupBy('wishlistable_type');
+        $map = [];
+
+        foreach ($byType as $type => $group) {
+            $ids = $group->pluck('wishlistable_id')->unique()->values()->all();
+            if (!$ids) continue;
+
+            $models = match ($type) {
+                'item'       => Item::whereIn('id', $ids)->get(),
+                'collection' => Collection::whereIn('id', $ids)->get(),
+                'project'    => Project::whereIn('id', $ids)->get(),
+                'catalog'    => Catalog::whereIn('id', $ids)->get(),
+                default      => collect(),
+            };
+
+            foreach ($models as $m) {
+                $map[$type . ':' . $m->id] = $this->formatEntityModel($m);
+            }
+        }
+
+        return $map;
+    }
+
     private function resolveEntity(string $type, int $id): ?array
     {
         $model = match ($type) {
@@ -85,14 +128,7 @@ class WishlistController extends Controller
 
         if (!$model) return null;
 
-        // Sesuaikan field ini kalau nama kolom di masing-masing tabel beda
-        // (mis. thumbnail vs cover_image). Cek dulu sebelum pakai di production.
-        return [
-            'id'    => $model->id,
-            'name'  => $model->name ?? $model->title ?? null,
-            'slug'  => $model->slug ?? null,
-            'image' => $model->thumbnail ?? $model->cover_image ?? null,
-        ];
+        return $this->formatEntityModel($model);
     }
 
     /**
@@ -104,15 +140,17 @@ class WishlistController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
-        $grouped = $rows->groupBy('user_id')->map(function ($items, $userId) {
+        $entityMap = $this->resolveEntitiesBatch($rows);
+
+        $grouped = $rows->groupBy('user_id')->map(function ($items, $userId) use ($entityMap) {
             $user = $items->first()->user;
             if (!$user) return null;
-            $resolved = $items->map(function (Wishlist $w) {
+            $resolved = $items->map(function (Wishlist $w) use ($entityMap) {
                 return [
                     'id'         => $w->id,
                     'type'       => $w->wishlistable_type,
                     'entity_id'  => $w->wishlistable_id,
-                    'entity'     => $this->resolveEntity($w->wishlistable_type, $w->wishlistable_id),
+                    'entity'     => $entityMap[$w->wishlistable_type . ':' . $w->wishlistable_id] ?? null,
                     'created_at' => $w->created_at,
                 ];
             })->filter(fn ($r) => $r['entity'] !== null)->values();
@@ -144,8 +182,10 @@ class WishlistController extends Controller
 
         // FIX: sertakan 'image' (di-absolutkan) supaya email follow-up
         // bisa menampilkan gambar item yang disimpan user.
-        $items = Wishlist::where('user_id', $user->id)->get()->map(function (Wishlist $w) {
-            $e = $this->resolveEntity($w->wishlistable_type, $w->wishlistable_id);
+        $wishlistRows = Wishlist::where('user_id', $user->id)->get();
+        $entityMap = $this->resolveEntitiesBatch($wishlistRows);
+        $items = $wishlistRows->map(function (Wishlist $w) use ($entityMap) {
+            $e = $entityMap[$w->wishlistable_type . ':' . $w->wishlistable_id] ?? null;
             return [
                 'name'  => $e['name'] ?? 'Item',
                 'type'  => $w->wishlistable_type,

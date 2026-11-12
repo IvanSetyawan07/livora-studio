@@ -59,7 +59,7 @@ Route::get('/media', function (\Illuminate\Http\Request $request) {
 
     $disk = \Illuminate\Support\Facades\Storage::disk('public');
 
-    return response($disk->get($path), 200, [
+    return $disk->response($path, null, [
         'Content-Type'                => $disk->mimeType($path) ?: 'application/octet-stream',
         'Cache-Control'               => 'public, max-age=86400',
         'Access-Control-Allow-Origin' => '*',

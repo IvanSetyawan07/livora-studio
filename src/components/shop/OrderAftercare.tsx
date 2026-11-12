@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Camera, Check, Loader2, ShieldCheck, Undo2, X } from "lucide-react";
 import { toast } from "sonner";
 import { openClaim, requestRefund, respondChange, rupiah, type ShopOrder } from "@/lib/shop";
@@ -22,7 +22,14 @@ export default function OrderAftercare({ order, onChange }: { order: ShopOrder; 
   const [rf, setRf] = useState({ reason: "", bank_name: "", account_number: "", account_holder: "" });
   const [cl, setCl] = useState({ type: "kerusakan", description: "" });
   const [photos, setPhotos] = useState<File[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const urls = photos.map((p) => URL.createObjectURL(p));
+    setPhotoUrls(urls);
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, [photos]);
 
   const run = async (k: string, fn: () => Promise<ShopOrder>, ok: string) => {
     setBusy(k);
@@ -122,9 +129,9 @@ export default function OrderAftercare({ order, onChange }: { order: ShopOrder; 
             className="mt-3 w-full rounded-xl border border-border bg-background p-3 outline-none focus:border-foreground" />
           <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { setPhotos([...photos, ...Array.from(e.target.files ?? [])].slice(0, 6)); e.target.value = ""; }} />
           <div className="mt-3 flex flex-wrap gap-2">
-            {photos.map((p, i) => (
+            {photos.map((_, i) => (
               <div key={i} className="relative h-16 w-16 overflow-hidden rounded-lg bg-muted">
-                <img src={URL.createObjectURL(p)} alt={`Foto ${i + 1}`} className="h-full w-full object-cover" />
+                {photoUrls[i] && <img src={photoUrls[i]} alt={`Foto ${i + 1}`} className="h-full w-full object-cover" />}
                 <button type="button" aria-label="Hapus foto" onClick={() => setPhotos(photos.filter((_, j) => j !== i))} className="absolute right-0.5 top-0.5 rounded-full bg-background/90 p-0.5"><X className="h-3 w-3" /></button>
               </div>
             ))}
