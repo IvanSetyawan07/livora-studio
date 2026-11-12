@@ -98,14 +98,7 @@ export function OurStyle() {
       });
     }, root);
 
-    // Gambar panel dimuat lazy; begitu ada yang selesai dimuat, tinggi/lebar
-    // track berubah dan semua posisi pin harus dihitung ulang.
-    const imgs = Array.from(root.current?.querySelectorAll("img") ?? []);
-    const onImgLoad = () => ScrollTrigger.refresh();
-    imgs.forEach((img) => img.addEventListener("load", onImgLoad));
-
     return () => {
-      imgs.forEach((img) => img.removeEventListener("load", onImgLoad));
       ctx.revert();
     };
   }, []);
@@ -139,7 +132,7 @@ export function OurStyle() {
                 srcSet={`${s.sm} 800w, ${s.img} ${s.w}w`}
                 sizes="(max-width: 640px) 100vw, 62vw"
                 alt={`${s.name} interior by Livora`}
-                loading="lazy"
+                loading="eager"
                 decoding="async"
                 width={s.w}
                 height={s.h}

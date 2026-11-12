@@ -28,6 +28,7 @@ export const Projects = () => {
   // FIX #2: flag dibagi antara measure() loop dan crossfade tween supaya
   // keduanya tidak rebutan menulis property `opacity` di saat yang sama.
   const crossfadeActiveRef = useRef(false);
+  const didMountFilterRef = useRef(false);
 
   const categories = useMemo(
     () => ["All", ...Array.from(new Set(all.map((p) => p.category).filter(Boolean)))],
@@ -148,20 +149,14 @@ export const Projects = () => {
 
         const updateMetrics = () => {
           isSettled = false;
-          const currentX = gsap.getProperty(track, "x") as number;
-          gsap.set(track, { x: 0 });
-
-          const trackRect = track.getBoundingClientRect();
-          trackBaseLeft = trackRect.left;
+          const currentX = (gsap.getProperty(track, "x") as number) || 0;
+          trackBaseLeft = track.getBoundingClientRect().left - currentX;
           focalPoint = window.innerWidth * 0.55;
           maxFocusDistance = window.innerWidth * 0.7;
 
           cardsData.forEach((data) => {
-            const cardRect = data.el.getBoundingClientRect();
-            data.baseX = (cardRect.left - trackRect.left) + cardRect.width / 2;
+            data.baseX = data.el.offsetLeft + data.el.offsetWidth / 2;
           });
-
-          gsap.set(track, { x: currentX });
         };
 
         ScrollTrigger.addEventListener("refreshInit", updateMetrics);
@@ -329,6 +324,10 @@ export const Projects = () => {
 
   /* ---------- Filter Change Crossfade ---------- */
   useEffect(() => {
+    if (!didMountFilterRef.current) {
+      didMountFilterRef.current = true;
+      return;
+    }
     if (prefersReducedMotion()) return;
     const track = trackRef.current;
     if (!track) return;
@@ -372,15 +371,17 @@ export const Projects = () => {
           className="card-media relative overflow-hidden will-change-transform"
           style={{ height: "min(72vh, 760px)" }}
         >
-          <img
-            src={p.img}
-            alt={`${p.name} — ${p.category}${p.location ? `, ${p.location}` : ""}`}
-            loading="lazy"
-            decoding="async"
-            width={900}
-            height={1125}
-            className="card-photo w-[116%] h-full object-cover max-w-none transition-transform duration-700 group-hover:scale-[1.04]"
-          />
+          <div className="h-full w-full transition-transform duration-700 group-hover:scale-[1.04]">
+            <img
+              src={p.img}
+              alt={`${p.name} — ${p.category}${p.location ? `, ${p.location}` : ""}`}
+              loading="eager"
+              decoding="async"
+              width={900}
+              height={1125}
+              className="card-photo w-[116%] h-full object-cover max-w-none"
+            />
+          </div>
 
           <div
             className="pointer-events-none absolute inset-0"

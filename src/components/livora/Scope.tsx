@@ -132,7 +132,6 @@ export const Scope = () => {
                     alt={tr(index)?.title ?? item.title}
                     loading="lazy"
                     decoding="async"
-                    onLoad={() => ScrollTrigger.refresh()}
                     className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                   />
                 </div>

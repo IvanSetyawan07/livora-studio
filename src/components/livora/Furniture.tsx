@@ -152,7 +152,7 @@ const FurnitureCollectionCard = () => {
     >
       {/* Premium Floating Card */}
       <div
-        className="rounded-[28px] md:rounded-[32px] overflow-hidden backdrop-blur-sm"
+        className="rounded-[28px] md:rounded-[32px] overflow-hidden"
         style={{
           background: "#FCFBF8",
           border: "1px solid rgba(0, 0, 0, 0.05)",
@@ -505,7 +505,7 @@ const WhatAreYouLookingForSection = () => {
 
 // Main Furniture Section
 export const Furniture = () => (
-  <section id="furniture" className="relative bg-secondary/">
+  <section id="furniture" className="relative">
     {/* Furniture Collection - Premium Floating Card */}
     <div className="py-20 md:py-28 lg:py-32">
       <FurnitureCollectionCard />
