@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import TranslationPanel from "@/components/admin/TranslationPanel";
 import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
-import { useRef } from "react";
-import { Pencil, Trash2, Plus, Image as ImageIcon, LayoutGrid } from "lucide-react";
+import { toast } from "sonner";
+import { Pencil, Trash2, Plus, Image as ImageIcon, LayoutGrid, Loader2 } from "lucide-react";
+import { ErrorState } from "@/components/admin/kit";
 import AdminProjectPhotos from "./AdminProjectPhotos";
 import AdminProjectSpaces from "./AdminProjectSpaces";
 
@@ -12,15 +13,30 @@ type Project = any;
 export default function AdminProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [scopes, setScopes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<Project | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [managingPhotos, setManagingPhotos] = useState<Project | null>(null);
   const [managingSpaces, setManagingSpaces] = useState<Project | null>(null);
 
-  const load = () => api.get("/projects").then((r) => setProjects(r.data));
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const r = await api.get("/projects");
+      setProjects(Array.isArray(r.data) ? r.data : []);
+    } catch (err: any) {
+      const msg = err?.message || "Gagal memuat data projects";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => {
     load();
-    api.get("/taxonomies/scopes").then((r) => setScopes(r.data));
+    api.get("/taxonomies/scopes").then((r) => setScopes(Array.isArray(r.data) ? r.data : [])).catch(() => {});
   }, []);
 
   const del = async (p: Project) => {
@@ -44,7 +60,14 @@ export default function AdminProjects() {
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-5">
+      {error ? (
+        <ErrorState title="Projects belum bisa dimuat" description={error} onRetry={load} />
+      ) : loading ? (
+        <div className="flex items-center justify-center py-16 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+        </div>
+      ) : (
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {projects.map((p) => (
           <div key={p.id} className="bg-card border border-border rounded-lg overflow-hidden">
             <div className="aspect-[4/3] bg-muted">
@@ -78,9 +101,10 @@ export default function AdminProjects() {
           </div>
         ))}
         {projects.length === 0 && (
-          <p className="col-span-3 text-sm text-muted-foreground">Belum ada project.</p>
+          <p className="col-span-full text-sm text-muted-foreground">Belum ada project.</p>
         )}
       </div>
+      )}
 
       {showForm && (
         <ProjectForm

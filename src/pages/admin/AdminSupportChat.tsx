@@ -66,8 +66,15 @@ export default function AdminSupportChat() {
   useEffect(() => {
     setLoading(true);
     loadSessions();
-    const i = window.setInterval(loadSessions, 4000);
-    return () => window.clearInterval(i);
+    const i = window.setInterval(() => {
+      if (document.visibilityState === "visible") loadSessions();
+    }, 6000);
+    const onVis = () => { if (document.visibilityState === "visible") loadSessions(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.clearInterval(i);
+      document.removeEventListener("visibilitychange", onVis);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
@@ -90,6 +97,7 @@ export default function AdminSupportChat() {
   useEffect(() => {
     if (!activeId) return;
     const i = window.setInterval(async () => {
+      if (document.visibilityState !== "visible") return;
       try {
         const d = await getSupportMessages(activeId, lastId);
         if (d.messages.length) {
@@ -99,7 +107,7 @@ export default function AdminSupportChat() {
       } catch {
         /* ignore */
       }
-    }, 1500);
+    }, 2500);
     return () => window.clearInterval(i);
   }, [activeId, lastId]);
 

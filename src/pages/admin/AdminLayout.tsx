@@ -10,7 +10,7 @@ import AdminNotificationCenter from "@/components/admin/layout/AdminNotification
 import AdminSidebar from "@/components/admin/layout/AdminSidebar";
 import AdminTopbar from "@/components/admin/layout/AdminTopbar";
 import { matchNav } from "@/components/admin/layout/adminNav";
-import { AdminDialogProvider } from "@/components/admin/kit";
+import { AdminDialogProvider, ErrorState } from "@/components/admin/kit";
 import LanguageSwitcher from "@/components/livora/LanguageSwitcher";
 import {
   getAdminActivities,
@@ -24,32 +24,53 @@ export default function AdminLayout() {
   const location = useLocation();
   const { t } = useTranslation();
   const [user, setUser] = useState<any>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authRetry, setAuthRetry] = useState(0);
   const [open, setOpen] = useState(false);
   const [activities, setActivities] = useState<ConsultationActivity[]>([]);
   const [unreadActivities, setUnreadActivities] = useState(0);
   const [perm, setPerm] = useState<{ role: string; permissions: Record<string, string> } | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    setAuthError(null);
     (async () => {
       try {
         const { data } = await api.get("/me");
+        if (cancelled) return;
         if (data?.role !== "admin") {
           toast.error(t("admin.access_denied"));
           navigate("/", { replace: true });
           return;
         }
         setUser(data);
-        api.get("/admin/my-permissions").then((r) => setPerm(r.data)).catch(() => {});
-      } catch {
-        rememberIntendedPath();
-        toast.error("Silakan masuk terlebih dahulu");
-        navigate("/login", { replace: true });
+        api.get("/admin/my-permissions").then((r) => !cancelled && setPerm(r.data)).catch(() => {});
+      } catch (err: any) {
+        if (cancelled) return;
+        const status = err?.status ?? err?.response?.status;
+        if (status === 401 || status === 403 || err?.kind === "unauthenticated") {
+          rememberIntendedPath();
+          toast.error("Silakan masuk terlebih dahulu");
+          navigate("/login", { replace: true });
+          return;
+        }
+        setAuthError(err?.message || "Server sedang bermasalah (HTTP 500). Coba muat ulang.");
       }
     })();
-    const h = setInterval(() => api.post("/heartbeat").catch(() => {}), 30000);
-    api.post("/heartbeat").catch(() => {});
-    return () => clearInterval(h);
-  }, [navigate, t]);
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate, authRetry]);
+
+  // Heartbeat hanya saat admin sudah terautentikasi dan tab browser terlihat (hemat koneksi DB).
+  useEffect(() => {
+    if (!user) return;
+    const ping = () => {
+      if (document.visibilityState === "visible") api.post("/heartbeat").catch(() => {});
+    };
+    ping();
+    const h = window.setInterval(ping, 60000);
+    return () => window.clearInterval(h);
+  }, [user]);
 
   // Tutup drawer mobile saat pindah halaman + scroll ke atas.
   useEffect(() => {
@@ -74,6 +95,7 @@ export default function AdminLayout() {
     if (!user) return;
     let cancelled = false;
     const load = () => {
+      if (document.visibilityState !== "visible") return;
       Promise.all([getAdminActivities(), getAdminActivitiesUnread()])
         .then(([acts, unread]) => {
           if (cancelled) return;
@@ -83,7 +105,7 @@ export default function AdminLayout() {
         .catch(() => {});
     };
     load();
-    const id = window.setInterval(load, 20000);
+    const id = window.setInterval(load, 25000);
     const onVis = () => { if (document.visibilityState === "visible") load(); };
     document.addEventListener("visibilitychange", onVis);
     return () => { cancelled = true; window.clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
@@ -104,6 +126,20 @@ export default function AdminLayout() {
     clearSession();
     navigate("/login");
   };
+
+  if (authError && !user) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-background p-6">
+        <div className="w-full max-w-md">
+          <ErrorState
+            title="Gagal terhubung ke server"
+            description={authError}
+            onRetry={() => setAuthRetry((n) => n + 1)}
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (!user) return null;
 

@@ -235,7 +235,6 @@ export default function ThreeBars({
       typeof window.matchMedia === "function" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    const clock = new THREE.Clock();
     const startTime = performance.now();
     let frame = 0;
     let disposed = false;
@@ -244,7 +243,7 @@ export default function ThreeBars({
       frame = requestAnimationFrame(render);
       if (disposed || !inView || document.visibilityState !== "visible") return;
 
-      const time = clock.getElapsedTime();
+      const time = (performance.now() - startTime) / 1000;
       const growth = motionOff ? 1 : Math.min(1, (performance.now() - startTime) / 900);
       const eased = 1 - Math.pow(1 - growth, 3);
 

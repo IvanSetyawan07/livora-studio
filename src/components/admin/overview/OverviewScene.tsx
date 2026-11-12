@@ -186,8 +186,9 @@ export default function OverviewScene({ palette, isDark, energy = 0.5, className
     );
     intersectionObserver.observe(host);
 
+    let startTime = performance.now();
     const onVisibility = () => {
-      if (document.visibilityState === "visible") clock.getDelta();
+      if (document.visibilityState === "visible") startTime = performance.now() - elapsed * 1000;
     };
     document.addEventListener("visibilitychange", onVisibility);
 
@@ -195,7 +196,7 @@ export default function OverviewScene({ palette, isDark, energy = 0.5, className
       typeof window.matchMedia === "function" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const speed = 0.35 + Math.min(1, Math.max(0, energy)) * 0.9;
-    const clock = new THREE.Clock();
+    let elapsed = 0;
 
     let frame = 0;
     let disposed = false;
@@ -204,7 +205,8 @@ export default function OverviewScene({ palette, isDark, energy = 0.5, className
       frame = requestAnimationFrame(render);
       if (disposed || !inView || document.visibilityState !== "visible") return;
 
-      const time = clock.getElapsedTime();
+      elapsed = (performance.now() - startTime) / 1000;
+      const time = elapsed;
 
       pointer.x += (pointer.targetX - pointer.x) * 0.05;
       pointer.y += (pointer.targetY - pointer.y) * 0.05;
