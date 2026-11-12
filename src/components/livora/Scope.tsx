@@ -154,9 +154,11 @@ export const Scope = () => {
                     </p>
                     <Link
                       to={item.href ?? "/projects"}
+                      aria-label={`${t("common.learn_more", "Learn More")} — ${tr(index)?.title ?? item.title}`}
                       className="scope-learnmore inline-block mt-4 md:mt-6 text-sm md:text-base font-medium underline underline-offset-4 transition-colors duration-300 hover:text-white/70"
                     >
                       {t("common.learn_more", "Learn More")}
+                      <span className="sr-only"> — {tr(index)?.title ?? item.title}</span>
                     </Link>
 
                     {item.featured && (

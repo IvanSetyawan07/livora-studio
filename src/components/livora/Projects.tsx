@@ -67,7 +67,7 @@ export const Projects = () => {
       });
 
       tl.from(scope.querySelectorAll<HTMLElement>("[data-intro-eyebrow]"), {
-        autoAlpha: 0,
+        opacity: 0,
         y: 16,
         duration: DUR.textFast,
         ease: EASE.text,
@@ -80,13 +80,13 @@ export const Projects = () => {
           "-=0.5",
         );
       } else {
-        tl.from(headline, { autoAlpha: 0, y: 24, duration: DUR.text, ease: EASE.text }, "-=0.5");
+        tl.from(headline, { opacity: 0, y: 24, duration: DUR.text, ease: EASE.text }, "-=0.5");
       }
 
       tl.from(
         scope.querySelectorAll<HTMLElement>("[data-intro-item]"),
         {
-          autoAlpha: 0,
+          opacity: 0,
           y: 18,
           duration: DUR.textFast,
           ease: EASE.text,
@@ -288,7 +288,7 @@ export const Projects = () => {
           const desc = card.querySelector<HTMLElement>(".card-description");
           if (desc) {
             gsap.from(desc, {
-              autoAlpha: 0,
+              opacity: 0,
               y: 12,
               duration: DUR.card,
               ease: EASE.card,
@@ -342,9 +342,9 @@ export const Projects = () => {
 
     gsap.fromTo(
       cards,
-      { autoAlpha: 0 },
+      { opacity: 0 },
       {
-        autoAlpha: 1,
+        opacity: 1,
         duration: DUR.card,
         ease: EASE.card,
         stagger: STAGGER.items,

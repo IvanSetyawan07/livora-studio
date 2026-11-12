@@ -45,9 +45,9 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks(id) {
           if (!id.includes("node_modules")) return;
+          if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) return "vendor-react";
           if (id.includes("@react-pdf")) return "vendor-pdf";
-          if (id.includes("node_modules/three")) return "vendor-three";
-          if (id.includes("recharts") || id.includes("d3-")) return "vendor-charts";
+          if (/[\\/]node_modules[\\/]three[\\/]/.test(id)) return "vendor-three";
           if (id.includes("gsap") || id.includes("lenis")) return "vendor-gsap";
           if (id.includes("framer-motion")) return "vendor-motion";
         },
