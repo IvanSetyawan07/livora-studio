@@ -26,9 +26,11 @@ import {
   Layers,
   ArrowRight,
   Maximize2,
+  Wand2,
 } from "lucide-react";
 import ItemQRCode from "@/components/livora/ItemQRCode";
 import BulkDiscountModal from "@/components/admin/BulkDiscountModal";
+import AiImageStudioModal from "@/components/admin/AiImageStudioModal";
 import { bulkDiscountItems } from "@/lib/promoApi";
 
 type SortKey = "name-asc" | "name-desc" | "date-desc" | "date-asc";
@@ -865,6 +867,7 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
     item?.image ? imgUrl(item.image) : ""
   );
   const [imageFit, setImageFit] = useState<"contain" | "cover">("contain");
+  const [showAiStudio, setShowAiStudio] = useState(false);
 
   // Promo settings
   const [isOnPromo, setIsOnPromo] = useState<boolean>(item?.is_on_promo || false);
@@ -1028,6 +1031,19 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
               <p className="text-[11px] text-muted-foreground mt-1">
                 Format: WebP, JPG, PNG (Resolusi tinggi disarankan)
               </p>
+
+              {previewImgUrl && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAiStudio(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#D7B483] text-black text-xs font-semibold hover:bg-[#c6a270] transition-all shadow-sm"
+                  >
+                    <Wand2 className="w-3.5 h-3.5" />
+                    <span>✨ AI Studio: Hapus Background & Tingkatkan Realisme</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {previewImgUrl && (
@@ -1144,6 +1160,21 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
           </button>
         </div>
       </form>
+
+      {/* AI Image Studio Modal */}
+      {showAiStudio && previewImgUrl && (
+        <AiImageStudioModal
+          isOpen={showAiStudio}
+          imageSource={previewImgUrl}
+          originalFile={file}
+          itemName={title || "Furnitur"}
+          onClose={() => setShowAiStudio(false)}
+          onApply={(processedFile, processedUrl) => {
+            setFile(processedFile);
+            setPreviewImgUrl(processedUrl);
+          }}
+        />
+      )}
     </div>
   );
 }

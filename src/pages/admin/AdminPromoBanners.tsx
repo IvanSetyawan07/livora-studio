@@ -379,72 +379,85 @@ function PromoBannerFormModal({ banner, onClose, onSaved }: FormModalProps) {
 
   // Canvas helper to apply crop/zoom into a new file before upload if adjusted
   const generateCroppedFile = async (sourceUrl: string, originalFile: File | null): Promise<File | null> => {
-    if (aspectRatio === "original" && zoom === 1 && posX === 50 && posY === 50 && originalFile) {
+    if (!originalFile) return null;
+    if (aspectRatio === "original" && zoom === 1 && posX === 50 && posY === 50) {
       return originalFile; // No adjustments, keep original file
     }
     return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = sourceUrl;
-      img.onload = () => {
-        let targetW = 1920;
-        let targetH = 1200; // default 16/10
-
-        if (aspectRatio === "original") {
-          targetW = img.width;
-          targetH = img.height;
-        } else if (aspectRatio === "16/9") {
-          targetH = 1080;
-        } else if (aspectRatio === "16/10") {
-          targetH = 1200;
-        } else if (aspectRatio === "4/3") {
-          targetH = 1440;
-        } else if (aspectRatio === "1/1") {
-          targetH = 1920;
+      try {
+        const img = new Image();
+        if (!sourceUrl.startsWith("blob:") && !sourceUrl.startsWith("data:")) {
+          img.crossOrigin = "anonymous";
         }
+        img.onload = () => {
+          try {
+            let targetW = 1920;
+            let targetH = 1200; // default 16/10
 
-        const canvas = document.createElement("canvas");
-        canvas.width = targetW;
-        canvas.height = targetH;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          resolve(originalFile);
-          return;
-        }
+            if (aspectRatio === "original") {
+              targetW = img.width || 1920;
+              targetH = img.height || 1200;
+            } else if (aspectRatio === "16/9") {
+              targetH = 1080;
+            } else if (aspectRatio === "16/10") {
+              targetH = 1200;
+            } else if (aspectRatio === "4/3") {
+              targetH = 1440;
+            } else if (aspectRatio === "1/1") {
+              targetH = 1920;
+            }
 
-        const imgRatio = img.width / img.height;
-        const targetRatio = targetW / targetH;
-        let drawW: number;
-        let drawH: number;
-
-        if (imgRatio > targetRatio) {
-          drawH = targetH * zoom;
-          drawW = drawH * imgRatio;
-        } else {
-          drawW = targetW * zoom;
-          drawH = drawW / imgRatio;
-        }
-
-        const offsetX = (targetW - drawW) * (posX / 100);
-        const offsetY = (targetH - drawH) * (posY / 100);
-
-        ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
+            const canvas = document.createElement("canvas");
+            canvas.width = targetW;
+            canvas.height = targetH;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
               resolve(originalFile);
               return;
             }
-            const processed = new File([blob], originalFile ? originalFile.name : "promo-adjusted.webp", {
-              type: "image/webp",
-            });
-            resolve(processed);
-          },
-          "image/webp",
-          0.92
-        );
-      };
-      img.onerror = () => resolve(originalFile);
+
+            const imgRatio = (img.width || 1) / (img.height || 1);
+            const targetRatio = targetW / targetH;
+            let drawW: number;
+            let drawH: number;
+
+            if (imgRatio > targetRatio) {
+              drawH = targetH * zoom;
+              drawW = drawH * imgRatio;
+            } else {
+              drawW = targetW * zoom;
+              drawH = drawW / imgRatio;
+            }
+
+            const offsetX = (targetW - drawW) * (posX / 100);
+            const offsetY = (targetH - drawH) * (posY / 100);
+
+            ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) {
+                  resolve(originalFile);
+                  return;
+                }
+                const processed = new File([blob], originalFile.name || "promo-adjusted.webp", {
+                  type: "image/webp",
+                });
+                resolve(processed);
+              },
+              "image/webp",
+              0.92
+            );
+          } catch (canvasErr) {
+            console.warn("Canvas crop error, fallback to original file:", canvasErr);
+            resolve(originalFile);
+          }
+        };
+        img.onerror = () => resolve(originalFile);
+        img.src = sourceUrl;
+      } catch (err) {
+        console.warn("Image load error, fallback to original file:", err);
+        resolve(originalFile);
+      }
     });
   };
 
@@ -472,12 +485,25 @@ function PromoBannerFormModal({ banner, onClose, onSaved }: FormModalProps) {
       if (startDate) fd.append("start_date", startDate);
       if (endDate) fd.append("end_date", endDate);
 
-      // Export cropped file if user uploaded or adjusted
-      if (previewUrl && (file || zoom !== 1 || posX !== 50 || posY !== 50 || aspectRatio !== "original")) {
-        const processedFile = await generateCroppedFile(previewUrl, file);
-        if (processedFile) {
-          fd.append("image", processedFile);
+      // Handle image file:
+      if (file) {
+        let imageToUpload: File = file;
+        // Hanya lakukan crop canvas jika admin secara aktif mengatur zoom / posisi
+        if (zoom !== 1 || posX !== 50 || posY !== 50 || aspectRatio !== "original") {
+          try {
+            const cropped = await generateCroppedFile(previewUrl, file);
+            if (cropped) {
+              imageToUpload = cropped;
+            }
+          } catch (e) {
+            console.warn("Crop failed, fallback to original file:", e);
+            imageToUpload = file;
+          }
         }
+        fd.append("image", imageToUpload);
+      } else if (banner?.image_url) {
+        // Jika sedang edit dan tidak ganti gambar, kirim URL gambar lama
+        fd.append("image_url", banner.image_url);
       }
 
       let resData: PromoBanner;

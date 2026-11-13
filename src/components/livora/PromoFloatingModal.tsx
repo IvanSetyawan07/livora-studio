@@ -5,8 +5,6 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { getPublicPromoBanners, type PromoBanner } from "@/lib/promoApi";
 import { imgUrl } from "@/lib/adminApi";
 
-const DISMISSED_KEY = "livora_promo_modal_closed_v1";
-
 interface PromoFloatingModalProps {
   ready?: boolean;
 }
@@ -17,27 +15,40 @@ export const PromoFloatingModal: React.FC<PromoFloatingModalProps> = ({ ready = 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
   const touchStartX = useRef<number | null>(null);
 
-  // Muat banner aktif dari backend
+  // Bersihkan key lama dari sessionStorage agar tidak pernah memblokir tampilan
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem("livora_promo_modal_closed_v1");
+    } catch {}
+  }, []);
+
+  // 1. Muat banner promo aktif dari backend API
   useEffect(() => {
     let cancelled = false;
     getPublicPromoBanners().then((data) => {
       if (cancelled) return;
       if (data && data.length > 0) {
         setBanners(data);
-        const isDismissed = sessionStorage.getItem(DISMISSED_KEY) === "1";
-        if (!isDismissed && ready) {
-          // Delay halus 450ms setelah hero preloader selesai
-          const t = setTimeout(() => setIsOpen(true), 450);
-          return () => clearTimeout(t);
-        }
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [ready]);
+  }, []);
+
+  // 2. Buka modal saat ada banner aktif dan belum ditutup oleh pengunjung
+  useEffect(() => {
+    if (banners.length === 0 || isDismissed) return;
+    // Buka setelah 400ms saat hero preloader siap (ready), atau fallback maksimal 900ms
+    const delay = ready ? 400 : 900;
+    const t = setTimeout(() => {
+      setIsOpen(true);
+    }, delay);
+    return () => clearTimeout(t);
+  }, [ready, banners.length, isDismissed]);
 
   const hasMultiple = banners.length > 1;
 
@@ -52,8 +63,8 @@ export const PromoFloatingModal: React.FC<PromoFloatingModalProps> = ({ ready = 
   }, [banners.length]);
 
   const handleClose = useCallback(() => {
+    setIsDismissed(true);
     setIsOpen(false);
-    sessionStorage.setItem(DISMISSED_KEY, "1");
   }, []);
 
   // Keyboard navigation (Esc to close, Left/Right arrows for slides)
@@ -81,7 +92,7 @@ export const PromoFloatingModal: React.FC<PromoFloatingModalProps> = ({ ready = 
   const imageUrl = banner.image_url ? imgUrl(banner.image_url) : "";
 
   const handleCardClick = () => {
-    sessionStorage.setItem(DISMISSED_KEY, "1");
+    setIsDismissed(true);
     setIsOpen(false);
     const link = banner.cta_link || "/promo";
     if (link.startsWith("http")) {

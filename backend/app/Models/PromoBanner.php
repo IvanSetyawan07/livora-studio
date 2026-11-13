@@ -38,10 +38,11 @@ class PromoBanner extends Model
         $now = now();
         return $query->where('is_active', true)
             ->where(function ($q) use ($now) {
-                $q->whereNull('start_date')->orWhere('start_date', '<=', $now);
+                // Toleransi perbedaan timezone input lokal (WIB / UTC+7) vs server (UTC)
+                $q->whereNull('start_date')->orWhere('start_date', '<=', $now->copy()->addHours(14));
             })
             ->where(function ($q) use ($now) {
-                $q->whereNull('end_date')->orWhere('end_date', '>=', $now);
+                $q->whereNull('end_date')->orWhere('end_date', '>=', $now->copy()->subHours(14));
             })
             ->orderBy('order_index', 'asc')
             ->orderBy('id', 'asc');
