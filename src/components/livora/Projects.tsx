@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useMemo, useState, useEffect, useRef, useLayoutEffect } from "react";
 import { Link } from "react-router-dom";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   registerGsap,
   gsap,
@@ -22,8 +23,10 @@ export const Projects = () => {
 
   const sectionRef = useRef<HTMLElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
+  const mobileTrackRef = useRef<HTMLDivElement | null>(null);
   const introRef = useRef<HTMLDivElement | null>(null);
   const headlineRef = useRef<HTMLHeadingElement | null>(null);
+  const [mobileIdx, setMobileIdx] = useState(0);
 
   // FIX #2: flag dibagi antara measure() loop dan crossfade tween supaya
   // keduanya tidak rebutan menulis property `opacity` di saat yang sama.
@@ -114,7 +117,7 @@ export const Projects = () => {
     const ctx = gsap.context(() => {
       const mm = gsap.matchMedia();
 
-      mm.add("(min-width: 1px)", () => {
+      mm.add("(min-width: 1024px)", () => {
         const getDistance = () => Math.max(0, track.scrollWidth - window.innerWidth);
         const cards = gsap.utils.toArray<HTMLElement>(".project-card", track);
 
@@ -480,22 +483,106 @@ export const Projects = () => {
     );
   }
 
-  return (
-    <>
-      <div className="container-livora pt-24 pb-10 lg:hidden">
-        <IntroCopy />
-      </div>
+  useEffect(() => {
+    setMobileIdx(0);
+    mobileTrackRef.current?.scrollTo({ left: 0, behavior: "instant" as ScrollBehavior });
+  }, [filter]);
 
+  const scrollMobileCard = (nextIdx: number) => {
+    const el = mobileTrackRef.current;
+    if (!el) return;
+    const total = filtered.length + 1;
+    const clamped = Math.max(0, Math.min(total - 1, nextIdx));
+    const child = el.children[clamped] as HTMLElement | undefined;
+    if (child) {
+      el.scrollTo({ left: Math.max(0, child.offsetLeft - 20), behavior: "smooth" });
+    }
+    setMobileIdx(clamped);
+  };
+
+  const onMobileScroll = () => {
+    const el = mobileTrackRef.current;
+    if (!el) return;
+    const first = el.children[0] as HTMLElement | undefined;
+    const step = first ? first.offsetWidth + 20 : 1;
+    setMobileIdx(Math.max(0, Math.min(filtered.length, Math.round(el.scrollLeft / step))));
+  };
+
+  return (
+    <div id="projects" className="relative">
+      {/* ── Mobile / Tablet interactive snap gallery (no pin scroll-trap) ── */}
+      <section className="lg:hidden py-16 sm:py-20">
+        <div className="container-livora mb-8">
+          <IntroCopy />
+        </div>
+
+        <div
+          ref={mobileTrackRef}
+          data-lenis-prevent
+          onScroll={onMobileScroll}
+          className="flex gap-5 overflow-x-auto snap-x snap-mandatory no-scrollbar px-5 pb-2"
+        >
+          {filtered.map((p, i) => (
+            <div key={p.slug} className="snap-center shrink-0">
+              <Card p={p} i={i} />
+            </div>
+          ))}
+          <div className="snap-center shrink-0 flex items-center">
+            <ClosingPanel />
+          </div>
+        </div>
+
+        <div className="container-livora mt-5 flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            {filtered.map((p, i) => (
+              <button
+                key={p.slug}
+                type="button"
+                aria-label={`View ${p.name}`}
+                onClick={() => scrollMobileCard(i)}
+                className="h-8 flex items-center px-1"
+              >
+                <span
+                  className={`block h-1.5 rounded-full transition-all duration-300 ${
+                    mobileIdx === i ? "w-6 bg-foreground" : "w-1.5 bg-foreground/25"
+                  }`}
+                />
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Previous project"
+              onClick={() => scrollMobileCard(mobileIdx - 1)}
+              disabled={mobileIdx === 0}
+              className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-foreground disabled:opacity-30 active:scale-95 transition"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              type="button"
+              aria-label="Next project"
+              onClick={() => scrollMobileCard(mobileIdx + 1)}
+              disabled={mobileIdx >= filtered.length}
+              className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-foreground disabled:opacity-30 active:scale-95 transition"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Desktop GSAP pinned horizontal track ── */}
       <section
-        id="projects"
         ref={sectionRef}
-        className="h-screen flex flex-col justify-center overflow-hidden py-10 lg:py-32"
+        className="hidden lg:flex h-screen flex-col justify-center overflow-hidden py-32"
       >
         <div>
-          <div ref={trackRef} className="flex w-max items-center lg:items-start gap-6 lg:gap-10 xl:gap-14 pl-6 lg:pl-[max(1.5rem,calc((100vw-1680px)/2+2rem))] pr-[18vw] lg:pr-[12vw] will-change-transform">
+          <div ref={trackRef} className="flex w-max items-start gap-10 xl:gap-14 pl-[max(1.5rem,calc((100vw-1680px)/2+2rem))] pr-[12vw] will-change-transform">
               <div
                 ref={introRef}
-                className="hidden lg:flex shrink-0 w-[34vw] xl:w-[30vw] flex-col justify-center pr-10"
+                className="flex shrink-0 w-[34vw] xl:w-[30vw] flex-col justify-center pr-10"
                 style={{ minHeight: "min(78vh, 760px)" }}
               >
                 <div data-intro-eyebrow>
@@ -538,6 +625,6 @@ export const Projects = () => {
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 };

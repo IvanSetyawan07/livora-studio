@@ -79,6 +79,7 @@ export const Navbar = () => {
 
   // Links shown inside the hamburger overlay (both desktop & mobile).
   const menuLinks: NavLink[] = [
+  { key: "promo", label: "PROMO SPESIAL", to: "/promo" },
   { key: "furniture", label: t("nav.furniture"), to: "/furniture" },
   { key: "projects", label: t("nav.projects"), to: "/projects" },
   {
@@ -99,7 +100,8 @@ export const Navbar = () => {
 
   // Quick links always visible on desktop header.
   const desktopQuickLinks: NavLink[] = [
-  { key: "about", label: t("nav.about"), to: "/about" },
+    { key: "promo", label: "PROMO", to: "/promo" },
+    { key: "about", label: t("nav.about"), to: "/about" },
     { key: "style", label: t("nav.style"), hash: "style" },
     { key: "scope", label: t("nav.scope"), hash: "scope" },
     { key: "contact", label: t("nav.contact"), hash: "contact" },
@@ -111,6 +113,7 @@ export const Navbar = () => {
     (location.pathname === "/" ||
       (isAuthPage && isMobileView) ||
       location.pathname === "/appointment" ||
+      location.pathname === "/promo" ||
       /^\/catalog\/[^/]+$/.test(location.pathname) ||
       /^\/catalog\/[^/]+\/[^/]+$/.test(location.pathname) ||
       /^\/projects\/[^/]+$/.test(location.pathname) ||
@@ -321,7 +324,7 @@ export const Navbar = () => {
                   <Link
                     to={d.to}
                     onClick={() => setOpen(false)}
-                    className={`underline-grow inline-block text-[10px] uppercase tracking-[0.15em] font-light transition-all duration-300 hover:translate-x-1 ${
+                    className={`underline-grow inline-flex items-center min-h-[40px] py-1.5 text-[11px] uppercase tracking-[0.15em] font-light transition-all duration-300 hover:translate-x-1 ${
                       location.pathname === d.to
                         ? "text-white is-active"
                         : "text-white/70 hover:text-white"
@@ -444,11 +447,11 @@ export const Navbar = () => {
           </ul>
 
           {/* Actions */}
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
             <button
               aria-label="Search"
               onClick={() => setSearchOpen(true)}
-              className={`p-2 transition-colors duration-500 ${
+              className={`min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-full transition-colors duration-500 ${
                 headerLight ? "text-white/90 hover:text-white" : "text-foreground/80 hover:text-foreground"
               }`}
             >
@@ -588,7 +591,7 @@ export const Navbar = () => {
               <Link
                 to="/login"
                 aria-label="Login"
-                className={`p-2 flex items-center gap-2 transition-colors duration-500 ${
+                className={`min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-full gap-2 transition-colors duration-500 ${
                   headerLight ? "text-white/90 hover:text-white" : "text-foreground/80 hover:text-foreground"
                 }`}
                 onClick={() => setOpen(false)}
@@ -599,7 +602,7 @@ export const Navbar = () => {
             <button
               aria-label="Toggle menu"
               onClick={() => setOpen((v) => !v)}
-              className={`p-2 transition-all duration-500 relative z-[60] ${
+              className={`min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-full transition-all duration-500 relative z-[70] ${
                 headerLight ? "text-white" : "text-foreground"
               }`}
             >
@@ -633,18 +636,21 @@ export const Navbar = () => {
       {/* Full-screen overlay menu (mobile) / Right drawer (desktop) */}
       {open &&
         createPortal(
-          <div className="fixed inset-0 z-40">
+          <div className="fixed inset-0 z-[55]">
             {/* Backdrop — full dark blur di mobile, tipis+hangat di desktop */}
             <div
-              className="absolute inset-0 backdrop-blur-2xl bg-black/45 md:bg-black/20 md:backdrop-blur-sm animate-in fade-in duration-300"
+              className="absolute inset-0 backdrop-blur-2xl bg-black/55 md:bg-black/20 md:backdrop-blur-sm animate-in fade-in duration-300"
               onClick={() => setOpen(false)}
             />
 
             {/* Wrapper: anchored kanan, flex-row-reverse supaya drawer utama tetap di kanan
                 dan panel furniture (kalau ada) nempel pas di sisi kirinya, otomatis mengikuti lebar asli */}
-            <div className="md:absolute md:inset-auto md:top-0 md:right-0 h-full flex flex-row-reverse">
-              <div className="nav-overlay relative z-0 h-full w-full md:w-[420px] lg:w-[460px] md:bg-neutral-900/40 md:backdrop-blur-3xl md:border-l md:border-white/10 flex flex-col justify-between px-8 md:px-10 pt-28 pb-10 overflow-y-auto max-w-5xl md:max-w-none mx-auto md:mx-0 animate-in fade-in md:slide-in-from-right duration-500">
-                <ul className="flex flex-col gap-7 text-lg md:text-2xl uppercase tracking-[0.25em] font-light text-right">
+            <div className="w-full md:w-auto md:absolute md:inset-auto md:top-0 md:right-0 h-[100dvh] flex flex-row-reverse">
+              <div
+                data-lenis-prevent
+                className="nav-overlay relative z-0 h-full w-full md:w-[420px] lg:w-[460px] md:bg-neutral-900/40 md:backdrop-blur-3xl md:border-l md:border-white/10 flex flex-col justify-between px-6 sm:px-8 md:px-10 pt-24 pb-[max(2.5rem,env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain max-w-5xl md:max-w-none mx-auto md:mx-0 animate-in fade-in md:slide-in-from-right duration-500"
+              >
+                <ul className="flex flex-col gap-5 sm:gap-7 text-lg md:text-2xl uppercase tracking-[0.25em] font-light text-right">
                   {menuLinks.map((l, i) => (
                     <li
                       key={l.key}
@@ -660,20 +666,30 @@ export const Navbar = () => {
                   {desktopQuickLinks.map((l, i) => (
                     <li
                       key={l.key}
-                      className="animate-in fade-in slide-in-from-left-4 text-sm md:text-base text-white/70"
+                      className="animate-in fade-in slide-in-from-left-4 text-sm md:text-base text-white/75"
                       style={{
                         animationDelay: `${(menuLinks.length + i) * 80}ms`,
                         animationDuration: "500ms",
                         animationFillMode: "backwards",
                       }}
                     >
-                      <a
-                        href={`/#${l.hash}`}
-                        onClick={handleHashClick(l.hash!)}
-                        className="underline-grow hover:text-white transition-all duration-300 hover:translate-x-1 inline-block"
-                      >
-                        {l.label}
-                      </a>
+                      {l.to ? (
+                        <Link
+                          to={l.to}
+                          onClick={() => setOpen(false)}
+                          className="underline-grow hover:text-white transition-all duration-300 hover:translate-x-1 inline-flex items-center min-h-[40px]"
+                        >
+                          {l.label}
+                        </Link>
+                      ) : (
+                        <a
+                          href={`/#${l.hash}`}
+                          onClick={handleHashClick(l.hash!)}
+                          className="underline-grow hover:text-white transition-all duration-300 hover:translate-x-1 inline-flex items-center min-h-[40px]"
+                        >
+                          {l.label}
+                        </a>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -689,7 +705,18 @@ export const Navbar = () => {
               {/* Furniture drill-down panel — reveal dari GARIS BATAS KIRI drawer utama (bukan geser posisi) */}
               {furnitureMounted && (
                 <div
-                  className="fixed inset-0 md:relative md:inset-auto z-10 h-full w-full md:w-[380px] lg:w-[420px] bg-neutral-900/95 md:bg-neutral-900/40 backdrop-blur-3xl md:border-l md:border-white/10 flex flex-col px-8 md:px-10 pt-28 pb-10 overflow-y-auto transition-[clip-path,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                  data-lenis-prevent
+                  onTouchStart={(e) => {
+                    const t = e.touches[0];
+                    (e.currentTarget as any)._swipeX = t.clientX;
+                  }}
+                  onTouchEnd={(e) => {
+                    const startX = (e.currentTarget as any)._swipeX;
+                    if (typeof startX === "number" && e.changedTouches[0].clientX - startX > 65) {
+                      setOverlayView("main");
+                    }
+                  }}
+                  className="fixed inset-0 md:relative md:inset-auto z-10 h-[100dvh] md:h-full w-full md:w-[380px] lg:w-[420px] bg-neutral-900/95 md:bg-neutral-900/40 backdrop-blur-3xl md:border-l md:border-white/10 flex flex-col px-6 sm:px-8 md:px-10 pt-24 pb-[max(2.5rem,env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain transition-[clip-path,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
                   style={{
                     clipPath: furnitureShown ? "inset(0 0 0 0%)" : "inset(0 0 0 100%)",
                     opacity: furnitureShown ? 1 : 0,
@@ -698,7 +725,7 @@ export const Navbar = () => {
                   <button
                     type="button"
                     onClick={() => setOverlayView("main")}
-                    className="underline-grow inline-flex items-center gap-2 self-start text-[11px] uppercase tracking-[0.25em] text-white/70 hover:text-white transition-colors duration-300 mb-8"
+                    className="underline-grow inline-flex items-center gap-2 self-start min-h-[44px] py-2 text-[11px] uppercase tracking-[0.25em] text-white/75 hover:text-white transition-colors duration-300 mb-6"
                   >
                     <ArrowLeft size={14} />
                     Back

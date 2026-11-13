@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Check, Download, Loader2, MessageCircle, QrCode, Upload, Landmark, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { Navbar } from "@/components/livora/Navbar";
 import { authStorage } from "@/lib/api";
 import { rememberIntendedPath } from "@/lib/authGuard";
 import { imgUrl } from "@/lib/adminApi";
@@ -61,6 +62,8 @@ export default function MyOrderDetail() {
   const q = order.quote;
 
   return (
+    <>
+    <Navbar />
     <main className="min-h-screen bg-background pt-28 pb-24">
       <div className="mx-auto max-w-4xl px-4 sm:px-6">
         <Link to="/profile/orders" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Pesanan Saya</Link>
@@ -71,14 +74,19 @@ export default function MyOrderDetail() {
         <p className="mt-1 text-sm text-muted-foreground">Dibuat {new Date(order.created_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}</p>
 
         {!closed && (
-          <ol className="mt-8 grid grid-cols-7 gap-1" aria-label="Tahap pesanan">
-            {ORDER_STEPS.map((s, i) => (
-              <li key={s.key} className="text-center">
-                <div className={`mx-auto h-1.5 rounded-full ${i <= idx ? "bg-foreground" : "bg-border"}`} />
-                <p className={`mt-2 hidden text-[11px] sm:block ${i === idx ? "font-medium text-foreground" : "text-muted-foreground"}`}>{s.label}</p>
-              </li>
-            ))}
-          </ol>
+          <div className="mt-8">
+            <p className="sm:hidden text-xs font-medium text-foreground mb-2">
+              Tahap {Math.max(0, idx) + 1}/{ORDER_STEPS.length}: {ORDER_STEPS[idx]?.label ?? order.status_label}
+            </p>
+            <ol className="grid grid-cols-7 gap-1" aria-label="Tahap pesanan">
+              {ORDER_STEPS.map((s, i) => (
+                <li key={s.key} className="text-center">
+                  <div className={`mx-auto h-1.5 rounded-full ${i <= idx ? "bg-foreground" : "bg-border"}`} />
+                  <p className={`mt-2 hidden text-[11px] sm:block ${i === idx ? "font-medium text-foreground" : "text-muted-foreground"}`}>{s.label}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
         )}
 
         {/* Kartu tindakan utama */}
@@ -133,16 +141,16 @@ export default function MyOrderDetail() {
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nomor rekening {order.payment_options?.bank.name ?? "BCA"}</p>
                       {order.payment_options?.bank.account ? (
-                        <button type="button" onClick={() => { navigator.clipboard.writeText(order.payment_options!.bank.account!); toast.success("Nomor rekening disalin"); }} className="mt-1 flex items-center gap-2 font-mono text-2xl font-semibold">
-                          {order.payment_options.bank.account} <Copy className="h-4 w-4 text-muted-foreground" />
+                        <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(order.payment_options!.bank.account!); toast.success("Nomor rekening disalin"); } catch { toast.error("Gagal menyalin"); } }} className="mt-1 flex items-center gap-2 min-h-[44px] font-mono text-xl sm:text-2xl font-semibold">
+                          {order.payment_options.bank.account} <Copy className="h-4 w-4 text-muted-foreground shrink-0" />
                         </button>
                       ) : <p className="mt-1 text-sm text-muted-foreground">Dikirim lewat WhatsApp.</p>}
                       <p className="mt-1 text-xs text-muted-foreground">a.n. {order.payment_options?.bank.holder ?? "Livora"}</p>
                     </div>
                     <div className="sm:text-right">
                       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total tagihan (nominal transfer)</p>
-                      <button type="button" onClick={() => { navigator.clipboard.writeText(String(payment?.amount ?? order.grand_total ?? "")); toast.success("Nominal disalin"); }} className="mt-1 inline-flex items-center gap-2 text-2xl font-semibold text-primary">
-                        {rupiah(payment?.amount ?? order.grand_total)} <Copy className="h-4 w-4 text-muted-foreground" />
+                      <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(String(payment?.amount ?? order.grand_total ?? "")); toast.success("Nominal disalin"); } catch { toast.error("Gagal menyalin"); } }} className="mt-1 inline-flex items-center gap-2 min-h-[44px] text-xl sm:text-2xl font-semibold text-primary">
+                        {rupiah(payment?.amount ?? order.grand_total)} <Copy className="h-4 w-4 text-muted-foreground shrink-0" />
                       </button>
                       {order.documents?.find((d) => d.title.startsWith("Proforma")) && <p className="mt-1 text-xs text-muted-foreground">Proforma Invoice {order.documents.find((d) => d.title.startsWith("Proforma"))!.number}</p>}
                     </div>
@@ -154,7 +162,13 @@ export default function MyOrderDetail() {
                       <p className="flex items-center gap-2 font-medium"><QrCode className="h-4 w-4" /> QRIS</p>
                       <p className="mt-1 text-xs text-muted-foreground">Scan dengan aplikasi bank atau e-wallet apa pun. Status otomatis terkonfirmasi.</p>
                       {qr?.qr_url ? (
-                        <img src={qr.qr_url} alt="Kode QRIS pembayaran" className="mx-auto mt-3 w-48 rounded-lg bg-white p-2" />
+                        <div className="mt-3 text-center">
+                          <img src={qr.qr_url} alt="Kode QRIS pembayaran" className="mx-auto w-48 rounded-lg bg-white p-2" />
+                          <a href={qr.qr_url} download={`qris-${order.code}.png`} target="_blank" rel="noopener noreferrer"
+                            className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-border text-xs font-medium hover:bg-muted">
+                            <Download className="h-3.5 w-3.5" /> Simpan Gambar QRIS
+                          </a>
+                        </div>
                       ) : (
                         <button type="button" disabled={!!busy} onClick={() => run("qris", async () => setQr(await startQris(order.code)))} className="btn-primary mt-3 w-full">
                           {busy === "qris" && <Loader2 className="h-4 w-4 animate-spin" />} Tampilkan QRIS
@@ -259,6 +273,7 @@ export default function MyOrderDetail() {
       {confirm.node}
       <style>{`.btn-primary{display:inline-flex;height:3rem;align-items:center;justify-content:center;gap:.5rem;border-radius:999px;background:hsl(var(--foreground));color:hsl(var(--background));padding:0 1.5rem;font-size:.875rem;font-weight:500}.btn-primary.bg-emerald-600{background:#059669;color:#fff}.btn-primary:disabled,.btn-ghost:disabled{opacity:.5}.btn-ghost{display:inline-flex;height:3rem;align-items:center;justify-content:center;gap:.5rem;border-radius:999px;border:1px solid hsl(var(--border));padding:0 1.5rem;font-size:.875rem}`}</style>
     </main>
+    </>
   );
 }
 

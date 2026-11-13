@@ -354,7 +354,17 @@ const handleDownloadPDF = async (size: CatalogPageSize) => {
 };
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const sceneTouchRef = useRef<{ x: number; y: number } | null>(null);
   const carouselPages = Math.ceil(exploreItems.length / 4);
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const on = () => setIsDesktop(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
 
   // ── Measure hero height on mount
   useEffect(() => {
@@ -520,29 +530,14 @@ const handleDownloadPDF = async (size: CatalogPageSize) => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Navbar with scroll response */}
-      <motion.div
-        style={{
-          backgroundColor: navbarBgOpacity.get ? "rgba(0,0,0,0)" : "#000",
-        } as any}
-        className="fixed top-0 left-0 right-0 z-50 border-b border-border/0 transition-colors duration-300"
-      >
-        <motion.div
-          style={{
-            backdropFilter: navbarBlur.get ? `blur(${navbarBlur.get()}px)` : "blur(0px)",
-          } as any}
-          className="w-full"
-        >
-          <Navbar />
-        </motion.div>
-      </motion.div>
+      <Navbar />
 
       {/* ════════════════════════════════════════
           HERO SECTION — Premium, Cinematic
       ════════════════════════════════════════ */}
       <motion.section
         ref={heroRef}
-        className="relative min-h-screen flex items-end pb-16 md:pb-24 overflow-hidden"
+        className="relative min-h-[100svh] md:min-h-screen flex items-end pb-14 md:pb-24 overflow-hidden"
       >
         {/* Cover image with parallax */}
         <motion.div
@@ -588,7 +583,7 @@ const handleDownloadPDF = async (size: CatalogPageSize) => {
 
 <motion.div
   className="relative z-10 container-livora w-full"
-  style={{ x: textX, opacity: textOpacity, y: textY }}
+  style={isDesktop ? { x: textX, opacity: textOpacity, y: textY } : { opacity: textOpacity }}
 >
           {/* Navigation breadcrumb */}
           <motion.nav
@@ -656,24 +651,19 @@ const handleDownloadPDF = async (size: CatalogPageSize) => {
               >
                 Explore Spaces
               </a>
-              <Link
-                to={`/catalog/${item.category}`}
-                className="text-[10px] uppercase tracking-[0.18em] text-white/70 hover:text-white transition-colors duration-300 font-light flex items-center gap-1.5"
-              >
-                <div className="!rounded-none [&_button]:!rounded-none [&_button]:!border-0 [&_button]:!bg-foreground [&_button]:!text-background [&_button]:!px-8 [&_button]:!py-3.5 [&_button]:!text-[10px] [&_button]:!uppercase [&_button]:!tracking-[0.18em] [&_button]:!font-light hover:[&_button]:!bg-foreground/80 [&_button]:transition-colors [&_button]:duration-300">
-  <SaveButton type="catalog" id={Number(item.id)} variant="pill" />
-</div>
-              </Link>
-              
+              <div className="!rounded-none [&_button]:!rounded-none [&_button]:!border-0 [&_button]:!bg-foreground [&_button]:!text-background [&_button]:!px-7 [&_button]:!py-3.5 [&_button]:!text-[10px] [&_button]:!uppercase [&_button]:!tracking-[0.18em] [&_button]:!font-light hover:[&_button]:!bg-foreground/80 [&_button]:transition-colors [&_button]:duration-300">
+                <SaveButton type="catalog" id={Number(item.id)} variant="pill" />
+              </div>
+
               <div className="relative" ref={pdfMenuRef}>
-  <button
-    type="button"
-    disabled={pdfLoading}
-    onClick={() => setPdfMenuOpen((v) => !v)}
-    className="text-[10px] uppercase tracking-[0.18em] text-white/80 hover:text-white transition-colors duration-300 font-light flex items-center gap-1.5 px-6 py-3.5 border border-white/40 hover:border-white disabled:opacity-50"
-  >
-    <Download size={12} /> {pdfLoading ? "Preparing…" : "Download PDF"}
-  </button>
+                <button
+                  type="button"
+                  disabled={pdfLoading}
+                  onClick={() => setPdfMenuOpen((v) => !v)}
+                  className="min-h-[44px] text-[10px] uppercase tracking-[0.18em] text-white/85 hover:text-white transition-colors duration-300 font-light flex items-center gap-1.5 px-6 py-3.5 border border-white/40 hover:border-white disabled:opacity-50"
+                >
+                  <Download size={12} /> {pdfLoading ? "Preparing…" : "Download PDF"}
+                </button>
 
   {pdfMenuOpen && (
     <div className="absolute bottom-full left-0 mb-2 w-full min-w-[140px] bg-background border border-border shadow-lg z-30">
@@ -752,7 +742,7 @@ const handleDownloadPDF = async (size: CatalogPageSize) => {
                 Inside the <em className="italic">Space</em>
               </h2>
             </div>
-            <div className="flex items-center gap-2">
+            <div data-lenis-prevent className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
               {scenes.map((_, i) => (
                 <button
                   key={i}
@@ -760,7 +750,7 @@ const handleDownloadPDF = async (size: CatalogPageSize) => {
                     setSceneIdx(i);
                     setActiveSpot(null);
                   }}
-                  className={`text-[9px] uppercase tracking-[0.15em] px-3 py-1.5 border transition-all duration-300 font-light ${
+                  className={`shrink-0 min-h-[40px] text-[10px] uppercase tracking-[0.15em] px-4 py-2 border transition-all duration-300 font-light ${
                     i === sceneIdx
                       ? "bg-foreground text-background border-foreground"
                       : "border-border text-muted-foreground hover:border-foreground/50"
@@ -772,7 +762,23 @@ const handleDownloadPDF = async (size: CatalogPageSize) => {
             </div>
           </div>
 
-          <div className="relative aspect-[4/3] sm:aspect-[16/10] md:aspect-[16/9] bg-secondary overflow-hidden">
+          <div
+            onTouchStart={(e) => {
+              sceneTouchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }}
+            onTouchEnd={(e) => {
+              const start = sceneTouchRef.current;
+              sceneTouchRef.current = null;
+              if (!start || scenes.length <= 1 || activeSpot) return;
+              const dx = e.changedTouches[0].clientX - start.x;
+              const dy = e.changedTouches[0].clientY - start.y;
+              if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) {
+                setActiveSpot(null);
+                setSceneIdx((idx) => (dx < 0 ? (idx + 1) % scenes.length : (idx - 1 + scenes.length) % scenes.length));
+              }
+            }}
+            className="relative aspect-[4/3] sm:aspect-[16/10] md:aspect-[16/9] bg-secondary overflow-hidden"
+          >
             {currentScene.image ? (
               <img
                 src={currentScene.image}
@@ -809,28 +815,42 @@ const handleDownloadPDF = async (size: CatalogPageSize) => {
                   className="absolute inset-0 z-20"
                   onClick={() => setActiveSpot(null)}
                 />
-                <HotspotPanel
-                  spot={activeSpot}
-                  onClose={() => setActiveSpot(null)}
-                  itemMap={itemMap}
-                />
+                <div className="hidden sm:block">
+                  <HotspotPanel
+                    spot={activeSpot}
+                    onClose={() => setActiveSpot(null)}
+                    itemMap={itemMap}
+                  />
+                </div>
               </>
             )}
             {!activeSpot && currentScene.hotspots.length > 0 && (
-              <div className="hidden sm:block absolute bottom-4 right-4 text-[9px] uppercase tracking-[0.15em] text-white/60 font-light">
-                Tap the dots to explore items
+              <div className="absolute bottom-3 right-3 text-[9px] uppercase tracking-[0.15em] text-white/80 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full font-light">
+                Tap dots to explore items
               </div>
             )}
           </div>
+
+          {/* Mobile non-clipped active hotspot card */}
+          {activeSpot && (
+            <div className="sm:hidden mt-3">
+              <HotspotPanel
+                spot={activeSpot}
+                onClose={() => setActiveSpot(null)}
+                itemMap={itemMap}
+                inline
+              />
+            </div>
+          )}
         </div>
       </section>
 
       {/* ════════════════════════════════════════
           4. ITEMS GRID
       ════════════════════════════════════════ */}
-      <section className="py-20 md:py-28 border-b border-border">
+      <section className="py-16 md:py-28 border-b border-border">
   <div className="container-livora">
-    <div className="mb-12">
+    <div className="mb-8 md:mb-12">
       <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground mb-2 font-light">
         Livora &nbsp;|&nbsp; Pieces
       </p>
@@ -839,8 +859,8 @@ const handleDownloadPDF = async (size: CatalogPageSize) => {
       </h2>
     </div>
     <div
-      className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5"
-      style={{ gridAutoRows: "180px" }}
+      className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-5"
+      style={{ gridAutoRows: isDesktop ? "180px" : "200px" }}
     >
       {scenes.flatMap((s) => s.hotspots).slice(0, 7).map((spot) => {
         const itemSlug = (spot as any).item_slug || (spot as any).itemSlug;
@@ -853,7 +873,7 @@ const handleDownloadPDF = async (size: CatalogPageSize) => {
             to={itemSlug ? `/items/${itemSlug}` : "#"}
             className="group relative bg-secondary overflow-hidden"
             style={
-              layout
+              isDesktop && layout
                 ? {
                     gridColumn: `${layout.pos_x + 1} / span ${layout.width}`,
                     gridRow: `${layout.pos_y + 1} / span ${layout.height}`,
@@ -871,19 +891,14 @@ const handleDownloadPDF = async (size: CatalogPageSize) => {
               )}
             </div>
             <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors duration-500" />
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background/80 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-500">
-              <p className="text-[9px] uppercase tracking-[0.15em] text-foreground/60 mb-0.5 font-light">
+            <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-t from-background/95 via-background/70 to-transparent translate-y-0 md:translate-y-full md:group-hover:translate-y-0 transition-transform duration-500">
+              <p className="text-[9px] uppercase tracking-[0.15em] text-foreground/65 mb-0.5 font-light">
                 {item.taxonomy}
               </p>
-              <div className="flex items-center justify-between">
-                <p className="serif text-sm font-light text-foreground">{spot.label}</p>
-                <ArrowUpRight size={14} className="text-foreground/60" />
+              <div className="flex items-center justify-between gap-2">
+                <p className="serif text-sm font-light text-foreground truncate">{spot.label}</p>
+                <ArrowUpRight size={14} className="text-foreground/70 shrink-0" />
               </div>
-            </div>
-            <div className="absolute top-3 left-3">
-              <span className="text-[8px] uppercase tracking-[0.1em] bg-background/80 text-muted-foreground px-2 py-0.5 font-light">
-                {spot.label}
-              </span>
             </div>
           </Link>
         );
@@ -909,16 +924,16 @@ const handleDownloadPDF = async (size: CatalogPageSize) => {
             </p>
           </div>
 
-          <div className="overflow-hidden">
+          <div data-lenis-prevent className="overflow-x-auto snap-x snap-mandatory no-scrollbar md:overflow-hidden -mx-5 px-5 md:mx-0 md:px-0">
             <div
-              className="flex gap-4 transition-transform duration-500 select-none"
-              style={{ transform: `translateX(calc(-${carouselPos * 25}% - ${carouselPos * 16}px))` }}
+              className="flex gap-4 md:transition-transform md:duration-500 select-none"
+              style={isDesktop ? { transform: `translateX(calc(-${carouselPos * 25}% - ${carouselPos * 16}px))` } : undefined}
             >
               {exploreItems.map((ei) => (
                 <Link
                   key={ei.id}
                   to={`/catalog/${ei.category}/${ei.slug}`}
-                  className="group flex-shrink-0 w-[calc(100%-12px)] sm:w-[calc(50%-12px)] lg:w-[calc(25%-12px)]"
+                  className="group flex-shrink-0 w-[72vw] sm:w-[calc(50%-12px)] lg:w-[calc(25%-12px)] snap-start"
                   draggable={false}
                 >
                   <div className="relative aspect-[3/4] bg-secondary overflow-hidden mb-3">
@@ -1010,21 +1025,21 @@ const HotspotDot = ({
     <button
       onClick={onClick}
       style={{ left: `${spot.x}%`, top: `${spot.y}%` }}
-      className={`absolute -translate-x-1/2 -translate-y-1/2 group z-20 transition-all duration-300 ${
+      className={`absolute -translate-x-1/2 -translate-y-1/2 group z-20 w-11 h-11 flex items-center justify-center transition-all duration-300 ${
         active ? "scale-110" : ""
       }`}
       aria-label={spot.label}
     >
       <span
-        className={`absolute inset-0 rounded-full border border-white/70 animate-ping opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
+        className={`absolute w-7 h-7 rounded-full border border-white/70 animate-ping opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
           active ? "opacity-100" : ""
         }`}
       />
       <span
-        className={`block w-6 h-6 rounded-full border-2 border-white shadow-lg transition-all duration-300 flex items-center justify-center ${
+        className={`w-6 h-6 rounded-full border-2 border-white shadow-lg transition-all duration-300 flex items-center justify-center ${
           active
             ? "bg-white"
-            : "bg-white/20 backdrop-blur-sm group-hover:bg-white/60"
+            : "bg-white/25 backdrop-blur-sm group-hover:bg-white/60"
         }`}
       >
         <span
@@ -1033,7 +1048,7 @@ const HotspotDot = ({
           }`}
         />
       </span>
-      <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 whitespace-nowrap text-[9px] uppercase tracking-[0.15em] bg-background/90 text-foreground px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none font-light">
+      <span className="hidden sm:block absolute left-1/2 -translate-x-1/2 bottom-full mb-1 whitespace-nowrap text-[9px] uppercase tracking-[0.15em] bg-background/90 text-foreground px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none font-light">
         {spot.label}
       </span>
     </button>
@@ -1042,50 +1057,28 @@ const HotspotDot = ({
 // ─────────────────────────────────────────────
 // HotspotPanel Component
 // ─────────────────────────────────────────────
-// ─────────────────────────────────────────────
-// HotspotPanel Component
-// ─────────────────────────────────────────────
-// ─────────────────────────────────────────────
-// HotspotPanel Component
-// ─────────────────────────────────────────────
 const HotspotPanel = ({
   spot,
   onClose,
   itemMap,
+  inline = false,
 }: {
   spot: HotspotItem;
   onClose: () => void;
   itemMap: Record<string, { title: string; image?: string; code?: string }>;
+  inline?: boolean;
 }) => {
   const itemSlug = spot.itemSlug || spot.item_slug;
   const itemDetail = itemSlug ? itemMap[itemSlug] : undefined;
   const displayImage = itemDetail?.image || spot.image;
 
-  const [isMobile, setIsMobile] = useState<boolean>(
-    typeof window !== "undefined" ? window.matchMedia("(max-width: 639px)").matches : false
-  );
-
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 639px)");
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-
-  // Desktop: place near dot, flipping to keep inside container.
-  // Mobile: pin to safe left/right margins, flip vertically based on dot Y.
   const placeRight = spot.x < 55;
   const placeBelow = spot.y < 45;
   const horizontalOffset = 3;
   const verticalOffset = 3;
 
-  const style: React.CSSProperties = isMobile
-    ? {
-        left: 16,
-        right: 16,
-        top: placeBelow ? `calc(${spot.y}% + ${verticalOffset}%)` : undefined,
-        bottom: !placeBelow ? `calc(${100 - spot.y}% + ${verticalOffset}%)` : undefined,
-      }
+  const style: React.CSSProperties | undefined = inline
+    ? undefined
     : {
         left: placeRight ? `calc(${spot.x}% + ${horizontalOffset}%)` : undefined,
         right: !placeRight ? `calc(${100 - spot.x}% + ${horizontalOffset}%)` : undefined,
@@ -1098,9 +1091,11 @@ const HotspotPanel = ({
     <div
       style={style}
       onClick={(e) => e.stopPropagation()}
-      className={`absolute z-30 bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.14)] p-4 flex items-center gap-4 ${
-        isMobile ? "w-auto" : "w-[270px] sm:w-[310px]"
-      }`}
+      className={`${
+        inline
+          ? "relative w-full border border-border"
+          : "absolute z-30 w-[270px] sm:w-[310px]"
+      } bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.14)] p-4 flex items-center gap-4`}
     >
       <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-xl bg-secondary/60 overflow-hidden flex items-center justify-center">
         {displayImage ? (
@@ -1114,7 +1109,7 @@ const HotspotPanel = ({
         )}
       </div>
 
-      <div className="flex-1 min-w-0 pr-4">
+      <div className="flex-1 min-w-0 pr-5">
         <p className="text-[15px] sm:text-[16px] font-medium text-foreground leading-tight truncate">
           {spot.label}
         </p>
@@ -1126,7 +1121,7 @@ const HotspotPanel = ({
         {(spot.itemSlug || spot.item_slug) && (
           <Link
             to={`/items/${spot.itemSlug || spot.item_slug}`}
-            className="inline-flex items-center gap-1 mt-2 text-[12px] sm:text-[13px] text-foreground font-normal hover:text-muted-foreground transition-colors leading-tight"
+            className="inline-flex items-center gap-1 mt-2 py-1 text-[12px] sm:text-[13px] text-foreground font-normal hover:text-muted-foreground transition-colors leading-tight"
           >
             View Product <ArrowUpRight size={12} strokeWidth={2} />
           </Link>
@@ -1136,9 +1131,9 @@ const HotspotPanel = ({
       <button
         onClick={onClose}
         aria-label="Close"
-        className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded-full hover:bg-secondary/60"
+        className="absolute top-2 right-2 w-9 h-9 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors rounded-full hover:bg-secondary/60"
       >
-        <X size={14} />
+        <X size={15} />
       </button>
     </div>
   );

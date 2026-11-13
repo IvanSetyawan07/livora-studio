@@ -1,13 +1,17 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ZoomIn } from "lucide-react";
 import aboutImg from "@/assets/about-livora.webp";
 import { SectionHeader } from "./SectionHeader";
+import { ImageLightbox } from "./ImageLightbox";
 
 export const About = () => {
   const { t } = useTranslation();
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const missions = t("about.missions", { returnObjects: true }) as { t: string; d: string }[];
 
   return (
-    <section id="about" className="py-28 md:py-40 container-livora">
+    <section id="about" className="py-20 md:py-40 container-livora">
       <SectionHeader
         eyebrow={t("about.eyebrow")}
         title={
@@ -18,8 +22,13 @@ export const About = () => {
       />
 
       {/* ROW 1 — About */}
-      <div className="grid md:grid-cols-12 gap-10 md:gap-16 items-start">
-        <div className="reveal md:col-span-7 hover-zoom">
+      <div className="grid md:grid-cols-12 gap-8 md:gap-16 items-start">
+        <button
+          type="button"
+          onClick={() => setLightboxOpen(true)}
+          className="reveal md:col-span-7 hover-zoom relative group text-left w-full overflow-hidden rounded-sm cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Enlarge studio image"
+        >
           <img
             src={aboutImg}
             alt="Livora Architechture interior"
@@ -28,8 +37,11 @@ export const About = () => {
             loading="lazy"
             className="w-full aspect-[5/4] object-cover"
           />
-        </div>
-        <div className="reveal md:col-span-5 md:pt-8 space-y-8">
+          <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] opacity-90 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+            <ZoomIn size={12} /> View
+          </span>
+        </button>
+        <div className="reveal md:col-span-5 md:pt-8 space-y-6 md:space-y-8">
           <p className="text-base md:text-lg leading-relaxed text-foreground/80 font-light">
             {t("about.p1")}
           </p>
@@ -42,24 +54,24 @@ export const About = () => {
       </div>
 
       {/* ROW 2 — Vision */}
-      <div id="vision" className="reveal mt-24 md:mt-32 max-w-4xl">
+      <div id="vision" className="reveal mt-16 md:mt-32 max-w-4xl">
         <p className="text-[10px] uppercase tracking-[0.4em] text-foreground/50 mb-5">
           <span className="divider-line" />
           {t("about.vision_eyebrow")}
         </p>
-        <h3 className="serif text-3xl md:text-5xl font-light italic leading-snug text-foreground/90">
+        <h3 className="serif text-2xl sm:text-3xl md:text-5xl font-light italic leading-snug text-foreground/90">
           &ldquo;{t("about.vision_quote")}&rdquo;
         </h3>
       </div>
 
       {/* ROW 3 — Mission */}
-      <div id="mission" className="mt-24 md:mt-32">
-        <div className="reveal mb-12 md:mb-16">
+      <div id="mission" className="mt-16 md:mt-32">
+        <div className="reveal mb-10 md:mb-16">
           <p className="text-[10px] uppercase tracking-[0.4em] text-foreground/50 mb-5">
             <span className="divider-line" />
             {t("about.mission_eyebrow")}
           </p>
-          <h3 className="serif text-4xl md:text-5xl font-light leading-tight">
+          <h3 className="serif text-3xl sm:text-4xl md:text-5xl font-light leading-tight">
             {t("about.mission_title")} <em className="italic">{t("about.mission_title_em")}</em>
           </h3>
         </div>
@@ -67,22 +79,28 @@ export const About = () => {
         <div className="grid md:grid-cols-3 gap-6 md:gap-8">
           {(Array.isArray(missions) ? missions : []).map((m, i) => (
             <div key={m.t} className="reveal group mission-card" style={{ transitionDelay: `${i * 100}ms` }}>
-              <p className="text-[11px] uppercase mb-6" style={{ color: "#C9A97A", letterSpacing: "0.15em" }}>
+              <p className="text-[11px] uppercase mb-5 md:mb-6" style={{ color: "#C9A97A", letterSpacing: "0.15em" }}>
                 {String(i + 1).padStart(2, "0")}
               </p>
               <h4
-                className="serif text-3xl md:text-4xl font-light mb-4 origin-left transition-transform duration-300 ease-out group-hover:scale-[1.03]"
+                className="serif text-2xl sm:text-3xl md:text-4xl font-light mb-3 md:mb-4 origin-left transition-transform duration-300 ease-out group-hover:scale-[1.03]"
                 style={{ color: "#1A1A1A" }}
               >
                 {m.t}
               </h4>
-              <p className="font-light" style={{ color: "#6B6B6B", lineHeight: 1.7 }}>
+              <p className="font-light text-sm sm:text-base" style={{ color: "#6B6B6B", lineHeight: 1.7 }}>
                 {m.d}
               </p>
             </div>
           ))}
         </div>
       </div>
+
+      <ImageLightbox
+        open={lightboxOpen}
+        images={[{ src: aboutImg, alt: "Livora Architecture interior" }]}
+        onClose={() => setLightboxOpen(false)}
+      />
     </section>
   );
 };

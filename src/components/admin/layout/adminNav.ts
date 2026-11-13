@@ -88,7 +88,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     icon: Star,
     items: [
       { to: "/admin/landing", key: "landing", label: "Landing page", feature: "landing", icon: Star },
-      { to: "/admin/banners", key: "banners", label: "Banner", feature: "landing", icon: ImageIcon },
+      { to: "/admin/promo-banners", key: "promoBanners", label: "Pop-up Promo", feature: "landing", icon: Megaphone, keywords: "promo diskon popup modal banner" },
+      { to: "/admin/banners", key: "banners", label: "Banner tema", feature: "landing", icon: ImageIcon },
     ],
   },
   {

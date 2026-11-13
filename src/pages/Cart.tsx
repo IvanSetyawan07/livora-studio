@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Minus, Plus, Trash2, Loader2, ShoppingBag, MessageCircle, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
+import { Navbar } from "@/components/livora/Navbar";
 import { imgUrl } from "@/lib/adminApi";
 import { checkoutPublicCart, clearPublicCart, getPublicCart, savePublicCart, type PublicCartLine } from "@/lib/shopPublic";
 import Seo from "@/components/Seo.jsx";
@@ -45,13 +46,20 @@ export default function Cart() {
 
   const copyCode = async () => {
     if (!result) return;
-    await navigator.clipboard.writeText(result.code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(result.code);
+      setCopied(true);
+      toast.success("Kode disalin");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Salin manual kode: " + result.code);
+    }
   };
 
   if (result) {
     return (
+      <>
+      <Navbar />
       <main className="min-h-screen bg-background px-4 pt-32 pb-24">
         <Seo title="Lanjut ke WhatsApp | Livora" description="Kirim kode keranjang ke WhatsApp Livora" noindex />
         <div className="mx-auto max-w-md text-center">
@@ -69,11 +77,14 @@ export default function Cart() {
           <p className="mt-3 text-xs text-muted-foreground">Pesan sudah terisi otomatis — cukup tekan kirim. Tanpa kode pun Anda bisa langsung chat kami.</p>
         </div>
       </main>
+      </>
     );
   }
 
   return (
-    <main className="min-h-screen bg-background pt-28 pb-24">
+    <>
+    <Navbar />
+    <main className="min-h-screen bg-background pt-28 pb-36 lg:pb-24">
       <Seo title="Keranjang | Livora" description="Keranjang pesanan Livora" noindex />
       <div className="mx-auto max-w-5xl px-4 sm:px-6">
         <p className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">Pesanan furnitur</p>
@@ -103,22 +114,22 @@ export default function Cart() {
                         <p className="truncate font-medium">{l.title}</p>
                         {l.code && <p className="text-xs text-muted-foreground">{l.code}</p>}
                       </div>
-                      <button type="button" aria-label="Hapus" onClick={() => remove(idx)} className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground">
+                      <button type="button" aria-label="Hapus" onClick={() => remove(idx)} className="w-11 h-11 inline-flex items-center justify-center -mr-2 -mt-1 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-3">
-                      <div className="inline-flex items-center rounded-full border border-border">
-                        <button type="button" aria-label="Kurangi" className="h-9 w-9 rounded-full hover:bg-muted disabled:opacity-40" disabled={l.quantity <= 1} onClick={() => patch(idx, { quantity: l.quantity - 1 })}><Minus className="mx-auto h-3.5 w-3.5" /></button>
-                        <span className="w-8 text-center text-sm">{l.quantity}</span>
-                        <button type="button" aria-label="Tambah" className="h-9 w-9 rounded-full hover:bg-muted" onClick={() => patch(idx, { quantity: l.quantity + 1 })}><Plus className="mx-auto h-3.5 w-3.5" /></button>
+                    <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-3">
+                      <div className="inline-flex items-center self-start rounded-full border border-border">
+                        <button type="button" aria-label="Kurangi" className="h-11 w-11 rounded-full hover:bg-muted disabled:opacity-40" disabled={l.quantity <= 1} onClick={() => patch(idx, { quantity: l.quantity - 1 })}><Minus className="mx-auto h-3.5 w-3.5" /></button>
+                        <span className="w-8 text-center text-sm tabular-nums">{l.quantity}</span>
+                        <button type="button" aria-label="Tambah" className="h-11 w-11 rounded-full hover:bg-muted" onClick={() => patch(idx, { quantity: l.quantity + 1 })}><Plus className="mx-auto h-3.5 w-3.5" /></button>
                       </div>
                       <input
-                        defaultValue={l.note ?? ""}
-                        onBlur={(e) => e.target.value !== (l.note ?? "") && patch(idx, { note: e.target.value })}
+                        value={l.note ?? ""}
+                        onChange={(e) => patch(idx, { note: e.target.value })}
                         placeholder="Catatan (opsional)"
                         aria-label="Catatan barang"
-                        className="h-9 min-w-0 flex-1 rounded-full border border-border bg-background px-4 text-sm outline-none focus:border-foreground"
+                        className="h-11 min-w-0 w-full sm:flex-1 rounded-full border border-border bg-background px-4 text-base sm:text-sm outline-none focus:border-foreground"
                       />
                     </div>
                   </div>
@@ -143,6 +154,29 @@ export default function Cart() {
           </div>
         )}
       </div>
+
+      {/* Sticky mobile checkout CTA bar */}
+      {lines.length > 0 && (
+        <div
+          className="fixed inset-x-0 bottom-0 z-40 lg:hidden border-t border-border bg-background/95 backdrop-blur-md px-4 pt-3 flex items-center justify-between gap-3"
+          style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+        >
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground">{lines.length} barang</p>
+            <p className="text-sm font-medium">{lines.reduce((s, l) => s + l.quantity, 0)} unit</p>
+          </div>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={submitting}
+            className="inline-flex h-12 flex-1 max-w-[240px] items-center justify-center gap-2 rounded-full bg-foreground px-5 text-sm font-medium text-background disabled:opacity-40"
+          >
+            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
+            Pesan via WhatsApp
+          </button>
+        </div>
+      )}
     </main>
+    </>
   );
 }

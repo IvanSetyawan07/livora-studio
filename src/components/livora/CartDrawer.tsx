@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { useCart } from "@/context/CartContext";
@@ -9,26 +10,38 @@ export const CartDrawer = () => {
   const { t } = useTranslation();
   const { items, count, total, open, setOpen, remove, setQty, clear } = useCart();
 
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
   if (!open) return null;
 
   return (
     <>
       {/* Overlay */}
       <div
-        className="fixed inset-0 bg-black/40 z-[60]"
+        className="fixed inset-0 bg-black/40 z-[80]"
         onClick={() => setOpen(false)}
       />
       {/* Drawer */}
-      <div className="fixed top-0 right-0 h-full w-full max-w-md bg-background z-[70] shadow-2xl flex flex-col">
+      <div
+        className="fixed top-0 right-0 h-[100dvh] w-full max-w-md bg-background z-[85] shadow-2xl flex flex-col"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-border">
+        <div className="flex items-center justify-between px-5 sm:px-6 py-4 sm:py-5 border-b border-border">
           <div className="flex items-center gap-3">
             <ShoppingBag className="w-5 h-5 text-foreground/70" strokeWidth={1.5} />
             <h2 className="serif text-xl font-light">{t("cart.title")}</h2>
           </div>
           <button
             onClick={() => setOpen(false)}
-            className="p-2 hover:bg-secondary rounded-full transition-colors"
+            className="w-11 h-11 inline-flex items-center justify-center hover:bg-secondary rounded-full transition-colors -mr-2"
             aria-label="Close cart"
           >
             <X className="w-5 h-5" />
@@ -36,7 +49,7 @@ export const CartDrawer = () => {
         </div>
 
         {/* Items */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        <div data-lenis-prevent className="flex-1 overflow-y-auto overscroll-contain px-5 sm:px-6 py-4 space-y-4">
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <ShoppingBag className="w-12 h-12 text-foreground/25 mb-4" strokeWidth={1} />
@@ -47,7 +60,7 @@ export const CartDrawer = () => {
             items.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center gap-4 py-3 border-b border-border/50"
+                className="flex items-center gap-3 py-3 border-b border-border/50"
               >
                 <div className="flex-1 min-w-0">
                   <h4 className="text-sm font-medium truncate">{item.name}</h4>
@@ -55,21 +68,21 @@ export const CartDrawer = () => {
                     {item.price === 0 ? "Inquiry" : formatRupiah(item.price)}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <button
                     onClick={() => setQty(item.id, item.qty - 1)}
-                    className="p-1.5 hover:bg-secondary rounded-full transition-colors"
+                    className="w-10 h-10 inline-flex items-center justify-center hover:bg-secondary active:scale-95 rounded-full transition-all"
                     aria-label="Decrease quantity"
                   >
-                    <Minus className="w-3.5 h-3.5" />
+                    <Minus className="w-4 h-4" />
                   </button>
                   <span className="text-sm w-6 text-center tabular-nums">{item.qty}</span>
                   <button
                     onClick={() => setQty(item.id, item.qty + 1)}
-                    className="p-1.5 hover:bg-secondary rounded-full transition-colors"
+                    className="w-10 h-10 inline-flex items-center justify-center hover:bg-secondary active:scale-95 rounded-full transition-all"
                     aria-label="Increase quantity"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-4 h-4" />
                   </button>
                 </div>
                 <button
@@ -77,7 +90,7 @@ export const CartDrawer = () => {
                     remove(item.id);
                     toast.success("Removed from cart");
                   }}
-                  className="p-2 hover:bg-red-50 text-foreground/40 hover:text-red-500 rounded-full transition-colors"
+                  className="w-10 h-10 inline-flex items-center justify-center hover:bg-red-50 text-foreground/40 hover:text-red-500 rounded-full transition-colors -mr-1"
                   aria-label="Remove item"
                 >
                   <Trash2 className="w-4 h-4" />

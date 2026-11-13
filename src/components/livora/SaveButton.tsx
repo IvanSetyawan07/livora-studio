@@ -65,15 +65,16 @@ export default function SaveButton({ type, id, className = "", size = 22, varian
   if (variant === "pill") {
     return (
       <button
+        type="button"
         onClick={toggle}
         disabled={loading}
-        className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border transition-all text-xs uppercase tracking-[0.15em] ${
+        className={`inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 rounded-full border transition-all active:scale-95 text-xs uppercase tracking-[0.15em] ${
           saved
             ? "bg-foreground text-background border-foreground"
             : "bg-background/80 backdrop-blur border-border hover:border-foreground"
         } ${className}`}
       >
-        <Bookmark size={size - 6} fill={saved ? "currentColor" : "none"} />
+        <Bookmark size={Math.max(14, size - 6)} fill={saved ? "currentColor" : "none"} />
         {saved ? "Saved" : "Save"}
       </button>
     );
@@ -81,9 +82,10 @@ export default function SaveButton({ type, id, className = "", size = 22, varian
   if (variant === "solid") {
   return (
     <button
+      type="button"
       onClick={toggle}
       disabled={loading}
-      className={`inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] bg-foreground text-background px-8 py-3.5 hover:bg-foreground/80 transition-colors duration-300 font-light disabled:opacity-60 ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 min-h-[44px] text-[10px] uppercase tracking-[0.18em] bg-foreground text-background px-7 py-3.5 hover:bg-foreground/80 active:scale-95 transition-all duration-300 font-light disabled:opacity-60 ${className}`}
     >
       <Bookmark size={14} fill={saved ? "currentColor" : "none"} />
       {saved ? "Saved" : "Save"}
@@ -94,10 +96,11 @@ export default function SaveButton({ type, id, className = "", size = 22, varian
 
   return (
     <button
+      type="button"
       onClick={toggle}
       disabled={loading}
       aria-label={saved ? "Remove from saved" : "Save"}
-      className={`inline-flex items-center justify-center p-2 rounded-full backdrop-blur bg-background/70 border border-border hover:border-foreground transition-colors ${className}`}
+      className={`inline-flex items-center justify-center min-w-[44px] min-h-[44px] p-2.5 rounded-full backdrop-blur bg-background/70 border border-border hover:border-foreground active:scale-90 transition-all ${className}`}
     >
       <Bookmark size={size} fill={saved ? "currentColor" : "none"} />
     </button>

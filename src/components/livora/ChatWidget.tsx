@@ -82,8 +82,8 @@ type ChatSize = "md" | "lg";
 const CHAT_SIZE_KEY = "livora_chat_size";
 
 const CHAT_SIZES: Record<ChatSize, { className: string }> = {
-  md: { className: "w-[92vw] max-w-[380px] h-[70vh] max-h-[560px]" },
-  lg: { className: "w-[94vw] max-w-[520px] h-[82vh] max-h-[760px]" },
+  md: { className: "inset-x-3 bottom-20 sm:inset-x-auto sm:bottom-24 sm:right-6 sm:w-[380px] h-[min(74dvh,560px)]" },
+  lg: { className: "inset-x-3 bottom-20 sm:inset-x-auto sm:bottom-24 sm:right-6 sm:w-[520px] h-[min(82dvh,760px)]" },
 };
 
 export function ChatWidget() {
@@ -439,8 +439,9 @@ export function ChatWidget() {
   type="button"
   onClick={() => setOpen((v) => !v)}
   aria-label={open ? "Tutup chat" : "Buka chat"}
-  className="fixed bottom-6 right-6 z-[60] w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-500 ease-out hover:scale-110"
+  className="fixed right-4 sm:right-6 z-[60] w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-500 ease-out hover:scale-110"
   style={{
+    bottom: "max(1rem, env(safe-area-inset-bottom))",
     backgroundColor: PAPER,
     color: INK,
     opacity: visible ? 1 : 0,
@@ -489,28 +490,28 @@ export function ChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.97 }}
             transition={{ duration: 0.35, ease }}
-            className={`fixed bottom-24 right-6 z-[60] flex flex-col bg-white border border-[#e5e5e5] shadow-2xl transition-[width,height] duration-300 ${CHAT_SIZES[size].className}`}
+            className={`fixed z-[65] flex flex-col rounded-2xl overflow-hidden bg-white border border-[#e5e5e5] shadow-2xl transition-[width,height] duration-300 ${CHAT_SIZES[size].className}`}
           >
             {/* Header */}
             <div
-              className="px-5 py-4 flex items-center justify-between"
+              className="px-4 sm:px-5 py-3.5 flex items-center justify-between border-b border-black/5"
               style={{ backgroundColor: PAPER, color: INK }}
             >
-              <div>
-                <p className="serif text-base font-light leading-none mb-1">
+              <div className="min-w-0 pr-2">
+                <p className="serif text-base font-light leading-none mb-1 truncate">
                   {status === "active" ? "Livora Customer Service" : "Livora Concierge"}
                 </p>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-black/50 font-light">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-black/50 font-light truncate">
                   {statusLabel}
                 </p>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 shrink-0">
                 <button
                   type="button"
                   onClick={() => cycleSize(size === "md" ? 1 : -1)}
                   aria-label={size === "md" ? "Perbesar ukuran chat" : "Perkecil ukuran chat"}
                   title={size === "md" ? "Perbesar" : "Perkecil"}
-                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors overflow-hidden"
+                  className="hidden sm:flex w-10 h-10 items-center justify-center rounded-full hover:bg-black/5 transition-colors overflow-hidden"
                 >
                   <AnimatePresence mode="wait" initial={false}>
                     {size === "md" ? (
@@ -537,6 +538,14 @@ export function ChatWidget() {
                       </motion.span>
                     )}
                   </AnimatePresence>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  aria-label="Tutup chat"
+                  className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors"
+                >
+                  <X size={16} strokeWidth={1.6} />
                 </button>
               </div>
             </div>
@@ -616,13 +625,13 @@ export function ChatWidget() {
                             <Sparkles size={11} strokeWidth={1.5} />
                             Rekomendasi untuk Anda
                           </p>
-                          <div className="grid grid-cols-3 gap-2">
+                          <div className="flex gap-2.5 overflow-x-auto no-scrollbar snap-x pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible">
                             {(m.meta.recommendations as Recommendation[]).map((rec, i) => (
                               <button
                                 key={`${m.id}-rec-${i}`}
                                 type="button"
                                 onClick={() => goToRecommendation(rec.url)}
-                                className="text-left bg-white flex flex-col overflow-hidden group"
+                                className="text-left bg-white flex flex-col overflow-hidden group shrink-0 w-[132px] sm:w-auto snap-start rounded-lg p-1.5 border border-black/5 sm:border-0 sm:p-0"
                               >
                                 <div className="w-full aspect-square bg-[#f2f2f2] overflow-hidden rounded-lg relative">
                                   {rec.image ? (
@@ -783,7 +792,7 @@ export function ChatWidget() {
             </div>
 
             {/* Input */}
-            <div className="flex items-center gap-2 px-4 py-4 border-t border-[#e5e5e5] bg-white">
+            <div className="flex items-center gap-2 px-4 py-3 sm:py-4 border-t border-[#e5e5e5] bg-white">
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -791,14 +800,14 @@ export function ChatWidget() {
                 placeholder={
                   status === "active" ? "Tulis pesan untuk CS..." : "Tulis pertanyaan kamu..."
                 }
-                className="flex-1 border border-[#e5e5e5] rounded-full px-4 py-2.5 text-sm font-light outline-none focus:border-black transition-colors bg-white"
+                className="flex-1 min-w-0 border border-[#e5e5e5] rounded-full px-4 py-2.5 text-base sm:text-sm font-light outline-none focus:border-black transition-colors bg-white"
               />
               <button
                 type="button"
                 onClick={handleSend}
                 disabled={loading || !input.trim()}
                 aria-label="Kirim pesan"
-                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
+                className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity active:scale-95"
                 style={{ backgroundColor: INK, color: PAPER }}
               >
                 <Send size={15} strokeWidth={1.5} />

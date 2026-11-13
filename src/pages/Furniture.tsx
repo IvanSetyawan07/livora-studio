@@ -1,10 +1,11 @@
 import { getAllThumbnails, subscribeThumbnails } from "@/lib/themeThumbnails";
 import React, { useMemo, useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Armchair, Sofa as SofaIcon, Table2, LayoutGrid, ArrowLeft, Package } from "lucide-react";
+import { Armchair, Sofa as SofaIcon, Table2, LayoutGrid, ArrowLeft, Package, Search } from "lucide-react";
 import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
+import { PromoBadge, PromoPriceTag } from "@/components/livora/PromoPriceTag";
 import { type Item } from "@/data/items";
 import { useAllItems } from "@/lib/itemsApi";
 import { api } from "@/lib/api";
@@ -121,7 +122,7 @@ const ItemCard = ({ item }: { item: Item }) => (
     className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
   >
     <div
-      className="item-card"
+      className="item-card active:scale-[0.98] relative"
       style={{
         background: "#FAFAF8",
         border: "1px solid #E8E4DF",
@@ -135,17 +136,12 @@ const ItemCard = ({ item }: { item: Item }) => (
         justifyContent: "center",
         cursor: "pointer",
       }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = "#C9A97A";
-        e.currentTarget.style.boxShadow = "0 4px 12px rgba(201,169,122,0.12)";
-        e.currentTarget.style.transform = "translateY(-4px)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = "#E8E4DF";
-        e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.04)";
-        e.currentTarget.style.transform = "translateY(0)";
-      }}
     >
+      {item.is_on_promo && (
+        <div className="absolute top-2.5 left-2.5 z-10">
+          <PromoBadge text={item.promo_badge_text || "PROMO"} />
+        </div>
+      )}
       {item.image ? (
         <img
           src={item.image}
@@ -160,7 +156,6 @@ const ItemCard = ({ item }: { item: Item }) => (
     </div>
     <div className="mt-4 px-1">
       <h3 className="text-sm font-normal text-foreground leading-snug">{item.name}</h3>
-      
       <p className="text-[11px] uppercase tracking-[0.15em] text-foreground/50 mt-1">{item.code}</p>
     </div>
   </Link>
@@ -170,6 +165,7 @@ const Furniture = () => {
   const allItems = useAllItems();
   const [searchParams] = useSearchParams();
   const [activeTheme, setActiveTheme] = useState<ThemeKey | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [types, setTypes] = useState<FurnitureType[]>([]);
   const [banners, setBanners] = useState(() => getAllBanners());
   const [thumbnails, setThumbnails] = useState<Record<string, any>>({});
@@ -261,10 +257,18 @@ const Furniture = () => {
     return [...ordered, ...rest];
   };
 
-  const themedItems = useMemo(
-    () => (activeTheme ? itemsForTheme(activeTheme) : []),
-    [activeTheme, allItems, types],
-  );
+  const themedItems = useMemo(() => {
+    if (!activeTheme) return [];
+    const base = itemsForTheme(activeTheme);
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return base;
+    return base.filter(
+      (i) =>
+        i.name.toLowerCase().includes(q) ||
+        (i.code ?? "").toLowerCase().includes(q) ||
+        (i.category ?? "").toLowerCase().includes(q),
+    );
+  }, [activeTheme, allItems, types, searchQuery]);
 
   const activeBanners: ThemeBanner[] = activeTheme ? getBanners(activeTheme) : [];
 
@@ -272,19 +276,19 @@ const Furniture = () => {
     <main className="min-h-screen bg-background">
       <Navbar />
 
-      <section className="pt-40 pb-16 md:pt-48 md:pb-24 border-b border-border">
+      <section className="pt-28 pb-12 md:pt-48 md:pb-24 border-b border-border">
         <div className="container-livora text-center max-w-4xl">
-          <p className="text-[10px] uppercase tracking-[0.45em] text-foreground/60 mb-6">
+          <p className="text-[10px] uppercase tracking-[0.45em] text-foreground/60 mb-4 md:mb-6">
             Livora | Furniture
           </p>
-          <h1 className="serif text-5xl md:text-7xl font-light leading-[1.05] text-balance">
+          <h1 className="serif text-4xl sm:text-5xl md:text-7xl font-light leading-[1.08] text-balance">
             {activeTheme ? (
               <><em className="italic">{activeTheme}</em> Collection</>
             ) : (
               <>Our Furniture <em className="italic">Collection</em></>
             )}
           </h1>
-          <p className="mt-6 text-foreground/70 font-light max-w-xl mx-auto">
+          <p className="mt-4 md:mt-6 text-sm sm:text-base text-foreground/70 font-light max-w-xl mx-auto">
             {activeTheme
               ? (activeTheme === "All" ? allMeta : getMeta(activeTheme)).tagline
               : "Browse by theme — choose a category to explore the curated pieces inside."}
@@ -292,15 +296,15 @@ const Furniture = () => {
         </div>
       </section>
 
-      <section className="py-16 md:py-24">
-        <div className="w-full px-6 md:px-10 lg:px-16">
+      <section className="py-10 md:py-24">
+        <div className="container-livora">
           {!activeTheme ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 animate-fade-in">
               {themeKeys.map((k) => (
                 <ThemeCard
                   key={k}
                   themeKey={k}
-                  onOpen={setActiveTheme}
+                  onOpen={(k2) => { setSearchQuery(""); setActiveTheme(k2); }}
                   allItems={allItems}
                   count={itemsForTheme(k).length}
                   thumbnailImage={typeImageByName[k] || thumbnails[k]?.image}
@@ -309,15 +313,27 @@ const Furniture = () => {
             </div>
           ) : (
             <div className="animate-fade-in">
-              <button
-                onClick={() => setActiveTheme(null)}
-                className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-foreground/65 hover:text-foreground transition-colors mb-10"
-              >
-                <ArrowLeft size={14} /> Back to Themes
-              </button>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 md:mb-10">
+                <button
+                  onClick={() => { setActiveTheme(null); setSearchQuery(""); }}
+                  className="inline-flex items-center gap-2 min-h-[44px] py-2 text-[10px] uppercase tracking-[0.3em] text-foreground/75 hover:text-foreground transition-colors self-start"
+                >
+                  <ArrowLeft size={14} /> Back to Themes
+                </button>
+                <div className="relative w-full sm:w-64">
+                  <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={`Filter ${activeTheme.toLowerCase()}...`}
+                    aria-label="Filter furniture"
+                    className="w-full h-11 pl-10 pr-3 border border-border rounded bg-background text-base sm:text-sm font-light outline-none focus:border-foreground transition-colors"
+                  />
+                </div>
+              </div>
               <style>{`
+                .furniture-grid { grid-auto-flow: dense; }
                 @media (min-width: 1024px) {
-                  .furniture-grid { grid-auto-flow: dense; }
                   ${activeBanners.map((_, i) => {
                     const n = i + 1;
                     const colStart = n % 2 === 1 ? 1 : 3;
@@ -326,7 +342,7 @@ const Furniture = () => {
                   }).join("\n")}
                 }
               `}</style>
-              <div className="furniture-grid grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-10">
+              <div className="furniture-grid grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 sm:gap-x-5 gap-y-8 sm:gap-y-10">
                 {(() => {
                   const nodes: React.ReactNode[] = themedItems.map((item) => (
                     <ItemCard key={item.slug} item={item} />

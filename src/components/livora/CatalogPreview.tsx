@@ -38,6 +38,7 @@ export function CatalogPreview() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const pinRef = useRef<HTMLDivElement>(null);
   const cursorRef = useRef<HTMLDivElement>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // ── Scroll-driven slide changes (GSAP ScrollTrigger, pinned stage) ──
   // Only kicks in on large screens with no reduced-motion preference;
@@ -141,15 +142,29 @@ export function CatalogPreview() {
         </h2>
       </div>
 
-      {/* Full-bleed, full-screen visual block — pinned while scroll drives it */}
+      {/* Full-bleed visual block — pinned on desktop, swipeable on mobile */}
       <div
         ref={pinRef}
-        className="relative left-1/2 right-1/2 -mx-[50vw] w-screen h-screen overflow-hidden"
+        className="relative w-full h-[72dvh] min-h-[440px] lg:h-screen overflow-hidden"
         onMouseMove={onStageMove}
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => {
           setPaused(false);
           setCursorReady(false);
+        }}
+        onTouchStart={(e) => {
+          setPaused(true);
+          touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }}
+        onTouchEnd={(e) => {
+          const start = touchStartRef.current;
+          touchStartRef.current = null;
+          if (!start) return;
+          const dx = e.changedTouches[0].clientX - start.x;
+          const dy = e.changedTouches[0].clientY - start.y;
+          if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+            selectCategory((active + (dx < 0 ? 1 : -1) + total) % total);
+          }
         }}
       >
         {/* Crossfading background images with blur + slow Ken-Burns drift */}
@@ -245,37 +260,38 @@ export function CatalogPreview() {
           </div>
         </div>
 
-        {/* Bottom-left — crossfading caption, tied to the active category */}
-        <div className="absolute left-6 md:left-10 bottom-8 md:bottom-16 z-20 max-w-[85%] md:max-w-md">
-          <p
-            className={`text-[10px] md:text-xs uppercase tracking-[0.25em] text-white/70 font-light mb-2 md:mb-3 transition-all duration-300 ${
-              captionVisible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
-            }`}
-          >
-            {String(captionIndex + 1).padStart(2, "0")} / {String(total).padStart(2, "0")} — {captionCat.label}
-          </p>
-          <h3
-            className={`serif text-2xl md:text-4xl font-light text-white leading-[1.08] transition-all duration-500 ease-out ${
-              captionVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
-            }`}
-          >
-            {captionCat.title} <em className="italic">{captionCat.titleItalic}</em>
-          </h3>
-        </div>
+        {/* Bottom caption & CTA row (non-overlapping on mobile) */}
+        <div className="absolute inset-x-0 bottom-7 md:bottom-16 z-20 px-6 md:px-12 flex items-end justify-between gap-4">
+          <div className="min-w-0 max-w-[68%] md:max-w-md">
+            <p
+              className={`text-[10px] md:text-xs uppercase tracking-[0.25em] text-white/75 font-light mb-2 md:mb-3 transition-all duration-300 ${
+                captionVisible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
+              }`}
+            >
+              {String(captionIndex + 1).padStart(2, "0")} / {String(total).padStart(2, "0")} — {captionCat.label}
+            </p>
+            <h3
+              className={`serif text-2xl sm:text-3xl md:text-4xl font-light text-white leading-[1.08] transition-all duration-500 ease-out ${
+                captionVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+              }`}
+            >
+              {captionCat.title} <em className="italic">{captionCat.titleItalic}</em>
+            </h3>
+          </div>
 
-        {/* Bottom-right — circular CTA, points at whichever category is showing */}
-        <Link
-          to={`/catalog/${activeCat.slug}`}
-          className="absolute right-6 md:right-16 bottom-8 md:bottom-20 z-20 relative flex items-center justify-center w-20 h-20 md:w-32 md:h-32 rounded-full border border-white/50 text-white hover:bg-white/10 transition-colors duration-300 [animation:livora-pulse-ring_4s_ease-in-out_infinite]"
-        >
-          <span className="text-[8px] md:text-[10px] uppercase tracking-[0.2em] leading-tight text-center px-2">
-            Discover
-            <br />
-            Collection
-          </span>
-          <span className="absolute -top-1 -right-1 w-3 h-3 border-t border-r border-white/60 rotate-45" aria-hidden />
-          <span className="absolute -bottom-1 -left-1 w-3 h-3 border-b border-l border-white/60 rotate-45" aria-hidden />
-        </Link>
+          <Link
+            to={`/catalog/${activeCat.slug}`}
+            className="shrink-0 relative flex items-center justify-center w-20 h-20 md:w-32 md:h-32 rounded-full border border-white/55 text-white hover:bg-white/10 active:scale-95 transition-all duration-300 [animation:livora-pulse-ring_4s_ease-in-out_infinite]"
+          >
+            <span className="text-[8px] md:text-[10px] uppercase tracking-[0.2em] leading-tight text-center px-2">
+              Discover
+              <br />
+              Collection
+            </span>
+            <span className="absolute -top-1 -right-1 w-3 h-3 border-t border-r border-white/60 rotate-45" aria-hidden />
+            <span className="absolute -bottom-1 -left-1 w-3 h-3 border-b border-l border-white/60 rotate-45" aria-hidden />
+          </Link>
+        </div>
 
         {/* Scroll / autoplay progress rail */}
         <div className="absolute bottom-0 left-0 h-[2px] w-full bg-white/15 z-20">
@@ -289,14 +305,14 @@ export function CatalogPreview() {
       </div>
 
       {/* Mobile — pill selector replaces the click list, plus the standard CTA */}
-      <div className="flex md:hidden gap-2 overflow-x-auto px-6 pt-5 pb-2">
+      <div data-lenis-prevent className="flex md:hidden gap-2 overflow-x-auto no-scrollbar px-5 pt-5 pb-2">
         {CATALOG_CATEGORIES.map((cat, i) => (
           <button
             key={cat.slug}
             onClick={() => selectCategory(i)}
-            className={`shrink-0 text-[10px] uppercase tracking-[0.15em] px-3.5 py-2 border rounded-full transition-colors duration-300 ${
+            className={`shrink-0 min-h-[44px] text-[10px] uppercase tracking-[0.15em] px-4 py-2.5 border rounded-full transition-colors duration-300 ${
               i === active
-                ? "border-foreground text-foreground bg-foreground/5"
+                ? "border-foreground text-foreground bg-foreground/5 font-medium"
                 : "border-border text-muted-foreground"
             }`}
           >
@@ -304,10 +320,10 @@ export function CatalogPreview() {
           </button>
         ))}
       </div>
-      <div className="flex md:hidden justify-center py-8">
+      <div className="flex md:hidden justify-center py-6">
         <Link
           to="/catalog"
-          className="inline-flex items-center gap-3 text-[10px] uppercase tracking-[0.3em] font-light text-background bg-foreground px-8 py-3.5"
+          className="inline-flex items-center justify-center gap-3 min-h-[44px] text-[10px] uppercase tracking-[0.3em] font-light text-background bg-foreground px-8 py-3.5"
         >
           View Full Catalog
           <span>→</span>

@@ -1,7 +1,7 @@
 import OrdersTab from "@/components/shop/OrdersTab";
 import { Navbar } from "@/components/livora/Navbar";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, authStorage } from "@/lib/api";
 import {
   getMyConsultations,
@@ -56,7 +56,7 @@ export default function Profile() {
         const { data } = await api.get("/me");
         setUser(data);
       } catch {
-        alert("Anda harus login terlebih dahulu");
+        toast.error("Anda harus login terlebih dahulu");
         navigate("/login");
       }
     })();
@@ -104,7 +104,7 @@ export default function Profile() {
         </div>
 
          {/* Tabs */}
-        <div className="flex flex-wrap gap-2 mb-8 bg-secondary/50 p-1.5 rounded-lg w-fit">
+        <div data-lenis-prevent className="flex gap-1.5 overflow-x-auto no-scrollbar mb-8 bg-secondary/50 p-1.5 rounded-lg max-w-full sm:w-fit">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.key;
@@ -113,7 +113,7 @@ export default function Profile() {
               <button
                 key={tab.key}
                 onClick={() => navigate(TAB_TO_PATH[tab.key], { replace: true })}
-                className={`relative flex items-center gap-2 px-4 py-2.5 rounded-md text-xs uppercase tracking-[0.2em] transition-colors ${
+                className={`relative shrink-0 min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-md text-xs uppercase tracking-[0.16em] whitespace-nowrap transition-colors ${
                   active
                     ? "bg-foreground text-background shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-background/60"
@@ -364,6 +364,8 @@ function ConsultationCard({
 }) {
   const navigate = useNavigate();
   const [cancelling, setCancelling] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
   const [detail, setDetail] = useState<Consultation>(consultation);
 
   useEffect(() => {
@@ -375,21 +377,19 @@ function ConsultationCard({
   const isRejected = detail.status === "rejected";
   const isClosed = isCancelled || isRejected || detail.status === "completed";
 
-  const handleCancel = async () => {
-    const reason = window.prompt(
-      "Batalkan permintaan konsultasi ini?\n\nOpsional — tulis alasan singkat:",
-      "",
-    );
-    if (reason === null) return;
+  const handleCancelSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setCancelling(true);
     try {
-      await cancelConsultation(detail.id, reason.trim() || undefined);
+      await cancelConsultation(detail.id, cancelReason.trim() || undefined);
       toast.success("Consultation dibatalkan.");
+      setCancelOpen(false);
+      setCancelReason("");
       const fresh = await getConsultation(detail.id);
       setDetail(fresh);
       onChanged();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message || "Gagal membatalkan.");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Gagal membatalkan.");
     } finally {
       setCancelling(false);
     }
@@ -423,8 +423,8 @@ function ConsultationCard({
         />
       )}
       {/* Header */}
-      <div className="flex items-start gap-4 p-6 pb-4">
-        <div className="w-16 h-16 rounded-lg overflow-hidden bg-secondary shrink-0">
+      <div className="flex flex-wrap sm:flex-nowrap items-start gap-3 sm:gap-4 p-4 sm:p-6 pb-4">
+        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-secondary shrink-0">
           {thumbnail ? (
             <img src={thumbnail} alt="" className="w-full h-full object-cover" />
           ) : (
@@ -434,15 +434,15 @@ function ConsultationCard({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-1">
+          <p className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-muted-foreground mb-1 truncate">
             {detail.service_type ?? "Design Consultation"}
           </p>
-          <h3 className="serif text-xl truncate">{detail.project_type ?? "Consultation"} Request</h3>
+          <h3 className="serif text-lg sm:text-xl leading-snug">{detail.project_type ?? "Consultation"} Request</h3>
           <p className="text-[11px] text-muted-foreground mt-1">
             {new Date(detail.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
           </p>
         </div>
-        <span className={`shrink-0 text-xs px-3 py-1.5 rounded-full uppercase tracking-wider ${badgeClass}`}>
+        <span className={`shrink-0 text-[11px] px-3 py-1 rounded-full uppercase tracking-wider ${badgeClass}`}>
           {detail.status_label ?? detail.status}
         </span>
       </div>
@@ -471,31 +471,52 @@ function ConsultationCard({
       )}
 
       {/* Actions */}
-      <div className="px-6 pb-6 pt-2 border-t border-border flex flex-wrap items-center gap-3">
+      <div className="px-4 sm:px-6 pb-5 pt-3 border-t border-border flex flex-wrap items-center gap-2.5 sm:gap-3">
         <button
           onClick={openDetails}
-          className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.2em] bg-foreground text-background px-4 py-2.5 rounded hover:opacity-90"
+          className="inline-flex items-center justify-center min-h-[44px] gap-1.5 text-[11px] uppercase tracking-[0.2em] bg-foreground text-background px-4 py-2.5 rounded hover:opacity-90"
         >
           {isClosed ? "View Details" : "On Progress"}
         </button>
         <button
           onClick={openChat}
-          className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.2em] border border-border px-4 py-2.5 rounded hover:bg-secondary/50"
+          className="inline-flex items-center justify-center min-h-[44px] gap-1.5 text-[11px] uppercase tracking-[0.2em] border border-border px-4 py-2.5 rounded hover:bg-secondary/50"
         >
           <MessageCircle size={13} /> Contact Us
         </button>
         {!isClosed && (
           <button
-            onClick={handleCancel}
+            onClick={() => setCancelOpen(true)}
             disabled={cancelling}
-            className="ml-auto inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.2em] text-red-600 hover:underline disabled:opacity-60"
+            className="sm:ml-auto inline-flex items-center min-h-[44px] px-2 gap-1.5 text-[11px] uppercase tracking-[0.2em] text-red-600 hover:underline disabled:opacity-60"
           >
             <XCircle size={13} /> {cancelling ? "Cancelling…" : "Cancel Request"}
           </button>
         )}
       </div>
 
-          </div>
+      {cancelOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/45 p-0 sm:p-4" role="dialog" aria-modal="true">
+          <form onSubmit={handleCancelSubmit} className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-card p-6 border border-border shadow-xl" style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}>
+            <h4 className="serif text-xl">Batalkan Konsultasi?</h4>
+            <p className="mt-1 text-xs text-muted-foreground">Opsional — tulis alasan singkat pembatalan Anda.</p>
+            <textarea
+              rows={3}
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Alasan pembatalan (opsional)..."
+              className="mt-4 w-full rounded-lg border border-border bg-background p-3 text-base sm:text-sm outline-none focus:border-foreground"
+            />
+            <div className="mt-4 flex gap-2">
+              <button type="button" onClick={() => setCancelOpen(false)} className="h-11 flex-1 rounded-lg border border-border text-sm">Kembali</button>
+              <button type="submit" disabled={cancelling} className="h-11 flex-1 rounded-lg bg-red-600 text-white text-sm font-medium disabled:opacity-50">
+                {cancelling ? "Membatalkan…" : "Ya, Batalkan"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -574,14 +595,21 @@ function WishlistTab() {
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-      {items.map((entry) => (
-        <div key={entry.id} className="bg-card border border-border rounded-lg overflow-hidden group">
+      {items.map((entry) => {
+        const slug = entry.entity?.slug;
+        const target =
+          !slug ? null :
+          entry.type === "item" ? `/items/${slug}` :
+          entry.type === "project" ? `/projects/${slug}` :
+          entry.type === "collection" ? `/collection/${slug}` :
+          `/catalog`;
+        const thumb = (
           <div className="aspect-square bg-secondary/40 overflow-hidden">
             {entry.entity?.image ? (
               <img
                 src={imgUrl(entry.entity.image)}
                 alt={entry.entity.name ?? ""}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
@@ -589,18 +617,31 @@ function WishlistTab() {
               </div>
             )}
           </div>
-          <div className="p-3">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{entry.type}</p>
-            <p className="text-sm truncate mb-2">{entry.entity?.name ?? "Untitled"}</p>
-            <button
-              onClick={() => handleRemove(entry)}
-              className="text-[11px] text-red-600 hover:underline"
-            >
-              Remove
-            </button>
+        );
+        return (
+          <div key={entry.id} className="bg-card border border-border rounded-lg overflow-hidden group flex flex-col">
+            {target ? <Link to={target} className="block">{thumb}</Link> : thumb}
+            <div className="p-3 flex-1 flex flex-col justify-between gap-2">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{entry.type}</p>
+                {target ? (
+                  <Link to={target} className="block text-sm font-medium truncate hover:underline">
+                    {entry.entity?.name ?? "Untitled"}
+                  </Link>
+                ) : (
+                  <p className="text-sm truncate">{entry.entity?.name ?? "Untitled"}</p>
+                )}
+              </div>
+              <button
+                onClick={() => handleRemove(entry)}
+                className="self-start min-h-[36px] py-1 text-[11px] text-red-600 hover:underline"
+              >
+                Remove
+              </button>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

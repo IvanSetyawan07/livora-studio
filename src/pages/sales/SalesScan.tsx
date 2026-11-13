@@ -49,7 +49,13 @@ export default function SalesScan() {
       scannerRef.current = scanner;
       await scanner.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 260, height: 260 } },
+        {
+          fps: 10,
+          qrbox: (viewW: number, viewH: number) => {
+            const side = Math.min(260, Math.floor(Math.min(viewW, viewH) * 0.72));
+            return { width: side, height: side };
+          },
+        },
         (decoded) => {
           const slug = slugFromText(decoded);
           if (!slug) return;
@@ -103,14 +109,14 @@ export default function SalesScan() {
             {!scanning ? (
               <button
                 onClick={start}
-                className="inline-flex items-center gap-2 px-4 py-2 text-xs uppercase tracking-[0.15em] bg-foreground text-background rounded"
+                className="inline-flex items-center gap-2 min-h-[44px] px-5 py-2.5 text-xs uppercase tracking-[0.15em] bg-foreground text-background rounded"
               >
                 <Camera className="w-4 h-4" /> Mulai scan
               </button>
             ) : (
               <button
                 onClick={stop}
-                className="inline-flex items-center gap-2 px-4 py-2 text-xs uppercase tracking-[0.15em] border border-border rounded"
+                className="inline-flex items-center gap-2 min-h-[44px] px-5 py-2.5 text-xs uppercase tracking-[0.15em] border border-border rounded"
               >
                 <CameraOff className="w-4 h-4" /> Berhenti
               </button>
@@ -129,11 +135,11 @@ export default function SalesScan() {
               onChange={(e) => setManual(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && goManual()}
               placeholder="mis. sofa-calma"
-              className="flex-1 border border-border rounded px-3 py-2 text-sm bg-background"
+              className="flex-1 min-w-0 h-11 border border-border rounded px-3 py-2 text-base sm:text-sm bg-background"
             />
             <button
               onClick={goManual}
-              className="px-4 py-2 border border-border rounded text-sm inline-flex items-center gap-2"
+              className="min-h-[44px] px-4 py-2 border border-border rounded text-sm inline-flex items-center gap-2 shrink-0"
             >
               <Search className="w-4 h-4" /> Buka
             </button>

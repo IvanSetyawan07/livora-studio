@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ZoomIn } from "lucide-react";
 import { Navbar } from "@/components/livora/Navbar";
 import { PageBreadcrumb } from "@/components/livora/Breadcrumb";
 import { Footer } from "@/components/livora/Footer";
 import { BookConsultation } from "@/components/livora/BookConsultation";
+import { ImageLightbox } from "@/components/livora/ImageLightbox";
 import { useProjectBySlug } from "@/lib/projectsApi";
 import { trackClick, trackView } from "@/lib/adminApi";
 import { gsap } from "gsap";
@@ -29,6 +30,8 @@ const ProjectDetail = () => {
   const heroSubtitleRef = useRef<HTMLParagraphElement>(null);
   const [slideIndex, setSlideIndex] = useState(0);
   const [showScrollHint, setShowScrollHint] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // Always start at top on mount / route change
   useEffect(() => {
@@ -64,26 +67,27 @@ const ProjectDetail = () => {
       gsap.set(heroSubtitleRef.current, { x: 70, opacity: 0 });
 
       // 1. Entrance — slide dari kanan, per kata (stagger)
+      const mm = gsap.matchMedia();
       const entranceTl = gsap.timeline({
         defaults: { ease: "power3.out" },
         onComplete: () => {
-          // 2. ScrollTrigger baru dibuat SETELAH entrance selesai total,
-          //    supaya dia motret state akhir yang sudah bersih (x:0, opacity:1)
-          //    dan tidak rebutan properti dengan entrance timeline.
-          gsap.timeline({
-            scrollTrigger: {
-              trigger: heroSectionRef.current,
-              start: "top top",
-              end: "+=90%",
-              pin: true,
-              pinSpacing: true,
-              scrub: 0.8, // sedikit "catch-up" delay → berasa halus, bukan kaku
-              invalidateOnRefresh: true,
-            },
-          })
-            .to(words, { y: -70, opacity: 0, stagger: 0.03, ease: "power2.inOut" }, 0)
-            .to(heroSubtitleRef.current, { y: -50, opacity: 0, ease: "power2.inOut" }, 0)
-            .to(heroImgRef.current, { scaleX: baseScale * 1.2, scaleY: baseScale * 1.2, ease: "power2.inOut" }, 0);
+          // 2. Desktop only: pin + scrub hero exit so mobile touch never traps scroll
+          mm.add("(min-width: 1024px)", () => {
+            gsap.timeline({
+              scrollTrigger: {
+                trigger: heroSectionRef.current,
+                start: "top top",
+                end: "+=90%",
+                pin: true,
+                pinSpacing: true,
+                scrub: 0.8,
+                invalidateOnRefresh: true,
+              },
+            })
+              .to(words, { y: -70, opacity: 0, stagger: 0.03, ease: "power2.inOut" }, 0)
+              .to(heroSubtitleRef.current, { y: -50, opacity: 0, ease: "power2.inOut" }, 0)
+              .to(heroImgRef.current, { scaleX: baseScale * 1.2, scaleY: baseScale * 1.2, ease: "power2.inOut" }, 0);
+          });
         },
       });
 
@@ -230,7 +234,7 @@ const ProjectDetail = () => {
       <Navbar />
       <main style={{ background: "#FAFAF8" }}>
         {/* HERO — full screen */}
-        <section ref={heroSectionRef} className="relative w-full overflow-hidden" style={{ height: "100vh" }}>
+        <section ref={heroSectionRef} className="relative w-full overflow-hidden h-[100svh] md:h-screen">
           <img
             ref={heroImgRef}
             src={project.img}
@@ -308,81 +312,92 @@ const ProjectDetail = () => {
 
         {/* SECTION 2 — SPLIT CONTENT */}
         <section className="grid grid-cols-1 md:grid-cols-5 reveal" style={{ transitionDelay: "0.1s" }}>
-          {/* LEFT 60% — slideshow */}
+          {/* LEFT 60% — slideshow (swipeable + tap to zoom) */}
           <div
-            className="md:col-span-3 relative group px-6 md:pl-[60px] md:pr-0"
+            className="md:col-span-3 relative group px-5 sm:px-6 md:pl-[60px] md:pr-0"
             style={{ background: "#FAFAF8" }}
           >
-            <img
-              key={displayImage}
-              src={displayImage}
-              alt={`${displayTitle} — ${project.category}`}
-              className="transition-opacity duration-500 animate-fade-in w-full h-[340px] sm:h-[440px] md:h-[600px] object-cover block"
-              style={{
-                borderRadius: 0,
+            <div
+              onTouchStart={(e) => {
+                touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
               }}
-            />
+              onTouchEnd={(e) => {
+                const start = touchStartRef.current;
+                touchStartRef.current = null;
+                if (!start || slides.length <= 1) return;
+                const dx = e.changedTouches[0].clientX - start.x;
+                const dy = e.changedTouches[0].clientY - start.y;
+                if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+                  if (dx < 0) goNext();
+                  else goPrev();
+                }
+              }}
+              className="relative overflow-hidden"
+            >
+              <button
+                type="button"
+                onClick={() => setLightboxOpen(true)}
+                aria-label={`View ${displayTitle} fullscreen`}
+                className="block w-full cursor-zoom-in text-left"
+              >
+                <img
+                  key={displayImage}
+                  src={displayImage}
+                  alt={`${displayTitle} — ${project.category}`}
+                  className="transition-opacity duration-500 animate-fade-in w-full h-[320px] sm:h-[440px] md:h-[600px] object-cover block"
+                />
+                <span className="absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-black/55 backdrop-blur-sm text-white px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] opacity-90 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                  <ZoomIn size={12} /> Zoom
+                </span>
+              </button>
 
-            {hasSlides && slides.length > 1 && (
-              <>
-                <button
-                  onClick={goPrev}
-                  aria-label="Previous slide"
-                  className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 left-2 md:left-[76px]"
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "50%",
-                    background: "rgba(255,255,255,0.9)",
-                    color: "#1A1A1A",
-                    border: "1px solid rgba(0,0,0,0.08)",
-                    fontSize: "16px",
-                    cursor: "pointer",
-                  }}
-                >
-                  ←
-                </button>
-                <button
-                  onClick={goNext}
-                  aria-label="Next slide"
-                  className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 right-2 md:right-[16px]"
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "50%",
-                    background: "rgba(255,255,255,0.9)",
-                    color: "#1A1A1A",
-                    border: "1px solid rgba(0,0,0,0.08)",
-                    fontSize: "16px",
-                    cursor: "pointer",
-                  }}
-                >
-                  →
-                </button>
+              {hasSlides && slides.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={goPrev}
+                    aria-label="Previous slide"
+                    className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 left-3 md:left-4 w-11 h-11 rounded-full bg-white/90 text-[#1A1A1A] border border-black/10 shadow-sm active:scale-95"
+                  >
+                    ←
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    aria-label="Next slide"
+                    className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 right-3 md:right-4 w-11 h-11 rounded-full bg-white/90 text-[#1A1A1A] border border-black/10 shadow-sm active:scale-95"
+                  >
+                    →
+                  </button>
 
-                <div
-                  className="absolute flex gap-2 bottom-4 left-1/2 -translate-x-1/2"
-                  aria-hidden="false"
-                >
-                  {slides.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setSlideIndex(i)}
-                      aria-label={`Go to slide ${i + 1}`}
-                      style={{
-                        width: i === slideIndex ? "24px" : "8px",
-                        height: "8px",
-                        borderRadius: "999px",
-                        background: i === slideIndex ? "#C9A97A" : "rgba(255,255,255,0.7)",
-                        border: "none",
-                        cursor: "pointer",
-                        transition: "all 0.3s ease",
-                      }}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
+                  <div
+                    className="absolute flex gap-1.5 bottom-3 left-1/2 -translate-x-1/2"
+                    aria-hidden="false"
+                  >
+                    {slides.map((_, i) => (
+                      <button
+                        type="button"
+                        key={i}
+                        onClick={() => setSlideIndex(i)}
+                        aria-label={`Go to slide ${i + 1}`}
+                        className="py-2 px-0.5 flex items-center"
+                      >
+                        <span
+                          style={{
+                            width: i === slideIndex ? "24px" : "8px",
+                            height: "8px",
+                            borderRadius: "999px",
+                            background: i === slideIndex ? "#C9A97A" : "rgba(255,255,255,0.75)",
+                            transition: "all 0.3s ease",
+                            display: "block",
+                          }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           {/* RIGHT 40% */}
@@ -446,14 +461,13 @@ const ProjectDetail = () => {
 
             <button
               onClick={handleBack}
-              className="self-start mt-10 uppercase hover:opacity-70 transition-opacity"
+              className="self-start mt-8 inline-flex items-center min-h-[44px] py-2 uppercase hover:opacity-70 transition-opacity"
               style={{
                 color: "#C9A97A",
                 background: "none",
                 border: "none",
                 fontSize: "12px",
                 letterSpacing: "0.1em",
-                padding: 0,
                 cursor: "pointer",
               }}
             >
@@ -467,6 +481,16 @@ const ProjectDetail = () => {
 
         <BookConsultation />
       </main>
+      <ImageLightbox
+        open={lightboxOpen}
+        images={
+          hasSlides
+            ? slides.map((s) => ({ src: s.image, alt: s.title ?? project.name }))
+            : [{ src: project.img, alt: project.name }]
+        }
+        startIndex={hasSlides ? slideIndex % slides.length : 0}
+        onClose={() => setLightboxOpen(false)}
+      />
       <Footer />
     </>
   );

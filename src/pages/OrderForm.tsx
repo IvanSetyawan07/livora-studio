@@ -6,7 +6,7 @@ import { getOrderForm, submitOrderForm, type OrderItem } from "@/lib/shop";
 
 type FormData = Awaited<ReturnType<typeof getOrderForm>>;
 
-const input = "h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-foreground";
+const input = "h-12 w-full rounded-xl border border-border bg-background px-3.5 text-base sm:text-sm outline-none focus:border-foreground";
 
 /** Form data pengiriman publik (dibuka dari tautan WhatsApp, tanpa login). */
 export default function OrderForm() {
@@ -41,7 +41,12 @@ export default function OrderForm() {
       window.scrollTo({ top: 0 });
     } catch (e: any) {
       const errs = e?.details?.errors as Record<string, string[]> | undefined;
-      if (errs) setErrors(Object.fromEntries(Object.entries(errs).map(([k, v]) => [k, v[0]])));
+      if (errs) {
+        setErrors(Object.fromEntries(Object.entries(errs).map(([k, v]) => [k, v[0]])));
+        window.requestAnimationFrame(() => {
+          document.querySelector<HTMLElement>(".border-red-400")?.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      }
       toast.error(e?.message || "Gagal mengirim data");
     } finally {
       setBusy(false);
@@ -102,17 +107,17 @@ export default function OrderForm() {
         {delivery && (
           <>
             <Card title="Alamat">
-              <div className="grid gap-3 sm:grid-cols-6">
-                <div className="sm:col-span-6">{field("street", "Jalan, nomor, blok", { required: true, autoComplete: "street-address" })}</div>
-                <div className="sm:col-span-1">{field("rt", "RT")}</div>
-                <div className="sm:col-span-1">{field("rw", "RW")}</div>
-                <div className="sm:col-span-4">{field("village", "Kelurahan")}</div>
-                <div className="sm:col-span-3">{field("district", "Kecamatan", { required: true })}</div>
-                <div className="sm:col-span-3">{field("city", "Kota / Kabupaten", { required: true })}</div>
-                <div className="sm:col-span-4">{field("province", "Provinsi", { required: true })}</div>
-                <div className="sm:col-span-2">{field("postal_code", "Kode pos", { inputMode: "numeric" })}</div>
-                <div className="sm:col-span-6">{field("landmark", "Patokan (opsional)")}</div>
-                <div className="sm:col-span-6">{field("map_url", "Tautan Google Maps (opsional)", { type: "url", placeholder: "https://maps.app.goo.gl/…" })}</div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
+                <div className="col-span-2 sm:col-span-6">{field("street", "Jalan, nomor, blok", { required: true, autoComplete: "street-address" })}</div>
+                <div className="col-span-1 sm:col-span-1">{field("rt", "RT")}</div>
+                <div className="col-span-1 sm:col-span-1">{field("rw", "RW")}</div>
+                <div className="col-span-2 sm:col-span-4">{field("village", "Kelurahan")}</div>
+                <div className="col-span-2 sm:col-span-3">{field("district", "Kecamatan", { required: true })}</div>
+                <div className="col-span-2 sm:col-span-3">{field("city", "Kota / Kabupaten", { required: true })}</div>
+                <div className="col-span-1 sm:col-span-4">{field("province", "Provinsi", { required: true })}</div>
+                <div className="col-span-1 sm:col-span-2">{field("postal_code", "Kode pos", { inputMode: "numeric" })}</div>
+                <div className="col-span-2 sm:col-span-6">{field("landmark", "Patokan (opsional)")}</div>
+                <div className="col-span-2 sm:col-span-6">{field("map_url", "Tautan Google Maps (opsional)", { type: "url", placeholder: "https://maps.app.goo.gl/…" })}</div>
               </div>
             </Card>
             <Card title="Kondisi lokasi">

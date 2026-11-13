@@ -11,7 +11,7 @@ const ease = [0.22, 1, 0.36, 1] as const;
 const GOLD = "#C9974A";
 
 const inputCls =
-  "w-full h-12 pl-11 pr-11 rounded-xl border border-neutral-200 bg-white text-[14px] text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-[#C9974A] focus:ring-4 focus:ring-[#C9974A]/15 transition";
+  "w-full h-12 pl-11 pr-11 rounded-xl border border-neutral-200 bg-white text-base sm:text-[14px] text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-[#C9974A] focus:ring-4 focus:ring-[#C9974A]/15 transition";
 
 const btnCls =
   "group w-full h-12 rounded-xl bg-[#C9974A] shadow-lg shadow-[#C9974A]/25 text-white text-[14px] font-medium flex items-center justify-center gap-2 hover:bg-[#b88639] active:scale-[0.99] transition disabled:opacity-60";
@@ -225,7 +225,7 @@ export function ResetPassword() {
               <div className="relative mt-1.5">
                 <KeyRound size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
                 <input style={{ paddingLeft: 44, paddingRight: 44 }} type={show ? "text" : "password"} autoFocus value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Minimal 8 karakter" className={inputCls} />
-                <button type="button" onClick={() => setShow(!show)} aria-label={show ? "Sembunyikan password" : "Tampilkan password"} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700">
+                <button type="button" onClick={() => setShow(!show)} aria-label={show ? "Sembunyikan password" : "Tampilkan password"} className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-neutral-400 hover:text-neutral-700">
                   {show ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
@@ -259,7 +259,7 @@ export function ResetPassword() {
               <span className="text-[12px] font-medium text-neutral-700">Ulangi password</span>
               <div className="relative mt-1.5">
                 <KeyRound size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
-                <input style={{ paddingLeft: 44, paddingRight: 44 }} type={show ? "text" : "password"} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Ketik ulang password" className={inputCls} />
+                <input style={{ paddingLeft: 44, paddingRight: 96 }} type={show ? "text" : "password"} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Ketik ulang password" className={inputCls} />
                 {confirm && (
                   <span className={`absolute right-4 top-1/2 -translate-y-1/2 text-[11px] font-medium ${matches ? "" : "text-red-500"}`} style={matches ? { color: GOLD } : undefined}>
                     {matches ? "Cocok" : "Belum cocok"}

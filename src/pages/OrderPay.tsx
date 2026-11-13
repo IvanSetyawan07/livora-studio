@@ -19,10 +19,14 @@ export default function OrderPay() {
   }, [code, token]);
 
   const copy = async (label: string, value: string) => {
-    await navigator.clipboard.writeText(value);
-    setCopied(label);
-    toast.success("Disalin");
-    setTimeout(() => setCopied(null), 2000);
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(label);
+      toast.success("Disalin");
+      setTimeout(() => setCopied(null), 2000);
+    } catch {
+      toast.error("Gagal menyalin");
+    }
   };
 
   if (error) {
@@ -82,13 +86,13 @@ export default function OrderPay() {
                 </div>
                 {page.bank.account && (
                   <button type="button" onClick={() => copy("rek", page.bank.account!)} aria-label="Salin nomor rekening"
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border hover:bg-muted">
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border hover:bg-muted">
                     {copied === "rek" ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
                   </button>
                 )}
               </div>
               <button type="button" onClick={() => copy("total", String(page.transfer_total))}
-                className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full border border-border text-sm hover:bg-muted">
+                className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-border text-sm hover:bg-muted">
                 {copied === "total" ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />} Salin nominal transfer
               </button>
             </section>

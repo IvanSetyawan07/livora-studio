@@ -68,6 +68,8 @@ const AdminTaxonomies = lazy(() => import("./pages/admin/AdminTaxonomies"));
 const AdminLanding = lazy(() => import("./pages/admin/AdminLanding"));
 const AdminAnalytics = lazy(() => import("./pages/admin/AdminAnalytics"));
 const AdminBanners = lazy(() => import("./pages/admin/AdminBanners"));
+const AdminPromoBanners = lazy(() => import("./pages/admin/AdminPromoBanners"));
+const PromoPage = lazy(() => import("./pages/PromoPage"));
 const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
 const AdminMarketing = lazy(() => import("./pages/admin/AdminMarketing"));
 const ERD = lazy(() => import("./pages/ERD"));
@@ -117,6 +119,7 @@ function App() {
             <Routes>
               <Route path="/erd" element={<ERD />} />
               <Route path="/" element={<Index />} />
+              <Route path="/promo" element={<PromoPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/projects" element={<ProjectsPage />} />
               <Route path="/projects/:slug" element={<ProjectDetail />} />
@@ -189,6 +192,7 @@ function App() {
                 <Route path="landing" element={<AdminLanding />} />
                 <Route path="analytics" element={<AdminAnalytics />} />
                 <Route path="banners" element={<AdminBanners />} />
+                <Route path="promo-banners" element={<AdminPromoBanners />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="marketing" element={<AdminMarketing />} />
                 <Route path="shop/orders" element={<AdminShopOrders />} />

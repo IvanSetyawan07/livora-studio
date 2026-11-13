@@ -17,6 +17,13 @@ export interface Item {
   textures: string[];
   image?: string; // optional URL (for admin-created items)
   apiId?: number; // backend id for analytics tracking
+  original_price?: number | null;
+  discount_type?: "PERCENTAGE" | "FIXED_AMOUNT" | null;
+  discount_value?: number | null;
+  final_price?: number | null;
+  is_on_promo?: boolean;
+  promo_badge_text?: string | null;
+  price?: number | null;
 }
 
 export const items: Item[] = [

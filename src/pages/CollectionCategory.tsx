@@ -107,7 +107,7 @@ export default function CollectionCategory() {
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
           <div>
             <p className="text-[11px] tracking-[0.3em] uppercase text-muted-foreground mb-2 flex flex-wrap items-center gap-2">
-              <Link to={`/collection/${slug}`} className="hover:text-foreground">
+              <Link to={`/collection/${slug}`} className="inline-flex items-center min-h-[40px] py-1 hover:text-foreground">
                 {collection?.name ?? "Collection"}
               </Link>
               {activePackage && (
@@ -174,8 +174,8 @@ export default function CollectionCategory() {
                       × {it.count} pcs
                     </span>
                   )}
-                  <span className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-background/90 border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Plus size={14} />
+                  <span className="absolute bottom-3 right-3 w-10 h-10 rounded-full bg-background/90 border border-border flex items-center justify-center opacity-90 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                    <Plus size={15} />
                   </span>
                 </div>
                 <div className="p-4">

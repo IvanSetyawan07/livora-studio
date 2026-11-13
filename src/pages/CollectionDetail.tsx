@@ -25,6 +25,15 @@ export default function CollectionDetail() {
   const [mounted, setMounted] = useState(false);
 
   const heroRef = useRef<HTMLElement>(null);
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const on = () => setIsDesktop(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
   const { scrollY } = useScroll();
   const heroHeight = 800;
 
@@ -146,7 +155,7 @@ export default function CollectionDetail() {
       <Navbar />
 
       {/* HERO — cinematic parity with CatalogPage */}
-      <section ref={heroRef} className="relative h-screen w-full overflow-hidden border-b border-border">
+      <section ref={heroRef} className="relative h-[100svh] md:h-screen w-full overflow-hidden border-b border-border">
         <motion.div
           key={`hero-bg-${collection.slug}`}
           className="absolute inset-0 will-change-transform"
@@ -195,9 +204,9 @@ export default function CollectionDetail() {
 
         <motion.div
           className="relative z-10 h-full container-livora flex items-center"
-          style={{ x: textX, opacity: textOpacity, y: textY }}
+          style={isDesktop ? { x: textX, opacity: textOpacity, y: textY } : { opacity: textOpacity }}
         >
-          <div className="max-w-[560px] w-full md:w-[46%] pt-24 md:pt-32 pr-4 md:pr-0">
+          <div className="max-w-[560px] w-full md:w-[46%] pt-20 md:pt-32 pr-2 md:pr-0">
             <div className="flex items-center justify-between mb-8">
               <motion.p
                 {...eyebrowAnim}
@@ -211,8 +220,8 @@ export default function CollectionDetail() {
             </div>
 
             <h1
-              className="serif font-light text-white leading-[0.95] mb-6 md:mb-8"
-              style={{ fontSize: "clamp(44px, 10vw, 128px)", textShadow: "1px 1px 12px rgba(0,0,0,0.45)" }}
+              className="serif font-light text-white leading-[0.98] md:leading-[0.95] mb-5 md:mb-8"
+              style={{ fontSize: "clamp(38px, 10vw, 128px)", textShadow: "1px 1px 12px rgba(0,0,0,0.45)" }}
             >
               <motion.span {...headingAnim} className="block">
                 {collection.name}
@@ -284,7 +293,7 @@ export default function CollectionDetail() {
                 <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent" />
               </div>
             )}
-            <div className="relative z-10 p-10 md:p-16 max-w-xl text-white">
+            <div className="relative z-10 p-6 sm:p-10 md:p-16 max-w-xl text-white">
               <p className="text-sm md:text-base text-white/85 leading-relaxed">
                 {collection.story?.story_description}
               </p>
@@ -305,7 +314,7 @@ export default function CollectionDetail() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div data-lenis-prevent className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-4 pb-2 -mx-5 px-5 md:mx-0 md:px-0 md:grid md:grid-cols-3 md:gap-6">
             {collection.packages.map((p, i) => {
               const isActive = activePackage?.id === p.id;
               return (
@@ -319,7 +328,7 @@ export default function CollectionDetail() {
                     setActivePackage(p);
                     document.getElementById("package-items")?.scrollIntoView({ behavior: "smooth" });
                   }}
-                  className={`group relative aspect-[4/3] rounded-xl overflow-hidden text-left transition-all duration-500 ${
+                  className={`group shrink-0 w-[80vw] sm:w-[60vw] md:w-auto snap-center relative aspect-[4/3] rounded-xl overflow-hidden text-left transition-all duration-500 ${
                     isActive ? "ring-2 ring-foreground" : "hover:-translate-y-1"
                   }`}
                 >

@@ -35,11 +35,11 @@ export const CatalogCard = ({ item, index = 0 }: CatalogCardProps) => {
           </div>
         )}
 
-        <span className="absolute top-3 left-3 text-[10px] uppercase tracking-[0.12em] bg-background/88 backdrop-blur-sm text-muted-foreground px-2 py-1 font-light">
+        <span className="absolute top-3 left-3 max-w-[calc(100%-24px)] truncate text-[10px] uppercase tracking-[0.12em] bg-background/88 backdrop-blur-sm text-muted-foreground px-2 py-1 font-light">
           {item.taxonomy}
         </span>
 
-        <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/8 transition-colors duration-500" />
+        <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/8 group-active:bg-foreground/10 transition-colors duration-300" />
       </div>
 
       {/* Text block */}

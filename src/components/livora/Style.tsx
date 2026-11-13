@@ -79,6 +79,8 @@ export const StyleGlassmorphism = () => {
 
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState(1);
+  const [paused, setPaused] = useState(false);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const go = useCallback((next: number, dir: 1 | -1) => {
     setDirection(dir);
@@ -88,14 +90,15 @@ export const StyleGlassmorphism = () => {
   const next = useCallback(() => go(index + 1, 1), [go, index]);
   const prev = useCallback(() => go(index - 1, -1), [go, index]);
 
-  // Auto-slide every 3s — always runs, no hover/pause dependency
+  // Auto-slide every 3s unless user interacted/paused on mobile
   useEffect(() => {
+    if (paused) return;
     const t = setInterval(() => {
       setDirection(1);
       setIndex((i) => (i + 1) % SLIDES.length);
     }, AUTOPLAY_MS);
     return () => clearInterval(t);
-  }, []);
+  }, [paused]);
 
   const slide = SLIDES[index];
 
@@ -166,13 +169,13 @@ export const StyleGlassmorphism = () => {
             </div>
 
             {/* Dots */}
-            <div className="flex items-center gap-2 pt-2">
+            <div className="flex items-center gap-1 pt-2">
               {SLIDES.map((s, i) => (
                 <button
                   key={s.key}
                   aria-label={`Go to ${s.key} style`}
-                  onClick={() => go(i, i > index ? 1 : -1)}
-                  className="group h-2 flex items-center"
+                  onClick={() => { setPaused(true); go(i, i > index ? 1 : -1); }}
+                  className="group min-h-[44px] px-1 flex items-center"
                 >
                   <span
                     className={`block h-[2px] transition-all duration-500 ${
@@ -188,7 +191,24 @@ export const StyleGlassmorphism = () => {
 
           {/* Image Carousel */}
           <div className="md:col-span-7 order-1 md:order-2 relative">
-            <div className="relative rounded-[32px] overflow-hidden shadow-xl aspect-[4/5] md:aspect-[5/4] bg-black/10">
+            <div
+              onTouchStart={(e) => {
+                setPaused(true);
+                touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+              }}
+              onTouchEnd={(e) => {
+                const start = touchStartRef.current;
+                touchStartRef.current = null;
+                if (!start) return;
+                const dx = e.changedTouches[0].clientX - start.x;
+                const dy = e.changedTouches[0].clientY - start.y;
+                if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+                  if (dx < 0) next();
+                  else prev();
+                }
+              }}
+              className="relative rounded-[28px] md:rounded-[32px] overflow-hidden shadow-xl aspect-[4/5] md:aspect-[5/4] bg-black/10"
+            >
               <AnimatePresence custom={direction}>
                 <motion.img
                   key={slide.key + "-img"}
@@ -206,19 +226,25 @@ export const StyleGlassmorphism = () => {
                 />
               </AnimatePresence>
 
-              {/* Tap zones — the only manual controls: left = prev, right = next */}
-               <button
-                type="button"
-                aria-label="Previous style"
-                onClick={prev}
-                className="absolute inset-y-0 left-0 w-1/2 z-10 cursor-pointer"
-              />
-              <button
-                type="button"
-                aria-label="Next style"
-                onClick={next}
-                className="absolute inset-y-0 right-0 w-1/2 z-10 cursor-pointer"
-              />
+              {/* Explicit prev / next controls (safe for vertical touch scroll) */}
+              <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-label="Previous style"
+                  onClick={() => { setPaused(true); prev(); }}
+                  className="w-11 h-11 rounded-full bg-black/45 backdrop-blur text-white border border-white/20 flex items-center justify-center active:scale-95 transition"
+                >
+                  ←
+                </button>
+                <button
+                  type="button"
+                  aria-label="Next style"
+                  onClick={() => { setPaused(true); next(); }}
+                  className="w-11 h-11 rounded-full bg-black/45 backdrop-blur text-white border border-white/20 flex items-center justify-center active:scale-95 transition"
+                >
+                  →
+                </button>
+              </div>
 
               {/* Style label chip */}
               <div className="absolute top-4 left-4 md:top-6 md:left-6 px-3 py-1.5 rounded-full bg-black/35 backdrop-blur text-white text-[10px] md:text-[11px] uppercase tracking-[0.3em] pointer-events-none">

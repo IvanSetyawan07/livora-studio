@@ -15,13 +15,31 @@ class ItemController extends Controller
         if ($t = $r->query('theme'))      $q->whereHas('themes', fn($x) => $x->where('slug',$t));
         if ($t = $r->query('category'))   $q->whereHas('categories', fn($x) => $x->where('slug',$t));
         if ($t = $r->query('collection')) $q->whereHas('collection', fn($x) => $x->where('slug',$t));
-        $items = $q->orderByDesc('id')->get();
+        
+        // Filter promo
+        if ($r->boolean('promo')) {
+            $q->where('is_on_promo', true);
+        }
+
+        // Sorting
+        $sort = $r->query('sort');
+        if ($sort === 'discount_desc') {
+            $q->orderByDesc('discount_value')->orderByDesc('id');
+        } elseif ($sort === 'price_asc') {
+            $q->orderBy('final_price', 'asc')->orderByDesc('id');
+        } elseif ($sort === 'price_desc') {
+            $q->orderByDesc('final_price')->orderByDesc('id');
+        } else {
+            $q->orderByDesc('id');
+        }
+
+        $items = $q->get();
         if (!$this->isStaff()) $items->each->makeHidden(self::INTERNAL_FIELDS);
         return $items;
     }
 
-    /** Field internal yang tidak boleh terlihat pengunjung publik. */
-    private const INTERNAL_FIELDS = ['stock', 'warehouse_note', 'price', 'discount_type', 'discount_value'];
+    /** Field internal yang tidak boleh terlihat pengunjung publik (termasuk harga). */
+    private const INTERNAL_FIELDS = ['stock', 'warehouse_note', 'price', 'original_price', 'final_price'];
 
     private function isStaff(): bool
     {
@@ -106,6 +124,51 @@ class ItemController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    /**
+     * Bulk-assign diskon ke beberapa item sekaligus.
+     * Jika discount_value <= 0, promo pada item tersebut akan dihapus.
+     */
+    public function bulkDiscount(Request $r)
+    {
+        $data = $r->validate([
+            'item_ids'         => 'required|array|min:1',
+            'item_ids.*'       => 'integer|exists:items,id',
+            'discount_type'    => 'nullable|string|in:PERCENTAGE,FIXED_AMOUNT',
+            'discount_value'   => 'nullable|numeric|min:0',
+            'promo_badge_text' => 'nullable|string|max:100',
+            'promo_start_date' => 'nullable|date',
+            'promo_end_date'   => 'nullable|date',
+        ]);
+
+        $items = Item::whereIn('id', $data['item_ids'])->get();
+        $updated = 0;
+
+        foreach ($items as $item) {
+            $val = (float) ($data['discount_value'] ?? 0);
+            if ($val > 0) {
+                $item->discount_type = $data['discount_type'] ?? 'PERCENTAGE';
+                $item->discount_value = $val;
+                $item->promo_badge_text = $data['promo_badge_text'] ?? null;
+                $item->promo_start_date = $data['promo_start_date'] ?? null;
+                $item->promo_end_date = $data['promo_end_date'] ?? null;
+            } else {
+                $item->discount_type = null;
+                $item->discount_value = 0;
+                $item->promo_badge_text = null;
+                $item->promo_start_date = null;
+                $item->promo_end_date = null;
+            }
+            $item->save(); // hook saving otomatis hitung final_price & is_on_promo
+            $updated++;
+        }
+
+        return response()->json([
+            'ok' => true,
+            'updated_count' => $updated,
+            'message' => "Berhasil memperbarui promo untuk {$updated} item.",
+        ]);
+    }
+
     private function validateData(Request $r)
     {
         return $r->validate([
@@ -124,6 +187,14 @@ class ItemController extends Controller
             'image' => 'nullable|file|image',
             'stock' => 'nullable|integer|min:0',
             'price' => 'nullable|numeric|min:0',
+            'original_price' => 'nullable|numeric|min:0',
+            'discount_type' => 'nullable|string|in:PERCENTAGE,FIXED_AMOUNT',
+            'discount_value' => 'nullable|numeric|min:0',
+            'final_price' => 'nullable|numeric|min:0',
+            'is_on_promo' => 'nullable|boolean',
+            'promo_badge_text' => 'nullable|string|max:100',
+            'promo_start_date' => 'nullable|date',
+            'promo_end_date' => 'nullable|date',
             'weight_kg' => 'nullable|numeric|min:0',
             'width_cm' => 'nullable|numeric|min:0',
             'depth_cm' => 'nullable|numeric|min:0',

@@ -15,10 +15,14 @@ export default function OrderWhatsApp() {
   }, [code, url]);
 
   const copy = async () => {
-    await navigator.clipboard.writeText(code);
-    setCopied(true);
-    toast.success("Kode pesanan disalin");
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      toast.success("Kode pesanan disalin");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Salin manual kode: " + code);
+    }
   };
 
   return (
@@ -27,16 +31,22 @@ export default function OrderWhatsApp() {
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-700"><Check className="h-6 w-6" /></div>
         <h1 className="serif mt-5 text-3xl">Pesanan dibuat</h1>
         <p className="mt-2 text-sm text-muted-foreground">Langkah berikutnya: kirim kode ini ke WhatsApp Livora. Tim kami akan membalas dengan penawaran harga.</p>
-        <button type="button" onClick={copy} className="mx-auto mt-6 flex items-center gap-3 rounded-2xl border border-border bg-card px-6 py-4">
-          <span className="font-mono text-2xl tracking-widest">{code}</span>
-          {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
+        <button type="button" onClick={copy} className="mx-auto mt-6 flex items-center gap-3 rounded-2xl border border-border bg-card px-5 sm:px-6 py-4 max-w-full">
+          <span className="font-mono text-xl sm:text-2xl tracking-widest truncate">{code}</span>
+          {copied ? <Check className="h-4 w-4 text-emerald-600 shrink-0" /> : <Copy className="h-4 w-4 text-muted-foreground shrink-0" />}
         </button>
-        <a href={url ?? "#"} target="_blank" rel="noopener noreferrer" aria-disabled={!url}
-          className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-emerald-600 text-sm font-medium text-white">
-          <MessageCircle className="h-4 w-4" /> Buka WhatsApp
-        </a>
+        {url ? (
+          <a href={url} target="_blank" rel="noopener noreferrer"
+            className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-emerald-600 text-sm font-medium text-white">
+            <MessageCircle className="h-4 w-4" /> Buka WhatsApp
+          </a>
+        ) : (
+          <button type="button" disabled className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-emerald-600/60 text-sm font-medium text-white">
+            <MessageCircle className="h-4 w-4" /> Menyiapkan WhatsApp…
+          </button>
+        )}
         <p className="mt-3 text-xs text-muted-foreground">Pesan sudah terisi otomatis. Cukup tekan kirim. Pesanan tanpa chat akan otomatis ditutup dalam 3 hari.</p>
-        <Link to={`/profile/orders/${code}`} className="mt-8 inline-block text-sm underline underline-offset-4">Lihat status pesanan</Link>
+        <Link to={`/profile/orders/${code}`} className="mt-6 inline-flex items-center min-h-[44px] py-2 text-sm underline underline-offset-4">Lihat status pesanan</Link>
       </div>
     </main>
   );

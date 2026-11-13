@@ -37,6 +37,8 @@ export default function MyConsultationDetail() {
   const [detail, setDetail] = useState<Consultation | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
 
   const load = () => {
     if (!id) return;
@@ -84,13 +86,14 @@ export default function MyConsultationDetail() {
     ? NEXT_STEP_HINTS[currentStage.key] ?? "Our team is discussing your needs and preparing the proposal."
     : "Our team is discussing your needs and preparing the proposal.";
 
-  const handleCancel = async () => {
-    const reason = window.prompt("Batalkan permintaan konsultasi ini?\n\nOpsional — tulis alasan singkat:", "");
-    if (reason === null) return;
+  const handleCancelSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setCancelling(true);
     try {
-      await cancelConsultation(c.id, reason.trim() || undefined);
+      await cancelConsultation(c.id, cancelReason.trim() || undefined);
       toast.success("Consultation dibatalkan.");
+      setCancelOpen(false);
+      setCancelReason("");
       load();
     } catch (e: any) {
       toast.error(e?.response?.data?.message || "Gagal membatalkan.");
@@ -104,7 +107,7 @@ export default function MyConsultationDetail() {
       <div className="max-w-6xl mx-auto px-5 py-8 md:px-10 md:py-14">
         <button
           onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/profile/consultations"))}
-          className="mb-8 md:mb-10 inline-flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-muted-foreground hover:text-foreground transition-colors"
+          className="mb-6 md:mb-10 inline-flex items-center gap-2 min-h-[44px] py-2 text-xs uppercase tracking-[0.24em] text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft size={14} /> Back to My Consultation
         </button>
@@ -146,7 +149,7 @@ export default function MyConsultationDetail() {
 
         {/* ── Content ──────────────────────────────────────────── */}
         <div className="grid lg:grid-cols-[1fr_336px] gap-8 lg:gap-14 mt-10 md:mt-14">
-          <div className="space-y-10 md:space-y-14 min-w-0">
+          <div className="space-y-10 md:space-y-14 min-w-0 order-2 lg:order-1">
             <section>
               <h2 className="serif text-2xl mb-6">Consultation Details</h2>
               <div className="grid sm:grid-cols-2 gap-x-10">
@@ -186,7 +189,7 @@ export default function MyConsultationDetail() {
             </section>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-6 order-1 lg:order-2">
             <div className="bg-card border border-border rounded-sm p-6 md:p-7">
               <p className="text-[10px] uppercase tracking-[0.26em] text-muted-foreground mb-3">Current Status</p>
               <StatusPill
@@ -220,9 +223,9 @@ export default function MyConsultationDetail() {
 
                 {!isClosed && (
                   <button
-                    onClick={handleCancel}
+                    onClick={() => setCancelOpen(true)}
                     disabled={cancelling}
-                    className="w-full inline-flex items-center justify-center gap-1.5 text-[11px] uppercase tracking-[0.2em] text-red-600 hover:underline disabled:opacity-60 pt-2"
+                    className="w-full inline-flex items-center justify-center min-h-[44px] gap-1.5 text-[11px] uppercase tracking-[0.2em] text-red-600 hover:underline disabled:opacity-60 pt-2"
                   >
                     <XCircle size={13} /> {cancelling ? "Cancelling…" : "Cancel Request"}
                   </button>
@@ -232,6 +235,28 @@ export default function MyConsultationDetail() {
           </div>
         </div>
       </div>
+
+      {cancelOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/45 p-0 sm:p-4" role="dialog" aria-modal="true">
+          <form onSubmit={handleCancelSubmit} className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-card p-6 border border-border shadow-xl" style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}>
+            <h3 className="serif text-xl">Batalkan Konsultasi?</h3>
+            <p className="mt-1 text-xs text-muted-foreground">Opsional — tulis alasan singkat pembatalan Anda.</p>
+            <textarea
+              rows={3}
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Alasan pembatalan (opsional)..."
+              className="mt-4 w-full rounded-lg border border-border bg-background p-3 text-base sm:text-sm outline-none focus:border-foreground"
+            />
+            <div className="mt-4 flex gap-2">
+              <button type="button" onClick={() => setCancelOpen(false)} className="h-11 flex-1 rounded-lg border border-border text-sm">Kembali</button>
+              <button type="submit" disabled={cancelling} className="h-11 flex-1 rounded-lg bg-red-600 text-white text-sm font-medium disabled:opacity-50">
+                {cancelling ? "Membatalkan…" : "Ya, Batalkan"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
@@ -387,9 +412,9 @@ function JourneyStepper({
 function Row({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
-    <div className="flex items-baseline justify-between gap-6 border-b border-border/60 py-2.5">
+    <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 sm:gap-6 border-b border-border/60 py-2.5">
       <span className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground shrink-0">{label}</span>
-      <span className="text-sm text-foreground text-right truncate">{value}</span>
+      <span className="text-sm text-foreground sm:text-right break-words">{value}</span>
     </div>
   );
 }

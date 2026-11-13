@@ -75,6 +75,13 @@ interface ApiItem {
   availability?: string | null;
   description?: string | null;
   image?: string | null;
+  price?: number | null;
+  original_price?: number | null;
+  discount_type?: "PERCENTAGE" | "FIXED_AMOUNT" | null;
+  discount_value?: number | null;
+  final_price?: number | null;
+  is_on_promo?: boolean;
+  promo_badge_text?: string | null;
   type?: { id: number; name: string; slug: string } | null;
   collection?: CollectionRef | null;
   themes?: { id: number; name: string; slug: string }[];
@@ -120,6 +127,13 @@ export const mapApiItem = (it: ApiItem): RichItem => {
     textures: textures.length ? textures : ["Premium"],
     image: imgUrl(it.image) || undefined,
     apiId: it.id,
+    original_price: it.original_price != null ? Number(it.original_price) : (it.price != null ? Number(it.price) : null),
+    discount_type: it.discount_type ?? null,
+    discount_value: it.discount_value != null ? Number(it.discount_value) : null,
+    final_price: it.final_price != null ? Number(it.final_price) : (it.price != null ? Number(it.price) : null),
+    is_on_promo: Boolean(it.is_on_promo),
+    promo_badge_text: it.promo_badge_text ?? null,
+    price: it.final_price != null ? Number(it.final_price) : (it.price != null ? Number(it.price) : null),
     collection: it.collection ?? null,
     variants: (it.variants ?? []).map((v) => ({
       ...v,

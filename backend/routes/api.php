@@ -95,6 +95,7 @@ Route::get('/projects/{project}/layouts', [\App\Http\Controllers\Api\ProjectSpac
 Route::get('/landing/highlights', [ProjectController::class, 'highlights']);
 Route::get('/items', [ItemController::class, 'index']);
 Route::get('/items/{slug}', [ItemController::class, 'show']);
+Route::get('/promo-banners', [\App\Http\Controllers\Api\PromoBannerController::class, 'publicBanners']);
 Route::get('/taxonomies/{type}', [TaxonomyController::class, 'index']);
 Route::get('/collections', [CollectionController::class, 'index']);
 Route::get('/collections/{slug}', [CollectionController::class, 'show']);
@@ -199,8 +200,16 @@ Route::middleware('auth:sanctum')->group(function () {
         // Items
         Route::get('/items/lookup/{slug}', [ItemController::class, 'adminShow']);
         Route::post('/items', [ItemController::class, 'store']);
+        Route::post('/items/bulk-discount', [ItemController::class, 'bulkDiscount']);
         Route::post('/items/{item}', [ItemController::class, 'update']);
         Route::delete('/items/{item}', [ItemController::class, 'destroy']);
+
+        // Promo Banners (Pop-up Promo)
+        Route::get('/promo-banners', [\App\Http\Controllers\Api\Admin\PromoBannerController::class, 'index']);
+        Route::post('/promo-banners', [\App\Http\Controllers\Api\Admin\PromoBannerController::class, 'store']);
+        Route::post('/promo-banners/{promoBanner}', [\App\Http\Controllers\Api\Admin\PromoBannerController::class, 'update']);
+        Route::patch('/promo-banners/{promoBanner}/toggle', [\App\Http\Controllers\Api\Admin\PromoBannerController::class, 'toggleActive']);
+        Route::delete('/promo-banners/{promoBanner}', [\App\Http\Controllers\Api\Admin\PromoBannerController::class, 'destroy']);
 
         // Collections
         Route::post('/collections', [CollectionController::class, 'store']);

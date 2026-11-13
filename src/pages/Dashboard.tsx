@@ -1,11 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { Navbar } from "@/components/livora/Navbar";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { clearSession, rememberIntendedPath } from "@/lib/authGuard";
 import { getMyConsultations, type Consultation } from "@/lib/consultations";
-import { Check, Calendar, MapPin, Video } from "lucide-react";
+import { Check, Calendar, MapPin, Video, ChevronRight } from "lucide-react";
 
 type User = { id: number; name: string; email: string };
 
@@ -59,20 +60,22 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6 md:p-10">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex items-center justify-between mb-10">
-          <div>
-            <h1 className="serif text-3xl mb-1">Dashboard</h1>
-            <p className="text-sm text-muted-foreground">{t("dashboard.hello")} {user?.name ?? "..."}!</p>
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-background px-5 pt-28 pb-16 md:p-10 md:pt-36">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex items-center justify-between gap-4 mb-10">
+            <div>
+              <h1 className="serif text-3xl mb-1">Dashboard</h1>
+              <p className="text-sm text-muted-foreground">{t("dashboard.hello")} {user?.name ?? "..."}!</p>
+            </div>
+            <button
+              onClick={logout}
+              className="min-h-[44px] bg-foreground text-background px-4 py-2 rounded text-xs sm:text-sm uppercase tracking-[0.2em]"
+            >
+              {t("dashboard.logout")}
+            </button>
           </div>
-          <button
-            onClick={logout}
-            className="bg-foreground text-background px-4 py-2 rounded text-sm uppercase tracking-[0.2em]"
-          >
-            {t("dashboard.logout")}
-          </button>
-        </div>
 
         <section>
           <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground mb-2">
@@ -102,8 +105,9 @@ export default function Dashboard() {
             </div>
           )}
         </section>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -112,14 +116,18 @@ function ConsultationCard({ consultation }: { consultation: Consultation }) {
   const currentIndex = TIMELINE_STEPS.findIndex((s) => s.key === consultation.status);
 
   return (
-    <div className="bg-card border border-border rounded-lg p-6">
+    <Link
+      to={`/profile/consultations/${consultation.id}`}
+      className="block bg-card border border-border rounded-lg p-5 sm:p-6 hover:border-foreground/30 transition-colors"
+    >
       <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-1">
             {consultation.service_type ?? "Design Consultation"}
           </p>
-          <h3 className="serif text-xl">
+          <h3 className="serif text-xl flex items-center gap-1.5">
             {consultation.project_type ?? "Consultation"} Request
+            <ChevronRight size={16} className="text-muted-foreground" />
           </h3>
         </div>
 
@@ -166,38 +174,40 @@ function ConsultationCard({ consultation }: { consultation: Consultation }) {
         </div>
       )}
 
-      {/* Timeline */}
+      {/* Timeline — horizontal scroll on mobile so 8 steps never crush each other */}
       {!isCancelled && (
-        <div className="relative flex items-start justify-between mt-2">
-          {TIMELINE_STEPS.map((step, i) => {
-            const reached = currentIndex >= 0 && i <= currentIndex;
-            const isLast = i === TIMELINE_STEPS.length - 1;
-            return (
-              <div key={step.key} className="flex-1 flex flex-col items-center relative">
-                {!isLast && (
+        <div data-lenis-prevent className="overflow-x-auto no-scrollbar -mx-2 px-2 pb-1">
+          <div className="relative flex items-start justify-between mt-2 min-w-[540px]">
+            {TIMELINE_STEPS.map((step, i) => {
+              const reached = currentIndex >= 0 && i <= currentIndex;
+              const isLast = i === TIMELINE_STEPS.length - 1;
+              return (
+                <div key={step.key} className="flex-1 flex flex-col items-center relative">
+                  {!isLast && (
+                    <div
+                      className={`absolute top-3 left-1/2 w-full h-[2px] ${
+                        i < currentIndex ? "bg-foreground" : "bg-border"
+                      }`}
+                    />
+                  )}
                   <div
-                    className={`absolute top-3 left-1/2 w-full h-[2px] ${
-                      i < currentIndex ? "bg-foreground" : "bg-border"
+                    className={`relative z-10 w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${
+                      reached ? "bg-foreground text-background" : "bg-secondary text-muted-foreground"
                     }`}
-                  />
-                )}
-                <div
-                  className={`relative z-10 w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${
-                    reached ? "bg-foreground text-background" : "bg-secondary text-muted-foreground"
-                  }`}
-                >
-                  {reached ? <Check size={12} /> : i + 1}
+                  >
+                    {reached ? <Check size={12} /> : i + 1}
+                  </div>
+                  <p
+                    className={`mt-2 text-[10px] text-center leading-tight max-w-[72px] ${
+                      reached ? "text-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    {step.label}
+                  </p>
                 </div>
-                <p
-                  className={`mt-2 text-[10px] text-center leading-tight max-w-[70px] ${
-                    reached ? "text-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  {step.label}
-                </p>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -206,6 +216,6 @@ function ConsultationCard({ consultation }: { consultation: Consultation }) {
           "{consultation.message}"
         </p>
       )}
-    </div>
+    </Link>
   );
 }

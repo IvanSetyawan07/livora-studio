@@ -100,19 +100,19 @@ export default function SearchOverlay({ open, onClose }: Props) {
       <div className="relative h-full w-full flex flex-col overflow-y-auto overscroll-contain" data-lenis-prevent>
         {/* Search bar */}
         <div className="sticky top-0 z-10 backdrop-blur-md bg-black/20 border-b border-white/15">
-          <div className="max-w-6xl mx-auto px-6 md:px-10 h-20 flex items-center gap-4">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-10 h-20 flex items-center gap-3 sm:gap-4">
             <Search size={20} className="text-white/70 shrink-0" />
             <input
               ref={inputRef}
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="What can we help you find?"
-              className="flex-1 bg-transparent outline-none text-white placeholder:text-white/50 text-lg md:text-xl font-light tracking-wide"
+              className="flex-1 min-w-0 bg-transparent outline-none text-white placeholder:text-white/50 text-base md:text-xl font-light tracking-wide"
             />
             {q && (
               <button
                 onClick={() => setQ("")}
-                className="text-white/60 hover:text-white text-xs uppercase tracking-[0.2em]"
+                className="min-h-[40px] px-2 text-white/60 hover:text-white text-xs uppercase tracking-[0.2em]"
               >
                 clear
               </button>
@@ -120,7 +120,7 @@ export default function SearchOverlay({ open, onClose }: Props) {
             <button
               onClick={onClose}
               aria-label="Close search"
-              className="text-white/80 hover:text-white transition"
+              className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-full text-white/80 hover:text-white hover:bg-white/10 transition"
             >
               <X size={22} />
             </button>
@@ -128,21 +128,21 @@ export default function SearchOverlay({ open, onClose }: Props) {
         </div>
 
         {/* Body */}
-        <div className="flex-1 max-w-6xl w-full mx-auto px-6 md:px-10 py-10 md:py-14 text-white">
+        <div className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 md:px-10 py-8 md:py-14 text-white">
           {/* EMPTY STATE */}
           {!query && (
-            <div className="grid md:grid-cols-[220px_1fr] gap-10 md:gap-16 animate-in fade-in slide-in-from-bottom-3 duration-500">
+            <div className="grid md:grid-cols-[220px_1fr] gap-8 md:gap-16 animate-in fade-in slide-in-from-bottom-3 duration-500">
               {/* Popular terms */}
               <div>
-                <p className="text-xs uppercase tracking-[0.25em] text-white/60 mb-5">
+                <p className="text-xs uppercase tracking-[0.25em] text-white/60 mb-4 md:mb-5">
                   Popular searches
                 </p>
-                <ul className="space-y-3">
+                <ul className="flex flex-wrap gap-2 md:block md:space-y-3">
                   {POPULAR.map((t) => (
                     <li key={t}>
                       <button
                         onClick={() => setQ(t)}
-                        className="flex items-center gap-2 text-sm text-white/85 hover:text-white group"
+                        className="inline-flex items-center gap-2 min-h-[40px] px-3.5 py-2 md:p-0 md:min-h-0 rounded-full md:rounded-none border border-white/15 md:border-0 bg-white/5 md:bg-transparent text-xs md:text-sm text-white/85 hover:text-white hover:bg-white/10 md:hover:bg-transparent group transition-colors"
                       >
                         <Search size={12} className="opacity-60 group-hover:opacity-100" />
                         <span className="tracking-wide">{t}</span>

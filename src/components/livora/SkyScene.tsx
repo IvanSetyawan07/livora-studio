@@ -309,8 +309,8 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
   // ── Typewriter tidak ada di file ini (itu ada di Hero.tsx yang lain) ──
 
   return (
-    <section id="top" ref={root} className="relative h-[380vh]">
-      <div className="sticky top-0 h-screen overflow-hidden bg-[#8CC0E8]">
+    <section id="top" ref={root} className="relative h-[260vh] md:h-[380vh]">
+      <div className="sticky top-0 h-[100svh] md:h-screen overflow-hidden bg-[#8CC0E8]">
         <div className="absolute inset-0 overflow-hidden">
           <div className="scene-img absolute left-0 top-0 h-[200%] w-full will-change-transform">
             <img
@@ -390,14 +390,14 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
           <div className="absolute inset-0 bg-gradient-to-r from-foreground/90 via-foreground/45 to-transparent" />
           <div className="absolute inset-0 flex items-center">
             <div className="container-livora">
-              <span className="interior-line block text-[20px] uppercase tracking-[0.4em] text-background/70">
+              <span className="interior-line block text-xs sm:text-sm md:text-[20px] uppercase tracking-[0.26em] sm:tracking-[0.4em] text-background/75">
                 PT. Langgeng Cipta Ruang
               </span>
 
-              <div className="mt-6 ">
+              <div className="mt-4 sm:mt-6">
                 {["Imagine.", "Create.", "Realize."].map((w) => (
                   <span key={w} className="block overflow-hidden">
-                    <span className="interior-line serif block text-[13vw] font-light leading-[1] text-background sm:text-[5.2vw]">
+                    <span className="interior-line serif block text-[12vw] font-light leading-[1] text-background sm:text-[5.2vw]">
                       {w}
                     </span>
                   </span>

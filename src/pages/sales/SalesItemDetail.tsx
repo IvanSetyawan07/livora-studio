@@ -57,7 +57,7 @@ export default function SalesItemDetail() {
       <div className="max-w-5xl mx-auto">
         <button
           onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 text-xs text-muted-foreground mb-4"
+          className="inline-flex items-center gap-2 min-h-[44px] py-2 text-xs text-muted-foreground mb-3"
         >
           <ArrowLeft className="w-4 h-4" /> Kembali
         </button>
@@ -71,7 +71,7 @@ export default function SalesItemDetail() {
             </div>
             <Link
               to={`/items/${item.slug}`}
-              className="mt-3 block text-center text-[11px] text-muted-foreground underline"
+              className="mt-3 min-h-[44px] flex items-center justify-center text-xs text-muted-foreground underline"
             >
               Buka halaman publik
             </Link>
@@ -88,7 +88,7 @@ export default function SalesItemDetail() {
               {item.collection?.name ? ` · ${item.collection.name}` : ""}
             </p>
 
-            <div className="grid sm:grid-cols-3 gap-3 mt-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-5">
               <Stat label="Stok tersisa" value={item.stock !== null && item.stock !== undefined ? `${item.stock} unit` : "—"} />
               <Stat label="Harga" value={fmtIDR(item.price)} />
               <Stat label="Berat" value={item.weight_kg ? `${item.weight_kg} kg` : "—"} />

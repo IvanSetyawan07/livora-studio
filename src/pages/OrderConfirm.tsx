@@ -169,11 +169,11 @@ export default function OrderConfirm() {
 
       {reviseOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" role="dialog" aria-modal="true">
-          <div className="w-full max-w-md rounded-t-3xl bg-card p-6 sm:rounded-3xl">
+          <div className="w-full max-w-md rounded-t-3xl bg-card p-6 sm:rounded-3xl" style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}>
             <h2 className="serif text-xl">Minta Revisi / Nego</h2>
             <p className="mt-1 text-sm text-muted-foreground">Tulis bagian yang ingin diubah atau harga yang Anda harapkan. Tim kami akan membalas lewat WhatsApp.</p>
             <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={4} maxLength={1000} autoFocus
-              className="mt-4 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-foreground"
+              className="mt-4 w-full rounded-xl border border-border bg-background p-3 text-base sm:text-sm outline-none focus:border-foreground"
               placeholder="Contoh: ongkirnya bisa dikurangi? atau ukurannya mau saya ubah…" />
             <div className="mt-4 flex gap-2">
               <button type="button" onClick={() => setReviseOpen(false)} className="h-11 flex-1 rounded-full border border-border text-sm">Batal</button>

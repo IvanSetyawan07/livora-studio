@@ -9,6 +9,7 @@ import { Projects } from "@/components/livora/Projects";
 import { Furniture } from "@/components/livora/Furniture";
 import { Contact } from "@/components/livora/Contact";
 import { Footer } from "@/components/livora/Footer";
+import { PromoFloatingModal } from "@/components/livora/PromoFloatingModal";
 import { useReveal } from "@/hooks/useReveal";
 import wallpaper from "@/assets/add.webp";
 
@@ -50,6 +51,7 @@ const Index = () => {
   return (
     <>
       <Navbar />
+      <PromoFloatingModal ready={ready} />
       <main>
         <SkyScene ready={ready} />
 
@@ -57,7 +59,7 @@ const Index = () => {
         <div className="relative">
           <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
             <div
-              className="sticky top-0 h-screen w-full bg-cover bg-center bg-no-repeat will-change-transform"
+              className="sticky top-0 h-[100svh] md:h-screen w-full bg-cover bg-center bg-no-repeat will-change-transform"
               style={{ backgroundImage: `url(${wallpaper})` }}
             />
           </div>

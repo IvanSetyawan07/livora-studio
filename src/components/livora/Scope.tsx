@@ -43,7 +43,7 @@ export const Scope = () => {
         if (ctas.length) gsap.set(ctas, { y: 16, opacity: 0 });
 
         const tl = gsap.timeline({
-          scrollTrigger: { trigger: row, start: "top 80%", toggleActions: "play none none reverse" },
+          scrollTrigger: { trigger: row, start: "top 82%", once: true },
         });
 
         tl.to(number, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" })
@@ -119,8 +119,10 @@ export const Scope = () => {
                 <div className="scope-number hidden md:block text-4xl md:text-6xl lg:text-7xl font-normal tracking-tight">
                   {item.number}
                 </div>
-                <div
-                  className="scope-image-wrap relative overflow-hidden mt-2 md:mt-10 rounded-sm"
+                <Link
+                  to={item.href ?? "/projects"}
+                  aria-label={`${tr(index)?.title ?? item.title} — ${t("common.learn_more", "Learn More")}`}
+                  className="scope-image-wrap block relative overflow-hidden mt-2 md:mt-10 rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
                   style={{ aspectRatio: "4 / 5" }}
                 >
                   <img
@@ -134,7 +136,10 @@ export const Scope = () => {
                     decoding="async"
                     className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                   />
-                </div>
+                  <span className="md:hidden absolute bottom-3 right-3 inline-flex items-center gap-1 rounded-full bg-black/65 backdrop-blur-sm text-white px-3 py-1.5 text-[10px] uppercase tracking-[0.2em]">
+                    Explore <ArrowUpRight className="h-3.5 w-3.5" />
+                  </span>
+                </Link>
               </div>
 
               {/* Right column */}
@@ -154,24 +159,24 @@ export const Scope = () => {
                     <Link
                       to={item.href ?? "/projects"}
                       aria-label={`${t("common.learn_more", "Learn More")} — ${tr(index)?.title ?? item.title}`}
-                      className="scope-learnmore inline-block mt-4 md:mt-6 text-sm md:text-base font-medium underline underline-offset-4 transition-colors duration-300 hover:text-white/70"
+                      className="scope-learnmore inline-flex items-center min-h-[44px] py-2 mt-2 md:mt-4 text-sm md:text-base font-medium underline underline-offset-4 transition-colors duration-300 hover:text-white/70"
                     >
                       {t("common.learn_more", "Learn More")}
                       <span className="sr-only"> — {tr(index)?.title ?? item.title}</span>
                     </Link>
 
                     {item.featured && (
-                      <div className="mt-10 md:mt-32 flex flex-wrap items-center gap-4 md:gap-6">
+                      <div className="mt-8 md:mt-32 flex flex-wrap items-center gap-4 md:gap-6">
                         <Link
                           to="/projects"
-                          className="scope-cta text-sm md:text-base font-medium underline underline-offset-4 transition-colors duration-300 hover:text-white/70"
+                          className="scope-cta inline-flex items-center min-h-[44px] py-2 text-sm md:text-base font-medium underline underline-offset-4 transition-colors duration-300 hover:text-white/70"
                         >
                           {t("common.see_all_projects", item.ctaLabel ?? "See All Projects")}
                         </Link>
                         <span className="hidden sm:block h-4 w-px" style={{ backgroundColor: C.line }} />
                         <Link
                           to={item.href ?? "/projects"}
-                          className="scope-cta inline-flex items-center gap-1 text-sm md:text-base font-medium underline underline-offset-4 transition-colors duration-300 hover:text-white/70"
+                          className="scope-cta inline-flex items-center gap-1 min-h-[44px] py-2 text-sm md:text-base font-medium underline underline-offset-4 transition-colors duration-300 hover:text-white/70"
                         >
                           {item.ctaUrl}
                           <ArrowUpRight className="h-4 w-4" />

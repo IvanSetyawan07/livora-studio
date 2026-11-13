@@ -259,17 +259,10 @@ export default function Appointment() {
 
   return (
     <div className="bg-background text-foreground">
-      <motion.div
-        style={{ backgroundColor: navbarBg }}
-        className="fixed top-0 left-0 right-0 z-50 border-b border-border/0 transition-colors duration-300"
-      >
-        <motion.div style={{ backdropFilter: navbarBlur }} className="w-full">
-          <Navbar />
-        </motion.div>
-      </motion.div>
+      <Navbar />
 
       {/* ══════════ HERO ══════════ */}
-      <section ref={heroRef} className="relative w-full min-h-[92vh] flex items-end overflow-hidden">
+      <section ref={heroRef} className="relative w-full min-h-[92svh] flex items-end overflow-hidden">
         <motion.div
           className="absolute inset-0 will-change-transform"
           style={{ y: heroImgY, scale: heroImgScale }}
@@ -308,7 +301,7 @@ export default function Appointment() {
               <Eyebrow light>Livora | Design Consultation</Eyebrow>
             </motion.div>
 
-            <h1 className="serif font-light text-5xl md:text-7xl leading-[1.05] tracking-tight mb-8">
+            <h1 className="serif font-light text-4xl sm:text-5xl md:text-7xl leading-[1.08] md:leading-[1.05] tracking-tight mb-6 md:mb-8">
               <motion.span
                 className="block"
                 initial={{ opacity: 0, x: -80, filter: "blur(8px)" }}
@@ -483,25 +476,60 @@ export default function Appointment() {
 
           <motion.div
             variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}
-            className="relative aspect-[16/10] overflow-hidden bg-neutral-900"
+            className="relative aspect-[16/10] overflow-hidden bg-neutral-900 rounded-sm"
           >
             <img src={questionsMedia} alt="Livora interior process" className="w-full h-full object-cover" loading="lazy" />
-            <div className="absolute inset-0 bg-black/15" />
-            <button
-              type="button"
-              onClick={() => setVideoPlaying((v) => !v)}
-              aria-label={videoPlaying ? "Pause" : "Play"}
-              className="absolute inset-0 flex items-center justify-center"
-            >
-              <span
-                className="w-16 h-16 md:w-20 md:h-20 rounded-full backdrop-blur-md flex items-center justify-center transition-all duration-500 group-hover:scale-105"
-                style={{ backgroundColor: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.4)" }}
+            <div className={`absolute inset-0 transition-colors duration-300 ${videoPlaying ? "bg-black/75 backdrop-blur-sm" : "bg-black/25"}`} />
+            {!videoPlaying ? (
+              <button
+                type="button"
+                onClick={() => setVideoPlaying(true)}
+                aria-label="Preview our 3-step design process"
+                className="group absolute inset-0 flex flex-col items-center justify-center gap-3"
               >
-                {videoPlaying
-                  ? <Pause size={22} className="text-white" strokeWidth={1.2} />
-                  : <Play size={22} className="text-white translate-x-0.5" strokeWidth={1.2} />}
-              </span>
-            </button>
+                <span
+                  className="w-16 h-16 md:w-20 md:h-20 rounded-full backdrop-blur-md flex items-center justify-center transition-all duration-500 group-hover:scale-105"
+                  style={{ backgroundColor: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.45)" }}
+                >
+                  <Play size={22} className="text-white translate-x-0.5" strokeWidth={1.2} />
+                </span>
+                <span className="text-[10px] uppercase tracking-[0.28em] text-white/90">
+                  Preview Process
+                </span>
+              </button>
+            ) : (
+              <div className="absolute inset-0 p-5 sm:p-8 flex flex-col justify-between text-white">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] uppercase tracking-[0.28em] text-white/75">How We Work</span>
+                  <button
+                    type="button"
+                    onClick={() => setVideoPlaying(false)}
+                    aria-label="Close process preview"
+                    className="w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <ol className="space-y-3 sm:space-y-4 my-auto">
+                  {STEPS.map((s) => (
+                    <li key={s.n} className="flex items-start gap-3">
+                      <span className="serif text-lg sm:text-xl text-[#C9A97A] shrink-0">{s.n}</span>
+                      <div>
+                        <p className="serif text-base sm:text-lg leading-tight">{s.title}</p>
+                        <p className="text-xs text-white/75 font-light">{s.desc}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+                <a
+                  href="#appointment-form"
+                  onClick={() => setVideoPlaying(false)}
+                  className="self-start text-[11px] uppercase tracking-[0.25em] border-b border-white/60 pb-1 hover:border-white"
+                >
+                  Book This Session →
+                </a>
+              </div>
+            )}
           </motion.div>
         </div>
       </section>
@@ -765,22 +793,25 @@ export default function Appointment() {
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mt-10 pt-6 border-t border-[#e5e5e5]">
               <div className="space-y-3 max-w-md">
-                <label className="flex items-start gap-3 text-xs text-muted-foreground font-light">
+                <div className="flex items-start gap-3 text-xs text-muted-foreground font-light">
                   <input
+                    id="appointment-policy-consent"
                     type="checkbox"
                     checked={form.agree_terms && form.agree_privacy}
                     onChange={(e) => {
                       upd("agree_terms", e.target.checked);
                       upd("agree_privacy", e.target.checked);
                     }}
-                    className="mt-1 accent-black"
+                    className="mt-0.5 w-5 h-5 shrink-0 accent-black cursor-pointer"
                   />
-                  <span>
-                    Saya telah membaca dan menyetujui{" "}
+                  <span className="leading-relaxed">
+                    <label htmlFor="appointment-policy-consent" className="cursor-pointer">
+                      Saya telah membaca dan menyetujui{" "}
+                    </label>
                     <button
                       type="button"
-                      onClick={() => setPolicyDoc(TERMS_OF_SERVICE)}
-                      className="underline underline-offset-2"
+                      onClick={(e) => { e.stopPropagation(); setPolicyDoc(TERMS_OF_SERVICE); }}
+                      className="underline underline-offset-2 py-1"
                       style={{ color: BLACK }}
                     >
                       Ketentuan Layanan
@@ -788,15 +819,15 @@ export default function Appointment() {
                     dan{" "}
                     <button
                       type="button"
-                      onClick={() => setPolicyDoc(PRIVACY_POLICY)}
-                      className="underline underline-offset-2"
+                      onClick={(e) => { e.stopPropagation(); setPolicyDoc(PRIVACY_POLICY); }}
+                      className="underline underline-offset-2 py-1"
                       style={{ color: BLACK }}
                     >
                       Kebijakan Privasi
                     </button>{" "}
                     Livora.
                   </span>
-                </label>
+                </div>
               </div>
 
               <button
@@ -830,7 +861,7 @@ function Field({
   label, required, full, children,
 }: { label: string; required?: boolean; full?: boolean; children: React.ReactNode }) {
   return (
-    <div className={full ? "md:col-span-3" : ""}>
+    <div className={full ? "md:col-span-2" : ""}>
       <label className="block text-[11px] uppercase tracking-[0.18em] font-light text-foreground/70 mb-2">
         {label} {required && <span style={{ color: "#000000" }}>*</span>}
       </label>
@@ -848,7 +879,7 @@ function Input({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full border border-[#e5e5e5] px-3 py-3 text-sm font-light outline-none focus:border-black transition-colors bg-white"
+      className="w-full border border-[#e5e5e5] px-3 py-3 text-base sm:text-sm font-light outline-none focus:border-black transition-colors bg-white"
     />
   );
 }
@@ -860,7 +891,7 @@ function Select({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full border border-[#e5e5e5] px-3 py-3 text-sm font-light outline-none focus:border-black transition-colors bg-white"
+      className="w-full border border-[#e5e5e5] px-3 py-3 text-base sm:text-sm font-light outline-none focus:border-black transition-colors bg-white"
     >
       <option value="">{placeholder ?? "Select an option"}</option>
       {options.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -895,7 +926,7 @@ function LocationSearch({
         onChange={(e) => { onChange(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
         placeholder={placeholder ?? "Ketik nama provinsi..."}
-        className="w-full border border-[#e5e5e5] px-3 py-3 text-sm font-light outline-none focus:border-black transition-colors bg-white"
+        className="w-full border border-[#e5e5e5] px-3 py-3 text-base sm:text-sm font-light outline-none focus:border-black transition-colors bg-white"
       />
       {open && filtered.length > 0 && (
         <ul
@@ -907,7 +938,7 @@ function LocationSearch({
               <button
                 type="button"
                 onClick={() => { onChange(p); setOpen(false); }}
-                className="w-full text-left px-3 py-2 text-sm font-light hover:bg-[#fafafa] transition-colors"
+                className="w-full text-left px-3 py-3 min-h-[44px] text-sm font-light hover:bg-[#fafafa] transition-colors"
               >
                 {p}
               </button>

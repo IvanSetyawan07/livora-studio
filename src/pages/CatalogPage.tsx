@@ -181,26 +181,7 @@ export default function CatalogPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* ─── NAVBAR (fixed, sama persis dengan CatalogDetail) ─── */}
-      <motion.div
-        style={{
-          backgroundColor: navbarBgOpacity.get
-            ? "rgba(0,0,0,0)"
-            : "#000",
-        } as any}
-        className="fixed top-0 left-0 right-0 z-50 border-b border-border/0 transition-colors duration-300"
-      >
-        <motion.div
-          style={{
-            backdropFilter: navbarBlur.get
-              ? `blur(${navbarBlur.get()}px)`
-              : "blur(0px)",
-          } as any}
-          className="w-full"
-        >
-          <Navbar />
-        </motion.div>
-      </motion.div>
+      <Navbar />
 
       {/* ── HERO (luxury editorial with scroll-driven exit animation) ── */}
       <CatalogHero
@@ -221,12 +202,12 @@ export default function CatalogPage() {
         <p className="text-[10px] uppercase tracking-[0.2em] text-foreground font-medium mb-3">
           {activeCat.label}
         </p>
-        <div className="flex flex-wrap gap-2">
+        <div data-lenis-prevent className="flex gap-2 overflow-x-auto no-scrollbar sm:flex-wrap pb-1">
           {CATALOG_TAXONOMIES.map((tax) => (
             <button
               key={tax}
               onClick={() => { setActiveTax(tax); setVisibleCount(ITEMS_PER_PAGE); }}
-              className={`text-[10px] uppercase tracking-[0.1em] px-3.5 py-1.5 border transition-all duration-300 font-light ${
+              className={`shrink-0 min-h-[44px] text-[10px] uppercase tracking-[0.12em] px-4 py-2.5 border transition-all duration-300 font-light ${
                 activeTax === tax
                   ? "bg-foreground text-background border-foreground"
                   : "border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground"
@@ -283,8 +264,8 @@ export default function CatalogPage() {
             </p>
           </div>
           {/* Mobile: horizontal snap scroll. Desktop: paged translate */}
-          <div className="md:hidden -mx-6 px-6 max-w-[100vw] overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div className="flex gap-3 pb-2">
+          <div data-lenis-prevent className="md:hidden -mx-5 px-5 overflow-x-auto snap-x snap-mandatory no-scrollbar">
+            <div className="flex gap-3.5 pb-2">
               {carouselItems.map((item) => (
                 <Link
                   key={item.id}
@@ -411,6 +392,16 @@ function CatalogHero({
 }) {
   const [heroHeight, setHeroHeight] = useState(800);
   const [mounted, setMounted] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches,
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const on = () => setIsDesktop(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
 
   useEffect(() => {
     if (heroRef.current) {
@@ -484,7 +475,7 @@ function CatalogHero({
   return (
     <section
       ref={heroRef}
-      className="relative h-screen w-full overflow-hidden border-b border-border"
+      className="relative h-[100svh] md:h-screen w-full overflow-hidden border-b border-border"
     >
       {/* Background image (parallax + initial zoom from 105% → 100%) */}
       <motion.div
@@ -580,13 +571,13 @@ function CatalogHero({
       {/* Content — left aligned, ~38% width */}
       <motion.div
         className="relative z-10 h-full container-livora flex items-center"
-        style={{ x: textX, opacity: textOpacity, y: textY }}
+        style={isDesktop ? { x: textX, opacity: textOpacity, y: textY } : { opacity: textOpacity }}
       >
-        <div className="max-w-[560px] w-full md:w-[40%] pt-24 md:pt-32 pr-4 md:pr-0">
+        <div className="max-w-[560px] w-full md:w-[40%] pt-20 md:pt-32 pr-2 md:pr-0">
           {/* Eyebrow */}
           <motion.p
             {...eyebrowAnimation}
-            className="flex items-center gap-4 text-[10px] uppercase tracking-[0.45em] text-white/80 font-light mb-8"
+            className="flex items-center gap-4 text-[10px] uppercase tracking-[0.45em] text-white/80 font-light mb-5 md:mb-8"
           >
             <span className="inline-block h-px w-8 bg-white/50" />
             Livora Collection
@@ -594,9 +585,9 @@ function CatalogHero({
 
           {/* Massive editorial heading */}
           <h1
-            className="serif font-light text-white leading-[0.95] mb-6 md:mb-8"
+            className="serif font-light text-white leading-[0.98] md:leading-[0.95] mb-5 md:mb-8"
             style={{
-              fontSize: "clamp(44px, 11vw, 140px)",
+              fontSize: "clamp(38px, 10vw, 140px)",
               textShadow: "1px 1px 12px rgba(0,0,0,0.45)",
             }}
           >

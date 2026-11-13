@@ -187,7 +187,7 @@ const FurnitureCollectionCard = () => {
           {/* Content Section - 45% width */}
           <motion.div
             variants={contentVariants}
-            className="md:col-span-5 flex flex-col justify-center w-full h-full p-8 md:p-12 lg:p-16 gap-8"
+            className="md:col-span-5 flex flex-col justify-center w-full h-full p-6 sm:p-8 md:p-12 lg:p-16 gap-6 md:gap-8"
           >
             {/* Label */}
             <motion.p
@@ -218,7 +218,7 @@ const FurnitureCollectionCard = () => {
             <motion.p
               custom={2}
               variants={itemVariants}
-              className="text-foreground/75 leading-relaxed font-light text-base md:text-base max-w-sm"
+              className="text-foreground/75 leading-relaxed font-light text-base max-w-sm"
             >
               {t("furniture.desc")}
             </motion.p>
@@ -235,7 +235,7 @@ const FurnitureCollectionCard = () => {
             <motion.div
               custom={4}
               variants={itemVariants}
-              className="grid grid-cols-3 gap-4 md:gap-6"
+              className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6"
             >
               {[
                 {
@@ -320,11 +320,11 @@ const WhatAreYouLookingForSection = () => {
       className="py-20 md:py-28 lg:py-32"
     >
       {/* Header with Title and View All */}
-      <div className="px-4 md:px-8 lg:px-20 mb-12 md:mb-16">
-        <div className="flex items-center justify-between gap-8">
+      <div className="container-livora mb-10 md:mb-16">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-8">
           <motion.h3
             variants={titleVariants}
-            className="serif text-4xl md:text-5xl font-light text-foreground"
+            className="serif text-3xl sm:text-4xl md:text-5xl font-light text-foreground"
           >
             {t("furniture.looking_for")}
           </motion.h3>
@@ -334,7 +334,7 @@ const WhatAreYouLookingForSection = () => {
           >
             <Link
               to="/furniture"
-              className="inline-flex items-center gap-2 text-sm md:text-base text-foreground/70 hover:text-foreground transition-colors duration-300 group focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex items-center gap-2 min-h-[44px] py-2 text-sm md:text-base text-foreground/75 hover:text-foreground transition-colors duration-300 group focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               View All Categories{" "}
               <span className="transform group-hover:translate-x-1 transition-transform duration-300">
@@ -346,7 +346,7 @@ const WhatAreYouLookingForSection = () => {
       </div>
 
       {/* Category Cards Grid */}
-      <div className="px-4 md:px-8 lg:px-20">
+      <div className="container-livora">
         {/* Desktop & Tablet Grid */}
         <div className="hidden sm:grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6 md:gap-8">
           {categories.map((category, idx) => (
@@ -414,34 +414,14 @@ const WhatAreYouLookingForSection = () => {
 
         {/* Mobile Horizontal Scroll Carousel */}
         <div className="sm:hidden">
-          <div className="overflow-x-auto pb-4 -mx-4 px-4">
-            <style>{`
-              .mobile-carousel {
-                display: flex;
-                gap: 16px;
-                min-width: min-content;
-              }
-              .mobile-carousel::-webkit-scrollbar {
-                height: 4px;
-              }
-              .mobile-carousel::-webkit-scrollbar-track {
-                background: transparent;
-              }
-              .mobile-carousel::-webkit-scrollbar-thumb {
-                background: rgba(0, 0, 0, 0.1);
-                border-radius: 2px;
-              }
-              .mobile-carousel::-webkit-scrollbar-thumb:hover {
-                background: rgba(0, 0, 0, 0.2);
-              }
-            `}</style>
-            <div className="mobile-carousel">
+          <div data-lenis-prevent className="overflow-x-auto snap-x snap-mandatory pb-4 -mx-5 px-5 no-scrollbar">
+            <div className="flex gap-4 min-w-min">
               {categories.map((category, idx) => (
                 <motion.div
                   key={category.id}
                   custom={idx}
                   variants={cardVariants}
-                  className="flex-shrink-0 w-56"
+                  className="flex-shrink-0 w-[64vw] max-w-[240px] snap-start"
                 >
                   <Link
                     to={`/furniture?category=${category.slug}`}
@@ -483,9 +463,9 @@ const WhatAreYouLookingForSection = () => {
                         <motion.div
                           whileHover={{ x: 2 }}
                           transition={{ duration: 0.3 }}
-                          className="w-8 h-8 flex items-center justify-center rounded-full flex-shrink-0"
+                          className="w-10 h-10 flex items-center justify-center rounded-full flex-shrink-0"
                           style={{
-                            background: "rgba(201, 169, 122, 0.08)",
+                            background: "rgba(201, 169, 122, 0.12)",
                           }}
                         >
                           <span className="text-sm">→</span>

@@ -33,8 +33,7 @@ export default function CollectionLanding() {
       {/* HERO */}
       <section
         ref={heroRef}
-        className="relative w-full overflow-hidden"
-        style={{ height: "85vh" }}
+        className="relative w-full overflow-hidden h-[78svh] sm:h-[85vh]"
       >
         <motion.div
           style={{ y: heroY, scale: heroScale }}
@@ -83,7 +82,7 @@ export default function CollectionLanding() {
       </section>
 
       {/* GRID */}
-      <section className="container-livora py-24 md:py-32">
+      <section className="container-livora py-14 md:py-32">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-14">
           <div>
             <p className="text-[11px] tracking-[0.3em] uppercase text-muted-foreground mb-3">

@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowUpRight, X, Plus } from "lucide-react";
+import { ArrowUpRight, X, Plus, ZoomIn } from "lucide-react";
 import { imgUrl } from "@/lib/adminApi";
+import { ImageLightbox } from "@/components/livora/ImageLightbox";
 import {
   fetchProjectLayouts,
   type ProjectLayout,
@@ -47,38 +48,42 @@ const HotspotDot = ({
           onToggle();
         }}
         aria-label={spot.label}
-        className="relative grid place-items-center"
-        style={{
-          width: 30,
-          height: 30,
-          borderRadius: "50%",
-          background: active ? "#C9A97A" : "rgba(255,255,255,0.92)",
-          color: active ? "#FFFFFF" : "#1A1A1A",
-          border: "1px solid rgba(0,0,0,0.08)",
-          boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
-          cursor: "pointer",
-          transition: "background .35s ease, transform .35s ease",
-        }}
+        className="relative grid place-items-center w-11 h-11"
+        style={{ background: "transparent", border: "none", cursor: "pointer" }}
       >
         <span
-          className="absolute inset-0 rounded-full"
+          className="relative grid place-items-center"
           style={{
-            border: "1px solid rgba(201,169,122,0.65)",
-            animation: "hs-ping 2.4s cubic-bezier(0,0,0.2,1) infinite",
+            width: 30,
+            height: 30,
+            borderRadius: "50%",
+            background: active ? "#C9A97A" : "rgba(255,255,255,0.92)",
+            color: active ? "#FFFFFF" : "#1A1A1A",
+            border: "1px solid rgba(0,0,0,0.08)",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
+            transition: "background .35s ease, transform .35s ease",
           }}
-        />
-        <Plus size={14} strokeWidth={1.6} style={{ transform: active ? "rotate(45deg)" : "none", transition: "transform .3s ease" }} />
+        >
+          <span
+            className="absolute inset-0 rounded-full"
+            style={{
+              border: "1px solid rgba(201,169,122,0.65)",
+              animation: "hs-ping 2.4s cubic-bezier(0,0,0.2,1) infinite",
+            }}
+          />
+          <Plus size={14} strokeWidth={1.6} style={{ transform: active ? "rotate(45deg)" : "none", transition: "transform .3s ease" }} />
+        </span>
       </button>
 
       {active && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="absolute z-30 bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.16)] p-3 flex items-center gap-3 w-[240px] sm:w-[280px] animate-scale-in"
+          className="hidden sm:flex absolute z-30 bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.16)] p-3 items-center gap-3 w-[280px] animate-scale-in"
           style={{
-            left: placeRight ? 22 : undefined,
-            right: !placeRight ? 22 : undefined,
-            top: placeBelow ? 12 : undefined,
-            bottom: !placeBelow ? 12 : undefined,
+            left: placeRight ? 36 : undefined,
+            right: !placeRight ? 36 : undefined,
+            top: placeBelow ? 16 : undefined,
+            bottom: !placeBelow ? 16 : undefined,
           }}
         >
           <div className="w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-[#F1EEE9] grid place-items-center">
@@ -88,7 +93,7 @@ const HotspotDot = ({
               <span className="text-[8px] uppercase tracking-[0.15em] text-[#8A8A8A]">N/A</span>
             )}
           </div>
-          <div className="min-w-0 flex-1 pr-3">
+          <div className="min-w-0 flex-1 pr-4">
             <p className="text-[14px] leading-tight text-[#1A1A1A] truncate">{spot.label}</p>
             {spot.description && (
               <p className="text-[12px] text-[#7A7A7A] leading-snug line-clamp-2 mt-0.5">{spot.description}</p>
@@ -105,9 +110,9 @@ const HotspotDot = ({
           <button
             onClick={onToggle}
             aria-label="Close"
-            className="absolute top-2 right-2 text-[#9A9A9A] hover:text-[#1A1A1A]"
+            className="absolute top-1.5 right-1.5 w-8 h-8 flex items-center justify-center text-[#9A9A9A] hover:text-[#1A1A1A]"
           >
-            <X size={13} />
+            <X size={14} />
           </button>
         </div>
       )}
@@ -153,15 +158,17 @@ const RoomVisual = ({
           },
         );
 
-        gsap.fromTo(
-          imgRef.current,
-          { yPercent: -6 },
-          {
-            yPercent: 6,
-            ease: EASE.scrub,
-            scrollTrigger: { trigger: el, start: "top bottom", end: "bottom top", scrub: SCRUB },
-          },
-        );
+        if (window.matchMedia("(min-width: 1024px)").matches) {
+          gsap.fromTo(
+            imgRef.current,
+            { yPercent: -6 },
+            {
+              yPercent: 6,
+              ease: EASE.scrub,
+              scrollTrigger: { trigger: el, start: "top bottom", end: "bottom top", scrub: SCRUB },
+            },
+          );
+        }
       }
 
       ScrollTrigger.create({
@@ -188,7 +195,7 @@ const RoomVisual = ({
           src={src(room.image)}
           alt={room.title}
           className="absolute inset-0 w-full h-full object-cover"
-          style={{ scale: "1.12" }}
+          style={{ scale: "1.04" }}
           loading="lazy"
         />
         {(room.hotspots ?? []).map((h, i) => (
@@ -200,8 +207,50 @@ const RoomVisual = ({
           />
         ))}
       </div>
+
+      {/* Mobile hotspot card shown below image so it never clips on 375px viewports */}
+      {activeSpot !== null && (room.hotspots ?? [])[activeSpot] && (() => {
+        const spot = (room.hotspots ?? [])[activeSpot];
+        return (
+          <div className="sm:hidden mt-3 bg-white rounded-2xl border border-black/10 shadow-md p-3 flex items-center gap-3 relative animate-fade-in">
+            <div className="w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-[#F1EEE9] grid place-items-center">
+              {spot.image ? (
+                <img src={src(spot.image)} alt={spot.label} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-[8px] uppercase tracking-[0.15em] text-[#8A8A8A]">N/A</span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1 pr-6">
+              <p className="text-sm font-medium leading-tight text-[#1A1A1A] truncate">{spot.label}</p>
+              {spot.description && (
+                <p className="text-xs text-[#7A7A7A] leading-snug line-clamp-2 mt-0.5">{spot.description}</p>
+              )}
+              {spot.item_slug && (
+                <Link
+                  to={`/items/${spot.item_slug}`}
+                  className="inline-flex items-center gap-1 mt-1.5 text-xs text-[#C9A97A] py-1"
+                >
+                  View item <ArrowUpRight size={13} strokeWidth={2} />
+                </Link>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveSpot(null)}
+              aria-label="Close"
+              className="absolute top-1.5 right-1.5 w-9 h-9 flex items-center justify-center text-[#9A9A9A] hover:text-[#1A1A1A]"
+            >
+              <X size={15} />
+            </button>
+          </div>
+        );
+      })()}
+
       <p className="mt-3 text-[11px] uppercase tracking-[0.22em] text-[#9A9184]">
         {String(index + 1).padStart(2, "0")} — {room.title}
+        {(room.hotspots ?? []).length > 0 && (
+          <span className="sm:hidden text-[#C9A97A]"> · Tap dots</span>
+        )}
       </p>
     </div>
   );
@@ -299,6 +348,7 @@ const ProjectSpaces = ({ projectId }: { projectId?: number }) => {
   const [layouts, setLayouts] = useState<ProjectLayout[]>([]);
   const [layoutIdx, setLayoutIdx] = useState(0);
   const [activeRoom, setActiveRoom] = useState(0);
+  const [floorplanZoom, setFloorplanZoom] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -392,7 +442,7 @@ const ProjectSpaces = ({ projectId }: { projectId?: number }) => {
               <button
                 key={l.id ?? i}
                 onClick={() => setLayoutIdx(i)}
-                className="text-[11px] uppercase tracking-[0.22em] px-5 py-2.5 rounded-full transition-all duration-500"
+                className="min-h-[44px] text-[11px] uppercase tracking-[0.22em] px-5 py-2.5 rounded-full transition-all duration-500"
                 style={{
                   background: i === layoutIdx ? "#1A1A17" : "transparent",
                   color: i === layoutIdx ? "#FAFAF8" : "#1A1A1A",
@@ -410,13 +460,23 @@ const ProjectSpaces = ({ projectId }: { projectId?: number }) => {
       <div className="px-6 md:px-[60px] pb-16 md:pb-24 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
         <div className="lg:col-span-8">
           {layout?.image && (
-            <img
-              key={layout.id}
-              data-floorplan
-              src={src(layout.image)}
-              alt={`${layout.title} floor plan`}
-              className="w-full h-auto object-contain"
-            />
+            <button
+              type="button"
+              onClick={() => setFloorplanZoom(true)}
+              aria-label={`Zoom ${layout.title} floor plan`}
+              className="group relative block w-full cursor-zoom-in text-left"
+            >
+              <img
+                key={layout.id}
+                data-floorplan
+                src={src(layout.image)}
+                alt={`${layout.title} floor plan`}
+                className="w-full h-auto object-contain"
+              />
+              <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-black/65 backdrop-blur-sm text-white px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] opacity-90 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                <ZoomIn size={12} /> Zoom floor plan
+              </span>
+            </button>
           )}
           <p className="mt-4 text-[11px] uppercase tracking-[0.22em] text-[#9A9184]">
             <span className="text-[#1A1A1A]">{layout?.title}</span>
@@ -478,6 +538,13 @@ const ProjectSpaces = ({ projectId }: { projectId?: number }) => {
             </div>
           </div>
         </div>
+      )}
+      {layout?.image && (
+        <ImageLightbox
+          open={floorplanZoom}
+          images={[{ src: src(layout.image), alt: `${layout.title} floor plan` }]}
+          onClose={() => setFloorplanZoom(false)}
+        />
       )}
     </section>
   );

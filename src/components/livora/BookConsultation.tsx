@@ -46,7 +46,7 @@ export function BookConsultation({ image = DEFAULT_IMAGE, onBook }: Props) {
           </div>
 
           {/* MIDDLE: copy + CTA */}
-          <div className="px-8 md:px-10 py-10 md:py-12 flex flex-col justify-center">
+          <div className="px-6 sm:px-8 md:px-10 py-8 md:py-12 flex flex-col justify-center">
             <p className="text-[11px] tracking-[0.3em] uppercase text-white/60 mb-3">
               Need Help Choosing?
             </p>
@@ -56,7 +56,7 @@ export function BookConsultation({ image = DEFAULT_IMAGE, onBook }: Props) {
             <button
               type="button"
               onClick={handleClick}
-              className="inline-flex items-center gap-3 self-start bg-white text-neutral-900 px-6 py-3 text-[11px] tracking-[0.28em] uppercase hover:bg-white/90 transition-colors"
+              className="w-full sm:w-auto sm:self-start inline-flex items-center justify-center gap-3 bg-white text-neutral-900 min-h-[44px] px-6 py-3 text-[11px] tracking-[0.28em] uppercase hover:bg-white/90 active:scale-95 transition-all"
             >
               Book Consultation
               <ArrowRight size={14} />
@@ -64,7 +64,7 @@ export function BookConsultation({ image = DEFAULT_IMAGE, onBook }: Props) {
           </div>
 
           {/* RIGHT: perks list */}
-          <div className="px-8 md:px-10 py-10 md:py-12 flex flex-col justify-center gap-5 border-t md:border-t-0 md:border-l border-white/10">
+          <div className="px-6 sm:px-8 md:px-10 py-8 md:py-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-4 md:gap-5 border-t md:border-t-0 md:border-l border-white/10">
             {perks.map(({ icon: Icon, label }) => (
               <div key={label} className="flex items-center gap-4">
                 <span className="w-10 h-10 rounded-full border border-white/25 flex items-center justify-center shrink-0">

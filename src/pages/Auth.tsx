@@ -464,12 +464,13 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
                           onChange={(e) => setPassword(e.target.value)}
                           onFocus={() => snapTo(true)}
                           required
-                          className="w-full h-12 px-3.5 pr-10 rounded-lg border border-neutral-200 bg-white text-[14px] text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-[#C9974A] focus:ring-2 focus:ring-[#C9974A]/15 transition"
+                          className="w-full h-12 px-3.5 pr-12 rounded-lg border border-neutral-200 bg-white text-base sm:text-[14px] text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-[#C9974A] focus:ring-2 focus:ring-[#C9974A]/15 transition"
                         />
                         <button
                           type="button"
+                          aria-label={showPassword ? "Hide password" : "Show password"}
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-neutral-400 hover:text-neutral-600 transition"
                         >
                           {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                         </button>
@@ -480,18 +481,18 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
                       <button
                         type="button"
                         onClick={() => setRemember(!remember)}
-                        className="flex items-center gap-2 text-neutral-600"
+                        className="flex items-center gap-2.5 min-h-[44px] py-1 text-neutral-600"
                       >
                         <span
-                          className={`flex h-4 w-4 items-center justify-center rounded-[4px] border transition-colors ${
+                          className={`flex h-5 w-5 items-center justify-center rounded-[4px] border transition-colors ${
                             remember ? "border-[#C9974A] bg-[#C9974A]" : "border-neutral-300 bg-white"
                           }`}
                         >
-                          {remember && <Check size={10} className="text-white" strokeWidth={3} />}
+                          {remember && <Check size={12} className="text-white" strokeWidth={3} />}
                         </span>
                         Remember Me
                       </button>
-                      <Link to="/forgot-password" className="text-[#C9974A] font-medium hover:underline">
+                      <Link to="/forgot-password" className="min-h-[44px] inline-flex items-center text-[#C9974A] font-medium hover:underline">
                         Forgot Password?
                       </Link>
                     </div>
@@ -598,7 +599,7 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
                         <select
                           value={regCountryCode}
                           onChange={(e) => setRegCountryCode(e.target.value)}
-                          className="h-12 pl-2.5 pr-1.5 rounded-lg border border-neutral-200 bg-white text-[14px] text-neutral-900 outline-none focus:border-[#C9974A] focus:ring-2 focus:ring-[#C9974A]/15 transition shrink-0"
+                          className="h-12 pl-2.5 pr-1.5 rounded-lg border border-neutral-200 bg-white text-base sm:text-[14px] text-neutral-900 outline-none focus:border-[#C9974A] focus:ring-2 focus:ring-[#C9974A]/15 transition shrink-0"
                         >
                           {COUNTRY_CODES.map((c) => (
                             <option key={c.code} value={c.dial}>
@@ -614,7 +615,7 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
                           onChange={(e) => setRegPhone(e.target.value.replace(/\D/g, ""))}
                           onFocus={() => snapTo(true)}
                           required
-                          className="w-full h-12 px-3.5 rounded-lg border border-neutral-200 bg-white text-[14px] text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-[#C9974A] focus:ring-2 focus:ring-[#C9974A]/15 transition"
+                          className="min-w-0 flex-1 h-12 px-3.5 rounded-lg border border-neutral-200 bg-white text-base sm:text-[14px] text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-[#C9974A] focus:ring-2 focus:ring-[#C9974A]/15 transition"
                         />
                       </div>
                     </div>
@@ -630,12 +631,13 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
                           onFocus={() => snapTo(true)}
                           required
                           minLength={8}
-                          className="w-full h-12 px-3.5 pr-10 rounded-lg border border-neutral-200 bg-white text-[14px] text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-[#C9974A] focus:ring-2 focus:ring-[#C9974A]/15 transition"
+                          className="w-full h-12 px-3.5 pr-12 rounded-lg border border-neutral-200 bg-white text-base sm:text-[14px] text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-[#C9974A] focus:ring-2 focus:ring-[#C9974A]/15 transition"
                         />
                         <button
                           type="button"
+                          aria-label={showRegPassword ? "Hide password" : "Show password"}
                           onClick={() => setShowRegPassword(!showRegPassword)}
-                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-neutral-400 hover:text-neutral-600 transition"
                         >
                           {showRegPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                         </button>
@@ -653,34 +655,43 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
                           onFocus={() => snapTo(true)}
                           required
                           minLength={8}
-                          className="w-full h-12 px-3.5 pr-10 rounded-lg border border-neutral-200 bg-white text-[14px] text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-[#C9974A] focus:ring-2 focus:ring-[#C9974A]/15 transition"
+                          className="w-full h-12 px-3.5 pr-12 rounded-lg border border-neutral-200 bg-white text-base sm:text-[14px] text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-[#C9974A] focus:ring-2 focus:ring-[#C9974A]/15 transition"
                         />
-                        <Eye size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-300" />
+                        <button
+                          type="button"
+                          aria-label={showRegPassword ? "Hide password" : "Show password"}
+                          onClick={() => setShowRegPassword(!showRegPassword)}
+                          className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-neutral-400 hover:text-neutral-600 transition"
+                        >
+                          {showRegPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        if (!e.currentTarget.contains(e.target as Node)) return; // klik dari PolicyDialog (portal)
-                        setAgreeTerms(!agreeTerms);
-                      }}
-                      className="flex items-start gap-2 text-left text-[12.5px] text-neutral-600 leading-relaxed pt-1"
-                    >
-                      <span
-                        className={`mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-[4px] border transition-colors ${
-                          agreeTerms ? "border-[#C9974A] bg-[#C9974A]" : "border-neutral-300 bg-white"
-                        }`}
+                    <div className="flex items-start gap-2.5 text-left text-[12.5px] text-neutral-600 leading-relaxed pt-1">
+                      <button
+                        type="button"
+                        aria-label="Agree to Terms of Service and Privacy Policy"
+                        onClick={() => setAgreeTerms(!agreeTerms)}
+                        className="mt-0.5 flex h-6 w-6 -ml-1 flex-shrink-0 items-center justify-center"
                       >
-                        {agreeTerms && <Check size={10} className="text-white" strokeWidth={3} />}
-                      </span>
+                        <span
+                          className={`flex h-5 w-5 items-center justify-center rounded-[4px] border transition-colors ${
+                            agreeTerms ? "border-[#C9974A] bg-[#C9974A]" : "border-neutral-300 bg-white"
+                          }`}
+                        >
+                          {agreeTerms && <Check size={12} className="text-white" strokeWidth={3} />}
+                        </span>
+                      </button>
                       <span>
-                        I agree to the{" "}
+                        <button type="button" onClick={() => setAgreeTerms(!agreeTerms)} className="text-left">
+                          I agree to the{" "}
+                        </button>
                         <PolicyLink doc="terms" className="text-[#C9974A] font-medium hover:underline">Terms of Service</PolicyLink>{" "}
                         and{" "}
                         <PolicyLink doc="privacy" className="text-[#C9974A] font-medium hover:underline">Privacy Policy</PolicyLink>.
                       </span>
-                    </button>
+                    </div>
 
                     <button
                       type="submit"

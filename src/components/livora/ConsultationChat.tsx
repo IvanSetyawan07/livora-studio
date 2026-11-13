@@ -303,15 +303,17 @@ export default function ConsultationChat({ consultationId, mode, locked }: Props
             onClick={() => fileRef.current?.click()}
             disabled={locked || sending}
             title="Attach file"
-            className="border border-border rounded p-2 text-muted-foreground hover:text-foreground disabled:opacity-50"
+            aria-label="Attach file"
+            className="w-11 h-11 inline-flex items-center justify-center border border-border rounded text-muted-foreground hover:text-foreground disabled:opacity-50 shrink-0"
           >
-            <Paperclip size={14} />
+            <Paperclip size={15} />
           </button>
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              const isTouch = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+              if (!isTouch && e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 submit(e as unknown as React.FormEvent);
               }
@@ -319,12 +321,12 @@ export default function ConsultationChat({ consultationId, mode, locked }: Props
             rows={2}
             disabled={locked}
             placeholder={locked ? "Consultation ini sudah ditutup." : "Ketik pesan…"}
-            className="flex-1 border border-border rounded px-3 py-2 text-sm bg-background outline-none focus:border-foreground resize-none disabled:opacity-60"
+            className="flex-1 min-w-0 border border-border rounded px-3 py-2 text-base sm:text-sm bg-background outline-none focus:border-foreground resize-none disabled:opacity-60"
           />
           <button
             type="submit"
             disabled={sending || locked || (!body.trim() && !attachment)}
-            className="bg-foreground text-background px-4 py-2 rounded text-xs uppercase tracking-[0.2em] disabled:opacity-50 flex items-center gap-1.5"
+            className="min-h-[44px] bg-foreground text-background px-4 py-2 rounded text-xs uppercase tracking-[0.2em] disabled:opacity-50 flex items-center gap-1.5 shrink-0"
           >
             <Send size={14} /> {sending ? "…" : "Send"}
           </button>
