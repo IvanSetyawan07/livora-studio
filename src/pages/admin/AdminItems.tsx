@@ -905,126 +905,131 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
     return await resp.blob();
   };
 
-  // ── 1. BUTTON HAPUS BACKGROUND (AI Cutout) ──
+  // ── 1. BUTTON HAPUS BACKGROUND (Google Gemini AI Vision) ──
   const handleRemoveBg = async () => {
     if (!previewImgUrl) return;
     setIsRemovingBg(true);
-    const toastId = toast.loading("AI sedang mendeteksi & menghapus background furnitur...");
+    const toastId = toast.loading("Google Gemini AI sedang memindai objek & menghapus background...");
 
     try {
-      let cutoutBlob: Blob | null = null;
-      const apiKey = localStorage.getItem("livora_removebg_key");
-
-      if (apiKey) {
-        try {
-          const rawBlob = await getImageBlob();
-          const fd = new FormData();
-          fd.append("image_file", rawBlob, "item.jpg");
-          fd.append("size", "auto");
-          const res = await fetch("https://api.remove.bg/v1.0/removebg", {
-            method: "POST",
-            headers: { "X-Api-Key": apiKey },
-            body: fd,
-          });
-          if (res.ok) {
-            cutoutBlob = await res.blob();
-          }
-        } catch {
-          // fallback to in-browser AI
-        }
+      const fd = new FormData();
+      if (file) {
+        fd.append("image", file);
+      } else {
+        fd.append("image", previewImgUrl);
       }
+      fd.append("action", "remove_bg");
 
-      if (!cutoutBlob) {
-        // Deep Learning AI (IS-Net via WebAssembly)
-        // @ts-ignore
-        const imgly = await import(/* @vite-ignore */ "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.7/+esm");
-        const removeBackground = imgly.removeBackground || imgly.default;
-        const rawBlob = await getImageBlob();
-        cutoutBlob = await removeBackground(rawBlob, {
-          publicPath: "https://staticimgly.com/@imgly/background-removal-data/1.5.7/dist/",
-        });
-      }
-
-      if (cutoutBlob) {
-        const cleanFile = new File([cutoutBlob], (file?.name || "furniture").replace(/\.[^/.]+$/, "") + "-nobg.png", {
+      const res = await api.post("/admin/items/gemini-process", fd);
+      if (res.data?.success && (res.data?.base64 || res.data?.url)) {
+        const outUrl = res.data.base64 || res.data.url;
+        const fetchRes = await fetch(outUrl);
+        const blob = await fetchRes.blob();
+        const cleanFile = new File([blob], (file?.name || "furniture").replace(/\.[^/.]+$/, "") + "-gemini-nobg.png", {
           type: "image/png",
         });
         setFile(cleanFile);
         setPreviewImgUrl(URL.createObjectURL(cleanFile));
         setIsModifiedByAi(true);
-        toast.success("Background berhasil dihapus! Hanya tersisa barangnya.", { id: toastId });
+
+        const modelUsed = res.data?.model || "Gemini Vision";
+        const detected = res.data?.gemini_analysis?.furniture_name || "Objek furnitur";
+        toast.success(`Berhasil! Google Gemini AI [${modelUsed}] mendeteksi "${detected}" & mengisolasi barang.`, { id: toastId });
       } else {
-        throw new Error("Gagal mengekstrak objek furnitur");
+        throw new Error(res.data?.message || "Gagal memproses dengan Gemini");
       }
     } catch (err: any) {
-      console.error("Remove BG error:", err);
-      toast.error(err?.message || "Gagal menghapus background. Pastikan internet aktif untuk memuat AI.", { id: toastId });
+      console.error("Gemini Remove BG error:", err);
+      // Fallback lokal jika backend terhambat koneksi luar
+      try {
+        const rawBlob = await getImageBlob();
+        // @ts-ignore
+        const imgly = await import(/* @vite-ignore */ "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.7/+esm");
+        const removeBackground = imgly.removeBackground || imgly.default;
+        const fallbackBlob = await removeBackground(rawBlob);
+        const cleanFile = new File([fallbackBlob], (file?.name || "furniture").replace(/\.[^/.]+$/, "") + "-nobg.png", { type: "image/png" });
+        setFile(cleanFile);
+        setPreviewImgUrl(URL.createObjectURL(cleanFile));
+        setIsModifiedByAi(true);
+        toast.success("Background berhasil dihapus!", { id: toastId });
+      } catch (fErr) {
+        toast.error(err?.response?.data?.message || err?.message || "Gagal memproses dengan Google Gemini.", { id: toastId });
+      }
     } finally {
       setIsRemovingBg(false);
     }
   };
 
-  // ── 2. BUTTON UPSCALE GAMBAR (2x Super-Resolution & Clarity) ──
+  // ── 2. BUTTON UPSCALE GAMBAR (Google Gemini AI Vision) ──
   const handleUpscale = async () => {
     if (!previewImgUrl) return;
     setIsUpscaling(true);
-    const toastId = toast.loading("Meningkatkan resolusi & kejernihan gambar (2x Upscale)...");
+    const toastId = toast.loading("Google Gemini AI sedang menganalisis tekstur & meng-upscale resolusi...");
 
     try {
-      const img = new Image();
-      if (!previewImgUrl.startsWith("blob:") && !previewImgUrl.startsWith("data:")) {
-        img.crossOrigin = "anonymous";
+      const fd = new FormData();
+      if (file) {
+        fd.append("image", file);
+      } else {
+        fd.append("image", previewImgUrl);
       }
+      fd.append("action", "upscale");
 
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = (e) => reject(e);
-        img.src = previewImgUrl;
-      });
-
-      const originalW = img.naturalWidth || img.width || 800;
-      const originalH = img.naturalHeight || img.height || 600;
-      const targetW = originalW * 2;
-      const targetH = originalH * 2;
-
-      const canvas = document.createElement("canvas");
-      canvas.width = targetW;
-      canvas.height = targetH;
-      const ctx = canvas.getContext("2d", { willReadFrequently: true });
-      if (!ctx) throw new Error("Canvas context tidak tersedia");
-
-      // Gambar dengan interpolasi kualitas tinggi
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
-      ctx.drawImage(img, 0, 0, targetW, targetH);
-
-      // Micro-contrast & texture unsharp mask
-      const imgData = ctx.getImageData(0, 0, targetW, targetH);
-      const data = imgData.data;
-      const contrastFactor = 1.08; // +8% micro-contrast
-      for (let i = 0; i < data.length; i += 4) {
-        if (data[i + 3] === 0) continue; // skip transparan
-        data[i] = Math.min(255, Math.max(0, Math.round(contrastFactor * (data[i] - 128) + 128)));
-        data[i + 1] = Math.min(255, Math.max(0, Math.round(contrastFactor * (data[i + 1] - 128) + 128)));
-        data[i + 2] = Math.min(255, Math.max(0, Math.round(contrastFactor * (data[i + 2] - 128) + 128)));
-      }
-      ctx.putImageData(imgData, 0, 0);
-
-      // Export sebagai WebP resolusi tinggi
-      canvas.toBlob((blob) => {
-        if (!blob) throw new Error("Gagal export canvas");
-        const upscaledFile = new File([blob], (file?.name || "furniture").replace(/\.[^/.]+$/, "") + "-upscaled.webp", {
-          type: "image/webp",
+      const res = await api.post("/admin/items/gemini-process", fd);
+      if (res.data?.success && (res.data?.base64 || res.data?.url)) {
+        const outUrl = res.data.base64 || res.data.url;
+        const fetchRes = await fetch(outUrl);
+        const blob = await fetchRes.blob();
+        const upscaledFile = new File([blob], (file?.name || "furniture").replace(/\.[^/.]+$/, "") + "-gemini-upscale.png", {
+          type: "image/png",
         });
         setFile(upscaledFile);
         setPreviewImgUrl(URL.createObjectURL(upscaledFile));
         setIsModifiedByAi(true);
-        toast.success(`Gambar berhasil di-upscale ke ${targetW}x${targetH}px lebih tajam!`, { id: toastId });
-        setIsUpscaling(false);
-      }, "image/webp", 0.96);
+
+        const modelUsed = res.data?.model || "Gemini Vision";
+        toast.success(`Berhasil! Google Gemini AI [${modelUsed}] berhasil meng-upscale gambar 2x lebih jernih.`, { id: toastId });
+      } else {
+        throw new Error(res.data?.message || "Gagal meng-upscale dengan Gemini");
+      }
     } catch (err: any) {
-      console.error("Upscale error:", err);
-      toast.error("Gagal melakukan upscale gambar.", { id: toastId });
+      console.error("Gemini Upscale error:", err);
+      // Fallback lokal client-side canvas
+      try {
+        const img = new Image();
+        if (!previewImgUrl.startsWith("blob:") && !previewImgUrl.startsWith("data:")) {
+          img.crossOrigin = "anonymous";
+        }
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = (e) => reject(e);
+          img.src = previewImgUrl;
+        });
+
+        const targetW = (img.naturalWidth || 800) * 2;
+        const targetH = (img.naturalHeight || 600) * 2;
+        const canvas = document.createElement("canvas");
+        canvas.width = targetW;
+        canvas.height = targetH;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(img, 0, 0, targetW, targetH);
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const f = new File([blob], "upscaled.webp", { type: "image/webp" });
+              setFile(f);
+              setPreviewImgUrl(URL.createObjectURL(f));
+              setIsModifiedByAi(true);
+              toast.success(`Gambar di-upscale ke ${targetW}x${targetH}px!`, { id: toastId });
+            }
+          }, "image/webp", 0.95);
+        }
+      } catch (fErr) {
+        toast.error(err?.response?.data?.message || err?.message || "Gagal meng-upscale gambar.", { id: toastId });
+      }
+    } finally {
       setIsUpscaling(false);
     }
   };
@@ -1190,17 +1195,17 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
                     onClick={handleRemoveBg}
                     disabled={isRemovingBg || isUpscaling}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#D7B483] text-black text-xs font-semibold hover:bg-[#c6a270] transition-all shadow-sm disabled:opacity-50"
-                    title="Hapus background agar tersisa murni barangnya saja"
+                    title="Hapus background objek dengan Google Gemini AI"
                   >
                     {isRemovingBg ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Menghapus Background...</span>
+                        <span>Gemini AI Memproses...</span>
                       </>
                     ) : (
                       <>
                         <Scissors className="w-3.5 h-3.5" />
-                        <span>Hapus Background</span>
+                        <span>Hapus Background (Gemini AI)</span>
                       </>
                     )}
                   </button>
@@ -1211,17 +1216,17 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
                     onClick={handleUpscale}
                     disabled={isRemovingBg || isUpscaling}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-foreground text-background text-xs font-semibold hover:opacity-90 transition-all shadow-sm disabled:opacity-50"
-                    title="Tingkatkan resolusi dan kejernihan foto (2x Upscale)"
+                    title="Tingkatkan resolusi & tekstur gambar dengan Google Gemini AI"
                   >
                     {isUpscaling ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Meng-upscale...</span>
+                        <span>Gemini AI Meng-upscale...</span>
                       </>
                     ) : (
                       <>
                         <Sparkles className="w-3.5 h-3.5 text-[#D7B483]" />
-                        <span>Upscale Gambar</span>
+                        <span>Upscale Gambar (Gemini AI)</span>
                       </>
                     )}
                   </button>

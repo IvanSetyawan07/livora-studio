@@ -200,6 +200,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Items
         Route::get('/items/lookup/{slug}', [ItemController::class, 'adminShow']);
         Route::post('/items', [ItemController::class, 'store']);
+        Route::post('/items/gemini-process', [\App\Http\Controllers\Api\GeminiItemImageController::class, 'process']);
         Route::post('/items/bulk-discount', [ItemController::class, 'bulkDiscount']);
         Route::post('/items/{item}', [ItemController::class, 'update']);
         Route::delete('/items/{item}', [ItemController::class, 'destroy']);
