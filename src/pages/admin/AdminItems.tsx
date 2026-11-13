@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import ItemQRCode from "@/components/livora/ItemQRCode";
 import BulkDiscountModal from "@/components/admin/BulkDiscountModal";
+import BatchGeminiCutoutModal from "@/components/admin/BatchGeminiCutoutModal";
 import { bulkDiscountItems } from "@/lib/promoApi";
 
 type SortKey = "name-asc" | "name-desc" | "date-desc" | "date-asc";
@@ -61,6 +62,8 @@ export default function AdminItems() {
   const [singlePromoItem, setSinglePromoItem] = useState<any | null>(null);
   const [promoOnlyFilter, setPromoOnlyFilter] = useState(false);
   const [clearingPromo, setClearingPromo] = useState(false);
+  const [showBatchModal, setShowBatchModal] = useState(false);
+  const [batchInitialItems, setBatchInitialItems] = useState<any[]>([]);
 
   // Filter / search / sort
   const [query, setQuery] = useState("");
@@ -227,6 +230,20 @@ export default function AdminItems() {
           </p>
         </div>
         <div className="flex items-center gap-2.5">
+          {/* Tombol Batch Gemini AI Cutout (Pilih 5 atau berapapun foto) */}
+          <button
+            type="button"
+            onClick={() => {
+              setBatchInitialItems([]);
+              setShowBatchModal(true);
+            }}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded text-xs uppercase tracking-[0.16em] font-medium transition-all shadow-sm bg-card hover:bg-muted text-foreground border border-border"
+            title="Pilih 5 atau berapapun foto sekaligus untuk dihapus backgroundnya oleh Gemini AI"
+          >
+            <Scissors className="w-3.5 h-3.5 text-[#D7B483]" />
+            <span>Batch Hapus BG (Gemini AI)</span>
+          </button>
+
           {/* Tombol Toggle Mode Seleksi Promo */}
           <button
             type="button"
@@ -772,6 +789,20 @@ export default function AdminItems() {
             <Percent className="w-3.5 h-3.5" /> Terapkan Diskon Massal
           </button>
 
+          {/* Tombol Hapus Background Massal untuk Item Terpilih */}
+          <button
+            type="button"
+            onClick={() => {
+              setBatchInitialItems(selectedItemsData);
+              setShowBatchModal(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-background/30 hover:bg-background/10 text-xs uppercase tracking-wider transition-colors"
+            title="Hapus background foto untuk semua item terpilih sekaligus dengan Gemini AI"
+          >
+            <Scissors className="w-3.5 h-3.5 text-[#D7B483]" />
+            <span>Hapus BG ({selectedIds.length} Item)</span>
+          </button>
+
           <button
             type="button"
             disabled={clearingPromo}
@@ -802,6 +833,24 @@ export default function AdminItems() {
           setSelectedIds([]);
           setIsPromoSelectMode(false); // Otomatis keluar mode promo setelah tersimpan
           load();
+        }}
+      />
+
+      {/* Batch Gemini AI Cutout Modal (Multi-Image / Multi-Item) */}
+      <BatchGeminiCutoutModal
+        isOpen={showBatchModal}
+        initialItems={batchInitialItems}
+        onClose={() => {
+          setShowBatchModal(false);
+          setBatchInitialItems([]);
+        }}
+        onItemsUpdated={() => {
+          load();
+          setSelectedIds([]);
+        }}
+        onApplyToNewItem={(cleanFile, cleanUrl) => {
+          setEditing(null);
+          setShowForm(true);
         }}
       />
 

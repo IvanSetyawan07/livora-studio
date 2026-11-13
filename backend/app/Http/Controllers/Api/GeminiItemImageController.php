@@ -201,11 +201,22 @@ Return ONLY a valid JSON object matching:
         imagedestroy($sourceImg);
         imagedestroy($outputImg);
 
-        // Simpan file sementara di storage
+        // Simpan file ke storage
         $filename = 'gemini_' . Str::random(16) . '.png';
         Storage::disk('public')->put('temp_ai/' . $filename, $outputBinary);
         $url = asset('storage/temp_ai/' . $filename);
         $base64Data = 'data:image/png;base64,' . base64_encode($outputBinary);
+
+        // Jika item_id disertakan, perbarui foto item di database secara otomatis
+        if ($request->filled('item_id')) {
+            $item = \App\Models\Item::find($request->input('item_id'));
+            if ($item) {
+                $permName = 'items/' . $filename;
+                Storage::disk('public')->put($permName, $outputBinary);
+                $item->image = $permName;
+                $item->save();
+            }
+        }
 
         return response()->json([
             'success' => true,
