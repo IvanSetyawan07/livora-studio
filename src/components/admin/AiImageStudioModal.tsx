@@ -66,15 +66,29 @@ export default function AiImageStudioModal({
     setProcessingMessage("AI Agent sedang menganalisis objek furnitur...");
 
     try {
-      const img = new Image();
+      // Pastikan gambar remote di-convert ke local blob URL agar bebas kendala CORS / tainted canvas
+      let resolvedSource = imageSource;
       if (!imageSource.startsWith("blob:") && !imageSource.startsWith("data:")) {
+        try {
+          const resp = await fetch(imageSource, { mode: "cors" });
+          if (resp.ok) {
+            const blob = await resp.blob();
+            resolvedSource = URL.createObjectURL(blob);
+          }
+        } catch {
+          // fallback ke original url jika fetch terhambat
+        }
+      }
+
+      const img = new Image();
+      if (!resolvedSource.startsWith("blob:") && !resolvedSource.startsWith("data:")) {
         img.crossOrigin = "anonymous";
       }
 
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve();
         img.onerror = (e) => reject(e);
-        img.src = imageSource;
+        img.src = resolvedSource;
       });
 
       setProcessingMessage("Menghapus background & mengisolasi furnitur...");
