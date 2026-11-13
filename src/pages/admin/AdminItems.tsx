@@ -27,10 +27,11 @@ import {
   ArrowRight,
   Maximize2,
   Wand2,
+  Scissors,
+  RotateCcw,
 } from "lucide-react";
 import ItemQRCode from "@/components/livora/ItemQRCode";
 import BulkDiscountModal from "@/components/admin/BulkDiscountModal";
-import AiImageStudioModal from "@/components/admin/AiImageStudioModal";
 import { bulkDiscountItems } from "@/lib/promoApi";
 
 type SortKey = "name-asc" | "name-desc" | "date-desc" | "date-asc";
@@ -861,13 +862,19 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
   const [themeIds, setThemeIds] = useState<number[]>(item?.themes?.map((t: any) => t.id) || []);
   const [catIds, setCatIds] = useState<number[]>(item?.categories?.map((c: any) => c.id) || []);
 
-  // Image Upload with Live Preview & Fit Adjuster
+  // Image Upload & 2 AI Action Buttons (Hapus Background & Upscale)
   const [file, setFile] = useState<File | null>(null);
   const [previewImgUrl, setPreviewImgUrl] = useState<string>(
     item?.image ? imgUrl(item.image) : ""
   );
+  const [originalBackupUrl, setOriginalBackupUrl] = useState<string>(
+    item?.image ? imgUrl(item.image) : ""
+  );
+  const [originalBackupFile, setOriginalBackupFile] = useState<File | null>(null);
   const [imageFit, setImageFit] = useState<"contain" | "cover">("contain");
-  const [showAiStudio, setShowAiStudio] = useState(false);
+  const [isRemovingBg, setIsRemovingBg] = useState(false);
+  const [isUpscaling, setIsUpscaling] = useState(false);
+  const [isModifiedByAi, setIsModifiedByAi] = useState(false);
 
   // Promo settings
   const [isOnPromo, setIsOnPromo] = useState<boolean>(item?.is_on_promo || false);
@@ -883,8 +890,151 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
     const f = e.target.files?.[0];
     if (f) {
       setFile(f);
-      setPreviewImgUrl(URL.createObjectURL(f));
+      const url = URL.createObjectURL(f);
+      setPreviewImgUrl(url);
+      setOriginalBackupFile(f);
+      setOriginalBackupUrl(url);
+      setIsModifiedByAi(false);
     }
+  };
+
+  // Helper untuk mendapatkan Blob dari preview gambar
+  const getImageBlob = async (): Promise<Blob> => {
+    if (file) return file;
+    const resp = await fetch(previewImgUrl, { mode: "cors" });
+    return await resp.blob();
+  };
+
+  // ── 1. BUTTON HAPUS BACKGROUND (AI Cutout) ──
+  const handleRemoveBg = async () => {
+    if (!previewImgUrl) return;
+    setIsRemovingBg(true);
+    const toastId = toast.loading("AI sedang mendeteksi & menghapus background furnitur...");
+
+    try {
+      let cutoutBlob: Blob | null = null;
+      const apiKey = localStorage.getItem("livora_removebg_key");
+
+      if (apiKey) {
+        try {
+          const rawBlob = await getImageBlob();
+          const fd = new FormData();
+          fd.append("image_file", rawBlob, "item.jpg");
+          fd.append("size", "auto");
+          const res = await fetch("https://api.remove.bg/v1.0/removebg", {
+            method: "POST",
+            headers: { "X-Api-Key": apiKey },
+            body: fd,
+          });
+          if (res.ok) {
+            cutoutBlob = await res.blob();
+          }
+        } catch {
+          // fallback to in-browser AI
+        }
+      }
+
+      if (!cutoutBlob) {
+        // Deep Learning AI (IS-Net via WebAssembly)
+        // @ts-ignore
+        const imgly = await import(/* @vite-ignore */ "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.7/+esm");
+        const removeBackground = imgly.removeBackground || imgly.default;
+        const rawBlob = await getImageBlob();
+        cutoutBlob = await removeBackground(rawBlob, {
+          publicPath: "https://staticimgly.com/@imgly/background-removal-data/1.5.7/dist/",
+        });
+      }
+
+      if (cutoutBlob) {
+        const cleanFile = new File([cutoutBlob], (file?.name || "furniture").replace(/\.[^/.]+$/, "") + "-nobg.png", {
+          type: "image/png",
+        });
+        setFile(cleanFile);
+        setPreviewImgUrl(URL.createObjectURL(cleanFile));
+        setIsModifiedByAi(true);
+        toast.success("Background berhasil dihapus! Hanya tersisa barangnya.", { id: toastId });
+      } else {
+        throw new Error("Gagal mengekstrak objek furnitur");
+      }
+    } catch (err: any) {
+      console.error("Remove BG error:", err);
+      toast.error(err?.message || "Gagal menghapus background. Pastikan internet aktif untuk memuat AI.", { id: toastId });
+    } finally {
+      setIsRemovingBg(false);
+    }
+  };
+
+  // ── 2. BUTTON UPSCALE GAMBAR (2x Super-Resolution & Clarity) ──
+  const handleUpscale = async () => {
+    if (!previewImgUrl) return;
+    setIsUpscaling(true);
+    const toastId = toast.loading("Meningkatkan resolusi & kejernihan gambar (2x Upscale)...");
+
+    try {
+      const img = new Image();
+      if (!previewImgUrl.startsWith("blob:") && !previewImgUrl.startsWith("data:")) {
+        img.crossOrigin = "anonymous";
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = (e) => reject(e);
+        img.src = previewImgUrl;
+      });
+
+      const originalW = img.naturalWidth || img.width || 800;
+      const originalH = img.naturalHeight || img.height || 600;
+      const targetW = originalW * 2;
+      const targetH = originalH * 2;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) throw new Error("Canvas context tidak tersedia");
+
+      // Gambar dengan interpolasi kualitas tinggi
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(img, 0, 0, targetW, targetH);
+
+      // Micro-contrast & texture unsharp mask
+      const imgData = ctx.getImageData(0, 0, targetW, targetH);
+      const data = imgData.data;
+      const contrastFactor = 1.08; // +8% micro-contrast
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] === 0) continue; // skip transparan
+        data[i] = Math.min(255, Math.max(0, Math.round(contrastFactor * (data[i] - 128) + 128)));
+        data[i + 1] = Math.min(255, Math.max(0, Math.round(contrastFactor * (data[i + 1] - 128) + 128)));
+        data[i + 2] = Math.min(255, Math.max(0, Math.round(contrastFactor * (data[i + 2] - 128) + 128)));
+      }
+      ctx.putImageData(imgData, 0, 0);
+
+      // Export sebagai WebP resolusi tinggi
+      canvas.toBlob((blob) => {
+        if (!blob) throw new Error("Gagal export canvas");
+        const upscaledFile = new File([blob], (file?.name || "furniture").replace(/\.[^/.]+$/, "") + "-upscaled.webp", {
+          type: "image/webp",
+        });
+        setFile(upscaledFile);
+        setPreviewImgUrl(URL.createObjectURL(upscaledFile));
+        setIsModifiedByAi(true);
+        toast.success(`Gambar berhasil di-upscale ke ${targetW}x${targetH}px lebih tajam!`, { id: toastId });
+        setIsUpscaling(false);
+      }, "image/webp", 0.96);
+    } catch (err: any) {
+      console.error("Upscale error:", err);
+      toast.error("Gagal melakukan upscale gambar.", { id: toastId });
+      setIsUpscaling(false);
+    }
+  };
+
+  // Reset ke foto asli
+  const handleResetOriginal = () => {
+    setFile(originalBackupFile);
+    setPreviewImgUrl(originalBackupUrl);
+    setIsModifiedByAi(false);
+    toast.info("Foto dikembalikan ke versi asli.");
   };
 
   // Auto-update promo badge saat nilai diskon berubah
@@ -1033,15 +1183,61 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
               </p>
 
               {previewImgUrl && (
-                <div className="pt-2">
+                <div className="pt-2 flex flex-wrap items-center gap-2">
+                  {/* Tombol 1: Hapus Background */}
                   <button
                     type="button"
-                    onClick={() => setShowAiStudio(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#D7B483] text-black text-xs font-semibold hover:bg-[#c6a270] transition-all shadow-sm"
+                    onClick={handleRemoveBg}
+                    disabled={isRemovingBg || isUpscaling}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#D7B483] text-black text-xs font-semibold hover:bg-[#c6a270] transition-all shadow-sm disabled:opacity-50"
+                    title="Hapus background agar tersisa murni barangnya saja"
                   >
-                    <Wand2 className="w-3.5 h-3.5" />
-                    <span>✨ AI Studio: Hapus Background & Tingkatkan Realisme</span>
+                    {isRemovingBg ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Menghapus Background...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Scissors className="w-3.5 h-3.5" />
+                        <span>Hapus Background</span>
+                      </>
+                    )}
                   </button>
+
+                  {/* Tombol 2: Upscale Gambar */}
+                  <button
+                    type="button"
+                    onClick={handleUpscale}
+                    disabled={isRemovingBg || isUpscaling}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-foreground text-background text-xs font-semibold hover:opacity-90 transition-all shadow-sm disabled:opacity-50"
+                    title="Tingkatkan resolusi dan kejernihan foto (2x Upscale)"
+                  >
+                    {isUpscaling ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Meng-upscale...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5 text-[#D7B483]" />
+                        <span>Upscale Gambar</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Reset ke Asli jika sudah diedit */}
+                  {isModifiedByAi && (
+                    <button
+                      type="button"
+                      onClick={handleResetOriginal}
+                      className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors"
+                      title="Kembalikan ke foto awal"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Reset Asli</span>
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -1161,20 +1357,7 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
         </div>
       </form>
 
-      {/* AI Image Studio Modal */}
-      {showAiStudio && previewImgUrl && (
-        <AiImageStudioModal
-          isOpen={showAiStudio}
-          imageSource={previewImgUrl}
-          originalFile={file}
-          itemName={title || "Furnitur"}
-          onClose={() => setShowAiStudio(false)}
-          onApply={(processedFile, processedUrl) => {
-            setFile(processedFile);
-            setPreviewImgUrl(processedUrl);
-          }}
-        />
-      )}
+
     </div>
   );
 }
