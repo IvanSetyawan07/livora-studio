@@ -88,11 +88,23 @@ export async function bulkDiscountItems(payload: BulkDiscountPayload): Promise<{
 
 /** Mengambil item-item yang sedang promo */
 export async function getPromoItems(params?: { type?: string; sort?: string }): Promise<RichItem[]> {
-  const res = await api.get<any[]>("/items", {
-    params: {
-      promo: 1,
-      ...params,
-    },
-  });
-  return (res.data || []).map(mapApiItem);
+  try {
+    const res = await api.get<any[]>("/items", {
+      params: {
+        promo: 1,
+        ...params,
+      },
+    });
+    const mapped = (res.data || []).map(mapApiItem);
+    if (mapped.length > 0) {
+      return mapped.filter((i) => i.is_on_promo !== false);
+    }
+    // Fallback: periksa seluruh items dan filter yang is_on_promo == true
+    const allRes = await api.get<any[]>("/items");
+    const allMapped = (allRes.data || []).map(mapApiItem);
+    return allMapped.filter((i) => Boolean(i.is_on_promo));
+  } catch (err) {
+    console.warn("Gagal memuat promo items:", err);
+    return [];
+  }
 }

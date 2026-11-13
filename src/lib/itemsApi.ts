@@ -95,6 +95,8 @@ interface ApiItem {
 
 export interface RichItem extends Item {
   id?: number;
+  type?: { id: number; name: string; slug: string } | null;
+  type_id?: number | null;
   collection?: CollectionRef | null;
   themeRefs?: { id: number; name: string; slug: string }[];
   categoryRefs?: { id: number; name: string; slug: string }[];
@@ -113,6 +115,8 @@ export const mapApiItem = (it: ApiItem): RichItem => {
     name: it.title,
     code: it.code ?? "",
     category: (it.type?.name ?? "Furniture").toUpperCase(),
+    type: it.type ?? null,
+    type_id: it.type?.id ?? null,
     specs: {
       dimensions: "—",
       material: it.texture ?? "—",

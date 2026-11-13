@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
 import { toast } from "sonner";
@@ -17,18 +17,28 @@ import {
   ClipboardList,
   Percent,
   Sparkles,
-  CheckSquare,
-  Square,
   Tag,
   Loader2,
+  LayoutGrid,
+  List,
+  Check,
+  CheckCircle2,
+  Layers,
+  ArrowRight,
+  Maximize2,
 } from "lucide-react";
 import ItemQRCode from "@/components/livora/ItemQRCode";
 import BulkDiscountModal from "@/components/admin/BulkDiscountModal";
 import { bulkDiscountItems } from "@/lib/promoApi";
 
 type SortKey = "name-asc" | "name-desc" | "date-desc" | "date-asc";
+type ViewMode = "grid" | "table";
 
 export default function AdminItems() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialPromoMode = searchParams.get("mode") === "promo";
+  const bannerTitleParam = searchParams.get("banner_title");
+
   const [items, setItems] = useState<any[]>([]);
   const [types, setTypes] = useState<any[]>([]);
   const [themes, setThemes] = useState<any[]>([]);
@@ -38,22 +48,26 @@ export default function AdminItems() {
   const [showForm, setShowForm] = useState(false);
   const [qrItem, setQrItem] = useState<any | null>(null);
 
-  // Bulk discount & selection
+  // Tampilan (View Mode): Grid Galeri Visual vs Tabel Detail
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+
+  // Mode Seleksi Promo (Hanya aktif jika admin mengaktifkannya, TIDAK mengotori tampilan normal)
+  const [isPromoSelectMode, setIsPromoSelectMode] = useState<boolean>(initialPromoMode);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showBulkModal, setShowBulkModal] = useState(false);
+  const [singlePromoItem, setSinglePromoItem] = useState<any | null>(null);
   const [promoOnlyFilter, setPromoOnlyFilter] = useState(false);
   const [clearingPromo, setClearingPromo] = useState(false);
 
-  // filter / search / sort
+  // Filter / search / sort
   const [query, setQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>(""); // type slug or id
+  const [typeFilter, setTypeFilter] = useState<string>("");
   const [sortBy, setSortBy] = useState<SortKey>("date-desc");
   const [showFilter, setShowFilter] = useState(false);
 
   const load = () =>
     api.get("/items").then((r) => {
       setItems(r.data);
-      // Bersihkan id yang sudah tidak ada
       setSelectedIds((prev) => prev.filter((id) => (r.data || []).some((it: any) => it.id === id)));
     });
 
@@ -72,6 +86,18 @@ export default function AdminItems() {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, []);
+
+  // Update query param bila mode promo berubah
+  const handleTogglePromoMode = () => {
+    const next = !isPromoSelectMode;
+    setIsPromoSelectMode(next);
+    if (!next) {
+      setSelectedIds([]);
+      searchParams.delete("mode");
+      searchParams.delete("banner_title");
+      setSearchParams(searchParams, { replace: true });
+    }
+  };
 
   const del = async (i: any) => {
     if (!confirm(`Hapus item "${i.title}"?`)) return;
@@ -101,24 +127,24 @@ export default function AdminItems() {
     }
   };
 
-  // Toggle selection
+  // Toggle selection pada mode promo (klik langsung pada item)
   const toggleSelect = (id: number) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
 
-  const toggleSelectAll = (visibleItems: any[]) => {
+  const selectAllVisible = (visibleItems: any[]) => {
     const visibleIds = visibleItems.map((i) => i.id);
-    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
-    if (allSelected) {
-      setSelectedIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
-    } else {
-      setSelectedIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
-    }
+    setSelectedIds(Array.from(new Set([...selectedIds, ...visibleIds])));
   };
 
-  // Bulk clear promo
+  const deselectAllVisible = (visibleItems: any[]) => {
+    const visibleIds = visibleItems.map((i) => i.id);
+    setSelectedIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+  };
+
+  // Hapus promo dari item-item yang dipilih
   const handleBulkClearPromo = async () => {
     if (!confirm(`Hapus status promo dari ${selectedIds.length} item terpilih?`)) return;
     setClearingPromo(true);
@@ -187,29 +213,95 @@ export default function AdminItems() {
   };
 
   return (
-    <div className="pb-24">
+    <div className="pb-32 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2">Manage</p>
-          <h1 className="serif text-4xl">Items / Furniture</h1>
-          <p className="text-xs text-muted-foreground mt-1">
-            Kelola data furnitur, rincian produk, serta penetapan diskon promo satuan maupun massal.
+          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-1.5">Katalog Furnitur</p>
+          <h1 className="serif text-3xl sm:text-4xl font-light">Items / Furniture</h1>
+          <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
+            Kelola katalog furnitur eksklusif LIVORA. Pilih furnitur untuk program promo, atau ubah spesifikasi produk.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          {/* Tombol Toggle Mode Seleksi Promo */}
+          <button
+            type="button"
+            onClick={handleTogglePromoMode}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded text-xs uppercase tracking-[0.16em] font-medium transition-all shadow-sm ${
+              isPromoSelectMode
+                ? "bg-[#D7B483] text-black ring-2 ring-[#D7B483]/50 font-semibold"
+                : "bg-muted/70 hover:bg-muted text-foreground border border-border"
+            }`}
+          >
+            <Tag className="w-3.5 h-3.5" />
+            {isPromoSelectMode ? "✕ Keluar Mode Promo" : "Pilih Item Promo"}
+          </button>
+
           <button
             onClick={() => { setEditing(null); setShowForm(true); }}
-            className="flex items-center gap-2 bg-foreground text-background px-4 py-2 rounded text-sm uppercase tracking-[0.2em] font-medium hover:opacity-90 transition-opacity"
+            className="flex items-center gap-2 bg-foreground text-background px-4 py-2 rounded text-xs uppercase tracking-[0.2em] font-medium hover:opacity-90 transition-opacity shadow-sm"
           >
             <Plus className="w-4 h-4" /> New Item
           </button>
         </div>
       </div>
 
-      {/* Toolbar & Filter Tabs */}
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        {/* Quick Filter: All vs Promo */}
+      {/* Banner Panduan Mode Promo Aktif */}
+      {isPromoSelectMode && (
+        <div className="p-4 rounded-xl bg-[#D7B483]/15 border border-[#D7B483]/35 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in slide-from-top-2 duration-200">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-[#D7B483] text-black flex items-center justify-center shrink-0 shadow-sm">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-wider font-semibold text-[#8B682E]">
+                Mode Seleksi Promo Aktif
+                {bannerTitleParam && (
+                  <span className="font-normal text-muted-foreground ml-1.5">
+                    (untuk banner: <strong>"{bannerTitleParam}"</strong>)
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-foreground/85 mt-0.5">
+                Klik langsung pada kartu atau baris produk yang ingin diikutsertakan dalam promo. Item terpilih ditandai dengan bingkai emas.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            {allVisibleSelected ? (
+              <button
+                type="button"
+                onClick={() => deselectAllVisible(filtered)}
+                className="px-3 py-1.5 rounded text-xs bg-background border border-border hover:bg-muted font-medium"
+              >
+                Batal Pilih Semua
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => selectAllVisible(filtered)}
+                className="px-3 py-1.5 rounded text-xs bg-background border border-border hover:bg-muted font-medium"
+              >
+                Pilih Semua ({filtered.length})
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleTogglePromoMode}
+              className="p-1.5 rounded hover:bg-black/10 text-muted-foreground"
+              title="Tutup Mode Promo"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Toolbar: Filter, Search, Tab Promo, & View Switcher (Galeri vs Tabel) */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Tab Filter Cepat: Semua vs Sedang Promo */}
         <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg border border-border text-xs">
           <button
             type="button"
@@ -224,22 +316,48 @@ export default function AdminItems() {
             type="button"
             onClick={() => setPromoOnlyFilter(true)}
             className={`px-3 py-1.5 rounded-md font-medium transition-colors inline-flex items-center gap-1.5 ${
-              promoOnlyFilter ? "bg-card text-[#A88247] shadow-sm" : "text-muted-foreground hover:text-foreground"
+              promoOnlyFilter ? "bg-card text-[#A88247] shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <Sparkles className="w-3.5 h-3.5 text-[#D7B483]" />
             Sedang Promo ({promoCount})
           </button>
         </div>
 
+        {/* View Switcher: Galeri Visual vs Tabel Detail */}
+        <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg border border-border text-xs">
+          <button
+            type="button"
+            onClick={() => setViewMode("grid")}
+            className={`px-2.5 py-1.5 rounded-md font-medium transition-colors inline-flex items-center gap-1.5 ${
+              viewMode === "grid" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+            title="Tampilan Galeri Visual (Sangat nyaman untuk memilih produk)"
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Galeri Visual</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("table")}
+            className={`px-2.5 py-1.5 rounded-md font-medium transition-colors inline-flex items-center gap-1.5 ${
+              viewMode === "table" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+            title="Tampilan Tabel Detail"
+          >
+            <List className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Tabel Detail</span>
+          </button>
+        </div>
+
         {/* Search */}
-        <div className="relative flex-1 min-w-[220px] max-w-md">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Cari nama atau code item..."
-            className="w-full pl-9 pr-9 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-full pl-9 pr-9 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-foreground"
           />
           {query && (
             <button onClick={() => setQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded">
@@ -262,9 +380,9 @@ export default function AdminItems() {
           {showFilter && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowFilter(false)} />
-              <div className="absolute right-0 mt-2 w-72 bg-card border border-border rounded-lg shadow-lg p-4 z-50 space-y-4">
+              <div className="absolute right-0 mt-2 w-72 bg-card border border-border rounded-lg shadow-xl p-4 z-50 space-y-4">
                 <div>
-                  <label className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Furniture Type</label>
+                  <label className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-medium">Furniture Type</label>
                   <select
                     value={typeFilter}
                     onChange={(e) => setTypeFilter(e.target.value)}
@@ -277,7 +395,7 @@ export default function AdminItems() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-1">
+                  <label className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-medium flex items-center gap-1">
                     <ArrowUpDown className="w-3 h-3" /> Sort By
                   </label>
                   <select
@@ -305,151 +423,350 @@ export default function AdminItems() {
           )}
         </div>
 
-        <span className="text-xs text-muted-foreground ml-auto">{filtered.length} of {items.length} items</span>
+        <span className="text-xs text-muted-foreground ml-auto">
+          {filtered.length} dari {items.length} item
+        </span>
       </div>
 
-      {/* Table */}
-      <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm">
-        <div className="w-full overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-xs uppercase tracking-[0.15em] text-muted-foreground">
-              <tr>
-                <th className="p-3 w-10 text-center">
-                  <input
-                    type="checkbox"
-                    aria-label="Pilih semua item"
-                    checked={allVisibleSelected}
-                    onChange={() => toggleSelectAll(filtered)}
-                    className="w-4 h-4 rounded border-border cursor-pointer"
-                  />
-                </th>
-                <th className="text-left p-3">Image</th>
-                <th className="text-left p-3">Title</th>
-                <th className="text-left p-3">Status Promo</th>
-                <th className="text-left p-3">Code</th>
-                <th className="text-left p-3">Type</th>
-                <th className="text-left p-3">Themes</th>
-                <th className="text-left p-3">Categories</th>
-                <th className="text-left p-3">Avail</th>
-                <th className="text-left p-3">Uploaded</th>
-                <th className="text-right p-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((i) => {
-                const isSelected = selectedIds.includes(i.id);
-                return (
-                  <tr
-                    key={i.id}
-                    className={`border-t border-border transition-colors ${
-                      isSelected ? "bg-muted/40" : "hover:bg-muted/20"
-                    }`}
-                  >
-                    {/* Checkbox */}
-                    <td className="p-3 text-center">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleSelect(i.id)}
-                        className="w-4 h-4 rounded border-border cursor-pointer"
-                      />
-                    </td>
+      {/* ── TAMPILAN 1: MODE GALERI KARTU VISUAL (Nyaman & Elegan) ── */}
+      {viewMode === "grid" && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {filtered.map((i) => {
+            const isSelected = selectedIds.includes(i.id);
+            return (
+              <div
+                key={i.id}
+                onClick={() => {
+                  if (isPromoSelectMode) {
+                    toggleSelect(i.id);
+                  }
+                }}
+                className={`group relative bg-card rounded-xl border overflow-hidden flex flex-col transition-all duration-200 select-none ${
+                  isPromoSelectMode ? "cursor-pointer" : ""
+                } ${
+                  isSelected
+                    ? "border-[#D7B483] ring-2 ring-[#D7B483] shadow-md bg-[#D7B483]/5"
+                    : isPromoSelectMode
+                    ? "border-border hover:border-[#D7B483]/60 hover:shadow-sm"
+                    : "border-border hover:shadow-md"
+                }`}
+              >
+                {/* Visual Image Container */}
+                <div className="relative aspect-square w-full bg-[#181818] overflow-hidden">
+                  {i.image ? (
+                    <img
+                      src={imgUrl(i.image)}
+                      alt={i.title}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+                      No Image
+                    </div>
+                  )}
 
-                    {/* Image */}
-                    <td className="p-3">
-                      {i.image ? (
-                        <img src={imgUrl(i.image)} className="w-12 h-12 object-cover rounded border border-border" alt="" />
+                  {/* Promo Badge di pojok atas */}
+                  {i.is_on_promo && (
+                    <div className="absolute top-2.5 left-2.5 z-10 inline-flex items-center gap-1 text-[10px] font-semibold tracking-wider text-black bg-[#D7B483] px-2.5 py-0.5 rounded-full shadow-md uppercase">
+                      <Sparkles className="w-2.5 h-2.5" />
+                      {i.promo_badge_text || `${i.discount_value}% OFF`}
+                    </div>
+                  )}
+
+                  {/* Indikator Terpilih (Khusus Mode Seleksi Promo) */}
+                  {isPromoSelectMode && (
+                    <div
+                      className={`absolute top-2.5 right-2.5 z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                        isSelected
+                          ? "bg-[#D7B483] text-black shadow-md scale-100"
+                          : "bg-black/50 text-white/70 border border-white/30 backdrop-blur-sm group-hover:bg-black/70"
+                      }`}
+                    >
+                      {isSelected ? (
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
                       ) : (
-                        <div className="w-12 h-12 bg-muted rounded border border-border" />
+                        <span className="text-[10px] font-mono">+</span>
                       )}
-                    </td>
+                    </div>
+                  )}
 
-                    {/* Title */}
-                    <td className="p-3 font-medium">
-                      <div>{i.title}</div>
-                    </td>
-
-                    {/* Promo Status */}
-                    <td className="p-3">
-                      {i.is_on_promo ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wider font-medium text-[#A88247] bg-[#A88247]/15 border border-[#A88247]/30 px-2 py-0.5 rounded-full whitespace-nowrap">
-                          <Sparkles className="w-3 h-3" />
-                          {i.promo_badge_text || `${i.discount_value}% OFF`}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground/60">—</span>
-                      )}
-                    </td>
-
-                    {/* Code */}
-                    <td className="p-3 text-muted-foreground font-mono text-xs">{i.code || "—"}</td>
-
-                    {/* Type */}
-                    <td className="p-3">{i.type?.name || "—"}</td>
-
-                    {/* Themes */}
-                    <td className="p-3 text-xs">{i.themes?.map((t: any) => t.name).join(", ") || "—"}</td>
-
-                    {/* Categories */}
-                    <td className="p-3 text-xs">{i.categories?.map((c: any) => c.name).join(", ") || "—"}</td>
-
-                    {/* Availability */}
-                    <td className="p-3 text-xs capitalize">{i.availability || "available"}</td>
-
-                    {/* Date */}
-                    <td className="p-3 text-xs whitespace-nowrap">{fmtDate(i.created_at)}</td>
-
-                    {/* Actions */}
-                    <td className="p-3 text-right whitespace-nowrap">
-                      <button onClick={() => setQrItem(i)} title="QR Identity" className="p-1.5 hover:bg-muted rounded" disabled={!i.slug}>
-                        <QrCode className="w-3.5 h-3.5" />
+                  {/* Hover Quick Overlay saat Normal Mode */}
+                  {!isPromoSelectMode && (
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSinglePromoItem(i);
+                        }}
+                        className="px-2.5 py-1.5 rounded bg-[#D7B483] text-black text-[11px] font-medium tracking-wide flex items-center gap-1 shadow-md hover:bg-[#c6a270]"
+                        title="Atur Promo Khusus Item Ini"
+                      >
+                        <Tag className="w-3 h-3" />
+                        Promo
                       </button>
-                      <button onClick={() => downloadImage(i)} title="Download image" className="p-1.5 hover:bg-muted rounded" disabled={!i.image}>
-                        <Download className="w-3.5 h-3.5" />
-                      </button>
-                      <Link to={`/admin/items/${i.slug}/detail`} title="Rincian internal (stok, dimensi, material)" className="p-1.5 hover:bg-muted rounded inline-flex">
-                        <ClipboardList className="w-3.5 h-3.5" />
-                      </Link>
-                      <Link to={`/admin/items/${i.id}/experience`} title="Manage Experience" className="p-1.5 hover:bg-muted rounded inline-flex">
-                        <Settings2 className="w-3.5 h-3.5" />
-                      </Link>
-                      <button onClick={() => { setEditing(i); setShowForm(true); }} className="p-1.5 hover:bg-muted rounded" title="Edit Item & Promo">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditing(i);
+                          setShowForm(true);
+                        }}
+                        className="p-1.5 rounded bg-white text-black hover:bg-stone-200 shadow-md"
+                        title="Edit Item"
+                      >
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => del(i)} className="p-1.5 hover:bg-destructive hover:text-destructive-foreground rounded" title="Delete">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={11} className="p-8 text-center text-muted-foreground">
-                    {items.length === 0 ? "Belum ada item." : "Tidak ada item yang cocok dengan filter."}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                    </div>
+                  )}
+                </div>
 
-      {/* Sticky Bottom Action Bar for Bulk Selection */}
+                {/* Card Content */}
+                <div className="p-3 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="font-medium text-xs sm:text-sm line-clamp-1 group-hover:text-[#A88247] transition-colors">
+                      {i.title}
+                    </h3>
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground mt-1">
+                      <span className="font-mono">{i.code || "—"}</span>
+                      <span>{i.type?.name || "—"}</span>
+                    </div>
+                  </div>
+
+                  {/* Card Actions (di bawah) */}
+                  <div className="pt-2.5 mt-2 border-t border-border flex items-center justify-between">
+                    <span className="text-[10px] text-muted-foreground capitalize">
+                      {i.availability || "available"}
+                    </span>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setQrItem(i);
+                        }}
+                        title="QR Code"
+                        className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
+                      >
+                        <QrCode className="w-3 h-3" />
+                      </button>
+                      <Link
+                        to={`/admin/items/${i.slug}/detail`}
+                        title="Rincian Teknis"
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground inline-flex"
+                      >
+                        <ClipboardList className="w-3 h-3" />
+                      </Link>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          del(i);
+                        }}
+                        title="Hapus"
+                        className="p-1 hover:bg-destructive/15 text-destructive rounded"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── TAMPILAN 2: MODE TABEL DETAIL (Bersih Tanpa Centang di Normal Mode) ── */}
+      {viewMode === "table" && (
+        <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm">
+          <div className="w-full overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 text-xs uppercase tracking-[0.15em] text-muted-foreground border-b border-border">
+                <tr>
+                  {/* Kolom Seleksi HANYA muncul saat Mode Promo Aktif */}
+                  {isPromoSelectMode && (
+                    <th className="p-3 w-12 text-center">
+                      <span className="text-[10px] uppercase font-bold text-[#A88247]">Pilih</span>
+                    </th>
+                  )}
+                  <th className="text-left p-3">Image</th>
+                  <th className="text-left p-3">Title</th>
+                  <th className="text-left p-3">Status Promo</th>
+                  <th className="text-left p-3">Code</th>
+                  <th className="text-left p-3">Type</th>
+                  <th className="text-left p-3">Categories</th>
+                  <th className="text-left p-3">Avail</th>
+                  <th className="text-left p-3">Uploaded</th>
+                  <th className="text-right p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filtered.map((i) => {
+                  const isSelected = selectedIds.includes(i.id);
+                  return (
+                    <tr
+                      key={i.id}
+                      onClick={() => {
+                        if (isPromoSelectMode) {
+                          toggleSelect(i.id);
+                        }
+                      }}
+                      className={`transition-colors ${
+                        isPromoSelectMode ? "cursor-pointer" : ""
+                      } ${
+                        isSelected
+                          ? "bg-[#D7B483]/15 font-medium"
+                          : isPromoSelectMode
+                          ? "hover:bg-muted/40"
+                          : "hover:bg-muted/20"
+                      }`}
+                    >
+                      {/* Tombol Pilih (HANYA muncul saat Mode Promo Aktif) */}
+                      {isPromoSelectMode && (
+                        <td className="p-3 text-center">
+                          <div
+                            className={`w-5 h-5 rounded-full mx-auto flex items-center justify-center transition-all ${
+                              isSelected
+                                ? "bg-[#D7B483] text-black shadow-sm"
+                                : "border border-border bg-background"
+                            }`}
+                          >
+                            {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                          </div>
+                        </td>
+                      )}
+
+                      {/* Image Thumbnail */}
+                      <td className="p-3">
+                        {i.image ? (
+                          <img
+                            src={imgUrl(i.image)}
+                            className="w-12 h-12 object-cover rounded border border-border"
+                            alt=""
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-muted rounded border border-border" />
+                        )}
+                      </td>
+
+                      {/* Title */}
+                      <td className="p-3 font-medium">
+                        <div>{i.title}</div>
+                      </td>
+
+                      {/* Promo Status Badge */}
+                      <td className="p-3">
+                        {i.is_on_promo ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSinglePromoItem(i);
+                            }}
+                            className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wider font-semibold text-black bg-[#D7B483] px-2.5 py-0.5 rounded-full whitespace-nowrap shadow-sm hover:opacity-90"
+                            title="Klik untuk ubah diskon promo"
+                          >
+                            <Sparkles className="w-3 h-3" />
+                            {i.promo_badge_text || `${i.discount_value}% OFF`}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSinglePromoItem(i);
+                            }}
+                            className="text-xs text-muted-foreground/60 hover:text-[#A88247] hover:underline"
+                            title="Klik untuk aktifkan promo pada item ini"
+                          >
+                            + Tambah Promo
+                          </button>
+                        )}
+                      </td>
+
+                      {/* Code */}
+                      <td className="p-3 text-muted-foreground font-mono text-xs">{i.code || "—"}</td>
+
+                      {/* Type */}
+                      <td className="p-3">{i.type?.name || "—"}</td>
+
+                      {/* Categories */}
+                      <td className="p-3 text-xs">{i.categories?.map((c: any) => c.name).join(", ") || "—"}</td>
+
+                      {/* Availability */}
+                      <td className="p-3 text-xs capitalize">{i.availability || "available"}</td>
+
+                      {/* Date */}
+                      <td className="p-3 text-xs whitespace-nowrap">{fmtDate(i.created_at)}</td>
+
+                      {/* Actions */}
+                      <td className="p-3 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
+                          {/* Tombol Quick Promo per Item */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSinglePromoItem(i);
+                            }}
+                            title="Atur Diskon Promo Item Ini"
+                            className="p-1.5 hover:bg-[#D7B483]/20 rounded text-[#A88247] transition-colors"
+                          >
+                            <Tag className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button onClick={(e) => { e.stopPropagation(); setQrItem(i); }} title="QR Identity" className="p-1.5 hover:bg-muted rounded" disabled={!i.slug}>
+                            <QrCode className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); downloadImage(i); }} title="Download image" className="p-1.5 hover:bg-muted rounded" disabled={!i.image}>
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
+                          <Link to={`/admin/items/${i.slug}/detail`} onClick={(e) => e.stopPropagation()} title="Rincian internal" className="p-1.5 hover:bg-muted rounded inline-flex">
+                            <ClipboardList className="w-3.5 h-3.5" />
+                          </Link>
+                          <Link to={`/admin/items/${i.id}/experience`} onClick={(e) => e.stopPropagation()} title="Manage Experience" className="p-1.5 hover:bg-muted rounded inline-flex">
+                            <Settings2 className="w-3.5 h-3.5" />
+                          </Link>
+                          <button onClick={(e) => { e.stopPropagation(); setEditing(i); setShowForm(true); }} className="p-1.5 hover:bg-muted rounded" title="Edit Item">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); del(i); }} className="p-1.5 hover:bg-destructive hover:text-destructive-foreground rounded" title="Delete">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {filtered.length === 0 && (
+        <div className="p-12 text-center text-muted-foreground bg-card border border-border rounded-xl">
+          {items.length === 0 ? "Belum ada item furnitur." : "Tidak ada furnitur yang cocok dengan pencarian / filter."}
+        </div>
+      )}
+
+      {/* Sticky Bottom Action Bar for Bulk Selection (Muncul saat ada item yang dipilih) */}
       {selectedIds.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-foreground text-background px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-4 animate-in fade-in slide-from-bottom-3 duration-200">
-          <span className="text-xs uppercase tracking-wider font-medium">
-            <strong>{selectedIds.length}</strong> item terpilih
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-foreground text-background px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-4 animate-in fade-in slide-from-bottom-4 duration-200 border border-white/20">
+          <span className="text-xs uppercase tracking-wider font-semibold">
+            <strong className="text-[#D7B483]">{selectedIds.length}</strong> item terpilih
           </span>
 
-          <div className="h-4 w-px bg-background/25" />
+          <div className="h-4 w-px bg-background/30" />
 
           <button
             type="button"
             onClick={() => setShowBulkModal(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#D7B483] text-black text-xs uppercase tracking-wider font-medium hover:bg-[#c49e6b] transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#D7B483] text-black text-xs uppercase tracking-wider font-semibold hover:bg-[#c49e6b] transition-colors shadow-md"
           >
-            <Percent className="w-3.5 h-3.5" /> Atur Diskon Massal
+            <Percent className="w-3.5 h-3.5" /> Terapkan Diskon Massal
           </button>
 
           <button
@@ -471,7 +788,7 @@ export default function AdminItems() {
         </div>
       )}
 
-      {/* Bulk Discount Modal */}
+      {/* Bulk Discount Modal (Untuk Banyak Item) */}
       <BulkDiscountModal
         isOpen={showBulkModal}
         selectedIds={selectedIds}
@@ -480,11 +797,26 @@ export default function AdminItems() {
         onSuccess={() => {
           setShowBulkModal(false);
           setSelectedIds([]);
+          setIsPromoSelectMode(false); // Otomatis keluar mode promo setelah tersimpan
           load();
         }}
       />
 
-      {/* Form Tambah/Edit Item */}
+      {/* Single Item Quick Promo Modal (Untuk 1 Item Spesifik) */}
+      {singlePromoItem && (
+        <BulkDiscountModal
+          isOpen={true}
+          selectedIds={[singlePromoItem.id]}
+          selectedItems={[singlePromoItem]}
+          onClose={() => setSinglePromoItem(null)}
+          onSuccess={() => {
+            setSinglePromoItem(null);
+            load();
+          }}
+        />
+      )}
+
+      {/* Form Tambah/Edit Item dengan Flexible Image Uploader & Live Preview */}
       {showForm && (
         <ItemForm
           item={editing}
@@ -514,6 +846,7 @@ export default function AdminItems() {
   );
 }
 
+// ── Form Tambah / Edit Item Furnitur dengan Live Image Preview & Fit Adjuster ──
 function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: any) {
   const [title, setTitle] = useState(item?.title || "");
   const [code, setCode] = useState(item?.code || "");
@@ -525,7 +858,13 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
   const [collectionId, setCollectionId] = useState(item?.collection_id?.toString() || item?.collection?.id?.toString() || "");
   const [themeIds, setThemeIds] = useState<number[]>(item?.themes?.map((t: any) => t.id) || []);
   const [catIds, setCatIds] = useState<number[]>(item?.categories?.map((c: any) => c.id) || []);
+
+  // Image Upload with Live Preview & Fit Adjuster
   const [file, setFile] = useState<File | null>(null);
+  const [previewImgUrl, setPreviewImgUrl] = useState<string>(
+    item?.image ? imgUrl(item.image) : ""
+  );
+  const [imageFit, setImageFit] = useState<"contain" | "cover">("contain");
 
   // Promo settings
   const [isOnPromo, setIsOnPromo] = useState<boolean>(item?.is_on_promo || false);
@@ -537,7 +876,15 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
 
   const [saving, setSaving] = useState(false);
 
-  // Auto-update promo badge & check state when discount value changes
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) {
+      setFile(f);
+      setPreviewImgUrl(URL.createObjectURL(f));
+    }
+  };
+
+  // Auto-update promo badge saat nilai diskon berubah
   const handleDiscountChange = (valStr: string) => {
     setDiscountValue(valStr);
     const num = parseFloat(valStr);
@@ -588,21 +935,21 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
       const res = await api.post(url, fd, { headers: { "Content-Type": "multipart/form-data" } });
       onSaved(res.data, !item);
     } catch (err: any) {
-      alert(err?.response?.data?.message || "Gagal menyimpan item");
+      toast.error(err?.response?.data?.message || "Gagal menyimpan item");
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm grid place-items-center p-4 sm:p-6 z-50 overflow-y-auto" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm grid place-items-center p-4 sm:p-6 z-50 overflow-y-auto" onClick={onClose}>
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
-        className="bg-card border border-border rounded-xl w-full max-w-3xl p-6 sm:p-8 space-y-5 max-h-[90vh] overflow-y-auto shadow-2xl my-auto"
+        className="bg-card border border-border rounded-xl w-full max-w-3xl p-6 sm:p-8 space-y-5 max-h-[90vh] overflow-y-auto shadow-2xl my-auto animate-in fade-in zoom-in-95 duration-200"
       >
         <div className="flex items-center justify-between pb-3 border-b border-border">
-          <h2 className="serif text-2xl font-light">{item ? "Edit Item" : "New Item"}</h2>
+          <h2 className="serif text-2xl font-light">{item ? "Edit Item Furnitur" : "Tambah Item Furnitur Baru"}</h2>
           <button type="button" onClick={onClose} className="p-1 hover:bg-muted rounded-full">
             <X className="w-5 h-5 text-muted-foreground" />
           </button>
@@ -643,11 +990,65 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
           </Field>
         </div>
 
+        {/* Flexible Image Upload & Live Preview Section */}
+        <div className="p-4 rounded-lg bg-muted/30 border border-border space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground font-medium">
+              Foto Produk Furnitur
+            </span>
+            {previewImgUrl && (
+              <div className="flex items-center gap-1 text-[11px] bg-muted px-2 py-0.5 rounded border border-border">
+                <span className="text-muted-foreground">Mode Tampilan:</span>
+                <button
+                  type="button"
+                  onClick={() => setImageFit("contain")}
+                  className={`px-1.5 py-0.5 rounded ${imageFit === "contain" ? "bg-card font-medium text-foreground" : "text-muted-foreground"}`}
+                >
+                  Fit Penuh
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setImageFit("cover")}
+                  className={`px-1.5 py-0.5 rounded ${imageFit === "cover" ? "bg-card font-medium text-foreground" : "text-muted-foreground"}`}
+                >
+                  Isi Frame
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+            <div className="sm:col-span-8">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="w-full text-xs text-muted-foreground file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-foreground file:text-background hover:file:opacity-90 cursor-pointer"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Format: WebP, JPG, PNG (Resolusi tinggi disarankan)
+              </p>
+            </div>
+
+            {previewImgUrl && (
+              <div className="sm:col-span-4 flex justify-center">
+                <div className="w-28 h-28 rounded-lg overflow-hidden bg-black/20 border border-border shadow-sm flex items-center justify-center relative">
+                  <img
+                    src={previewImgUrl}
+                    alt="Preview"
+                    className={`w-full h-full ${imageFit === "contain" ? "object-contain" : "object-cover"}`}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Promo Settings Section */}
-        <div className="p-4 rounded-lg bg-muted/40 border border-[#D7B483]/30 space-y-3">
+        <div className="p-4 rounded-lg bg-muted/40 border border-[#D7B483]/35 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs uppercase tracking-[0.2em] font-medium text-[#A88247]">
-              <Sparkles className="w-4 h-4" />
+              <Sparkles className="w-4 h-4 text-[#D7B483]" />
               Pengaturan Promosi & Diskon
             </div>
             <label className="flex items-center gap-2 cursor-pointer text-xs">
@@ -702,7 +1103,7 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
             <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-1">
               <span className="w-1.5 h-1.5 rounded-full bg-[#A88247]" />
               Item ini akan tampil di halaman <strong>/promo</strong> dan membawa badge{" "}
-              <strong>"{promoBadgeText || "PROMO"}"</strong>.
+              <strong className="text-[#A88247]">"{promoBadgeText || "PROMO"}"</strong>.
             </p>
           )}
         </div>
@@ -734,16 +1135,11 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
           </Field>
         </div>
 
-        <Field label="Image">
-          <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-          {item?.image && !file && <img src={imgUrl(item.image)} className="mt-2 w-28 h-20 object-contain rounded border border-border" alt="" />}
-        </Field>
-
         <div className="flex gap-2 pt-3 border-t border-border">
           <button type="button" onClick={onClose} className="px-5 py-2 border border-border rounded text-xs uppercase tracking-wider">
             Cancel
           </button>
-          <button disabled={saving} className="ml-auto px-6 py-2 bg-foreground text-background rounded text-xs uppercase tracking-[0.2em] font-medium disabled:opacity-60">
+          <button disabled={saving} className="ml-auto px-6 py-2 bg-foreground text-background rounded text-xs uppercase tracking-[0.2em] font-medium disabled:opacity-60 shadow-sm">
             {saving ? "Saving..." : "Save Item"}
           </button>
         </div>

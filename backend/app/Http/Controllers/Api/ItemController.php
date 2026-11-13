@@ -146,12 +146,14 @@ class ItemController extends Controller
         foreach ($items as $item) {
             $val = (float) ($data['discount_value'] ?? 0);
             if ($val > 0) {
+                $item->is_on_promo = true;
                 $item->discount_type = $data['discount_type'] ?? 'PERCENTAGE';
                 $item->discount_value = $val;
                 $item->promo_badge_text = $data['promo_badge_text'] ?? null;
                 $item->promo_start_date = $data['promo_start_date'] ?? null;
                 $item->promo_end_date = $data['promo_end_date'] ?? null;
             } else {
+                $item->is_on_promo = false;
                 $item->discount_type = null;
                 $item->discount_value = 0;
                 $item->promo_badge_text = null;

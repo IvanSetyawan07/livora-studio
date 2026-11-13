@@ -42,26 +42,48 @@ class Item extends Model {
 
             $orig = (float) ($item->original_price ?? 0);
             $val = (float) ($item->discount_value ?? 0);
-            $type = strtoupper(trim((string) ($item->discount_type ?? '')));
+            $type = strtoupper(trim((string) ($item->discount_type ?? 'PERCENTAGE')));
+            if (empty($type)) {
+                $type = 'PERCENTAGE';
+            }
 
-            if ($orig > 0 && $val > 0 && in_array($type, ['PERCENTAGE', 'FIXED_AMOUNT'], true)) {
+            // Item sedang promo jika:
+            // 1. discount_value > 0 ATAU
+            // 2. is_on_promo bernilai true
+            $hasDiscount = ($val > 0) || (bool) $item->is_on_promo;
+
+            if ($hasDiscount && $val > 0) {
+                $item->is_on_promo = true;
+                $item->discount_type = $type;
+                $item->discount_value = $val;
+
                 if ($type === 'PERCENTAGE') {
                     $val = min(100, max(0, $val));
                     $item->discount_value = $val;
-                    $calc = $orig * (1 - ($val / 100));
-                    $item->final_price = max(0, round($calc, 2));
+                    if ($orig > 0) {
+                        $calc = $orig * (1 - ($val / 100));
+                        $item->final_price = max(0, round($calc, 2));
+                        $item->price = $item->final_price;
+                    }
                     if (empty($item->promo_badge_text)) {
                         $item->promo_badge_text = round($val) . '% OFF';
                     }
                 } else {
-                    $calc = max(0, $orig - $val);
-                    $item->final_price = round($calc, 2);
+                    // FIXED_AMOUNT
+                    if ($orig > 0) {
+                        $calc = max(0, $orig - $val);
+                        $item->final_price = round($calc, 2);
+                        $item->price = $item->final_price;
+                    }
                     if (empty($item->promo_badge_text)) {
                         $item->promo_badge_text = 'HEMAT Rp ' . number_format($val, 0, ',', '.');
                     }
                 }
+            } elseif ($hasDiscount && (bool) $item->is_on_promo) {
                 $item->is_on_promo = true;
-                $item->price = $item->final_price; // pastikan kolom legacy price sinkron
+                if (empty($item->promo_badge_text)) {
+                    $item->promo_badge_text = 'PROMO';
+                }
             } else {
                 $item->final_price = $orig > 0 ? $orig : null;
                 $item->is_on_promo = false;
