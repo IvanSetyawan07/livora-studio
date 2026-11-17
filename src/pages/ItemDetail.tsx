@@ -17,6 +17,7 @@ import { items } from "@/data/items";
 import { useItemBySlug, type FurnitureVariant, type GalleryImage } from "@/lib/itemsApi";
 import { useProjectBySlug } from "@/lib/projectsApi";
 import { trackClick, trackView } from "@/lib/adminApi";
+import { trackLivoraEvent } from "@/lib/analytics";
 import SaveButton from "@/components/livora/SaveButton";
 import { PromoBadge, PromoPriceTag } from "@/components/livora/PromoPriceTag";
 
@@ -74,6 +75,7 @@ const ItemDetail = () => {
     if (!id) return;
     startRef.current = Date.now();
     trackClick("item", id);
+    trackLivoraEvent("view_item", { item_id: id, slug: item?.slug, title: item?.name });
     return () => {
       const sec = Math.round((Date.now() - startRef.current) / 1000);
       trackView("item", id, sec);

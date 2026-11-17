@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { Copy, MessageCircle, Check } from "lucide-react";
 import { toast } from "sonner";
 import { getWaLink } from "@/lib/shop";
+import { trackLivoraEvent } from "@/lib/analytics";
 
 /** Layar setelah pesanan dibuat: dorong pelanggan membuka WhatsApp. */
 export default function OrderWhatsApp() {
@@ -37,6 +38,7 @@ export default function OrderWhatsApp() {
         </button>
         {url ? (
           <a href={url} target="_blank" rel="noopener noreferrer"
+            onClick={() => trackLivoraEvent("whatsapp_inquiry_click", { source: "order", code })}
             className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-emerald-600 text-sm font-medium text-white">
             <MessageCircle className="h-4 w-4" /> Buka WhatsApp
           </a>

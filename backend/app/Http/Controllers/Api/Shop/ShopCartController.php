@@ -36,7 +36,14 @@ class ShopCartController extends Controller
             ];
         })->all();
 
-        $code = ShopCartService::create($items, $data['session_id'] ?? null);
+        $utm = $request->only(['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']);
+        $code = ShopCartService::create($items, $data['session_id'] ?? null, $utm);
+        \App\Services\Shop\Ops::funnel('cart_created', null, null, [
+            'code' => $code,
+            'items_count' => count($items),
+            'utm_source' => $utm['utm_source'] ?? null,
+        ], $data['session_id'] ?? null);
+
         $botNumber = \App\Services\Shop\ShopSettings::get('bot_wa_number') ?: config('services.shop.whatsapp_number');
         $text = "Halo Livora, saya mau pesan. Kode keranjang: {$code}";
 

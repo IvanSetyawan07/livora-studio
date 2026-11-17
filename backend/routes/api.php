@@ -298,6 +298,7 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::post('/marketing/send-test', [MarketingController::class, 'sendTest']);
         Route::post('/marketing/preview', [MarketingController::class, 'preview']);
         Route::post('/marketing/campaigns/draft', [MarketingController::class, 'saveDraft']);
+        Route::get('/marketing/campaigns/{campaign}', [MarketingController::class, 'showCampaign']);
         Route::get('/brand-settings', [MarketingController::class, 'brandSettings']);
         Route::get('/catalog/images', [MarketingController::class, 'catalogImages']);
         Route::post('/marketing/upload-image', [MarketingController::class, 'uploadImage']);
@@ -350,10 +351,13 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::get('/cro/funnel-summary', [\App\Http\Controllers\Api\Ai\CroController::class, 'funnelSummary']);
         Route::get('/seo/search-console-summary', [\App\Http\Controllers\Api\Ai\SeoController::class, 'searchConsoleSummary']);
         Route::get('/seo/local-summary', [\App\Http\Controllers\Api\Ai\BusinessProfileController::class, 'localSummary']);
+        Route::post('/seo/local-reviews/{reviewId}/draft-reply', [\App\Http\Controllers\Api\Ai\BusinessProfileController::class, 'draftReviewReply']);
+        Route::post('/seo/local-reviews/{reviewId}/reply', [\App\Http\Controllers\Api\Ai\BusinessProfileController::class, 'replyReview']);
         Route::get('/dashboard/health', [AiDashboardController::class, 'health']);
         Route::get('/dashboard/priorities', [AiDashboardController::class, 'priorities']);
         Route::get('/dashboard/kpis', [AiDashboardController::class, 'kpis']);
         Route::get('/agents', [AiAgentController::class, 'index']);
+        Route::post('/agents/{key}/run', [AiAgentController::class, 'run']);
 
         Route::get('/insights', [AiInsightController::class, 'index']);
         Route::get('/insights/{insight}', [AiInsightController::class, 'show']);
@@ -382,9 +386,11 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::get('/routing-strategy', [AiProviderController::class, 'routingStrategy']);
         
         Route::get('/campaigns', [AiCampaignController::class, 'index']);
+        Route::post('/campaigns/sync', [AiCampaignController::class, 'sync']);
         Route::get('/campaigns/{campaign}', [AiCampaignController::class, 'show']);
 
         Route::get('/impact', [AiImpactController::class, 'index']);
+        Route::post('/impact/refresh', [AiImpactController::class, 'refresh']);
         Route::get('/integrations/google/authorize-url', [GoogleIntegrationController::class, 'authorizeUrl']);
         Route::get('/integrations/google/status', [GoogleIntegrationController::class, 'status']);
         Route::post('/integrations/google/disconnect', [GoogleIntegrationController::class, 'disconnect']);
@@ -403,9 +409,14 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::get('/analytics/overview', [AiAnalyticsController::class, 'overview']);
         Route::get('/ads/summary', [AiAdsController::class, 'summary']);
         Route::get('/content/summary', [AiContentController::class, 'summary']);
+        Route::get('/content/queue', [AiContentController::class, 'queue']);
+        Route::post('/content/queue', [AiContentController::class, 'createDraft']);
+        Route::patch('/content/queue/{draft}', [AiContentController::class, 'updateDraft']);
+        Route::post('/content/queue/{draft}/email-draft', [AiContentController::class, 'pushToEmailCampaign']);
         Route::get('/content/inspiration/library', [AiContentInspirationController::class, 'library']);
         Route::post('/content/inspiration/analyze', [AiContentInspirationController::class, 'analyze']);
         Route::get('/leads/funnel', [LeadsController::class, 'funnel']);
+        Route::get('/leads/high-intent', [LeadsController::class, 'highIntent']);
     });
 });
 Route::get('/debug-mail-test', function (\Illuminate\Http\Request $request) {
@@ -436,11 +447,42 @@ Route::post('/reset-password', [\App\Http\Controllers\Api\PasswordResetControlle
 Route::post('/webhooks/midtrans', [\App\Http\Controllers\Api\Shop\WebhookController::class, 'midtrans']);
 Route::get('/webhooks/whatsapp', [\App\Http\Controllers\Api\Shop\WebhookController::class, 'whatsappVerify']);
 Route::post('/webhooks/whatsapp', [\App\Http\Controllers\Api\Shop\WebhookController::class, 'whatsappIncoming']);
+Route::get('/public/tracking-config', function () {
+    return response()->json([
+        'gaMeasurementId' => config('services.ga4.measurement_id') ?: null,
+        'metaPixelId' => config('services.meta_pixel.pixel_id') ?: null,
+    ]);
+});
 Route::post('/funnel', function (\Illuminate\Http\Request $r) {
-    $event = $r->input('event');
-    if (in_array($event, ['konsultasi_klik'], true)) \App\Services\Shop\Ops::funnel($event, null, optional($r->user('sanctum'))->id, ['path' => substr((string) $r->input('path'), 0, 120)], substr((string) $r->input('session'), 0, 64));
+    $event = (string) $r->input('event');
+    $allowed = [
+        'konsultasi_klik',
+        'view_item',
+        'view_project',
+        'view_promo',
+        'promo_cta_click',
+        'view_catalog_hotspot',
+        'whatsapp_inquiry_click',
+        'add_to_wishlist',
+        'cart_created',
+        'consultation_submitted',
+    ];
+    if (in_array($event, $allowed, true)) {
+        $meta = $r->input('meta');
+        $safeMeta = is_array($meta) ? $meta : [];
+        if ($r->filled('path')) {
+            $safeMeta['path'] = substr((string) $r->input('path'), 0, 120);
+        }
+        foreach (['utm_source', 'utm_medium', 'utm_campaign'] as $utm) {
+            if ($r->filled($utm)) {
+                $safeMeta[$utm] = substr((string) $r->input($utm), 0, 120);
+            }
+        }
+        \App\Services\Shop\Ops::funnel($event, null, optional($r->user('sanctum'))->id, $safeMeta, substr((string) $r->input('session'), 0, 64));
+    }
+
     return ['ok' => true];
-})->middleware('throttle:30,1');
+})->middleware('throttle:60,1');
 Route::get('/order-form/{code}', [\App\Http\Controllers\Api\Shop\OrderFormController::class, 'show'])->middleware('throttle:30,1');
 Route::post('/order-form/{code}', [\App\Http\Controllers\Api\Shop\OrderFormController::class, 'submit'])->middleware('throttle:10,1');
 

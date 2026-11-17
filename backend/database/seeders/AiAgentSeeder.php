@@ -21,7 +21,8 @@ class AiAgentSeeder extends Seeder
                 'dependencies' => [
                     ['name' => 'Web Analytics', 'state' => 'connected'],
                     ['name' => 'Google Search Console', 'state' => 'not_connected'],
-                    ['name' => 'Claude via Laravel API', 'state' => 'not_connected'],
+                    ['name' => 'Google Business Profile', 'state' => 'not_connected'],
+                    ['name' => 'LLM Orchestration', 'state' => 'not_connected'],
                 ],
             ],
             [
@@ -32,7 +33,7 @@ class AiAgentSeeder extends Seeder
                 'dependencies' => [
                     ['name' => 'Collection & Product Data', 'state' => 'connected'],
                     ['name' => 'Social publishing APIs', 'state' => 'not_connected'],
-                    ['name' => 'Claude via Laravel API', 'state' => 'not_connected'],
+                    ['name' => 'LLM Orchestration', 'state' => 'not_connected'],
                 ],
             ],
             [
@@ -43,7 +44,7 @@ class AiAgentSeeder extends Seeder
                 'dependencies' => [
                     ['name' => 'Meta Ads API', 'state' => 'not_connected'],
                     ['name' => 'Google Ads API', 'state' => 'not_connected'],
-                    ['name' => 'Claude via Laravel API', 'state' => 'not_connected'],
+                    ['name' => 'LLM Orchestration', 'state' => 'not_connected'],
                 ],
             ],
             [
@@ -52,12 +53,13 @@ class AiAgentSeeder extends Seeder
                 'purpose' => 'Score lead behaviour and surface high-intent enquiries.',
                 'capabilities' => [
                     'Lead scoring', 'Behaviour analysis', 'Product interest',
-                    'Collection interest', 'Follow-up priority', 'Conversion probability',
+                    'WhatsApp & LiviBot', 'Follow-up priority', 'Conversion probability',
                 ],
                 'dependencies' => [
                     ['name' => 'Lead & CRM Data', 'state' => 'connected'],
-                    ['name' => 'Email sequencing', 'state' => 'not_connected'],
-                    ['name' => 'Claude via Laravel API', 'state' => 'not_connected'],
+                    ['name' => 'WhatsApp (LiviBot)', 'state' => 'not_connected'],
+                    ['name' => 'Email sequencing', 'state' => 'connected'],
+                    ['name' => 'LLM Orchestration', 'state' => 'not_connected'],
                 ],
             ],
             [
@@ -70,8 +72,8 @@ class AiAgentSeeder extends Seeder
                 ],
                 'dependencies' => [
                     ['name' => 'Web Analytics', 'state' => 'connected'],
-                    ['name' => 'Session behaviour capture', 'state' => 'not_connected'],
-                    ['name' => 'Claude via Laravel API', 'state' => 'not_connected'],
+                    ['name' => 'Session behaviour capture', 'state' => 'connected'],
+                    ['name' => 'LLM Orchestration', 'state' => 'not_connected'],
                 ],
             ],
         ];

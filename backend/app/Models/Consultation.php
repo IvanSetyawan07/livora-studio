@@ -121,6 +121,11 @@ class Consultation extends Model
         'terms_version',
         'privacy_version',
         'consent_accepted_at',
+        'utm_source',
+        'utm_medium',
+        'utm_campaign',
+        'utm_content',
+        'utm_term',
     ];
 
     protected $casts = [

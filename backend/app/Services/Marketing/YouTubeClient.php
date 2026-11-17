@@ -98,19 +98,30 @@ class YouTubeClient
      *
      * @return list<array<string, mixed>>
      */
-    public function searchSimilar(string $query, int $max = 12): array
+    public function searchSimilar(string $query, int $max = 12, array $extraParams = []): array
     {
         if (! $this->isConfigured()) {
             throw MarketingApiException::notConfigured('YouTube belum dikonfigurasi. Isi YOUTUBE_API_KEY di backend/.env.');
         }
 
-        $search = $this->get('/search', [
+        $params = [
             'part' => 'id',
             'q' => $query,
             'type' => 'video',
             'order' => 'relevance',
             'maxResults' => max(1, min($max, 25)),
-        ]);
+        ];
+        if (! empty($extraParams['relevanceLanguage'])) {
+            $params['relevanceLanguage'] = (string) $extraParams['relevanceLanguage'];
+        }
+        if (! empty($extraParams['regionCode'])) {
+            $params['regionCode'] = (string) $extraParams['regionCode'];
+        }
+        if (! empty($extraParams['order']) && in_array($extraParams['order'], ['relevance', 'viewCount', 'date'], true)) {
+            $params['order'] = $extraParams['order'];
+        }
+
+        $search = $this->get('/search', $params);
 
         $ids = array_values(array_filter(array_map(fn ($i) => $i['id']['videoId'] ?? null, $search['items'] ?? [])));
         if ($ids === []) {
@@ -126,6 +137,26 @@ class YouTubeClient
         usort($videos, fn ($a, $b) => $b['views'] <=> $a['views']);
 
         return $videos;
+    }
+
+    /**
+     * Hydrate video publik YouTube berdasarkan daftar ID nyata.
+     *
+     * @param  list<string>  $ids
+     * @return list<array<string, mixed>>
+     */
+    public function hydrateByIds(array $ids): array
+    {
+        if (! filled(config('services.youtube.api_key'))) {
+            return [];
+        }
+
+        $clean = array_values(array_unique(array_filter(
+            $ids,
+            fn ($id) => is_string($id) && preg_match('/^[A-Za-z0-9_-]{11}$/', $id) === 1
+        )));
+
+        return $clean === [] ? [] : $this->hydrate(array_slice($clean, 0, 20));
     }
 
     /**
@@ -156,6 +187,7 @@ class YouTubeClient
                 'likes' => (int) ($s['likeCount'] ?? 0),
                 'comments' => (int) ($s['commentCount'] ?? 0),
                 'engagementRate' => $views > 0 ? round($eng / $views * 100, 2) : null,
+                'metricsSource' => 'YouTube Data API',
             ];
         }
 

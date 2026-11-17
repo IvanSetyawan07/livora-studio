@@ -20,24 +20,29 @@ use Illuminate\Support\Facades\Log;
  */
 class MetaAdsOAuthCallbackController extends Controller
 {
-    private const FRONTEND_RETURN_URL = 'https://livoralcr.com/admin/ai-marketing/settings';
+    private function returnUrl(): string
+    {
+        return rtrim((string) config('app.frontend_url', 'https://livoralcr.com'), '/') . '/admin/ai-marketing/settings';
+    }
 
     public function handle(Request $request, MetaAdsOAuthTokenStore $tokens)
     {
+        $returnUrl = $this->returnUrl();
+
         if ($request->query('error')) {
             Log::warning('Meta Ads OAuth callback error', ['error' => $request->query('error')]);
-            return redirect(self::FRONTEND_RETURN_URL.'?meta_ads=denied');
+            return redirect($returnUrl.'?meta_ads=denied');
         }
 
         if (!MetaAdsOAuthState::verify($request->query('state'))) {
             Log::warning('Meta Ads OAuth callback: state tidak valid atau kadaluarsa');
-            return redirect(self::FRONTEND_RETURN_URL.'?meta_ads=invalid_state');
+            return redirect($returnUrl.'?meta_ads=invalid_state');
         }
 
         $code = $request->query('code');
 
         if (!$code) {
-            return redirect(self::FRONTEND_RETURN_URL.'?meta_ads=missing_code');
+            return redirect($returnUrl.'?meta_ads=missing_code');
         }
 
         $version = (string) config('services.meta_ads.api_version', 'v21.0');
@@ -55,7 +60,7 @@ class MetaAdsOAuthCallbackController extends Controller
 
         if (!$shortLived->successful() || !$shortLived->json('access_token')) {
             Log::error('Meta Ads OAuth: tukar code gagal', ['body' => $shortLived->body()]);
-            return redirect(self::FRONTEND_RETURN_URL.'?meta_ads=exchange_failed');
+            return redirect($returnUrl.'?meta_ads=exchange_failed');
         }
 
         // 2) Short-lived → long-lived token (~60 hari), supaya tidak perlu
@@ -69,7 +74,7 @@ class MetaAdsOAuthCallbackController extends Controller
 
         if (!$longLived->successful() || !$longLived->json('access_token')) {
             Log::error('Meta Ads OAuth: tukar long-lived token gagal', ['body' => $longLived->body()]);
-            return redirect(self::FRONTEND_RETURN_URL.'?meta_ads=exchange_failed');
+            return redirect($returnUrl.'?meta_ads=exchange_failed');
         }
 
         $accessToken = (string) $longLived->json('access_token');
@@ -100,7 +105,7 @@ class MetaAdsOAuthCallbackController extends Controller
         $tokens->save($accessToken, $expiresIn, $accountId, $accountName);
         AiAgent::setDependencyState('ads', 'Meta Ads API', 'connected');
 
-        return redirect(self::FRONTEND_RETURN_URL.'?meta_ads=connected');
+        return redirect($returnUrl.'?meta_ads=connected');
     }
 
     private function normalizedAccountId(?string $id): ?string

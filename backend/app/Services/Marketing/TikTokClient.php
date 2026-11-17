@@ -123,6 +123,7 @@ class TikTokClient
                 'platform' => 'tiktok',
                 'id' => (string) ($v['item_id'] ?? ''),
                 'title' => (string) ($v['caption'] ?? ''),
+                'channel' => 'TikTok Livora',
                 'thumbnail' => (string) ($v['thumbnail_url'] ?? ''),
                 'url' => (string) ($v['share_url'] ?? ''),
                 'publishedAt' => is_numeric($ts) ? date(DATE_ATOM, (int) $ts) : null,
@@ -132,6 +133,7 @@ class TikTokClient
                 'shares' => (int) ($v['shares'] ?? 0),
                 'engagementRate' => $views > 0 ? round($eng / $views * 100, 2) : null,
                 'completionRate' => isset($v['full_video_watched_rate']) ? round(((float) $v['full_video_watched_rate']) * 100, 2) : null,
+                'metricsSource' => 'TikTok Business API',
             ];
         }
 

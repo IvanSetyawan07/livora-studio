@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useActionDecision, useAiActions, useRecommendations } from "@/hooks/useAiDashboard";
+import { extractApiErrorMessage, useActionDecision, useAiActions, useRecommendations } from "@/hooks/useAiDashboard";
 import type { AIApproval, AIApprovalStatus, AIRisk } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
 
@@ -59,8 +59,8 @@ export default function ApprovalsPage() {
       await approveAndExecute.mutateAsync(a.id);
       toast.success("Approval dieksekusi", { description: a.title });
       setSelectedId(null);
-    } catch {
-      toast.error("Gagal mengeksekusi approval");
+    } catch (error) {
+      toast.error(extractApiErrorMessage(error, "Gagal mengeksekusi approval"));
     }
   }
 

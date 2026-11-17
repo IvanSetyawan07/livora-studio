@@ -10,21 +10,16 @@ use App\Models\AiRecommendation;
 use App\Models\Consultation;
 use App\Models\ConsultationStatusHistory;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
- * Fase 6 — Agent AI pertama yang benar-benar jalan (bukan stub/fixture).
- *
- * Prinsip yang dipegang di sini sama seperti DashboardMetricsService (Fase 4):
- * kalau data mentahnya belum cukup, atau responsnya nggak bisa di-parse
- * dengan aman, JANGAN dipaksa jadi insight — kembalikan status jujur dan
- * jangan tulis apapun ke ai_insights/ai_recommendations. Lebih baik kosong
- * daripada mengarang.
+ * CRO Agent — menganalisis funnel konsultasi, LiviBot WhatsApp & keranjang shop,
+ * gesekan produk promo vs non-promo, serta funnel_events website.
  */
 class CroAgentService
 {
     private const AGENT_KEY = 'cro';
 
-    /** Minimal jumlah consultation supaya analisis funnel dianggap punya makna statistik. */
     public const MIN_SAMPLE = 5;
 
     private const STAGES = [
@@ -33,6 +28,7 @@ class CroAgentService
         Consultation::STATUS_CONTACTED,
         Consultation::STATUS_MEETING_SCHEDULED,
         Consultation::STATUS_IN_PROGRESS,
+        Consultation::STATUS_AGREEMENT_PENDING,
         Consultation::STATUS_DP_PENDING,
         Consultation::STATUS_PROJECT_PAID,
         Consultation::STATUS_PROJECT_RUNNING,
@@ -43,22 +39,27 @@ class CroAgentService
     {
     }
 
-    /**
-     * Jalankan satu siklus analisis CRO. Dipanggil dari command `ai:run-agent cro`.
-     *
-     * @return array{status: string, message?: string, insights_created?: int, recommendations_created?: int, provider?: string, raw?: string}
-     */
+    /** @return array{status: string, message?: string, insights_created?: int, recommendations_created?: int, provider?: string, raw?: string} */
     public function run(int $limit = 5): array
     {
-        $snapshot = $this->buildFunnelSnapshot();
+        $consultationFunnel = $this->buildFunnelSnapshot();
+        $commerceSnapshot = $this->buildShopAndMerchandisingSnapshot();
 
-        if ($snapshot === null) {
+        $totalActivity = ($consultationFunnel['total_consultations'] ?? 0)
+            + ($commerceSnapshot['shop_carts_30d'] ?? 0)
+            + ($commerceSnapshot['wa_inquiries_30d'] ?? 0);
+
+        if ($consultationFunnel === null && $totalActivity < 5) {
             return [
                 'status' => 'empty',
-                'message' => 'Data funnel belum cukup (minimal '.self::MIN_SAMPLE.' consultation) untuk '
-                    .'dianalisis secara jujur. Tidak ada insight yang dibuat.',
+                'message' => 'Data funnel konsultasi dan aktivitas shop/WA belum cukup untuk dianalisis secara jujur.',
             ];
         }
+
+        $snapshot = [
+            'consultation_funnel' => $consultationFunnel ?? ['note' => 'Sample konsultasi < '.self::MIN_SAMPLE],
+            'shop_and_whatsapp_funnel' => $commerceSnapshot,
+        ];
 
         try {
             $result = $this->ai->ask(
@@ -83,8 +84,7 @@ class CroAgentService
             AiActivityLog::create([
                 'actor' => 'AI',
                 'agent_key' => self::AGENT_KEY,
-                'message' => 'CRO Agent merespons tapi tidak menghasilkan insight yang valid (format JSON '
-                    .'tidak sesuai skema). Tidak ada data yang ditulis.',
+                'message' => 'CRO Agent merespons tapi tidak menghasilkan insight yang valid (format JSON tidak sesuai skema). Tidak ada data yang ditulis.',
                 'kind' => 'system',
             ]);
 
@@ -107,7 +107,7 @@ class CroAgentService
                 'type' => $item['type'],
                 'severity' => $item['severity'],
                 'confidence' => $this->clampConfidence($item['confidence']),
-                'source' => ['Lead Data'],
+                'source' => ['Lead Data', 'Site Behaviour'],
                 'agent_key' => self::AGENT_KEY,
                 'reasoning' => $item['reasoning'],
                 'what_happened' => $item['what_happened'],
@@ -154,7 +154,7 @@ class CroAgentService
             'actor' => 'AI',
             'agent_key' => self::AGENT_KEY,
             'message' => "CRO Agent menghasilkan {$insightsCreated} insight baru "
-                ."({$recommendationsCreated} disertai rekomendasi) dari analisis funnel konsultasi, "
+                ."({$recommendationsCreated} disertai rekomendasi) dari analisis funnel Livora, "
                 ."via provider {$result['provider']}.",
             'kind' => 'insight',
         ]);
@@ -167,10 +167,7 @@ class CroAgentService
         ];
     }
 
-    /**
-     * Kumpulkan data funnel ASLI dari Consultation + ConsultationStatusHistory.
-     * Return null kalau sample-nya terlalu kecil untuk dianalisis secara jujur.
-     */
+    /** Dipakai langsung oleh CroController::funnelSummary(). */
     public function buildFunnelSnapshot(): ?array
     {
         $total = Consultation::count();
@@ -185,22 +182,17 @@ class CroAgentService
             ->pluck('total', 'status')
             ->toArray();
 
-        // Berapa consultation yang PERNAH mencapai tiap stage (bukan cuma status saat ini),
-        // dihitung dari histori perpindahan status.
         $everReached = [];
         foreach (self::STAGES as $stage) {
             $everReached[$stage] = ConsultationStatusHistory::where('new_status', $stage)
                 ->distinct('consultation_id')
                 ->count('consultation_id');
         }
-        // Semua consultation pasti "melewati" new_inquiry secara konsep, meski row histori untuk
-        // transisi awal belum tentu tercatat (kalau langsung dibuat dengan status itu).
         $everReached[Consultation::STATUS_NEW_INQUIRY] = max(
             $everReached[Consultation::STATUS_NEW_INQUIRY] ?? 0,
             $total
         );
 
-        // Di tahap (previous_status) mana paling banyak consultation berakhir cancelled/rejected.
         $dropOffByPreviousStage = ConsultationStatusHistory::query()
             ->whereIn('new_status', [Consultation::STATUS_CANCELLED, Consultation::STATUS_REJECTED])
             ->whereNotNull('previous_status')
@@ -209,9 +201,6 @@ class CroAgentService
             ->pluck('total', 'previous_status')
             ->toArray();
 
-        // Rata-rata lama (jam) sebuah consultation "diam" di tiap stage sebelum pindah ke stage
-        // berikutnya. Consultation yang masih diam di stage itu sampai sekarang (belum pindah)
-        // sengaja tidak dihitung supaya rata-rata tidak bias oleh proses yang belum selesai.
         $histories = ConsultationStatusHistory::query()
             ->orderBy('consultation_id')
             ->orderBy('created_at')
@@ -255,32 +244,82 @@ class CroAgentService
         ];
     }
 
+    private function buildShopAndMerchandisingSnapshot(): array
+    {
+        $since = now()->subDays(30);
+
+        $cartsTotal = Schema::hasTable('shop_carts')
+            ? (int) DB::table('shop_carts')->where('created_at', '>=', $since)->count()
+            : 0;
+        $cartsClaimed = Schema::hasTable('shop_carts')
+            ? (int) DB::table('shop_carts')->where('created_at', '>=', $since)->whereNotNull('claimed_phone')->count()
+            : 0;
+
+        $ordersTotal = Schema::hasTable('shop_orders')
+            ? (int) DB::table('shop_orders')->where('created_at', '>=', $since)->count()
+            : 0;
+        $ordersPaidOrCompleted = Schema::hasTable('shop_orders')
+            ? (int) DB::table('shop_orders')->where('created_at', '>=', $since)->whereIn('status', ['diproses', 'siap_kirim', 'dikirim', 'diterima', 'selesai', 'dibayar'])->count()
+            : 0;
+
+        $waInquiriesTotal = Schema::hasTable('wa_price_inquiries')
+            ? (int) DB::table('wa_price_inquiries')->where('created_at', '>=', $since)->count()
+            : 0;
+        $waInquiriesPending = Schema::hasTable('wa_price_inquiries')
+            ? (int) DB::table('wa_price_inquiries')->where('status', 'pending')->count()
+            : 0;
+
+        $funnelEvents = Schema::hasTable('funnel_events')
+            ? DB::table('funnel_events')
+                ->where('created_at', '>=', $since)
+                ->selectRaw('event, COUNT(*) as total')
+                ->groupBy('event')
+                ->pluck('total', 'event')
+                ->toArray()
+            : [];
+
+        $highDurationLowPromoItems = [];
+        if (Schema::hasTable('item_views') && Schema::hasTable('items')) {
+            $highDurationLowPromoItems = DB::table('item_views')
+                ->join('items', 'items.id', '=', 'item_views.target_id')
+                ->where('item_views.target_type', 'item')
+                ->where('item_views.viewed_at', '>=', $since)
+                ->selectRaw('items.id, items.title, COUNT(*) as views, ROUND(AVG(item_views.duration_seconds), 1) as avg_sec')
+                ->groupBy('items.id', 'items.title')
+                ->orderByDesc('views')
+                ->limit(8)
+                ->get()
+                ->map(fn ($r) => [
+                    'item_id' => (int) $r->id,
+                    'title' => $r->title,
+                    'views_30d' => (int) $r->views,
+                    'avg_duration_seconds' => (float) $r->avg_sec,
+                ])->all();
+        }
+
+        return [
+            'shop_carts_30d' => $cartsTotal,
+            'shop_carts_claimed_in_wa_30d' => $cartsClaimed,
+            'cart_to_wa_claim_rate_percent' => $cartsTotal > 0 ? round($cartsClaimed / $cartsTotal * 100, 1) : null,
+            'shop_orders_30d' => $ordersTotal,
+            'shop_orders_paid_30d' => $ordersPaidOrCompleted,
+            'wa_inquiries_30d' => $waInquiriesTotal,
+            'wa_inquiries_currently_pending' => $waInquiriesPending,
+            'funnel_events_30d' => $funnelEvents,
+            'top_viewed_items_engagement' => $highDurationLowPromoItems,
+        ];
+    }
+
     private function systemPrompt(int $limit): string
     {
         return <<<PROMPT
-Kamu adalah CRO (Conversion Rate Optimization) Analyst untuk Livora Studio, platform interior
-design & furniture custom di Indonesia. Tugasmu menganalisis data funnel konsultasi (dari inquiry
-sampai project selesai) dan menemukan titik gesekan (friction) yang membuat calon klien batal atau
-macet di funnel.
+Kamu adalah CRO (Conversion Rate Optimization) Analyst untuk Livora Studio, platform interior design, arsitektur & custom/loose furniture di Indonesia (Jakarta). Konversi terjadi melalui form konsultasi, appointment showroom, WhatsApp LiviBot (keranjang CRT-XXXX & cek harga), serta halaman promo.
 
 ATURAN KETAT — WAJIB DIIKUTI:
-- Analisis HANYA berdasarkan angka yang diberikan di data funnel pada pesan user. JANGAN mengarang
-  angka, nama fitur, channel marketing, atau asumsi apapun yang tidak ada di data tersebut.
-- Kalau datanya ambigu atau sample-nya terlalu kecil untuk sebuah kesimpulan tertentu, JANGAN
-  dipaksakan jadi insight. Lebih baik hasilkan insight lebih sedikit tapi akurat daripada banyak
-  tapi mengada-ada.
+- Analisis HANYA berdasarkan angka nyata di pesan user. JANGAN mengarang angka atau channel.
+- Fokus pada titik bocor konversi: tahap konsultasi dengan drop-off atau waktu tunggu tertinggi, rasio keranjang Web -> klaim WhatsApp LiviBot, antrean cek harga WA yang tertunda, serta produk yang sering dilihat lama tapi belum dikonversi.
 - Maksimal {$limit} insight per respons.
-- Isi field "recommendation" HANYA kalau ada langkah konkret yang bisa langsung dikerjakan tim
-  Livora berdasarkan temuan itu. Kalau insight-nya murni observasi tanpa langkah jelas, set
-  "recommendation" ke null — jangan dipaksakan.
-- "confidence" (0-100) mencerminkan seberapa yakin kamu pola ini nyata secara statistik dari
-  besarnya sample data yang diberikan, BUKAN seberapa penting insight-nya.
-- "priority" pada recommendation mencerminkan urgensi + potensi dampak bisnis:
-  "high" untuk drop-off besar di tahap awal funnel atau kerugian berulang yang jelas dari data,
-  "medium" untuk pola yang perlu diperhatikan tapi belum kritis,
-  "low" untuk observasi minor.
-- Balas HANYA dengan JSON valid, TANPA teks pembuka/penutup, TANPA markdown code fence, PERSIS
-  sesuai skema berikut:
+- Balas HANYA dengan JSON valid, TANPA markdown code fence, PERSIS sesuai skema:
 
 {
   "insights": [
@@ -290,10 +329,10 @@ ATURAN KETAT — WAJIB DIIKUTI:
       "type": "opportunity" | "warning" | "trend" | "anomaly",
       "severity": "low" | "medium" | "high" | "critical",
       "confidence": 0-100,
-      "reasoning": "kenapa kamu menyimpulkan ini, WAJIB sebut angka konkret dari data yang diberikan",
-      "what_happened": "apa yang ditemukan di data, dalam bahasa yang mudah dibaca tim non-teknis",
-      "why_it_matters": "dampak ke bisnis Livora kalau dibiarkan",
-      "expected_impact": "perkiraan dampak KUALITATIF kalau diperbaiki — jangan karang angka rupiah spesifik",
+      "reasoning": "sebutkan angka konkret dari data",
+      "what_happened": "temuan jelas untuk tim non-teknis",
+      "why_it_matters": "dampak ke konversi & omzet Livora",
+      "expected_impact": "dampak kualitatif realistis",
       "recommendation": {
         "title": "judul singkat",
         "description": "ringkasan 1-2 kalimat",
@@ -302,8 +341,8 @@ ATURAN KETAT — WAJIB DIIKUTI:
         "priority": "low" | "medium" | "high",
         "expected_impact": "string",
         "confidence": 0-100,
-        "why": "alasan singkat kenapa ini direkomendasikan",
-        "suggested_action": "langkah konkret yang bisa langsung dikerjakan tim Livora"
+        "why": "alasan berdasarkan data",
+        "suggested_action": "langkah konkret yang bisa langsung dieksekusi"
       } | null
     }
   ]
@@ -315,15 +354,9 @@ PROMPT;
     {
         $json = json_encode($snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
-        return "Data funnel konsultasi Livora Studio saat ini (semua angka nyata dari database, "
-            ."bukan contoh):\n\n{$json}\n\nAnalisis data di atas dan hasilkan insight sesuai skema "
-            ."yang sudah dijelaskan di system prompt.";
+        return "Data funnel konsultasi, LiviBot WhatsApp, Shop & katalog Livora (angka nyata dari DB):\n\n{$json}\n\nAnalisis data di atas dan hasilkan insight sesuai skema.";
     }
 
-    /**
-     * Parse & validasi respons AI. Item yang tidak lolos validasi dibuang, BUKAN diperbaiki/ditebak,
-     * supaya tidak ada data setengah-mengarang yang masuk ke database.
-     */
     private function parseResponse(string $text): array
     {
         $clean = trim($text);
@@ -333,7 +366,7 @@ PROMPT;
 
         $data = json_decode($clean, true);
 
-        if (!is_array($data) || !isset($data['insights']) || !is_array($data['insights'])) {
+        if (! is_array($data) || ! isset($data['insights']) || ! is_array($data['insights'])) {
             return [];
         }
 
@@ -350,30 +383,26 @@ PROMPT;
     private function isValidInsight(array $item): bool
     {
         foreach (['title', 'description', 'type', 'severity', 'reasoning', 'what_happened', 'why_it_matters', 'expected_impact'] as $field) {
-            if (empty($item[$field]) || !is_string($item[$field])) {
+            if (empty($item[$field]) || ! is_string($item[$field])) {
                 return false;
             }
         }
 
-        if (!in_array($item['type'], ['opportunity', 'warning', 'trend', 'anomaly', 'recommendation', 'lead_intelligence'], true)) {
+        if (! in_array($item['type'], ['opportunity', 'warning', 'trend', 'anomaly', 'recommendation', 'lead_intelligence'], true)) {
             return false;
         }
 
-        if (!in_array($item['severity'], ['low', 'medium', 'high', 'critical'], true)) {
+        if (! in_array($item['severity'], ['low', 'medium', 'high', 'critical'], true)) {
             return false;
         }
 
-        if (!isset($item['confidence']) || !is_numeric($item['confidence'])) {
-            return false;
-        }
-
-        return true;
+        return isset($item['confidence']) && is_numeric($item['confidence']);
     }
 
     private function isValidRecommendation(array $rec): bool
     {
-        return !empty($rec['title']) && is_string($rec['title'])
-            && !empty($rec['description']) && is_string($rec['description']);
+        return ! empty($rec['title']) && is_string($rec['title'])
+            && ! empty($rec['description']) && is_string($rec['description']);
     }
 
     private function clampConfidence(mixed $value): int

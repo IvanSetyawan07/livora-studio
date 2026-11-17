@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
-import { ArrowUpRight, Megaphone, Sparkles } from "lucide-react";
+import { ArrowUpRight, Loader2, Megaphone, Play, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/admin/PageHeader";
-import { PlatformRow, TableShell } from "@/components/ai/offline";
+import { PlatformRow } from "@/components/ai/offline";
 import { ActivityStream } from "@/components/ai/activity-stream";
 import { AgentRail } from "@/components/ai/agent-rail";
 import { KpiCard } from "@/components/ai/kpi-card";
@@ -14,13 +15,16 @@ import { usePageContext } from "@/context/AiMarketingContext";
 import { useSectionState } from "@/hooks/useSectionState";
 import { AdRoasKpiCard, AvgEngagementKpiCard, PerformanceOverviewPanel, SocialPerformanceRows } from "@/components/ai/marketing-panels";
 import {
+  extractApiErrorMessage,
   useAiActivity,
   useAiAgents,
   useAiInsights,
   useCampaigns,
+  useContentQueue,
   useOverviewKpis,
   usePriorities,
   useRecommendations,
+  useRunAgent,
 } from "@/hooks/useAiDashboard";
 
 import type { AIInsight, AIKpi, Campaign, CampaignHealth } from "@/lib/ai/types";
@@ -150,6 +154,19 @@ export default function AiMarketingOverview() {
   const insights = useAiInsights();
   const activity = useAiActivity();
   const campaigns = useCampaigns();
+  const contentQueue = useContentQueue();
+  const runAgent = useRunAgent();
+
+  async function handleRunAll() {
+    try {
+      const res = await runAgent.mutateAsync({ key: "all", limit: 3 });
+      const results = res.results ?? {};
+      const okCount = Object.values(results).filter((r) => r.status === "ok").length;
+      toast.success(`Siklus AI selesai (${okCount}/${Object.keys(results).length || 5} agent menghasilkan insight).`);
+    } catch (err) {
+      toast.error(extractApiErrorMessage(err, "Gagal menjalankan siklus AI."));
+    }
+  }
 
   const topInsights = (insights.data ?? []).slice(0, 4);
   const metaCampaigns = (campaigns.data ?? []).filter((c) => matchesAdPlatform(c.channel, "meta"));
@@ -168,6 +185,17 @@ export default function AiMarketingOverview() {
         eyebrow="AI Marketing"
         title="Overview"
         description="Real-time intelligence and recommendations for Livora's digital growth."
+        action={
+          <button
+            type="button"
+            onClick={handleRunAll}
+            disabled={runAgent.isPending}
+            className="inline-flex items-center gap-1.5 rounded-sm bg-ai px-3.5 py-2 text-xs font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-60"
+          >
+            {runAgent.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
+            {runAgent.isPending ? "Running all agents…" : "Run All Agents"}
+          </button>
+        }
       />
 
       {/* KPI row — live KPI + slot terkunci untuk metrik yang butuh integrasi.
@@ -215,7 +243,7 @@ export default function AiMarketingOverview() {
             loading={insights.isLoading}
             error={insights.error}
             empty={topInsights.length === 0}
-            emptyText="Belum ada insight. Jalankan agent AI di server untuk menghasilkannya."
+            emptyText="Belum ada insight. Klik Run All Agents di kanan atas untuk memulai analisis."
           >
             <div className="space-y-2.5">
               {topInsights.map((ins) => (
@@ -239,21 +267,43 @@ export default function AiMarketingOverview() {
           </p>
         </Panel>
 
-        <TableShell
-          title="Content Queue"
-          action={
+        <Panel className="flex h-full flex-col p-5 sm:p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="text-display rule-accent text-lg">Content Queue</h3>
             <Link
               to="/admin/ai-marketing/content"
               className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
               View all <ArrowUpRight className="size-3" />
             </Link>
-          }
-          columns={["Draft", "Channel", "Scheduled", "Status", "Action"]}
-          emptyTitle="Not connected"
-          emptyDescription="Antrian konten terjadwal butuh koneksi platform sosial (Meta / TikTok / YouTube) dan endpoint Content Agent belum tersedia di backend."
-          rows={3}
-        />
+          </div>
+          <Block
+            loading={contentQueue.isLoading}
+            error={contentQueue.error}
+            empty={(contentQueue.data ?? []).length === 0}
+            emptyText="Belum ada draft konten. Jalankan Content Agent untuk membuat antrian draft IG/FB/Email."
+          >
+            <div className="space-y-2.5">
+              {(contentQueue.data ?? []).slice(0, 4).map((d) => (
+                <Link
+                  key={d.id}
+                  to="/admin/ai-marketing/content"
+                  className="flex items-center justify-between gap-3 rounded-sm border border-border px-3.5 py-2.5 transition-colors hover:bg-accent/40"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{d.title}</p>
+                    <p className="font-mono text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+                      {d.channel} · {d.status.replace("_", " ")}
+                    </p>
+                  </div>
+                  <Pill tone={d.status === "scheduled" || d.status === "published" ? "success" : d.status === "approved" ? "info" : "warning"}>
+                    {d.status.replace("_", " ")}
+                  </Pill>
+                </Link>
+              ))}
+            </div>
+          </Block>
+        </Panel>
 
         <Panel className="flex h-full flex-col p-5 sm:p-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

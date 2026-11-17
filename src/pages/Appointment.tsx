@@ -23,6 +23,7 @@ import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
 import { toast } from "sonner";
 import { submitConsultation } from "@/lib/consultations";
+import { getStoredUtm, trackLivoraEvent } from "@/lib/analytics";
 import { PolicyDialog } from "@/components/livora/PolicyDialog";
 import {
   TERMS_OF_SERVICE,
@@ -220,6 +221,7 @@ export default function Appointment() {
 
     setSubmitting(true);
     try {
+      const utm = getStoredUtm();
       await submitConsultation(
         {
           first_name: form.name,
@@ -237,9 +239,14 @@ export default function Appointment() {
           privacy_accepted: true,
           terms_version: TERMS_VERSION,
           privacy_version: PRIVACY_VERSION,
+          ...utm,
         },
         files
       );
+      trackLivoraEvent("consultation_submitted", {
+        service_type: resolvedServiceType || undefined,
+        project_type: resolvedProjectType || undefined,
+      });
       toast.success(
         "Thank you — email konfirmasi sudah dikirim ke inbox kamu. Tim kami akan meninjau dan menghubungi dalam 1×24 jam.",
         { duration: 6000 }

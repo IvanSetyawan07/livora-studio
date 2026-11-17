@@ -1,11 +1,19 @@
 // path: src/pages/admin/ai-marketing/AiMarketingContent.tsx
-import { Instagram, Facebook, Youtube, Music2, RefreshCcw, type LucideIcon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Instagram, Facebook, Mail, Check, Loader2, RefreshCcw, type LucideIcon } from "lucide-react";
+import { toast } from "sonner";
 import { AgentPageShell } from "@/components/ai/agent-page";
 import { IntegrationRequired } from "@/components/ai/integration-required";
 import { LastUpdated } from "@/components/ai/section-state";
-import { LockedKpiCard, OfflinePanel, PlatformRow, TableShell } from "@/components/ai/offline";
 import { NotConnected, Panel, Pill, SectionHeading, StatusDot, type Tone } from "@/components/ai/primitives";
-import { useAgent, useMetaIntegrationStatus } from "@/hooks/useAiDashboard";
+import {
+  extractApiErrorMessage,
+  useAgent,
+  useContentQueue,
+  useMetaIntegrationStatus,
+  usePushDraftToEmail,
+  useUpdateContentDraft,
+} from "@/hooks/useAiDashboard";
 import { usePageContext } from "@/context/AiMarketingContext";
 import { ContentKpiGrid, EngagementTrendPanel, SocialPerformanceRows } from "@/components/ai/marketing-panels";
 import { ContentInspirationPanel } from "@/components/ai/content-inspiration";
@@ -132,7 +140,29 @@ function MetaConnectionCard() {
 
 export default function ContentAgentPage() {
   usePageContext("content");
+  const navigate = useNavigate();
   const { agent } = useAgent("content");
+  const { data: queue = [], isLoading: queueLoading } = useContentQueue();
+  const updateDraft = useUpdateContentDraft();
+  const pushToEmail = usePushDraftToEmail();
+
+  async function handleApproveDraft(id: string) {
+    try {
+      await updateDraft.mutateAsync({ id, body: { status: "approved" } });
+      toast.success("Draft konten disetujui.");
+    } catch (err) {
+      toast.error(extractApiErrorMessage(err, "Gagal memperbarui draft."));
+    }
+  }
+
+  async function handleOpenEmailStudio(id: string) {
+    try {
+      const res = await pushToEmail.mutateAsync(id);
+      navigate(res.redirectPath);
+    } catch (err) {
+      toast.error(extractApiErrorMessage(err, "Gagal membuat draft Email Marketing."));
+    }
+  }
 
   return (
     <AgentPageShell agent={agent}>
@@ -158,13 +188,95 @@ export default function ContentAgentPage() {
       </section>
 
       <section className="mt-6">
-        <TableShell
-          title="Content Queue"
-          columns={["Draft", "Channel", "Scheduled", "Status", "Action"]}
-          emptyTitle="Antrian konten masih kosong"
-          emptyDescription="Queue diisi hanya oleh draft nyata dari Content Agent (`php artisan ai:run-agent content`). Sebelum itu tabel sengaja dibiarkan kosong, bukan diisi contoh."
-          rows={4}
-        />
+        <Panel className="overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+            <div>
+              <h3 className="text-display text-lg">Content Queue</h3>
+              <p className="text-xs text-muted-foreground">
+                Draft konten otomatis dari Content Agent — review, setujui, atau kirim langsung ke Email Marketing Studio.
+              </p>
+            </div>
+          </div>
+          {queueLoading ? (
+            <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" /> Memuat antrian konten…
+            </div>
+          ) : queue.length === 0 ? (
+            <div className="p-5">
+              <NotConnected
+                title="Antrian konten masih kosong"
+                description="Klik tombol Run Analysis di atas untuk membuat draft konten berbasis produk, proyek, dan promo Livora."
+              />
+            </div>
+          ) : (
+            <div className="scroll-rail">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left">
+                    {["Draft", "Channel", "Headline / Caption", "Status", "Action"].map((h) => (
+                      <th key={h} className="label-eyebrow px-5 py-3 font-normal">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {queue.map((d) => {
+                    const refUrl = typeof d.meta?.reference_url === "string" ? d.meta.reference_url : null;
+                    return (
+                      <tr key={d.id} className="border-b border-border last:border-0">
+                        <td className="px-5 py-4 font-medium">
+                          <div>{d.title}</div>
+                          {refUrl ? (
+                            <a
+                              href={refUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-1 inline-flex items-center gap-1 text-[11px] font-normal text-ai hover:underline"
+                            >
+                              Lihat video referensi ↗
+                            </a>
+                          ) : null}
+                        </td>
+                        <td className="px-5 py-4 uppercase font-mono text-xs text-muted-foreground">{d.channel}</td>
+                        <td className="max-w-md px-5 py-4 text-xs text-muted-foreground">
+                          {d.caption ? (d.caption.length > 120 ? `${d.caption.slice(0, 120)}…` : d.caption) : d.headline ?? "—"}
+                        </td>
+                        <td className="px-5 py-4">
+                          <Pill tone={d.status === "scheduled" || d.status === "published" ? "success" : d.status === "approved" ? "info" : "warning"}>
+                            {d.status.replace("_", " ")}
+                          </Pill>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {d.status === "needs_review" && (
+                              <button
+                                type="button"
+                                onClick={() => handleApproveDraft(d.id)}
+                                disabled={updateDraft.isPending}
+                                className="inline-flex items-center gap-1 rounded border border-border px-2.5 py-1 text-xs hover:bg-accent disabled:opacity-50"
+                              >
+                                <Check className="size-3" /> Approve
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEmailStudio(d.id)}
+                              disabled={pushToEmail.isPending}
+                              className="inline-flex items-center gap-1 rounded border border-ai/40 bg-ai/10 px-2.5 py-1 text-xs text-ai hover:bg-ai/20 disabled:opacity-50"
+                            >
+                              <Mail className="size-3" /> Edit di Email Studio
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Panel>
       </section>
 
       <ContentInspirationPanel />
@@ -192,12 +304,10 @@ export default function ContentAgentPage() {
 
       <section className="mt-10">
         <Panel className="p-6">
-          <SectionHeading title="Generation" />
-          <NotConnected
-            state="coming_soon"
-            title="Draft generation berjalan lewat AIProviderManager"
-            description="Brief dan draft dibuat di sisi server dan masuk queue sebagai Needs Review — tidak pernah dipublikasikan otomatis."
-          />
+          <SectionHeading title="Publishing & Email Integration" />
+          <p className="text-sm text-muted-foreground">
+            Rekomendasi Content Agent masuk ke Content Queue di atas sebagai draft review. Klik <span className="font-medium text-foreground">Approve &amp; Execute</span> di halaman Actions untuk membuat draft post Facebook Page (saat Meta Graph API terhubung) sekaligus menyusun draf Email Marketing di <span className="font-medium text-foreground">/admin/marketing</span>.
+          </p>
         </Panel>
       </section>
     </AgentPageShell>

@@ -9,21 +9,18 @@ use App\Services\Marketing\YouTubeClient;
 use App\Services\Meta\MetaGraphClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
- * Content Agent — menganalisis performa konten: halaman/katalog milik Livora
- * (klik item & project, wishlist) plus social media kalau platformnya sudah
- * tersambung (sumber yang sama dengan ContentController::summary()).
- *
- * Data on-site selalu ada tanpa integrasi eksternal, jadi agent ini bisa jalan
- * lebih dulu; social hanya ditambahkan ke snapshot kalau statusnya 'ok'.
+ * Content Agent — menganalisis performa produk, proyek, promo banner,
+ * wishlist, email marketing, serta akun social (IG/FB/TikTok/YouTube),
+ * lalu menghasilkan rekomendasi konten + draft visual di Content Queue.
  */
 class ContentAgentService extends BaseAgentService
 {
     private const WINDOW_DAYS = 30;
 
-    /** Minimal interaksi on-site supaya analisis konten punya makna. */
-    public const MIN_INTERACTIONS = 10;
+    public const MIN_INTERACTIONS = 3;
 
     public function __construct(
         AIProviderManager $ai,
@@ -51,23 +48,21 @@ class ContentAgentService extends BaseAgentService
 
     protected function sourceLabels(array $snapshot): array
     {
-        return array_merge(['Website Content'], $snapshot['connected_social_platforms'] ?? []);
+        return array_merge(['Website Content', 'Promo & Catalog'], $snapshot['connected_social_platforms'] ?? []);
     }
 
     protected function emptyMessage(): string
     {
-        return 'Interaksi konten pada 30 hari terakhir masih di bawah '.self::MIN_INTERACTIONS
-            .' (klik item/project + wishlist) dan belum ada akun social yang tersambung. '
-            .'Tidak ada insight yang dibuat.';
+        return 'Interaksi katalog & data konten masih terlalu sedikit dan belum ada akun sosial yang tersambung.';
     }
 
     protected function roleBrief(): string
     {
-        return 'Kamu adalah Content Performance Analyst untuk Livora Studio, platform interior '
-            .'design & furniture custom di Indonesia. Tugasmu menganalisis konten mana yang '
-            .'menarik perhatian (klik item/project, wishlist, engagement social) dan mana yang '
-            .'diabaikan, lalu menemukan tema/kategori konten yang layak diperbanyak atau '
-            .'diperbaiki.';
+        return 'Kamu adalah Creative & Content Strategist untuk Livora Studio (interior design & furniture premium di Jakarta). '
+            .'Analisis produk & proyek yang paling banyak dilihat/di-wishlist, item promo aktif, dan performa sosial media, '
+            .'lalu rekomendasikan konten visual (Instagram Carousel/Reels, Facebook Post, Email Newsletter) yang spesifik. '
+            .'Sertakan `"target_type"` ("item", "project", atau "promo_banner") dan `"target_id"` (angka ID nyata dari snapshot), '
+            .'serta `"channel"` ("instagram"|"facebook"|"email"|"tiktok"), `"headline"`, dan `"caption"` di dalam `recommendation` bila merekomendasikan konten.';
     }
 
     protected function buildSnapshot(): ?array
@@ -85,17 +80,41 @@ class ContentAgentService extends BaseAgentService
             ->join('items', 'items.id', '=', 'item_clicks.target_id')
             ->where('item_clicks.target_type', 'item')
             ->whereBetween('item_clicks.clicked_at', [$from, $to])
-            ->selectRaw('items.title as name, COUNT(*) as clicks')
-            ->groupBy('items.title')->orderByDesc('clicks')->limit(15)->get()
-            ->map(fn ($r) => ['name' => $r->name, 'clicks' => (int) $r->clicks])->all();
+            ->selectRaw('items.id, items.title as name, items.slug, COUNT(*) as clicks')
+            ->groupBy('items.id', 'items.title', 'items.slug')
+            ->orderByDesc('clicks')->limit(12)->get()
+            ->map(fn ($r) => ['target_type' => 'item', 'target_id' => (int) $r->id, 'name' => $r->name, 'slug' => $r->slug, 'clicks' => (int) $r->clicks])->all();
 
         $topProjects = DB::table('item_clicks')
             ->join('projects', 'projects.id', '=', 'item_clicks.target_id')
             ->where('item_clicks.target_type', 'project')
             ->whereBetween('item_clicks.clicked_at', [$from, $to])
-            ->selectRaw('projects.title as name, COUNT(*) as clicks')
-            ->groupBy('projects.title')->orderByDesc('clicks')->limit(15)->get()
-            ->map(fn ($r) => ['name' => $r->name, 'clicks' => (int) $r->clicks])->all();
+            ->selectRaw('projects.id, projects.title as name, projects.slug, COUNT(*) as clicks')
+            ->groupBy('projects.id', 'projects.title', 'projects.slug')
+            ->orderByDesc('clicks')->limit(12)->get()
+            ->map(fn ($r) => ['target_type' => 'project', 'target_id' => (int) $r->id, 'name' => $r->name, 'slug' => $r->slug, 'clicks' => (int) $r->clicks])->all();
+
+        // Jika klik belum banyak, tetap ambil sample produk & project aktif sebagai bahan editorial.
+        if (empty($topItems) && Schema::hasTable('items')) {
+            $topItems = DB::table('items')
+                ->orderByDesc('id')->limit(6)->get(['id', 'title', 'slug'])
+                ->map(fn ($r) => ['target_type' => 'item', 'target_id' => (int) $r->id, 'name' => $r->title, 'slug' => $r->slug, 'clicks' => 0])->all();
+        }
+        if (empty($topProjects) && Schema::hasTable('projects')) {
+            $topProjects = DB::table('projects')
+                ->orderByDesc('is_highlighted')->orderBy('sort_order')->limit(6)->get(['id', 'title', 'slug'])
+                ->map(fn ($r) => ['target_type' => 'project', 'target_id' => (int) $r->id, 'name' => $r->title, 'slug' => $r->slug, 'clicks' => 0])->all();
+        }
+
+        $promoItems = Schema::hasTable('items') && Schema::hasColumn('items', 'is_on_promo')
+            ? DB::table('items')->where('is_on_promo', true)->limit(8)->get(['id', 'title', 'promo_badge_text'])
+                ->map(fn ($r) => ['target_type' => 'item', 'target_id' => (int) $r->id, 'title' => $r->title, 'badge' => $r->promo_badge_text])->all()
+            : [];
+
+        $promoBanners = Schema::hasTable('promo_banners')
+            ? DB::table('promo_banners')->where('is_active', true)->limit(5)->get(['id', 'title', 'subtitle', 'label'])
+                ->map(fn ($r) => ['target_type' => 'promo_banner', 'target_id' => (int) $r->id, 'title' => $r->title, 'label' => $r->label])->all()
+            : [];
 
         $wishlistByType = DB::table('wishlists')
             ->selectRaw('wishlistable_type, COUNT(*) as n')
@@ -108,10 +127,10 @@ class ContentAgentService extends BaseAgentService
 
         $totalClicks = array_sum($clicksByType);
         $totalSaves = array_sum(array_column($wishlistByType, 'saves'));
-
         $social = $this->socialSnapshot($period);
 
-        if (($totalClicks + $totalSaves) < self::MIN_INTERACTIONS && empty($social['platforms'])) {
+        $hasCatalog = ! empty($topItems) || ! empty($topProjects) || ! empty($promoBanners);
+        if (($totalClicks + $totalSaves) < self::MIN_INTERACTIONS && empty($social['platforms']) && ! $hasCatalog) {
             return null;
         }
 
@@ -126,15 +145,16 @@ class ContentAgentService extends BaseAgentService
                 'clicks_by_target_type' => $clicksByType,
                 'total_wishlist_saves' => $totalSaves,
                 'wishlist_saves_by_type' => $wishlistByType,
-                'top_items_by_clicks' => $topItems,
-                'top_projects_by_clicks' => $topProjects,
+                'top_items' => $topItems,
+                'top_projects' => $topProjects,
+                'active_promo_items' => $promoItems,
+                'active_promo_banners' => $promoBanners,
             ],
             'connected_social_platforms' => $social['platforms'],
             'social' => $social['data'],
         ];
     }
 
-    /** Social hanya masuk snapshot kalau platformnya benar-benar merespons 'ok'. */
     private function socialSnapshot(MarketingPeriod $period): array
     {
         $sections = [
@@ -162,29 +182,17 @@ class ContentAgentService extends BaseAgentService
                 $s = $this->youtube->summary($period);
 
                 return ['label' => 'YouTube', 'followers' => $s['subscribers'],
-                    'reach' => $s['views_in_period'], 'engagements' => $s['engagements'],
-                    'posts' => $s['videos_in_period']];
+                    'reach' => $s['views_in_period'], 'engagements' => $s['engagements'], 'posts' => $s['videos_in_period']];
             }),
         ];
 
         $platforms = [];
         $data = [];
-
-        foreach ($sections as $section) {
-            if (($section['status'] ?? null) !== 'ok') {
-                continue;
+        foreach ($sections as $key => $s) {
+            if (($s['status'] ?? null) === 'ok') {
+                $platforms[] = $s['label'];
+                $data[$key] = $s;
             }
-
-            $platforms[] = $section['label'];
-            $data[] = [
-                'platform' => $section['label'],
-                'followers' => $section['followers'],
-                'reach' => $section['reach'],
-                'engagements' => $section['engagements'],
-                'posts_in_period' => $section['posts'],
-                'engagement_rate_percent' => ($section['reach'] ?? 0) > 0
-                    ? round($section['engagements'] / $section['reach'] * 100, 2) : null,
-            ];
         }
 
         return ['platforms' => $platforms, 'data' => $data];

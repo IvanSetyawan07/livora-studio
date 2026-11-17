@@ -359,7 +359,7 @@ function PromoBannerFormModal({ banner, onClose, onSaved }: FormModalProps) {
   const [zoom, setZoom] = useState<number>(1);
   const [posX, setPosX] = useState<number>(50); // 0% - 100% horizontal center
   const [posY, setPosY] = useState<number>(50); // 0% - 100% vertical center
-  const [aspectRatio, setAspectRatio] = useState<"original" | "16/10" | "16/9" | "4/3" | "1/1">("16/10");
+  const [aspectRatio, setAspectRatio] = useState<"original" | "4/5" | "1/1" | "4/3" | "16/10" | "16/9">("original");
   const [devicePreview, setDevicePreview] = useState<"desktop" | "mobile">("desktop");
   const [showAdjuster, setShowAdjuster] = useState<boolean>(false);
 
@@ -397,6 +397,9 @@ function PromoBannerFormModal({ banner, onClose, onSaved }: FormModalProps) {
             if (aspectRatio === "original") {
               targetW = img.width || 1920;
               targetH = img.height || 1200;
+            } else if (aspectRatio === "4/5") {
+              targetW = 1440;
+              targetH = 1800;
             } else if (aspectRatio === "16/9") {
               targetH = 1080;
             } else if (aspectRatio === "16/10") {
@@ -641,7 +644,7 @@ function PromoBannerFormModal({ banner, onClose, onSaved }: FormModalProps) {
                         setZoom(1);
                         setPosX(50);
                         setPosY(50);
-                        setAspectRatio("16/10");
+                        setAspectRatio("original");
                       }}
                       className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1"
                     >
@@ -701,10 +704,10 @@ function PromoBannerFormModal({ banner, onClose, onSaved }: FormModalProps) {
                   {/* Ratio Selector */}
                   <div>
                     <span className="text-[11px] text-muted-foreground block mb-1.5">
-                      Rasio Pemotongan / Ukuran:
+                      Rasio Pemotongan / Ukuran Pop-up:
                     </span>
-                    <div className="grid grid-cols-5 gap-1.5 text-xs">
-                      {(["16/10", "16/9", "4/3", "1/1", "original"] as const).map((r) => (
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 text-xs">
+                      {(["original", "4/5", "1/1", "4/3", "16/10", "16/9"] as const).map((r) => (
                         <button
                           key={r}
                           type="button"
@@ -715,7 +718,7 @@ function PromoBannerFormModal({ banner, onClose, onSaved }: FormModalProps) {
                               : "border-border hover:bg-muted text-muted-foreground"
                           }`}
                         >
-                          {r === "original" ? "Asli" : r}
+                          {r === "original" ? "Sesuai Gambar" : r}
                         </button>
                       ))}
                     </div>
@@ -798,45 +801,60 @@ function PromoBannerFormModal({ banner, onClose, onSaved }: FormModalProps) {
               </div>
             </div>
 
-            {/* Container Pratinjau dengan rasio proporsional */}
+            {/* Container Pratinjau menyesuaikan rasio gambar asli (tanpa space hitam) */}
             <div className="w-full flex-1 flex items-center justify-center bg-black/10 p-4 rounded-xl border border-dashed border-border min-h-[380px]">
-              <div
-                className={`relative rounded-xl overflow-hidden border border-white/20 shadow-2xl flex flex-col justify-center items-center text-center bg-black select-none transition-all duration-300 ${
-                  devicePreview === "desktop"
-                    ? "w-full max-w-lg aspect-[16/10]"
-                    : "w-56 aspect-[9/16]"
-                }`}
-              >
-                {/* Pure Image with applied zoom & position (Tanpa Wording Apapun) */}
-                {previewUrl ? (
-                  <div className="absolute inset-0 overflow-hidden flex items-center justify-center bg-black">
-                    <img
-                      src={previewUrl}
-                      alt="Preview Banner"
-                      className="w-full h-full object-cover transition-transform duration-150"
-                      style={{
-                        transform: `scale(${zoom})`,
-                        objectPosition: `${posX}% ${posY}%`,
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div className="absolute inset-0 bg-[#161616] flex flex-col items-center justify-center text-muted-foreground text-xs p-6">
-                    <ImageIcon className="w-8 h-8 opacity-40 mb-2" />
-                    <span>Unggah gambar banner untuk melihat pratinjau</span>
-                  </div>
-                )}
+              {previewUrl ? (
+                <div
+                  className={`relative rounded-xl overflow-hidden border border-white/20 shadow-2xl flex items-center justify-center select-none transition-all duration-300 ${
+                    aspectRatio === "original"
+                      ? devicePreview === "desktop"
+                        ? "w-fit max-w-lg max-h-[360px]"
+                        : "w-fit max-w-[220px] max-h-[360px]"
+                      : `${devicePreview === "desktop" ? "w-full max-w-lg" : "w-56"} ${
+                          aspectRatio === "16/9"
+                            ? "aspect-video"
+                            : aspectRatio === "16/10"
+                            ? "aspect-[16/10]"
+                            : aspectRatio === "4/3"
+                            ? "aspect-[4/3]"
+                            : aspectRatio === "4/5"
+                            ? "aspect-[4/5] max-w-[290px]"
+                            : "aspect-square max-w-[340px]"
+                        }`
+                  }`}
+                >
+                  <img
+                    src={previewUrl}
+                    alt="Preview Banner"
+                    className={
+                      aspectRatio === "original"
+                        ? `block w-auto h-auto max-h-[360px] transition-transform duration-150 ${
+                            devicePreview === "desktop" ? "max-w-lg" : "max-w-[220px]"
+                          }`
+                        : "w-full h-full object-cover transition-transform duration-150"
+                    }
+                    style={{
+                      transform: `scale(${zoom})`,
+                      objectPosition: `${posX}% ${posY}%`,
+                    }}
+                  />
 
-                {/* Close Button Preview in Frosted Glass */}
-                <div className="absolute top-3 right-3 w-7 h-7 rounded-full bg-black/45 text-white/85 border border-white/25 flex items-center justify-center pointer-events-none">
-                  <X className="w-3.5 h-3.5" />
-                </div>
+                  {/* Close Button Preview in Frosted Glass */}
+                  <div className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-black/45 text-white/85 border border-white/25 flex items-center justify-center pointer-events-none">
+                    <X className="w-3.5 h-3.5" />
+                  </div>
 
-                {/* Notice link tujuan di pojok bawah */}
-                <div className="absolute bottom-2 left-0 right-0 text-[10px] text-white/70 font-mono tracking-wider bg-black/50 py-1 pointer-events-none">
-                  Klik banner mengarah ke: {ctaLink || "/promo"}
+                  {/* Notice link tujuan di pojok bawah */}
+                  <div className="absolute bottom-2 left-2 right-2 text-center text-[10px] text-white/85 font-mono tracking-wider bg-black/55 backdrop-blur-sm py-1 px-2 rounded-md pointer-events-none truncate">
+                    Klik → {ctaLink || "/promo"}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="w-full max-w-md aspect-[16/10] rounded-xl border border-border bg-[#161616] flex flex-col items-center justify-center text-muted-foreground text-xs p-6">
+                  <ImageIcon className="w-8 h-8 opacity-40 mb-2" />
+                  <span>Unggah gambar banner untuk melihat pratinjau</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -872,12 +890,12 @@ function PromoBannerPreviewModal({ banner, onClose }: { banner: PromoBanner; onC
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-4xl max-h-[85vh] rounded-2xl md:rounded-[24px] overflow-hidden shadow-2xl border border-white/20 flex items-center justify-center bg-black select-none"
+        className="relative w-fit max-w-[92vw] sm:max-w-[86vw] lg:max-w-4xl max-h-[85vh] rounded-2xl md:rounded-[24px] overflow-hidden shadow-2xl border border-white/20 inline-flex items-center justify-center select-none"
       >
         <img
           src={imgUrl(banner.image_url)}
           alt={banner.title}
-          className="w-full h-auto max-h-[85vh] object-contain"
+          className="block w-auto h-auto max-w-[92vw] sm:max-w-[86vw] lg:max-w-4xl max-h-[85vh]"
         />
 
         {/* Close Button */}

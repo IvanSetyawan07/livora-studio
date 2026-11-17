@@ -38,7 +38,7 @@ class AIProviderManager
      * "Prioritaskan tapi tetap fallback": provider pilihan dicoba duluan, tapi
      * kalau gagal/limit habis, otomatis lanjut ke provider berikutnya.
      */
-    public function ask(string $systemPrompt, string $userMessage, ?string $agentKey = null, ?string $forceProvider = null): array
+    public function ask(string $systemPrompt, string $userMessage, ?string $agentKey = null, ?string $forceProvider = null, array $options = []): array
     {
         $order = $forceProvider ? [$forceProvider] : $this->resolveOrder();
         $lastError = null;
@@ -50,11 +50,16 @@ class AIProviderManager
             }
 
             try {
-                $result = $driver->complete($systemPrompt, $userMessage);
+                $result = $driver->complete($systemPrompt, $userMessage, $options);
                 $this->recordUsage($key, $agentKey, $result->model, $result->inputTokens, $result->outputTokens, $result->durationMs, 'success');
                 $this->touchProviderStatus($key, 'connected', $result->durationMs, true, $result);
 
-                return ['text' => $result->text, 'provider' => $key, 'model' => $result->model];
+                return [
+                    'text' => $result->text,
+                    'provider' => $key,
+                    'model' => $result->model,
+                    'groundingChunks' => $result->groundingChunks,
+                ];
             } catch (\Throwable $e) {
                 $lastError = $e;
                 $this->recordUsage($key, $agentKey, $driver->model(), 0, 0, null, 'error', $e->getMessage());
@@ -65,6 +70,11 @@ class AIProviderManager
         throw new \RuntimeException(
             'Tidak ada AI provider yang berhasil merespons. '.($lastError?->getMessage() ?? 'Belum ada provider yang dikonfigurasi.')
         );
+    }
+
+    public function hasProvider(string $key): bool
+    {
+        return ($this->drivers[$key] ?? null)?->isConfigured() ?? false;
     }
 
     /** Provider mana saja yang API key-nya sudah diisi (buat Settings page). */

@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api\Shop;
 use App\Http\Controllers\Controller;
 use App\Models\ShopDocument;
 use App\Models\ShopOrder;
+use App\Services\Meta\MetaCapiService;
 use App\Services\Shop\MidtransGateway;
 use App\Services\Shop\ShopOrderService;
 use App\Services\WhatsApp\WhatsAppNotifier;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class OrderController extends Controller
@@ -46,7 +48,31 @@ class OrderController extends Controller
         }
         $key = $request->header('Idempotency-Key') ?: hash('sha256', $user->id.'|'.implode(',', $data['cart_item_ids']).'|'.now()->format('YmdHi'));
         $order = $this->service->createFromCart($user, $data['cart_item_ids'], $data['note'] ?? null, $key);
-        \App\Services\Shop\Ops::funnel('order_dibuat', $order->id, $user->id);
+
+        if (Schema::hasColumn('shop_orders', 'utm_source')) {
+            $utmUpdate = [];
+            foreach (['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'] as $k) {
+                $val = $request->input($k);
+                if (is_string($val) && trim($val) !== '') {
+                    $utmUpdate[$k] = mb_substr(trim($val), 0, 150);
+                }
+            }
+            if ($utmUpdate !== []) {
+                $order->update($utmUpdate);
+            }
+        }
+
+        \App\Services\Shop\Ops::funnel('order_dibuat', $order->id, $user->id, [
+            'utm_source' => $request->input('utm_source'),
+            'utm_campaign' => $request->input('utm_campaign'),
+        ]);
+
+        app(MetaCapiService::class)->sendEvent(
+            'InitiateCheckout',
+            $request,
+            ['email' => $user->email, 'phone' => $user->phone],
+            ['content_name' => 'Shop Order '.$order->code]
+        );
 
         return response()->json(['order' => $this->present($order, true), 'wa_url' => $this->service->waLink($order)], 201);
     }

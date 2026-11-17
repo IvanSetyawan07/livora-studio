@@ -8,6 +8,7 @@ import { BookConsultation } from "@/components/livora/BookConsultation";
 import { ImageLightbox } from "@/components/livora/ImageLightbox";
 import { useProjectBySlug } from "@/lib/projectsApi";
 import { trackClick, trackView } from "@/lib/adminApi";
+import { trackLivoraEvent } from "@/lib/analytics";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import ProjectSpaces from "@/components/livora/ProjectSpaces";
@@ -106,6 +107,7 @@ const ProjectDetail = () => {
     if (!id) return;
     startRef.current = Date.now();
     trackClick("project", id);
+    trackLivoraEvent("view_project", { project_id: id, slug: project?.slug, title: project?.title });
     return () => {
       const sec = Math.round((Date.now() - startRef.current) / 1000);
       trackView("project", id, sec);

@@ -20,18 +20,8 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Daftarin semua ActionExecutor yang sudah beneran diimplementasikan di sini.
-        // Action_type yang belum punya baris di bawah akan tetap jujur 422
-        // (lihat ActionExecutorRegistry) — jangan didaftarin sampai eksekutornya jadi.
-        //
-        // technical_seo / content / process_change / follow_up / training / other
-        // dijalankan lewat AbstractDraftActionExecutor: AI menghasilkan checklist
-        // konkret siap kerja, BUKAN publish otomatis ke sistem — activity log
-        // mencatatnya jujur sebagai draft, sama seperti pola OnPageActionExecutor.
-        //
-        // budget_shift & campaign SENGAJA tidak didaftarkan: itu menyangkut duit
-        // beneran di ads platform, jangan dikasih eksekutor palsu — biarkan 422
-        // sampai integrasi tulis Google/Meta Ads-nya benar-benar jadi.
+        // Daftarin semua ActionExecutor nyata & draft checklist di sini.
+        // Action_type yang tidak terdaftar tetap mengembalikan HTTP 422 eksplisit.
         $this->app->singleton(ActionExecutorRegistry::class, function ($app) {
             return new ActionExecutorRegistry([
                 $app->make(OnPageActionExecutor::class),

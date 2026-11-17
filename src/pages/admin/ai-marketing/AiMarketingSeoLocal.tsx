@@ -4,14 +4,28 @@
  * Tidak ada fixture: nilai kosong ditulis "—", dan alasan setiap metrik
  * yang tidak tersedia ditampilkan apa adanya dari backend.
  */
-import { MapPin, Star, PhoneCall, Navigation, AlertTriangle } from "lucide-react";
+import { useState } from "react";
+import { MapPin, Star, PhoneCall, Navigation, AlertTriangle, MessageSquareReply, Loader2, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 import { IntegrationRequired } from "@/components/ai/integration-required";
 import { PlatformRow } from "@/components/ai/offline";
 import { Panel, SectionHeading, StatusDot } from "@/components/ai/primitives";
 import { ChartSection, MultiLineChart } from "@/components/ai/dashboard-charts";
-import { useLocalSeoSummary } from "@/hooks/useAiDashboard";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  extractApiErrorMessage,
+  useDraftReviewReply,
+  useLocalSeoSummary,
+  useReplyReview,
+} from "@/hooks/useAiDashboard";
 import type { SectionState } from "@/lib/ai/section-state";
-import type { LocalSeoSummary } from "@/lib/ai/types";
+import type { LocalSeoReview, LocalSeoSummary } from "@/lib/ai/types";
 
 function fmt(value: number | null | undefined, digits = 0) {
   if (value === null || value === undefined) return "—";
@@ -51,6 +65,37 @@ function LocalKpi({
 /** Local SEO block (reviews, rankings, map presence) reused by the SEO agent page. */
 export function LocalSeoSection() {
   const { data, section } = useLocalSeoSummary();
+  const [replyTarget, setReplyTarget] = useState<LocalSeoReview | null>(null);
+  const [replyDraft, setReplyDraft] = useState("");
+  const draftReply = useDraftReviewReply();
+  const sendReply = useReplyReview();
+
+  async function openReplyDialog(r: LocalSeoReview) {
+    setReplyTarget(r);
+    setReplyDraft("");
+    try {
+      const res = await draftReply.mutateAsync({
+        reviewId: r.id,
+        reviewer: r.reviewer,
+        rating: r.rating,
+        comment: r.comment,
+      });
+      setReplyDraft(res.draft || "");
+    } catch (err) {
+      toast.error(extractApiErrorMessage(err, "Gagal membuat draft balasan AI."));
+    }
+  }
+
+  async function handleSendReply() {
+    if (!replyTarget || !replyDraft.trim()) return;
+    try {
+      await sendReply.mutateAsync({ reviewId: replyTarget.id, comment: replyDraft.trim() });
+      toast.success("Balasan review berhasil dikirim ke Google Maps.");
+      setReplyTarget(null);
+    } catch (err) {
+      toast.error(extractApiErrorMessage(err, "Gagal mengirim balasan ke Google Business Profile."));
+    }
+  }
 
   const connected = data?.connected ?? false;
   const totals = data?.totals ?? null;
@@ -132,13 +177,14 @@ export function LocalSeoSection() {
         {data?.reviews?.length ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead>
+                <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground">
                   <th className="pb-2 pr-4">Reviewer</th>
                   <th className="pb-2 pr-4">Rating</th>
                   <th className="pb-2 pr-4">Snippet</th>
                   <th className="pb-2 pr-4">Replied</th>
-                  <th className="pb-2">Date</th>
+                  <th className="pb-2 pr-4">Date</th>
+                  <th className="pb-2 text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -150,8 +196,21 @@ export function LocalSeoSection() {
                       {r.comment ? (r.comment.length > 120 ? `${r.comment.slice(0, 120)}…` : r.comment) : "—"}
                     </td>
                     <td className="py-2 pr-4">{r.replied ? "Ya" : "Belum"}</td>
-                    <td className="py-2 text-muted-foreground">
+                    <td className="py-2 pr-4 text-muted-foreground">
                       {r.createdAt ? new Date(r.createdAt).toLocaleDateString("id-ID") : "—"}
+                    </td>
+                    <td className="py-2 text-right">
+                      {!r.replied ? (
+                        <button
+                          type="button"
+                          onClick={() => openReplyDialog(r)}
+                          className="inline-flex items-center gap-1 rounded border border-ai/40 bg-ai/10 px-2.5 py-1 text-xs text-ai hover:bg-ai/20"
+                        >
+                          <MessageSquareReply className="size-3" /> Balas (AI)
+                        </button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -196,6 +255,60 @@ export function LocalSeoSection() {
           />
         </div>
       )}
+
+      <Dialog open={!!replyTarget} onOpenChange={(open) => !open && setReplyTarget(null)}>
+        <DialogContent className="border-border-strong bg-popover sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-display text-lg">Balas Review Google Maps</DialogTitle>
+            <DialogDescription>
+              {replyTarget?.reviewer ?? "Reviewer"} · {replyTarget?.rating ?? "—"} bintang
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {replyTarget?.comment && (
+              <p className="rounded border border-border bg-background/50 p-3 text-xs text-muted-foreground">
+                “{replyTarget.comment}”
+              </p>
+            )}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="label-eyebrow">Draft Balasan AI</label>
+                {draftReply.isPending && (
+                  <span className="inline-flex items-center gap-1 text-xs text-ai">
+                    <Loader2 className="size-3 animate-spin" /> Menyusun…
+                  </span>
+                )}
+              </div>
+              <textarea
+                rows={4}
+                value={replyDraft}
+                onChange={(e) => setReplyDraft(e.target.value)}
+                placeholder="Tulis atau edit balasan sebelum dikirim ke Google Maps..."
+                className="w-full rounded border border-border bg-background p-3 text-sm"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => replyTarget && openReplyDialog(replyTarget)}
+                disabled={draftReply.isPending || sendReply.isPending}
+                className="inline-flex items-center gap-1 rounded border border-border px-3 py-1.5 text-xs hover:bg-accent disabled:opacity-50"
+              >
+                <Sparkles className="size-3 text-ai" /> Buat ulang draft
+              </button>
+              <button
+                type="button"
+                onClick={handleSendReply}
+                disabled={!replyDraft.trim() || sendReply.isPending}
+                className="inline-flex items-center gap-1.5 rounded bg-ai px-3.5 py-1.5 text-xs font-semibold text-background disabled:opacity-50"
+              >
+                {sendReply.isPending && <Loader2 className="size-3 animate-spin" />}
+                Kirim ke Google Maps
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

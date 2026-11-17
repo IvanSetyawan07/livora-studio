@@ -134,6 +134,115 @@ class MetaGraphClient
         ];
     }
 
+    /**
+     * Daftar Instagram Reels / Video milik akun Business Livora + metrik nyata.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function instagramVideos(int $max = 12): array
+    {
+        $igId = $this->instagramBusinessId() ?? throw MetaGraphException::notConfigured('META_INSTAGRAM_BUSINESS_ID belum diisi.');
+
+        $username = null;
+        try {
+            $acc = $this->getInstagramAccount();
+            $username = $acc['username'] !== '' ? '@'.$acc['username'] : null;
+        } catch (\Throwable) {
+            // Username opsional; media list tetap bisa jalan.
+        }
+
+        $res = $this->get("/{$igId}/media", [
+            'fields' => 'id,caption,media_type,media_product_type,permalink,thumbnail_url,media_url,timestamp,like_count,comments_count',
+            'limit' => min(max($max * 3, 15), 50),
+        ]);
+
+        $videoMedia = [];
+        foreach ($res['data'] ?? [] as $m) {
+            $type = strtoupper((string) ($m['media_type'] ?? ''));
+            $product = strtoupper((string) ($m['media_product_type'] ?? ''));
+            if ($type !== 'VIDEO' && $product !== 'REELS') {
+                continue;
+            }
+            $videoMedia[] = $m;
+            if (count($videoMedia) >= $max) {
+                break;
+            }
+        }
+
+        $out = [];
+        foreach ($videoMedia as $m) {
+            $id = (string) ($m['id'] ?? '');
+            if ($id === '') {
+                continue;
+            }
+            $metrics = $this->fetchInstagramVideoMetrics($id);
+            $likes = (int) ($m['like_count'] ?? 0);
+            $comments = (int) ($m['comments_count'] ?? 0);
+            $shares = $metrics['shares'];
+            $saves = $metrics['saved'];
+            $views = $metrics['views'] ?? $metrics['plays'] ?? $metrics['reach'];
+            $denominator = ($views !== null && $views > 0)
+                ? $views
+                : (($metrics['reach'] ?? null) !== null && $metrics['reach'] > 0 ? $metrics['reach'] : null);
+
+            $caption = trim((string) ($m['caption'] ?? ''));
+            $firstLine = trim((string) strtok($caption, "\r\n"));
+            $title = $firstLine !== '' ? mb_substr($firstLine, 0, 140) : ($caption !== '' ? mb_substr($caption, 0, 140) : 'Instagram Reel Livora');
+
+            $engTotal = $likes + $comments + ($shares ?? 0) + ($saves ?? 0);
+
+            $out[] = [
+                'platform' => 'instagram',
+                'id' => $id,
+                'title' => $title,
+                'channel' => $username ?? 'Instagram Livora',
+                'thumbnail' => (string) ($m['thumbnail_url'] ?? $m['media_url'] ?? ''),
+                'url' => (string) ($m['permalink'] ?? ''),
+                'publishedAt' => isset($m['timestamp']) ? (string) $m['timestamp'] : null,
+                'durationSeconds' => null,
+                'views' => $views,
+                'likes' => $likes,
+                'comments' => $comments,
+                'shares' => $shares,
+                'saves' => $saves,
+                'engagementRate' => $denominator ? round($engTotal / $denominator * 100, 2) : null,
+                'metricsSource' => 'Instagram Graph API',
+            ];
+        }
+
+        usort($out, fn ($a, $b) => ($b['views'] ?? $b['likes'] ?? 0) <=> ($a['views'] ?? $a['likes'] ?? 0));
+
+        return $out;
+    }
+
+    /**
+     * Ambil views/reach/saved/shares per Reel secara defensif supaya satu media
+     * dengan metrik lama tidak menjatuhkan seluruh daftar video IG.
+     *
+     * @return array{views: ?int, plays: ?int, reach: ?int, saved: ?int, shares: ?int}
+     */
+    private function fetchInstagramVideoMetrics(string $mediaId): array
+    {
+        $metrics = ['views' => null, 'plays' => null, 'reach' => null, 'saved' => null, 'shares' => null];
+        foreach (['views,reach,saved,shares', 'reach,saved,shares'] as $metricSet) {
+            try {
+                $res = $this->get("/{$mediaId}/insights", ['metric' => $metricSet]);
+                foreach ($res['data'] ?? [] as $row) {
+                    $name = (string) ($row['name'] ?? '');
+                    if (array_key_exists($name, $metrics)) {
+                        $val = $row['values'][0]['value'] ?? null;
+                        $metrics[$name] = is_numeric($val) ? (int) $val : null;
+                    }
+                }
+                break;
+            } catch (\Throwable) {
+                // Coba metric set fallback tanpa throws agar caption & permalink tetap tampil.
+            }
+        }
+
+        return $metrics;
+    }
+
     /** Lipat respons insights Graph (per metric → values[]) jadi baris per tanggal. */
     private function foldDaily(array $metrics, array $map): array
     {

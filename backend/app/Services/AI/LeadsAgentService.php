@@ -5,20 +5,18 @@ namespace App\Services\AI;
 use App\Services\Marketing\MarketingPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
- * Leads Agent — menganalisis kualitas & kecepatan penanganan lead.
- *
- * Sumber datanya sama persis dengan LeadsController::funnel(): konsultasi baru,
- * wishlist adds, lead yang sudah ditindaklanjuti, sebaran status, plus delta
- * terhadap periode sebelumnya.
+ * Leads Agent — menggabungkan data konsultasi, wishlist, repeat item_views,
+ * antrean cek harga WhatsApp (`wa_price_inquiries`), percakapan LiviBot
+ * (`wa_conversations`), dan pesanan shop (`shop_orders`).
  */
 class LeadsAgentService extends BaseAgentService
 {
     private const WINDOW_DAYS = 30;
 
-    /** Minimal lead supaya polanya tidak sekadar kebetulan. */
-    public const MIN_LEADS = 5;
+    public const MIN_LEADS = 3;
 
     protected function agentKey(): string
     {
@@ -37,21 +35,20 @@ class LeadsAgentService extends BaseAgentService
 
     protected function sourceLabels(array $snapshot): array
     {
-        return ['Lead Data'];
+        return ['Lead Data', 'WhatsApp & Shop'];
     }
 
     protected function emptyMessage(): string
     {
-        return 'Lead pada 30 hari terakhir masih di bawah '.self::MIN_LEADS
-            .' — belum cukup untuk dianalisis secara jujur. Tidak ada insight yang dibuat.';
+        return 'Belum ada cukup aktivitas lead (konsultasi + WA inquiry + wishlist) dalam 30 hari terakhir untuk dianalisis secara jujur.';
     }
 
     protected function roleBrief(): string
     {
-        return 'Kamu adalah Lead Management Analyst untuk Livora Studio, platform interior design '
-            .'& furniture custom di Indonesia. Tugasmu menganalisis volume lead, response rate, '
-            .'sebaran status konsultasi, dan tren dibanding periode sebelumnya, lalu menemukan '
-            .'lead yang menumpuk tanpa ditindaklanjuti serta penurunan kualitas penanganan.';
+        return 'Kamu adalah Lead Intelligence Analyst untuk Livora Studio (interior design, arsitek & custom/loose furniture di Jakarta). '
+            .'Tugasmu memprioritaskan prospek berniat beli tinggi (konsultasi yang belum di-follow up, pertanyaan harga WhatsApp di LiviBot, '
+            .'pengguna dengan wishlist berulang & view durasi tinggi), serta merekomendasikan tindak lanjut via WhatsApp / Email (`follow_up`). '
+            .'Jika merujuk ke konsultasi spesifik, isi target_type="consultation" dan target_id=<id>; jika cek harga WA, isi target_type="wa_inquiry" dan target_id=<id>.';
     }
 
     protected function buildSnapshot(): ?array
@@ -60,13 +57,14 @@ class LeadsAgentService extends BaseAgentService
         $prev = $period->previous();
 
         $current = $this->window($period->fromDate(), $period->toDate());
+        $waStats = $this->whatsappSnapshot($period->fromDate(), $period->toDate());
 
-        if ($current['leads'] < self::MIN_LEADS) {
+        $totalSignals = $current['leads'] + ($waStats['price_inquiries_total'] ?? 0) + $current['wishlist'];
+        if ($totalSignals < self::MIN_LEADS) {
             return null;
         }
 
         $previous = $this->window($prev->fromDate(), $prev->toDate());
-
         $delta = fn (float $now, float $before) => $before > 0
             ? round((($now - $before) / $before) * 100, 1)
             : null;
@@ -99,11 +97,13 @@ class LeadsAgentService extends BaseAgentService
                 'responded' => $delta($current['responded'], $previous['responded']),
             ],
             'leads_by_status' => $current['byStatus'],
+            'whatsapp_livibot' => $waStats,
+            'stalled_consultations' => $this->stalledConsultations(),
+            'utm_sources_30d' => $this->utmBreakdown($period->fromDate(), $period->toDate()),
             'daily_series' => $current['series'],
         ];
     }
 
-    /** Agregat satu jendela waktu — logika sama dengan LeadsController::funnel(). */
     private function window(string $fromDate, string $toDate): array
     {
         $from = $fromDate.' 00:00:00';
@@ -152,5 +152,86 @@ class LeadsAgentService extends BaseAgentService
             'series' => $series,
             'byStatus' => $byStatus,
         ];
+    }
+
+    private function whatsappSnapshot(string $fromDate, string $toDate): array
+    {
+        $from = $fromDate.' 00:00:00';
+        $to = $toDate.' 23:59:59';
+
+        $inquiriesTotal = 0;
+        $inquiriesPending = 0;
+        $pendingDetails = [];
+
+        if (Schema::hasTable('wa_price_inquiries')) {
+            $inquiriesTotal = (int) DB::table('wa_price_inquiries')->whereBetween('created_at', [$from, $to])->count();
+            $inquiriesPending = (int) DB::table('wa_price_inquiries')->where('status', 'pending')->count();
+            $pendingDetails = DB::table('wa_price_inquiries')
+                ->where('status', 'pending')
+                ->orderBy('created_at')
+                ->limit(8)
+                ->get(['id', 'phone', 'items', 'created_at'])
+                ->map(function ($r) {
+                    $items = json_decode((string) $r->items, true) ?: [];
+
+                    return [
+                        'id' => (int) $r->id,
+                        'phone' => substr((string) $r->phone, 0, 6).'***'.substr((string) $r->phone, -3),
+                        'item_count' => count($items),
+                        'first_item' => $items[0]['title'] ?? null,
+                        'age_hours' => now()->diffInHours($r->created_at),
+                    ];
+                })->all();
+        }
+
+        $waitingAdmin = Schema::hasTable('wa_conversations')
+            ? (int) DB::table('wa_conversations')->where('mode', 'menunggu_admin')->count()
+            : 0;
+        $ordersPendingWa = Schema::hasTable('shop_orders')
+            ? (int) DB::table('shop_orders')->whereIn('status', ['menunggu_wa', 'menunggu_harga', 'penawaran'])->count()
+            : 0;
+
+        return [
+            'price_inquiries_total' => $inquiriesTotal,
+            'price_inquiries_pending' => $inquiriesPending,
+            'pending_price_inquiry_samples' => $pendingDetails,
+            'conversations_waiting_admin' => $waitingAdmin,
+            'shop_orders_awaiting_closing' => $ordersPendingWa,
+        ];
+    }
+
+    private function stalledConsultations(): array
+    {
+        return DB::table('consultations')
+            ->whereIn('status', ['new_inquiry', 'under_review', 'contacted'])
+            ->where('updated_at', '<=', now()->subDays(2))
+            ->orderBy('updated_at')
+            ->limit(10)
+            ->get(['id', 'first_name', 'status', 'service_type', 'project_type', 'updated_at'])
+            ->map(fn ($c) => [
+                'id' => (int) $c->id,
+                'name' => $c->first_name,
+                'status' => $c->status,
+                'service_type' => $c->service_type,
+                'project_type' => $c->project_type,
+                'idle_hours' => now()->diffInHours($c->updated_at),
+            ])->all();
+    }
+
+    private function utmBreakdown(string $fromDate, string $toDate): array
+    {
+        if (! Schema::hasColumn('consultations', 'utm_source')) {
+            return [];
+        }
+
+        return DB::table('consultations')
+            ->whereBetween('created_at', [$fromDate.' 00:00:00', $toDate.' 23:59:59'])
+            ->selectRaw("COALESCE(NULLIF(utm_source, ''), '(direct/organic)') as source, COUNT(*) as total")
+            ->groupBy('source')
+            ->orderByDesc('total')
+            ->limit(8)
+            ->get()
+            ->map(fn ($r) => ['source' => $r->source, 'leads' => (int) $r->total])
+            ->all();
     }
 }

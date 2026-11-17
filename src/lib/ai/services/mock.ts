@@ -68,6 +68,17 @@ const dashboard: AIDashboardService = {
     await delay(250);
     return agentsFixture;
   },
+  async runAgent(key) {
+    await delay(400);
+    return {
+      agent: key,
+      status: "ok",
+      insights_created: 0,
+      recommendations_created: 0,
+      provider: "mock",
+      message: "Mode mock tidak menjalankan LLM sungguhan.",
+    };
+  },
 };
 
 const recommendations: AIRecommendationService = {
@@ -231,12 +242,20 @@ const campaigns: AICampaignService = {
     await delay(220);
     return campaignsFixture.find((c) => c.id === id);
   },
+  async sync() {
+    await delay(300);
+    return { synced: campaignsFixture.length, campaigns: campaignsFixture };
+  },
 };
 
 const impact: AIImpactService = {
   async list() {
     await delay(300);
     return impactFixture;
+  },
+  async refresh() {
+    await delay(300);
+    return { updated: impactFixture.length, records: impactFixture };
   },
 };
 
@@ -341,13 +360,46 @@ const marketing: AIMarketingService = {
     return { ...notConfigured(p), kpis: { leads: 0, wishlistAdds: 0, responded: 0, responseRate: null },
       deltas: { leads: null, wishlistAdds: null, responseRate: null }, series: [], byStatus: [] };
   },
-  // Content Inspiration butuh API YouTube/TikTok nyata — mode mock tidak
-  // pernah mengarang video atau metrik.
+  async getHighIntentLeads() {
+    await delay(200);
+    return { status: "ok", total: 0, leads: [] };
+  },
+  async getContentQueue() {
+    await delay(200);
+    return [];
+  },
+  async createContentDraft(body) {
+    await delay(150);
+    return {
+      id: `draft_${Date.now()}`,
+      recommendationId: null,
+      title: body.title,
+      channel: body.channel,
+      headline: body.headline ?? body.title,
+      caption: body.caption ?? null,
+      mediaUrl: body.media_url ?? null,
+      status: "needs_review" as const,
+      scheduledFor: null,
+      createdAt: new Date().toISOString(),
+      meta: body.meta ?? null,
+    };
+  },
+  async updateContentDraft(id, body) {
+    await delay(150);
+    return { id, status: body.status as any };
+  },
+  async pushContentDraftToEmail() {
+    await delay(150);
+    return { campaignId: 1, redirectPath: "/admin/marketing" };
+  },
+  // Content Inspiration butuh API Instagram/YouTube/TikTok/Gemini nyata — mode mock tidak
+  // pernah mengarang video, URL, atau metrik.
   async getInspirationLibrary() {
     await delay(200);
     return {
       status: "not_configured" as const,
       generatedAt: new Date().toISOString(),
+      instagram: { status: "not_configured" as const },
       youtube: { status: "not_configured" as const },
       tiktok: { status: "not_configured" as const },
       tiktokDiscoveryAvailable: false,
@@ -356,7 +408,7 @@ const marketing: AIMarketingService = {
   },
   async analyzeInspiration(p) {
     await delay(200);
-    return { status: "not_configured" as const, query: p.query, references: [], analysis: null };
+    return { status: "not_configured" as const, query: p.query ?? "", references: [], recommendations: [], analysis: null };
   },
 };
 // Honest-empty: belum ada koneksi Search Console beneran di mode mock,

@@ -17,6 +17,7 @@ final class AIProviderResult
         public readonly ?\DateTimeInterface $rlRequestsResetAt = null,
         public readonly ?\DateTimeInterface $rlTokensResetAt = null,
         public readonly ?string $rlNote = null,
+        public readonly ?array $groundingChunks = null,
     ) {
     }
 }

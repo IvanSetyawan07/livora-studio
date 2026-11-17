@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { RefreshCcw } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Panel, Pill } from "@/components/ai/primitives";
 import { QueryError } from "@/components/ai/query-error";
 import { usePageContext } from "@/context/AiMarketingContext";
-import { useAiAgents, useImpact } from "@/hooks/useAiDashboard";
+import { extractApiErrorMessage, useAiAgents, useImpact, useRefreshImpact } from "@/hooks/useAiDashboard";
 import type { ImpactPeriod, ImpactResult } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
 
@@ -28,9 +30,19 @@ export default function AiMarketingImpact() {
   const [period, setPeriod] = useState<ImpactPeriod>(14);
   const { data: agents } = useAiAgents();
   const { data: records, isLoading, isError, refetch } = useImpact();
+  const refreshImpact = useRefreshImpact();
 
   function agentName(key: string) {
     return agents?.find((a) => a.id === key)?.name ?? key;
+  }
+
+  async function handleRefreshImpact() {
+    try {
+      const res = await refreshImpact.mutateAsync();
+      toast.success(`Metrik dampak diperbarui (${res.updated} record).`);
+    } catch (err) {
+      toast.error(extractApiErrorMessage(err, "Gagal memperbarui metrik impact."));
+    }
   }
 
   return (
@@ -39,6 +51,17 @@ export default function AiMarketingImpact() {
         eyebrow="Workspace"
         title="Impact"
         description="Recommendations are only as good as the results they produce. This is where that gets checked."
+        action={
+          <button
+            type="button"
+            onClick={handleRefreshImpact}
+            disabled={refreshImpact.isPending}
+            className="inline-flex items-center gap-1.5 rounded-sm border border-border-strong px-3 py-2 text-xs font-medium transition-colors hover:bg-accent disabled:opacity-60"
+          >
+            <RefreshCcw className={cn("size-3.5", refreshImpact.isPending && "animate-spin")} />
+            {refreshImpact.isPending ? "Refreshing…" : "Refresh Metrics"}
+          </button>
+        }
       />
 
       <div className="mb-6 flex items-center gap-2">

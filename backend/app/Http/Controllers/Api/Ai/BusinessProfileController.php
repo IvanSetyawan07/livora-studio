@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Ai;
 
 use App\Http\Controllers\Controller;
+use App\Services\AI\AIProviderManager;
 use App\Services\Google\GoogleBusinessProfileClient;
 use App\Services\Google\GoogleOAuthTokenStore;
 use Illuminate\Http\Request;
@@ -158,5 +159,65 @@ class BusinessProfileController extends Controller
             'reviews' => $reviews,
             'unavailable' => $unavailable,
         ];
+    }
+
+    /**
+     * POST /api/ai/seo/local-reviews/{reviewId}/draft-reply
+     * Generate draft balasan review Google Maps dengan keyword lokal Livora (aman, butuh review manusia).
+     */
+    public function draftReviewReply(Request $request, string $reviewId, AIProviderManager $ai)
+    {
+        $data = $request->validate([
+            'reviewer' => ['nullable', 'string', 'max:120'],
+            'rating' => ['nullable', 'integer', 'min:1', 'max:5'],
+            'comment' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $reviewer = $data['reviewer'] ?? 'Customer';
+        $rating = $data['rating'] ?? 5;
+        $comment = $data['comment'] ?? '(tanpa komentar tertulis)';
+
+        $prompt = <<<TXT
+Tulis balasan profesional & hangat dari LIVORA Studio (interior design, arsitektur & custom furniture showroom di Jakarta Selatan) untuk ulasan Google Maps berikut:
+
+Nama reviewer: {$reviewer}
+Rating         : {$rating}/5 bintang
+Ulasan         : {$comment}
+
+Aturan:
+- Bahasa Indonesia ramah & elegan (atau bahasa Inggris kalau ulasan berbahasa Inggris).
+- Sapa nama reviewer dengan sopan.
+- Maksimal 2-3 kalimat, natural (tidak kaku/robotik).
+- Bila rating >= 4: ucapkan terima kasih dan sebut secara alami keahlian Livora di interior/custom furniture showroom Jakarta.
+- Bila rating <= 3: akui pengalaman mereka, minta maaf tulus, dan ajak lanjut via WhatsApp resmi Livora (+62 821-2043-307) agar tim kami bantu langsung.
+Balas HANYA teks balasannya.
+TXT;
+
+        $res = $ai->ask('Kamu adalah showroom hospitality manager LIVORA Studio Jakarta.', $prompt, 'seo');
+
+        return response()->json([
+            'reviewId' => $reviewId,
+            'draft' => trim((string) ($res['text'] ?? '')),
+            'provider' => $res['provider'] ?? null,
+        ]);
+    }
+
+    /**
+     * POST /api/ai/seo/local-reviews/{reviewId}/reply
+     * Kirim balasan resmi ke Google Business Profile dan reset cache summary.
+     */
+    public function replyReview(Request $request, string $reviewId)
+    {
+        $data = $request->validate([
+            'comment' => ['required', 'string', 'min:2', 'max:4096'],
+        ]);
+
+        $result = $this->client->replyReview($reviewId, $data['comment']);
+
+        foreach ([7, 14, 28, 30, 90] as $d) {
+            Cache::forget("ai:seo:local-summary:{$d}");
+        }
+
+        return response()->json($result);
     }
 }

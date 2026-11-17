@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Loader2, ShoppingBag, Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { addPublicCartLine } from "@/lib/shopPublic";
+import { trackLivoraEvent } from "@/lib/analytics";
 
 type Props = {
   itemId?: number;
@@ -32,6 +33,7 @@ export default function AddToCartButton({ itemId, variantId, hasVariants, varian
         item_id: itemId, variant_id: variantId, quantity: qty,
         title: itemTitle, code: itemCode ?? null, image: itemImage ?? null, slug: itemSlug,
       });
+      trackLivoraEvent("add_to_cart", { item_id: itemId, item_title: itemTitle, qty });
       toast.success("Ditambahkan ke keranjang", { action: { label: "Lihat", onClick: () => navigate("/cart") } });
     } finally {
       setBusy(false);

@@ -7,14 +7,17 @@ use App\Http\Resources\Ai\AiApprovalResource;
 use App\Models\AiActivityLog;
 use App\Models\AiApproval;
 use App\Services\AI\Actions\ActionExecutorRegistry;
+use App\Services\AI\ImpactTrackerService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class ActionController extends Controller
 {
-    public function __construct(protected ActionExecutorRegistry $executors)
-    {
+    public function __construct(
+        protected ActionExecutorRegistry $executors,
+        protected ImpactTrackerService $impactTracker,
+    ) {
     }
 
     public function index()
@@ -117,6 +120,12 @@ class ActionController extends Controller
                 'recommendation_id' => $recommendation->id,
             ]);
         });
+
+        try {
+            $this->impactTracker->recordExecution($recommendation->fresh(), now());
+        } catch (Throwable $e) {
+            Log::warning('Impact tracker failed to record baseline: '.$e->getMessage());
+        }
 
         return (new AiApprovalResource($action->fresh()))->additional([
             'executed' => true,

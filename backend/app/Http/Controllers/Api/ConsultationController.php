@@ -8,11 +8,14 @@ use App\Mail\NewConsultationAdminAlert;
 use App\Models\Consultation;
 use App\Models\ConsultationStageFile;
 use App\Models\User;
+use App\Services\Meta\MetaCapiService;
+use App\Services\Shop\Ops;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class ConsultationController extends Controller
@@ -63,7 +66,7 @@ class ConsultationController extends Controller
             }
         }
 
-        $consultation = Consultation::create([
+        $payload = [
             'user_id'            => $userId,
             'first_name'         => $data['first_name'],
             'last_name'          => $data['last_name'] ?? null,
@@ -84,7 +87,18 @@ class ConsultationController extends Controller
             'terms_version'      => $data['terms_version'] ?? null,
             'privacy_version'    => $data['privacy_version'] ?? null,
             'consent_accepted_at' => now(),
-        ]);
+        ];
+
+        if (Schema::hasColumn('consultations', 'utm_source')) {
+            foreach (['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'] as $utmKey) {
+                $val = $request->input($utmKey);
+                if (is_string($val) && trim($val) !== '') {
+                    $payload[$utmKey] = mb_substr(trim($val), 0, 150);
+                }
+            }
+        }
+
+        $consultation = Consultation::create($payload);
 
         $consultation->statusHistory()->create([
             'previous_status' => null,
@@ -121,6 +135,20 @@ class ConsultationController extends Controller
                 Log::error('NewConsultationAdminAlert email failed for consultation #' . $consultation->id . ': ' . mb_substr($e->getMessage(), 0, 200));
             }
         }
+
+        Ops::funnel('consultation_submitted', null, $userId, [
+            'consultation_id' => $consultation->id,
+            'service_type' => $consultation->service_type,
+            'utm_source' => $request->input('utm_source'),
+            'utm_campaign' => $request->input('utm_campaign'),
+        ]);
+
+        app(MetaCapiService::class)->sendEvent(
+            'Lead',
+            $request,
+            ['email' => $consultation->email, 'phone' => $consultation->phone],
+            ['content_name' => $consultation->service_type ?: 'Interior Consultation', 'content_category' => $consultation->project_type ?: 'Residential']
+        );
 
         return response()->json($consultation, 201);
     }

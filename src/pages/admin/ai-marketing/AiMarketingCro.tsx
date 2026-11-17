@@ -150,18 +150,28 @@ export default function CroAgentPage() {
 
       <section className="mt-10 grid gap-4 lg:grid-cols-2">
         <Panel className="p-6">
-          <SectionHeading title="Page performance" />
-          <NotConnected
-            title="Per-page conversion breakdown is not enabled"
-            description="Page-level conversion and drop-off rates will populate from Web Analytics once the CRO Agent is running."
-          />
+          <SectionHeading title="Tracked Funnel Events (30d)" />
+          {funnel.data?.funnelEvents && funnel.data.funnelEvents.length > 0 ? (
+            <div className="space-y-2">
+              {funnel.data.funnelEvents.map((fe) => (
+                <div key={fe.event} className="flex items-center justify-between border-b border-border/50 py-2 text-sm last:border-0">
+                  <span className="font-mono text-xs text-foreground/85">{fe.event}</span>
+                  <span className="num font-medium">{fe.count.toLocaleString("id-ID")}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <NotConnected
+              title="Belum ada event funnel tercatat"
+              description="Event otomatis terekam saat pengunjung melihat item/proyek, membuka promo, menambah ke keranjang, atau mengajukan konsultasi."
+            />
+          )}
         </Panel>
         <Panel className="p-6">
-          <SectionHeading title="Session behaviour" />
-          <NotConnected
-            title="Session behaviour capture is not connected"
-            description="Scroll depth, rage clicks and form abandonment need a client-side capture layer in the Laravel backend."
-          />
+          <SectionHeading title="Behaviour & GA4 Capture" />
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Client-side tracker sudah terpasang (<code className="font-mono text-xs">src/lib/analytics.ts</code>) dan otomatis mengirim custom events ke database <code className="font-mono text-xs">funnel_events</code> serta Google Analytics 4 / Meta Pixel begitu <code className="font-mono text-xs">GA4_MEASUREMENT_ID</code> / <code className="font-mono text-xs">META_PIXEL_ID</code> diisi di <code className="font-mono text-xs">.env</code>.
+          </p>
         </Panel>
       </section>
     </AgentPageShell>

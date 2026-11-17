@@ -49,7 +49,8 @@ return [
     ],
     'gemini' => [
         'api_key' => env('GEMINI_API_KEY'),
-        'model'   => env('GEMINI_MODEL', 'gemini-2.5-flash'),
+        'model'   => env('GEMINI_MODEL', 'gemini-3.6-flash'),
+        'fallback_model' => env('GEMINI_FALLBACK_MODEL', 'gemini-2.5-flash'),
     ],
 
     // ---------------------------------------------------------------
@@ -92,7 +93,14 @@ return [
 
     'ga4' => [
         'property_id' => env('GA4_PROPERTY_ID'),
+        'measurement_id' => env('GA4_MEASUREMENT_ID'),
         'service_account_json' => env('GA4_SERVICE_ACCOUNT_JSON'),
+    ],
+
+    'meta_pixel' => [
+        'pixel_id' => env('META_PIXEL_ID'),
+        'capi_access_token' => env('META_CAPI_ACCESS_TOKEN'),
+        'test_event_code' => env('META_CAPI_TEST_EVENT_CODE'),
     ],
 
     'google_business' => [

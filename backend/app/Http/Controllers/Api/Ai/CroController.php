@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\Ai;
 use App\Http\Controllers\Controller;
 use App\Models\Consultation;
 use App\Services\AI\CroAgentService;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * KPI funnel CRO — dihitung LANGSUNG dari tabel consultations dan
@@ -74,22 +76,43 @@ class CroController extends Controller
                 'lostPrev30d' => (int) $snapshot['cancelled_or_rejected_previous_30_days'],
             ],
             'stages' => $stages,
+            'funnelEvents' => $this->funnelEvents30d(),
             'unavailable' => $this->unavailableMetrics(),
         ]);
     }
 
-    /** Metrik yang JELAS belum punya sumber — dikirim apa adanya, bukan diisi 0. */
+    private function funnelEvents30d(): array
+    {
+        if (! Schema::hasTable('funnel_events')) {
+            return [];
+        }
+
+        return DB::table('funnel_events')
+            ->where('created_at', '>=', now()->subDays(30))
+            ->selectRaw('event, COUNT(*) as total')
+            ->groupBy('event')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn ($r) => ['event' => $r->event, 'count' => (int) $r->total])
+            ->values()
+            ->all();
+    }
+
+    /** Metrik yang belum terpasang sumber eksternalnya dinyatakan apa adanya. */
     private function unavailableMetrics(): array
     {
-        return [
-            [
-                'metric' => 'CTA click rate',
-                'reason' => 'Butuh event klik CTA yang dikirim ke GA4. GA4 sudah tersambung, tapi event CTA-nya belum dipasang di frontend.',
-            ],
-            [
-                'metric' => 'Session-level behaviour / scroll depth',
-                'reason' => 'Butuh capture layer di frontend — belum dipasang.',
-            ],
+        $items = [];
+        if (! filled(config('services.ga4.measurement_id'))) {
+            $items[] = [
+                'metric' => 'GA4 client tag (gtag.js)',
+                'reason' => 'Event internal (funnel_events) sudah aktif, namun GA4_MEASUREMENT_ID belum diset di backend/.env.',
+            ];
+        }
+        $items[] = [
+            'metric' => 'Scroll depth heatmap',
+            'reason' => 'Membutuhkan integrasi GA4 Enhanced Measurement / Microsoft Clarity terpisah.',
         ];
+
+        return $items;
     }
 }

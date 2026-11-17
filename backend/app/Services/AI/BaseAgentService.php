@@ -5,9 +5,11 @@ namespace App\Services\AI;
 use App\Models\AiActivityLog;
 use App\Models\AiAgent;
 use App\Models\AiApproval;
+use App\Models\AiContentDraft;
 use App\Models\AiInsight;
 use App\Models\AiRecommendation;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Fase 4 (agent lifecycle) — kerangka siklus AI yang dipakai bersama oleh
@@ -121,11 +123,15 @@ abstract class BaseAgentService
                     return;
                 }
 
+                $target = $this->sanitizeTarget($recData);
+
                 $recommendation = AiRecommendation::create([
                     'insight_id' => $insight->id,
                     'title' => $recData['title'],
                     'description' => $recData['description'],
                     'action_type' => $recData['action_type'] ?? $this->defaultActionType(),
+                    'target_type' => $target['target_type'],
+                    'target_id' => $target['target_id'],
                     'risk' => in_array($recData['risk'] ?? null, ['low', 'medium', 'high'], true)
                         ? $recData['risk'] : 'low',
                     'status' => 'pending',
@@ -136,11 +142,16 @@ abstract class BaseAgentService
                         ? $recData['priority'] : 'medium',
                     'why' => $recData['why'] ?? null,
                     'suggested_action' => $recData['suggested_action'] ?? null,
+                    'change_from' => isset($recData['change_from']) && is_string($recData['change_from'])
+                        ? mb_substr($recData['change_from'], 0, 250) : null,
+                    'change_to' => isset($recData['change_to']) && is_string($recData['change_to'])
+                        ? mb_substr($recData['change_to'], 0, 250) : null,
                 ]);
 
                 // Fase 1: setiap recommendation WAJIB punya baris approval pendamping.
                 AiApproval::ensureForRecommendation($recommendation);
                 $insight->update(['recommendation_id' => $recommendation->id]);
+                $this->maybeCreateContentDraft($recommendation, $recData);
                 $recommendationsCreated++;
             });
         }
@@ -290,5 +301,69 @@ PROMPT;
     protected function clampConfidence(mixed $value): int
     {
         return (int) max(0, min(100, (int) round((float) $value)));
+    }
+
+    /** @return array{target_type: ?string, target_id: ?int} */
+    protected function sanitizeTarget(array $rec): array
+    {
+        $type = isset($rec['target_type']) && is_string($rec['target_type'])
+            ? strtolower(trim($rec['target_type']))
+            : null;
+        $id = isset($rec['target_id']) && is_numeric($rec['target_id'])
+            ? (int) $rec['target_id']
+            : null;
+
+        if (! $type || ! $id || $id <= 0) {
+            return ['target_type' => null, 'target_id' => null];
+        }
+
+        $exists = match ($type) {
+            'item' => Schema::hasTable('items') && DB::table('items')->where('id', $id)->exists(),
+            'project' => Schema::hasTable('projects') && DB::table('projects')->where('id', $id)->exists(),
+            'consultation' => Schema::hasTable('consultations') && DB::table('consultations')->where('id', $id)->exists(),
+            'wa_inquiry' => Schema::hasTable('wa_price_inquiries') && DB::table('wa_price_inquiries')->where('id', $id)->exists(),
+            'promo_banner' => Schema::hasTable('promo_banners') && DB::table('promo_banners')->where('id', $id)->exists(),
+            default => false,
+        };
+
+        return $exists
+            ? ['target_type' => $type, 'target_id' => $id]
+            : ['target_type' => null, 'target_id' => null];
+    }
+
+    protected function maybeCreateContentDraft(AiRecommendation $recommendation, array $recData): void
+    {
+        if (($recommendation->action_type ?? null) !== 'content' || ! Schema::hasTable('ai_content_drafts')) {
+            return;
+        }
+
+        $channel = strtolower((string) ($recData['channel'] ?? 'instagram'));
+        if (! in_array($channel, ['instagram', 'facebook', 'email', 'tiktok', 'youtube', 'website'], true)) {
+            $channel = 'instagram';
+        }
+
+        $mediaUrl = null;
+        if ($recommendation->target_type === 'item' && $recommendation->target_id && Schema::hasTable('items')) {
+            $mediaUrl = DB::table('items')->where('id', $recommendation->target_id)->value('image');
+        } elseif ($recommendation->target_type === 'project' && $recommendation->target_id && Schema::hasTable('projects')) {
+            $mediaUrl = DB::table('projects')->where('id', $recommendation->target_id)->value('hero_image');
+        } elseif ($recommendation->target_type === 'promo_banner' && $recommendation->target_id && Schema::hasTable('promo_banners')) {
+            $mediaUrl = DB::table('promo_banners')->where('id', $recommendation->target_id)->value('image_url');
+        }
+
+        AiContentDraft::create([
+            'recommendation_id' => $recommendation->id,
+            'title' => $recommendation->title,
+            'channel' => $channel,
+            'headline' => isset($recData['headline']) && is_string($recData['headline'])
+                ? mb_substr($recData['headline'], 0, 250) : $recommendation->title,
+            'caption' => isset($recData['caption']) && is_string($recData['caption'])
+                ? $recData['caption'] : ($recommendation->suggested_action ?: $recommendation->description),
+            'body' => $recommendation->suggested_action ?: $recommendation->description,
+            'media_url' => $mediaUrl,
+            'target_type' => $recommendation->target_type,
+            'target_id' => $recommendation->target_id,
+            'status' => 'needs_review',
+        ]);
     }
 }

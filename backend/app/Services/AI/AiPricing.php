@@ -16,7 +16,11 @@ class AiPricing
 {
     /** @var array<string, array{in: float, out: float}> */
     private const TABLE = [
-        // Google Gemini
+        // Google Gemini (harga per 1M token USD)
+        'gemini:gemini-3.8-flash' => ['in' => 0.75, 'out' => 3.75],
+        'gemini:gemini-3.6-flash' => ['in' => 0.75, 'out' => 3.75],
+        'gemini:gemini-3.5-flash-lite' => ['in' => 0.30, 'out' => 2.50],
+        'gemini:gemini-3.1-pro' => ['in' => 2.00, 'out' => 12.00],
         'gemini:gemini-2.5-flash' => ['in' => 0.30, 'out' => 2.50],
         'gemini:gemini-2.5-flash-lite' => ['in' => 0.10, 'out' => 0.40],
         'gemini:gemini-2.5-pro' => ['in' => 1.25, 'out' => 10.00],

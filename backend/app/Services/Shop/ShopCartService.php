@@ -3,6 +3,7 @@
 namespace App\Services\Shop;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Keranjang anonim berkode pendek CRT-XXXX — pintu masuk dari web ke WhatsApp.
@@ -10,15 +11,26 @@ use Illuminate\Support\Facades\DB;
  */
 class ShopCartService
 {
-    public static function create(array $items, ?string $sessionId = null): string
+    public static function create(array $items, ?string $sessionId = null, array $utm = []): string
     {
         $code = self::generateCode();
-        DB::table('shop_carts')->insert([
+        $row = [
             'code' => $code,
             'items' => json_encode(array_values($items)),
             'session_id' => $sessionId,
-            'created_at' => now(), 'updated_at' => now(),
-        ]);
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        if (Schema::hasColumn('shop_carts', 'utm_source')) {
+            foreach (['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'] as $k) {
+                if (! empty($utm[$k])) {
+                    $row[$k] = mb_substr((string) $utm[$k], 0, 150);
+                }
+            }
+        }
+
+        DB::table('shop_carts')->insert($row);
 
         return $code;
     }

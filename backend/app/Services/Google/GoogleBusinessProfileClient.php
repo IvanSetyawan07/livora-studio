@@ -222,6 +222,48 @@ class GoogleBusinessProfileClient
         ];
     }
 
+    /**
+     * Balas review Google Maps showroom Livora via My Business API v4.
+     *
+     * @return array{comment: string, updateTime: ?string}
+     */
+    public function replyReview(string $reviewId, string $comment): array
+    {
+        $account = $this->accountId();
+        $location = $this->requireLocation();
+
+        if ($account === null) {
+            throw new RuntimeException(
+                'GOOGLE_BUSINESS_ACCOUNT_ID belum diisi di backend/.env — balasan review butuh accounts/{id}/locations/{id}.'
+            );
+        }
+
+        $token = $this->tokens->getValidAccessToken();
+        if ($token === null) {
+            throw new RuntimeException('Koneksi Google belum aktif atau token perlu disambungkan ulang.');
+        }
+
+        $cleanReviewId = basename($reviewId);
+        $url = self::REVIEWS_BASE.'/'.$account.'/'.$location.'/reviews/'.$cleanReviewId.'/reply';
+
+        $response = Http::withToken($token)->timeout(20)->acceptJson()->put($url, [
+            'comment' => trim($comment),
+        ]);
+
+        if ($response->failed()) {
+            throw new RuntimeException(
+                self::humanError('My Business API (reply review)', $response->status(), (string) ($response->json('error.message') ?? $response->body()))
+            );
+        }
+
+        $json = $response->json() ?? [];
+
+        return [
+            'comment' => (string) ($json['comment'] ?? trim($comment)),
+            'updateTime' => $json['updateTime'] ?? now()->toIso8601String(),
+        ];
+    }
+
     private function requireLocation(): string
     {
         $location = $this->locationId();

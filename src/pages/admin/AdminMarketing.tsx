@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import { Users as UsersIcon, Search, Image as ImageIcon, X } from "lucide-react";
 import HeroImagePicker from "@/pages/admin/HeroImagePicker";
@@ -18,6 +19,8 @@ const SIGNATURE_OPTIONS = [
 // into every rendered email + preview. Nothing to configure here.
 
 export default function AdminMarketing() {
+  const [searchParams] = useSearchParams();
+  const campaignIdParam = searchParams.get("campaignId");
   const [audience, setAudience] = useState<AudienceUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -47,6 +50,29 @@ export default function AdminMarketing() {
       .then((r) => setAudience(r.data.users || []))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!campaignIdParam) return;
+    api
+      .get(`/admin/marketing/campaigns/${campaignIdParam}`)
+      .then((r) => {
+        const c = r.data?.campaign;
+        if (!c) return;
+        if (c.campaign_name) setCampaignName(c.campaign_name);
+        if (c.subject) setSubject(c.subject);
+        if (c.section_label) setSectionLabel(c.section_label);
+        if (c.headline) setHeadline(c.headline);
+        if (c.body) setBody(c.body);
+        if (c.hero_image) setHeroImage({ url: c.hero_image, alt: c.hero_image_alt || c.headline || "" });
+        if (c.cta_label && c.cta_url) {
+          setShowCta(true);
+          setCtaLabel(c.cta_label);
+          setCtaUrl(c.cta_url);
+        }
+        if (c.signature) setSignature(c.signature);
+      })
+      .catch(() => {});
+  }, [campaignIdParam]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

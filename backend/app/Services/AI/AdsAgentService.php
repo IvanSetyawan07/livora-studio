@@ -7,6 +7,8 @@ use App\Services\Marketing\MarketingPeriod;
 use App\Services\Marketing\MarketingSection;
 use App\Services\Marketing\MetaAdsClient;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Ads Agent — menganalisis performa campaign berbayar (Meta Ads & Google Ads).
@@ -126,6 +128,22 @@ class AdsAgentService extends BaseAgentService
             return null;
         }
 
+        $utmConsultations = [];
+        if (Schema::hasTable('consultations') && Schema::hasColumn('consultations', 'utm_campaign')) {
+            $utmConsultations = DB::table('consultations')
+                ->whereBetween('created_at', [$period->fromDate().' 00:00:00', $period->toDate().' 23:59:59'])
+                ->whereNotNull('utm_source')
+                ->selectRaw('utm_source, utm_campaign, COUNT(*) as consultations')
+                ->groupBy('utm_source', 'utm_campaign')
+                ->limit(15)
+                ->get()
+                ->map(fn ($r) => [
+                    'utm_source' => $r->utm_source,
+                    'utm_campaign' => $r->utm_campaign,
+                    'consultations' => (int) $r->consultations,
+                ])->all();
+        }
+
         return [
             'window' => [
                 'from' => $period->fromDate(),
@@ -146,6 +164,7 @@ class AdsAgentService extends BaseAgentService
             ],
             'per_platform' => $perPlatform,
             'campaigns' => $campaigns,
+            'livora_utm_consultations' => $utmConsultations,
         ];
     }
 }

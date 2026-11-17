@@ -43,7 +43,11 @@ import type {
   PriorityItem,
   AnalyticsOverview,
   AdsSummary,
+  AgentRunResult,
+  AiContentDraftItem,
+  CreateContentDraftRequest,
   ContentSummary,
+  HighIntentLeadsResponse,
   LeadsFunnel,
   InspirationLibrary,
   InspirationAnalysis,
@@ -55,6 +59,14 @@ export interface AIMarketingService {
   getAdsSummary: (p: { from: string; to: string; days: number }) => Promise<AdsSummary>;
   getContentSummary: (p: { from: string; to: string; days: number }) => Promise<ContentSummary>;
   getLeadsFunnel: (p: { from: string; to: string; days: number }) => Promise<LeadsFunnel>;
+  getHighIntentLeads: () => Promise<HighIntentLeadsResponse>;
+  getContentQueue: () => Promise<AiContentDraftItem[]>;
+  createContentDraft: (body: CreateContentDraftRequest) => Promise<AiContentDraftItem>;
+  updateContentDraft: (
+    id: string,
+    body: { status?: string; channel?: string; caption?: string; headline?: string; scheduled_for?: string },
+  ) => Promise<Partial<AiContentDraftItem>>;
+  pushContentDraftToEmail: (id: string) => Promise<{ campaignId: number; redirectPath: string }>;
   getInspirationLibrary: () => Promise<InspirationLibrary>;
   analyzeInspiration: (p: InspirationAnalysisRequest) => Promise<InspirationAnalysis>;
 }
@@ -64,6 +76,7 @@ export interface AIDashboardService {
   getPriorities(): Promise<PriorityItem[]>;
   getOverviewKpis(params?: AIDateRangeParams): Promise<AIKpi[]>;
   getAgents(): Promise<AIAgent[]>;
+  runAgent(key: AIAgentId | "all", limit?: number): Promise<AgentRunResult>;
 }
 
 export interface AIRecommendationService {
@@ -100,10 +113,12 @@ export interface AIProviderService {
 export interface AICampaignService {
   list(params?: AIDateRangeParams): Promise<Campaign[]>;
   getById(id: string): Promise<Campaign | undefined>;
+  sync(): Promise<{ synced: number; campaigns: Campaign[] }>;
 }
 
 export interface AIImpactService {
   list(): Promise<ImpactRecord[]>;
+  refresh(): Promise<{ updated: number; records: ImpactRecord[] }>;
 }
 
 export interface AIInsightService {

@@ -1,16 +1,17 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Loader2, Play } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { statusMeta } from "@/components/ai/agent-rail";
 import {
-  NotConnected,
   Panel,
   Pill,
   Reveal,
   SectionHeading,
   StatusDot,
 } from "@/components/ai/primitives";
+import { extractApiErrorMessage, useRunAgent } from "@/hooks/useAiDashboard";
 import type { AIAgent } from "@/lib/ai/types";
 
 const connLabel = {
@@ -33,6 +34,26 @@ export function AgentPageShell({
   children?: ReactNode;
 }) {
   const meta = statusMeta[agent.status];
+  const runAgent = useRunAgent();
+
+  async function handleRunNow() {
+    try {
+      const res = await runAgent.mutateAsync({ key: agent.id, limit: 5 });
+      if (res.status === "ok") {
+        toast.success(`${agent.name} selesai dijalankan`, {
+          description: `${res.insights_created ?? 0} insight & ${res.recommendations_created ?? 0} rekomendasi baru (via ${res.provider ?? "AI"}).`,
+        });
+      } else if (res.status === "empty") {
+        toast.message(`${agent.name}: data belum cukup`, {
+          description: res.message ?? "Belum ada data baru yang cukup untuk dianalisis.",
+        });
+      } else {
+        toast.error(res.message ?? "Gagal menjalankan agent.");
+      }
+    } catch (err) {
+      toast.error(extractApiErrorMessage(err, `Gagal menjalankan ${agent.name}.`));
+    }
+  }
 
   return (
     <>
@@ -46,6 +67,19 @@ export function AgentPageShell({
               <StatusDot tone={meta.tone} pulse={meta.pulse} />
               {meta.label}
             </Pill>
+            <button
+              type="button"
+              onClick={handleRunNow}
+              disabled={runAgent.isPending}
+              className="inline-flex items-center gap-1.5 rounded-sm bg-ai px-3 py-2 text-xs font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-60"
+            >
+              {runAgent.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Play className="size-3.5" />
+              )}
+              {runAgent.isPending ? "Running analysis…" : "Run Analysis"}
+            </button>
             <Link
               to="/admin/analytics"
               className="inline-flex items-center gap-1.5 rounded-sm border border-border-strong px-3 py-2 text-xs transition-colors hover:bg-accent"
@@ -59,7 +93,7 @@ export function AgentPageShell({
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
           ["Status", meta.label],
-          ["Last run", agent.lastRun ?? "Never"],
+          ["Last run", agent.lastRun ? new Date(agent.lastRun).toLocaleString("id-ID") : "Never"],
           ["Insights generated", String(agent.insightsCount)],
           ["Pending approvals", String(agent.pendingApprovals)],
         ].map(([label, value], i) => (
@@ -76,7 +110,7 @@ export function AgentPageShell({
 
       <section className="mt-10 grid gap-4 lg:grid-cols-2">
         <Panel className="p-6">
-          <SectionHeading title="Planned capabilities" />
+          <SectionHeading title="Capabilities" />
           <ul className="grid gap-2 sm:grid-cols-2">
             {agent.capabilities.map((c) => (
               <li
@@ -105,12 +139,6 @@ export function AgentPageShell({
               </li>
             ))}
           </ul>
-          <NotConnected
-            className="mt-4"
-            state="coming_soon"
-            title={`${agent.name} execution is not implemented yet`}
-            description="This page defines the interface and data contracts. Reasoning will run in the Laravel API via Claude; this dashboard never holds model credentials."
-          />
         </Panel>
       </section>
     </>

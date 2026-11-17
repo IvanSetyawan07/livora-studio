@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { getPublicPromoBanners, type PromoBanner } from "@/lib/promoApi";
 import { imgUrl } from "@/lib/adminApi";
+import { trackLivoraEvent } from "@/lib/analytics";
 
 interface PromoFloatingModalProps {
   ready?: boolean;
@@ -92,6 +93,7 @@ export const PromoFloatingModal: React.FC<PromoFloatingModalProps> = ({ ready = 
   const imageUrl = banner.image_url ? imgUrl(banner.image_url) : "";
 
   const handleCardClick = () => {
+    trackLivoraEvent("promo_cta_click", { banner_id: banner.id, title: banner.title });
     setIsDismissed(true);
     setIsOpen(false);
     const link = banner.cta_link || "/promo";
@@ -146,10 +148,10 @@ export const PromoFloatingModal: React.FC<PromoFloatingModalProps> = ({ ready = 
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
           title="Klik untuk melihat penawaran promo"
-          className="relative w-full max-w-4xl max-h-[86vh] rounded-2xl md:rounded-[24px] overflow-hidden shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] border border-white/20 cursor-pointer group select-none flex items-center justify-center bg-black"
+          className="relative w-fit max-w-[92vw] sm:max-w-[86vw] lg:max-w-4xl max-h-[88vh] rounded-2xl md:rounded-[24px] overflow-hidden shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] border border-white/20 cursor-pointer group select-none inline-flex items-center justify-center"
         >
-          {/* Banner Pure Image (Tanpa Text Overlay & Tanpa Tombol Button) */}
-          <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+          {/* Banner Pure Image (Menyesuaikan dimensi gambar tanpa space hitam) */}
+          <div className="relative flex items-center justify-center overflow-hidden">
             <AnimatePresence initial={false} mode="wait">
               <motion.img
                 key={banner.id + "-" + imageUrl}
@@ -159,7 +161,7 @@ export const PromoFloatingModal: React.FC<PromoFloatingModalProps> = ({ ready = 
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.98 }}
                 transition={{ duration: 0.45, ease: "easeOut" }}
-                className="w-full h-auto max-h-[86vh] object-contain transition-transform duration-700 ease-out group-hover:scale-[1.015]"
+                className="block w-auto h-auto max-w-[92vw] sm:max-w-[86vw] lg:max-w-4xl max-h-[88vh] transition-transform duration-700 ease-out group-hover:scale-[1.015]"
               />
             </AnimatePresence>
           </div>

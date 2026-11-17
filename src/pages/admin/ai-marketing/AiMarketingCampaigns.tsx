@@ -1,11 +1,12 @@
 // src/pages/admin/ai-marketing/AiMarketingCampaigns.tsx
 import { Link } from "react-router-dom";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, RefreshCcw } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Panel, Pill, Sparkline } from "@/components/ai/primitives";
 import { QueryError } from "@/components/ai/query-error";
 import { usePageContext } from "@/context/AiMarketingContext";
-import { useCampaigns } from "@/hooks/useAiDashboard";
+import { extractApiErrorMessage, useCampaigns, useSyncCampaigns } from "@/hooks/useAiDashboard";
 import type { CampaignHealth } from "@/lib/ai/types";
 
 const healthTone: Record<CampaignHealth, "success" | "warning" | "danger"> = {
@@ -19,6 +20,16 @@ export default function AiMarketingCampaigns() {
   // useCampaigns() ikut mengirim rentang tanggal dari header, jadi date-range
   // picker sekarang benar-benar berefek di halaman ini.
   const { data: campaigns, isLoading, isError, refetch } = useCampaigns();
+  const syncCampaigns = useSyncCampaigns();
+
+  async function handleSync() {
+    try {
+      const res = await syncCampaigns.mutateAsync();
+      toast.success(`Sinkronisasi selesai (${res.synced} campaign).`);
+    } catch (err) {
+      toast.error(extractApiErrorMessage(err, "Gagal menyinkronkan campaign."));
+    }
+  }
 
   return (
     <>
@@ -26,6 +37,17 @@ export default function AiMarketingCampaigns() {
         eyebrow="Workspace"
         title="Campaigns"
         description="Not just analytics — AI helps plan the fix, not only report the problem."
+        action={
+          <button
+            type="button"
+            onClick={handleSync}
+            disabled={syncCampaigns.isPending}
+            className="inline-flex items-center gap-1.5 rounded-sm border border-border-strong px-3 py-2 text-xs font-medium transition-colors hover:bg-accent disabled:opacity-60"
+          >
+            <RefreshCcw className={`size-3.5 ${syncCampaigns.isPending ? "animate-spin" : ""}`} />
+            {syncCampaigns.isPending ? "Syncing…" : "Sync Campaigns"}
+          </button>
+        }
       />
 
       {isLoading ? (

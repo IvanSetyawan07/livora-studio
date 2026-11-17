@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Sparkles, ArrowUp, X, CheckCircle2 } from "lucide-react";
+import { Sparkles, ArrowUp, CheckCircle2, AlertTriangle, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useAiMarketingContext } from "@/context/AiMarketingContext";
+import { extractApiErrorMessage } from "@/hooks/useAiDashboard";
 import { aiServices } from "@/lib/ai/services";
 import type { AiChatContextKey, AiChatMessage } from "@/lib/ai/types";
 
@@ -26,23 +28,23 @@ const contextLabel: Record<AiChatContextKey, string> = {
 
 const suggestedQuestions: Record<AiChatContextKey, string[]> = {
   overview: [
-    "What should I fix today?",
-    "Why did traffic drop this week?",
-    "Which campaign needs attention?",
-    "What should I prioritise?",
+    "Apa prioritas marketing terpenting hari ini?",
+    "Bagaimana performa konsultasi & cek harga WA bulan ini?",
+    "Kampanye mana yang perlu perhatian?",
+    "Apa insight SEO & produk terbaru?",
   ],
-  seo: ["Why isn't Serenade ranking yet?", "What's our local pack rank?", "Which pages need metadata work?"],
-  content: ["What content gaps do we have?", "Which posts need review?", "What should I publish next?"],
-  ads: ["Why did CPL change?", "Which platform has the best ROAS?", "Should I shift budget?"],
-  leads: ["Which leads are high-intent right now?", "How fast are we responding?", "Who needs follow-up?"],
-  cro: ["Why did the funnel drop?", "Where are people leaving?", "What should I test next?"],
-  campaigns: ["Which campaign needs attention?", "What's blocking the funnel recovery?"],
-  impact: ["Did the funnel fix work?", "What's the ROI on lead routing?"],
-  actions: ["What's waiting for my review?", "What's the riskiest pending action?"],
-  recommendations: ["What's the highest-impact recommendation?", "What's low-risk and ready to approve?"],
-  usage: ["Which agent costs the most?", "Are we over budget this month?"],
-  providers: ["Which provider handles content?", "Is Claude connected yet?"],
-  general: ["What should I fix today?", "What should I prioritise?"],
+  seo: ["Halaman produk & proyek mana yang belum punya meta SEO?", "Bagaimana performa Google Business Profile?", "Keyword apa yang potensial?"],
+  content: ["Produk & promo apa yang paling banyak dilihat bulan ini?", "Konten Instagram/Email apa yang sebaiknya dibuat?"],
+  ads: ["Bagaimana CPL & leads per platform iklan?", "Apakah perlu realokasi budget?"],
+  leads: ["Siapa lead dengan skor intent tertinggi saat ini?", "Berapa cek harga WA LiviBot yang belum dijawab?", "Siapa yang perlu follow-up segera?"],
+  cro: ["Di tahap konsultasi mana paling banyak drop-off?", "Bagaimana rasio keranjang ke WA LiviBot?", "Apa yang harus diperbaiki di funnel?"],
+  campaigns: ["Kampanye mana yang butuh perhatian?", "Apa hambatan utama konversi promo?"],
+  impact: ["Apakah eksekusi terakhir berdampak positif?", "Bagaimana perkembangan metrik 7-14 hari terakhir?"],
+  actions: ["Aksi apa yang siap saya Approve & Execute sekarang?", "Mana aksi berisiko rendah yang bisa langsung jalan?"],
+  recommendations: ["Rekomendasi mana yang paling berdampak ke leads Livora?", "Mana yang tinggal dieksekusi?"],
+  usage: ["Agent mana yang paling banyak memakai token?", "Bagaimana estimasi biaya AI bulan ini?"],
+  providers: ["Provider AI mana yang sedang aktif?", "Apakah fallback Gemini/Groq berjalan normal?"],
+  general: ["Apa yang harus saya prioritaskan hari ini?", "Bagaimana kondisi lead Livora saat ini?"],
 };
 
 export function AskAIDrawer() {
@@ -51,23 +53,27 @@ export function AskAIDrawer() {
   const [messages, setMessages] = useState<AiChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
+  const [lastError, setLastError] = useState<{ prompt: string; message: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, pending]);
+  }, [messages, pending, lastError]);
 
-  async function send(text: string) {
+  async function send(text: string, isRetry = false) {
     const trimmed = text.trim();
     if (!trimmed || pending) return;
-    const userMsg: AiChatMessage = {
-      id: `u_${Date.now()}`,
-      role: "user",
-      text: trimmed,
-      createdAt: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
+    setLastError(null);
+    if (!isRetry) {
+      const userMsg: AiChatMessage = {
+        id: `u_${Date.now()}`,
+        role: "user",
+        text: trimmed,
+        createdAt: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, userMsg]);
+      setInput("");
+    }
     setPending(true);
     try {
       const reply = await aiServices.chat.ask(trimmed, context);
@@ -77,6 +83,13 @@ export function AskAIDrawer() {
       if (reply.recommendation) {
         queryClient.invalidateQueries({ queryKey: ["ai"] });
       }
+    } catch (error) {
+      const msg = extractApiErrorMessage(
+        error,
+        "AI provider tidak merespons. Periksa API key Gemini/Groq di backend atau coba sesaat lagi.",
+      );
+      setLastError({ prompt: trimmed, message: msg });
+      toast.error(msg);
     } finally {
       setPending(false);
     }
@@ -166,6 +179,21 @@ export function AskAIDrawer() {
                     <span className="size-1.5 animate-pulse-dot rounded-full bg-ai [animation-delay:150ms]" />
                     <span className="size-1.5 animate-pulse-dot rounded-full bg-ai [animation-delay:300ms]" />
                   </div>
+                </div>
+              )}
+              {lastError && (
+                <div className="flex items-start justify-between gap-2 rounded-xl border border-destructive/40 bg-destructive/10 px-3.5 py-2.5 text-xs text-destructive">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                    <span>{lastError.message}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => send(lastError.prompt, true)}
+                    className="inline-flex shrink-0 items-center gap-1 rounded border border-destructive/40 px-2 py-1 text-[11px] font-medium hover:bg-destructive/15"
+                  >
+                    <RotateCcw className="size-3" /> Retry
+                  </button>
                 </div>
               )}
             </div>

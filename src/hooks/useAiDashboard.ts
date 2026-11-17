@@ -7,6 +7,7 @@
  * invalidasi setelah approve/reject konsisten di seluruh dashboard.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import { aiServices } from "@/lib/ai/services";
 import { rangeKey, type AiDateRange } from "@/lib/ai/date-range";
 import { toSectionState } from "@/lib/ai/query-state";
@@ -29,9 +30,12 @@ import type {
   AIUsageByAgent,
   AIUsageByProvider,
   AIUsageTotals,
+  AiContentDraftItem,
+  CreateContentDraftRequest,
   BusinessHealth,
   Campaign,
-   GoogleIntegrationStatus,
+  GoogleIntegrationStatus,
+  HighIntentLeadsResponse,
   ImpactRecord,
   MetaAdsIntegrationStatus,
   MetaIntegrationStatus,
@@ -75,6 +79,8 @@ export const aiKeys = {
   usageByAgent: (r: AiDateRange) => ["ai", "usage", "by-agent", rangeKey(r)] as const,
   usageByProvider: (r: AiDateRange) => ["ai", "usage", "by-provider", rangeKey(r)] as const,
   impact: (r: AiDateRange) => ["ai", "impact", rangeKey(r)] as const,
+  highIntentLeads: ["ai", "leads", "high-intent"] as const,
+  contentQueue: ["ai", "content", "queue"] as const,
   googleStatus: ["ai", "integrations", "google", "status"] as const,
   metaStatus: ["ai", "integrations", "meta", "status"] as const,
   metaAdsStatus: ["ai", "integrations", "meta-ads", "status"] as const,
@@ -478,4 +484,126 @@ export function useActionDecision() {
 export function useAiRefresh(queryKey: readonly unknown[]) {
   const qc = useQueryClient();
   return useCallback(() => void qc.invalidateQueries({ queryKey }), [qc, queryKey]);
+}
+
+export function extractApiErrorMessage(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error)) {
+    const msg = (error.response?.data as { message?: string; error?: string } | undefined);
+    if (msg?.message) return msg.message;
+    if (msg?.error) return msg.error;
+  }
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+}
+
+export function useRunAgent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, limit = 5 }: { key: AIAgentId | "all"; limit?: number }) =>
+      aiServices.dashboard.runAgent(key, limit),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai"] });
+    },
+  });
+}
+
+export function useHighIntentLeads() {
+  return useQuery<HighIntentLeadsResponse>({
+    queryKey: aiKeys.highIntentLeads,
+    queryFn: () => aiServices.marketing.getHighIntentLeads(),
+    staleTime: STALE,
+  });
+}
+
+export function useContentQueue() {
+  return useQuery<AiContentDraftItem[]>({
+    queryKey: aiKeys.contentQueue,
+    queryFn: () => aiServices.marketing.getContentQueue(),
+    staleTime: STALE,
+  });
+}
+
+export function useCreateContentDraft() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreateContentDraftRequest) => aiServices.marketing.createContentDraft(body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: aiKeys.contentQueue });
+    },
+  });
+}
+
+export function useUpdateContentDraft() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: string;
+      body: { status?: string; channel?: string; caption?: string; headline?: string; scheduled_for?: string };
+    }) => aiServices.marketing.updateContentDraft(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: aiKeys.contentQueue });
+    },
+  });
+}
+
+export function usePushDraftToEmail() {
+  return useMutation({
+    mutationFn: (id: string) => aiServices.marketing.pushContentDraftToEmail(id),
+  });
+}
+
+export function useSyncCampaigns() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => aiServices.campaigns.sync(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai", "campaigns"] });
+      qc.invalidateQueries({ queryKey: ["ai", "dashboard", "kpis"] });
+    },
+  });
+}
+
+export function useRefreshImpact() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => aiServices.impact.refresh(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai", "impact"] });
+    },
+  });
+}
+
+export function useDraftReviewReply() {
+  return useMutation({
+    mutationFn: ({
+      reviewId,
+      reviewer,
+      rating,
+      comment,
+    }: {
+      reviewId: string;
+      reviewer?: string | null;
+      rating?: number | null;
+      comment?: string | null;
+    }) =>
+      aiServices.seo.draftReviewReply
+        ? aiServices.seo.draftReviewReply(reviewId, { reviewer, rating, comment })
+        : Promise.resolve({ reviewId, draft: "" }),
+  });
+}
+
+export function useReplyReview() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ reviewId, comment }: { reviewId: string; comment: string }) =>
+      aiServices.seo.replyReview
+        ? aiServices.seo.replyReview(reviewId, comment)
+        : Promise.resolve({ comment }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai", "seo", "local"] });
+    },
+  });
 }

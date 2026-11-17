@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\Ai\BusinessProfileController;
 use App\Http\Controllers\Api\Ai\SeoController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 /**
@@ -49,8 +51,39 @@ class MarketingSnapshot
 
         $out[] = $this->searchConsoleLine($period);
         $out[] = $this->localSeoLine($period);
+        $out[] = $this->internalLivoraLine($period);
 
         return implode("\n", $out);
+    }
+
+    private function internalLivoraLine(MarketingPeriod $period): string
+    {
+        $from = $period->fromDate().' 00:00:00';
+        $to = $period->toDate().' 23:59:59';
+
+        $clicks = Schema::hasTable('item_clicks') ? DB::table('item_clicks')->whereBetween('clicked_at', [$from, $to])->count() : 0;
+        $views = Schema::hasTable('item_views') ? DB::table('item_views')->whereBetween('viewed_at', [$from, $to])->count() : 0;
+        $consults = Schema::hasTable('consultations') ? DB::table('consultations')->whereBetween('created_at', [$from, $to])->count() : 0;
+        $wishlists = Schema::hasTable('wishlists') ? DB::table('wishlists')->whereBetween('created_at', [$from, $to])->count() : 0;
+        $waInquiries = Schema::hasTable('wa_price_inquiries') ? DB::table('wa_price_inquiries')->whereBetween('created_at', [$from, $to])->count() : 0;
+        $waPending = Schema::hasTable('wa_price_inquiries') ? DB::table('wa_price_inquiries')->where('status', 'pending')->count() : 0;
+        $orders = Schema::hasTable('shop_orders') ? DB::table('shop_orders')->whereBetween('created_at', [$from, $to])->count() : 0;
+        $promoItems = Schema::hasTable('items') && Schema::hasColumn('items', 'is_on_promo')
+            ? DB::table('items')->where('is_on_promo', true)->count() : 0;
+
+        return sprintf(
+            '- Internal Livora (DB %s s/d %s): views=%d, clicks=%d, wishlist=%d, konsultasi=%d, WA cek harga=%d (pending=%d), shop orders=%d, promo items aktif=%d',
+            $period->fromDate(),
+            $period->toDate(),
+            $views,
+            $clicks,
+            $wishlists,
+            $consults,
+            $waInquiries,
+            $waPending,
+            $orders,
+            $promoItems
+        );
     }
 
     /**

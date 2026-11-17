@@ -20,24 +20,29 @@ use Illuminate\Support\Facades\Log;
  */
 class GoogleOAuthCallbackController extends Controller
 {
-    private const FRONTEND_RETURN_URL = 'https://livoralcr.com/admin/ai-marketing/seo';
+    private function returnUrl(): string
+    {
+        return rtrim((string) config('app.frontend_url', 'https://livoralcr.com'), '/') . '/admin/ai-marketing/seo';
+    }
 
     public function handle(Request $request, GoogleOAuthTokenStore $tokens)
     {
+        $returnUrl = $this->returnUrl();
+
         if ($request->query('error')) {
             Log::warning('Google OAuth callback error', ['error' => $request->query('error')]);
-            return redirect(self::FRONTEND_RETURN_URL.'?google=denied');
+            return redirect($returnUrl.'?google=denied');
         }
 
         if (!GoogleOAuthState::verify($request->query('state'))) {
             Log::warning('Google OAuth callback: state tidak valid atau kadaluarsa');
-            return redirect(self::FRONTEND_RETURN_URL.'?google=invalid_state');
+            return redirect($returnUrl.'?google=invalid_state');
         }
 
         $code = $request->query('code');
 
         if (!$code) {
-            return redirect(self::FRONTEND_RETURN_URL.'?google=missing_code');
+            return redirect($returnUrl.'?google=missing_code');
         }
 
         $client = new Google_Client();
@@ -49,7 +54,7 @@ class GoogleOAuthCallbackController extends Controller
 
         if (isset($tokenResponse['error'])) {
             Log::error('Google OAuth token exchange gagal', ['error' => $tokenResponse]);
-            return redirect(self::FRONTEND_RETURN_URL.'?google=exchange_failed');
+            return redirect($returnUrl.'?google=exchange_failed');
         }
 
         $email = null;
@@ -65,6 +70,6 @@ class GoogleOAuthCallbackController extends Controller
         $tokens->save($tokenResponse, $email);
         AiAgent::setDependencyState('seo', 'Google Search Console', 'connected');
 
-        return redirect(self::FRONTEND_RETURN_URL.'?google=connected');
+        return redirect($returnUrl.'?google=connected');
     }
 }

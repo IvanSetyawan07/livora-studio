@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { getLivoraSessionId, getStoredUtm, trackLivoraEvent } from "@/lib/analytics";
 
 /** Keranjang anonim (tanpa login) + halaman bertoken — alur WA-first. */
 
@@ -39,13 +40,21 @@ export const addPublicCartLine = (line: PublicCartLine) => {
 export const clearPublicCart = () => savePublicCart([]);
 
 /** Simpan keranjang ke server → kode CRT-XXXX + URL wa.me berisi kode. */
-export const checkoutPublicCart = (lines: PublicCartLine[]) =>
-  api
+export const checkoutPublicCart = (lines: PublicCartLine[]) => {
+  const utm = getStoredUtm();
+  const sid = getLivoraSessionId();
+
+  return api
     .post<{ code: string; wa_url: string }>("/shop/carts", {
       items: lines.map((l) => ({ item_id: l.item_id, variant_id: l.variant_id ?? null, quantity: l.quantity, note: l.note })),
-      session_id: sessionStorage.getItem("livora_session") ?? undefined,
+      session_id: sid,
+      ...utm,
     })
-    .then((r) => r.data);
+    .then((r) => {
+      trackLivoraEvent("cart_created", { code: r.data.code, items_count: lines.length });
+      return r.data;
+    });
+};
 
 // ── Halaman bertoken ──
 

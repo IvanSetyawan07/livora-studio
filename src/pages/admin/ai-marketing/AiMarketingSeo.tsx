@@ -254,7 +254,7 @@ export default function SeoAgentPage() {
             <div className="p-5">
               <NotConnected
                 title="SEO Agent belum pernah menghasilkan insight"
-                description="Jalankan `php artisan ai:run-agent seo` setelah Search Console terhubung dan ada cukup data. Sampai itu terjadi, tabel ini sengaja dibiarkan kosong — bukan diisi contoh."
+                description="Klik tombol Run Analysis di kanan atas untuk mengaudit metadata on-page katalog Livora serta Search Console & Google Business Profile."
               />
             </div>
           ) : (

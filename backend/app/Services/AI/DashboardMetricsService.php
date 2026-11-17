@@ -7,6 +7,7 @@ use App\Models\AiRecommendation;
 use App\Models\Consultation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Fase 4 — perhitungan data ASLI (menggantikan stub honest-empty Fase 3).
@@ -128,8 +129,18 @@ class DashboardMetricsService
         $leadsNow = Consultation::whereBetween('created_at', [$periodStart, $periodEnd])->count();
         $leadsPrev = Consultation::whereBetween('created_at', [$prevStart, $prevEnd])->count();
 
+        try {
+            app(CampaignSyncService::class)->syncIfStale(10);
+        } catch (\Throwable) {
+        }
+
         $pendingRecommendations = AiRecommendation::where('status', 'pending')->count();
         $activeCampaigns = AiCampaign::where('status', 'Active')->count();
+
+        $waInquiriesNow = Schema::hasTable('wa_price_inquiries')
+            ? DB::table('wa_price_inquiries')->whereBetween('created_at', [$periodStart, $periodEnd])->count()
+            : 0;
+        $totalLeadsNow = $leadsNow + $waInquiriesNow;
 
         return [
             [
@@ -145,10 +156,10 @@ class DashboardMetricsService
             [
                 'id' => 'new_leads',
                 'label' => 'New Leads',
-                'value' => $leadsNow,
+                'value' => $totalLeadsNow,
                 'deltaLabel' => $this->pctDeltaLabel($leadsNow, $leadsPrev, $lengthDays),
                 'deltaDirection' => $this->pctDeltaDirection($leadsNow, $leadsPrev),
-                'footnote' => "New consultations, {$rangeLabel}",
+                'footnote' => "{$leadsNow} konsultasi + {$waInquiriesNow} cek harga WA, {$rangeLabel}",
                 'spark' => $this->dailyCounts('consultations', 'created_at', $sparkDays, $periodEnd),
                 'live' => true,
             ],

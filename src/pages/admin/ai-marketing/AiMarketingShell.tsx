@@ -42,7 +42,7 @@ import {
 import { AskAIDrawer } from "@/components/ai/ask-ai-drawer";
 import { Pill, StatusDot } from "@/components/ai/primitives";
 import { AiMarketingProvider, useAiMarketingContext } from "@/context/AiMarketingContext";
-import { useAiActivity } from "@/hooks/useAiDashboard";
+import { useAiActivity, useProviders } from "@/hooks/useAiDashboard";
 import { cn } from "@/lib/utils";
 import "@/styles/ai-marketing.css";
 
@@ -199,6 +199,9 @@ function NavGroupBlock({
 function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) {
   const { openAsk, dateRange, setDateRangePreset, setCustomDateRange } = useAiMarketingContext();
   const { data: recentActivity = [] } = useAiActivity();
+  const { data: providers = [] } = useProviders();
+  const activeProviders = providers.filter((p) => p.status === "connected" || p.status === "degraded");
+  const isLive = activeProviders.length > 0;
   const thisMonth = () => {
     const now = new Date();
     const from = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -215,9 +218,9 @@ function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) 
           <Sparkles className="size-3 text-ai" />
         </span>
         <span className="label-eyebrow">AI System</span>
-        <Pill tone="warning">
-          <StatusDot tone="warning" pulse />
-          Preview
+        <Pill tone={isLive ? "success" : "warning"}>
+          <StatusDot tone={isLive ? "success" : "warning"} pulse />
+          {isLive ? "Live" : "Offline"}
         </Pill>
       </span>
 
@@ -295,6 +298,10 @@ function ShellBody({ user, children }: { user: any; children: ReactNode }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
+  const { data: providers = [] } = useProviders();
+  const connectedNames = providers
+    .filter((p) => p.status === "connected")
+    .map((p) => `${p.provider.toUpperCase()} (${p.model})`);
 
   return (
     <div className="dark ai-marketing-scope min-h-screen bg-background text-foreground">
@@ -331,9 +338,12 @@ function ShellBody({ user, children }: { user: any; children: ReactNode }) {
 
         <div className="border-t border-sidebar-border px-5 py-4">
           <p className="flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
-            <StatusDot tone="warning" /> Claude orchestration
+            <StatusDot tone={connectedNames.length > 0 ? "success" : "warning"} pulse={connectedNames.length > 0} />
+            Multi-LLM Orchestration
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">Awaiting Laravel API integration</p>
+          <p className="mt-1 truncate text-xs text-muted-foreground">
+            {connectedNames.length > 0 ? connectedNames.join(" · ") : "Periksa API key provider di Settings"}
+          </p>
         </div>
       </aside>
 

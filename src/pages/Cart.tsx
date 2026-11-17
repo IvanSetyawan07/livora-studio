@@ -4,6 +4,7 @@ import { Minus, Plus, Trash2, Loader2, ShoppingBag, MessageCircle, Copy, Check }
 import { toast } from "sonner";
 import { Navbar } from "@/components/livora/Navbar";
 import { imgUrl } from "@/lib/adminApi";
+import { trackLivoraEvent } from "@/lib/analytics";
 import { checkoutPublicCart, clearPublicCart, getPublicCart, savePublicCart, type PublicCartLine } from "@/lib/shopPublic";
 import Seo from "@/components/Seo.jsx";
 
@@ -71,6 +72,7 @@ export default function Cart() {
             {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
           </button>
           <a href={result.wa_url} target="_blank" rel="noopener noreferrer"
+            onClick={() => trackLivoraEvent("whatsapp_inquiry_click", { source: "cart", code: result.code })}
             className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-emerald-600 text-sm font-medium text-white">
             <MessageCircle className="h-4 w-4" /> Buka WhatsApp
           </a>

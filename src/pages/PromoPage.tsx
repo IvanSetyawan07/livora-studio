@@ -7,6 +7,7 @@ import { PromoBadge } from "@/components/livora/PromoPriceTag";
 import { ItemIllustration } from "@/components/livora/ItemIllustration";
 import { getPromoItems } from "@/lib/promoApi";
 import { api } from "@/lib/api";
+import { trackLivoraEvent } from "@/lib/analytics";
 import type { RichItem } from "@/lib/itemsApi";
 
 type SortOption = "discount_desc" | "name_asc" | "newest";
@@ -22,6 +23,7 @@ export default function PromoPage() {
   useEffect(() => {
     document.title = "Promo Spesial & Penawaran Terbatas | LIVORA";
     window.scrollTo(0, 0);
+    trackLivoraEvent("view_promo");
 
     let cancelled = false;
     setLoading(true);

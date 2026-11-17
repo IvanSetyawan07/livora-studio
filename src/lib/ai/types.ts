@@ -194,7 +194,67 @@ export interface CroFunnelSummary {
     lostPrev30d: number;
   } | null;
   stages: CroFunnelStage[];
+  funnelEvents?: { event: string; count: number }[];
   unavailable: { metric: string; reason: string }[];
+}
+
+export interface AgentRunResult {
+  agent?: string;
+  status: string;
+  message?: string;
+  insights_created?: number;
+  recommendations_created?: number;
+  provider?: string;
+  results?: Record<string, AgentRunResult>;
+}
+
+export interface HighIntentLead {
+  id: string;
+  name: string;
+  contact: string;
+  source: string;
+  channel: string;
+  score: number;
+  signals: string[];
+  lastActivity: string;
+  status: string;
+  href: string;
+}
+
+export interface HighIntentLeadsResponse {
+  status: string;
+  total: number;
+  leads: HighIntentLead[];
+}
+
+export interface AiContentDraftItem {
+  id: string;
+  recommendationId: string | null;
+  marketingCampaignId?: number | null;
+  title: string;
+  channel: "instagram" | "facebook" | "email" | "tiktok" | "youtube" | "website";
+  headline: string | null;
+  caption: string | null;
+  mediaUrl: string | null;
+  status: "needs_review" | "approved" | "scheduled" | "published" | "draft";
+  scheduledFor: string | null;
+  externalId?: string | null;
+  createdAt?: string | null;
+  meta?: Record<string, unknown> | null;
+}
+
+export interface CreateContentDraftRequest {
+  title: string;
+  channel: "instagram" | "facebook" | "email" | "tiktok" | "youtube" | "website";
+  headline?: string | null;
+  caption?: string | null;
+  body?: string | null;
+  media_url?: string | null;
+  cta_label?: string | null;
+  cta_url?: string | null;
+  target_type?: "item" | "project" | "promo_banner" | null;
+  target_id?: number | null;
+  meta?: Record<string, unknown> | null;
 }
 
 export interface AICroService {
@@ -243,6 +303,11 @@ export interface LocalSeoSummary {
 export interface AISeoService {
   getSearchConsoleSummary(days?: number): Promise<SearchConsoleSummary>;
   getLocalSummary(days?: number): Promise<LocalSeoSummary>;
+  draftReviewReply?(
+    reviewId: string,
+    payload: { reviewer?: string | null; rating?: number | null; comment?: string | null },
+  ): Promise<{ reviewId: string; draft: string; provider?: string | null }>;
+  replyReview?(reviewId: string, comment: string): Promise<{ comment: string; updateTime?: string }>;
 }
 
 export interface SeoOpportunity {
@@ -589,23 +654,28 @@ export interface LeadsFunnel {
   byStatus: { status: string; count: number }[];
 }
 
-/** Content Inspiration — video nyata dari YouTube/TikTok, tanpa angka rekaan. */
+export type VideoPlatform = "instagram" | "youtube" | "tiktok";
+
+/** Content Inspiration — video nyata dari Instagram/YouTube/TikTok, tanpa angka rekaan. */
 export interface InspirationVideo {
-  platform: "youtube" | "tiktok";
+  platform: VideoPlatform;
   id: string;
   title: string;
-  channel?: string;
+  channel?: string | null;
   channelId?: string;
   thumbnail: string;
   url: string;
   publishedAt: string | null;
   durationSeconds?: number | null;
-  views: number;
-  likes: number;
-  comments: number;
-  shares?: number;
+  views: number | null;
+  likes: number | null;
+  comments: number | null;
+  shares?: number | null;
+  saves?: number | null;
   engagementRate: number | null;
   completionRate?: number | null;
+  sourceKind?: "reference_creator" | "livora_benchmark" | "web_discovered";
+  metricsSource?: string;
 }
 
 export interface InspirationLibrarySection {
@@ -614,29 +684,103 @@ export interface InspirationLibrarySection {
   videos?: InspirationVideo[];
 }
 
+export interface PlatformTrafficOverview {
+  platform: VideoPlatform;
+  status: MarketingStatus;
+  connected: boolean;
+  message?: string | null;
+  videoCount: number;
+  totalViews: number | null;
+  avgViews: number | null;
+  avgEngagementRate: number | null;
+  topVideo: {
+    title: string;
+    url: string;
+    views: number | null;
+    engagementRate: number | null;
+  } | null;
+}
+
+export interface LivoraBrandContextSummary {
+  items: { targetType: "item"; targetId: number; name: string; clicks?: number }[];
+  projects: { targetType: "project"; targetId: number; name: string }[];
+  promos: { targetType: "promo_banner"; targetId: number; name: string; label?: string | null }[];
+}
+
 export interface InspirationLibrary {
   status: MarketingStatus;
   generatedAt: string;
+  instagram?: InspirationLibrarySection;
   youtube: InspirationLibrarySection;
   tiktok: InspirationLibrarySection;
+  trafficOverview?: Record<VideoPlatform, PlatformTrafficOverview>;
+  brandContext?: LivoraBrandContextSummary;
   tiktokDiscoveryAvailable: boolean;
   tiktokDiscoveryNote: string;
 }
 
 export interface InspirationAnalysisRequest {
-  query: string;
+  query?: string;
+  mode?: "auto_brand" | "topic";
+  platforms?: VideoPlatform[];
   sourceTitle?: string;
-  sourcePlatform?: "youtube" | "tiktok";
+  sourcePlatform?: VideoPlatform;
   sourceViews?: number;
   sourceEngagementRate?: number;
+  sourceUrl?: string;
+}
+
+export interface RecommendedVideoItem {
+  id: string;
+  platform: VideoPlatform;
+  sourceKind: "reference_creator" | "livora_benchmark" | "web_discovered";
+  title: string;
+  channel: string | null;
+  url: string;
+  thumbnail: string | null;
+  publishedAt: string | null;
+  durationSeconds: number | null;
+  views: number | null;
+  likes: number | null;
+  comments: number | null;
+  shares?: number | null;
+  saves?: number | null;
+  engagementRate: number | null;
+  metricsSource: string;
+  description: string;
+  reason: string;
+  brandFitScore: number;
+  trafficInsight: string;
+  livoraAdaptation: {
+    conceptTitle: string;
+    hook: string;
+    shotList: string[];
+    captionDraft: string;
+    recommendedChannel: VideoPlatform;
+    targetFormat: string;
+    targetType?: "item" | "project" | "promo_banner" | null;
+    targetId?: number | null;
+    targetName?: string | null;
+  };
+}
+
+export interface CrossPlatformTrafficAnalysis {
+  summary: string;
+  platformNotes?: Partial<Record<VideoPlatform, string>>;
+  platforms?: Record<VideoPlatform, PlatformTrafficOverview>;
 }
 
 export interface InspirationAnalysis {
   status: MarketingStatus | "empty";
   message?: string;
   query: string;
+  mode?: "auto_brand" | "topic";
   generatedAt?: string;
   references: InspirationVideo[];
+  recommendations?: RecommendedVideoItem[];
+  trafficAnalysis?: CrossPlatformTrafficAnalysis;
+  brandContextUsed?: LivoraBrandContextSummary;
+  discoveryNotes?: Record<string, string>;
   analysis: { text: string; provider: string; model: string } | null;
   analysisError?: string | null;
 }

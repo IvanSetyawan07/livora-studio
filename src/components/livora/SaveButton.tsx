@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { addToWishlist, removeFromWishlist, getWishlist, type WishlistType } from "@/lib/wishlist";
 import { authStorage } from "@/lib/api";
+import { trackLivoraEvent } from "@/lib/analytics";
 
 type Props = {
   type: WishlistType;
@@ -53,6 +54,7 @@ export default function SaveButton({ type, id, className = "", size = 22, varian
       } else {
         await addToWishlist(type, id);
         setSaved(true);
+        trackLivoraEvent("add_to_wishlist", { type, target_id: id });
         toast.success("Disimpan ke profile");
       }
     } catch {

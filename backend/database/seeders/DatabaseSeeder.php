@@ -32,6 +32,9 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             LivoraSeeder::class,
+            AiAgentSeeder::class,
+            AiProviderSeeder::class,
+            AiRoutingStrategySeeder::class,
         ]);
     }
 }

@@ -42,7 +42,10 @@ import type {
   AiChatMessage,
   AnalyticsOverview,
   AdsSummary,
+  AgentRunResult,
+  AiContentDraftItem,
   ContentSummary,
+  HighIntentLeadsResponse,
   LeadsFunnel,
   InspirationLibrary,
   InspirationAnalysis,
@@ -77,6 +80,8 @@ export const laravelServices: AIServiceBundle = {
     getOverviewKpis: (p) =>
       api.get("/ai/dashboard/kpis", { params: p }).then((r) => unwrapList<AIKpi>(r.data)),
     getAgents: () => api.get("/ai/agents").then((r) => unwrapList<AIAgent>(r.data)),
+    runAgent: (key, limit = 5) =>
+      api.post(`/ai/agents/${key}/run`, { limit }).then((r) => unwrap<AgentRunResult>(r.data)),
   },
   recommendations: {
     list: (params) =>
@@ -124,9 +129,11 @@ export const laravelServices: AIServiceBundle = {
   campaigns: {
     list: (p) => api.get("/ai/campaigns", { params: p }).then((r) => unwrapList<Campaign>(r.data)),
     getById: (id) => api.get(`/ai/campaigns/${id}`).then((r) => unwrap<Campaign>(r.data)),
+    sync: () => api.post("/ai/campaigns/sync").then((r) => unwrap<{ synced: number; campaigns: Campaign[] }>(r.data)),
   },
   impact: {
     list: () => api.get("/ai/impact").then((r) => unwrapList<ImpactRecord>(r.data)),
+    refresh: () => api.post("/ai/impact/refresh").then((r) => unwrap<{ updated: number; records: ImpactRecord[] }>(r.data)),
   },
   insights: {
     list: (params) =>
@@ -169,6 +176,14 @@ export const laravelServices: AIServiceBundle = {
       api
         .get("/ai/seo/search-console-summary", { params: { days } })
         .then((r) => unwrap<SearchConsoleSummary>(r.data)),
+    draftReviewReply: (reviewId, payload) =>
+      api
+        .post(`/ai/seo/local-reviews/${encodeURIComponent(reviewId)}/draft-reply`, payload)
+        .then((r) => unwrap<{ reviewId: string; draft: string; provider?: string | null }>(r.data)),
+    replyReview: (reviewId, comment) =>
+      api
+        .post(`/ai/seo/local-reviews/${encodeURIComponent(reviewId)}/reply`, { comment })
+        .then((r) => unwrap<{ comment: string; updateTime?: string }>(r.data)),
   },
   marketing: {
     getAnalyticsOverview: (p) =>
@@ -179,6 +194,16 @@ export const laravelServices: AIServiceBundle = {
       api.get("/ai/content/summary", { params: p }).then((r) => unwrap<ContentSummary>(r.data)),
     getLeadsFunnel: (p) =>
       api.get("/ai/leads/funnel", { params: p }).then((r) => unwrap<LeadsFunnel>(r.data)),
+    getHighIntentLeads: () =>
+      api.get("/ai/leads/high-intent").then((r) => unwrap<HighIntentLeadsResponse>(r.data)),
+    getContentQueue: () =>
+      api.get("/ai/content/queue").then((r) => unwrapList<AiContentDraftItem>(r.data)),
+    createContentDraft: (body) =>
+      api.post("/ai/content/queue", body).then((r) => unwrap<AiContentDraftItem>(r.data)),
+    updateContentDraft: (id, body) =>
+      api.patch(`/ai/content/queue/${id}`, body).then((r) => unwrap<Partial<AiContentDraftItem>>(r.data)),
+    pushContentDraftToEmail: (id) =>
+      api.post(`/ai/content/queue/${id}/email-draft`).then((r) => unwrap<{ campaignId: number; redirectPath: string }>(r.data)),
     getInspirationLibrary: () =>
       api.get("/ai/content/inspiration/library").then((r) => unwrap<InspirationLibrary>(r.data)),
     analyzeInspiration: (p) =>
