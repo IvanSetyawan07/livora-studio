@@ -447,12 +447,7 @@ Route::post('/reset-password', [\App\Http\Controllers\Api\PasswordResetControlle
 Route::post('/webhooks/midtrans', [\App\Http\Controllers\Api\Shop\WebhookController::class, 'midtrans']);
 Route::get('/webhooks/whatsapp', [\App\Http\Controllers\Api\Shop\WebhookController::class, 'whatsappVerify']);
 Route::post('/webhooks/whatsapp', [\App\Http\Controllers\Api\Shop\WebhookController::class, 'whatsappIncoming']);
-Route::get('/public/tracking-config', function () {
-    return response()->json([
-        'gaMeasurementId' => config('services.ga4.measurement_id') ?: null,
-        'metaPixelId' => config('services.meta_pixel.pixel_id') ?: null,
-    ]);
-});
+Route::get('/public/tracking-config', [TrackingController::class, 'config']);
 Route::post('/funnel', function (\Illuminate\Http\Request $r) {
     $event = (string) $r->input('event');
     $allowed = [

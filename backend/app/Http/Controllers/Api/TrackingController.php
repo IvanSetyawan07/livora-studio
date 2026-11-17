@@ -38,4 +38,12 @@ class TrackingController extends Controller
         ]);
         return response()->json(['ok' => true]);
     }
+
+    public function config()
+    {
+        return response()->json([
+            'gaMeasurementId' => config('services.ga4.measurement_id') ?: null,
+            'metaPixelId' => config('services.meta_pixel.pixel_id') ?: null,
+        ]);
+    }
 }
