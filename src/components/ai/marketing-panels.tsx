@@ -1,4 +1,5 @@
-import { Facebook, Instagram, Megaphone, Music2, Target, Youtube, type LucideIcon } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Facebook, Instagram, Megaphone, Music2, Search, Target, Youtube, type LucideIcon } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, Tooltip, XAxis, YAxis } from "recharts";
 import { ChartSection, StatCard, type StatKpi } from "@/components/ai/dashboard-charts";
 import { KpiCard } from "@/components/ai/kpi-card";
@@ -26,8 +27,8 @@ const money = (n: number | null | undefined) => (n == null ? "—" : `Rp ${fmt(n
 const deltaOf = (d: number | null | undefined): Pick<StatKpi, "delta" | "direction"> =>
   d == null ? {} : { delta: `${d > 0 ? "+" : ""}${d}%`, direction: d >= 0 ? "up" : "down" };
 
-const statusTone = (s: MarketingStatus) =>
-  s === "ok" ? "success" : s === "not_configured" ? "muted" : s === "rate_limited" ? "warning" : "danger";
+const statusTone = (s: MarketingStatus): "success" | "neutral" | "warning" | "danger" =>
+  s === "ok" ? "success" : s === "not_configured" ? "neutral" : s === "rate_limited" ? "warning" : "danger";
 const statusLabel: Record<MarketingStatus, string> = {
   ok: "Connected", not_configured: "Not connected", invalid_credentials: "Invalid credentials",
   permission_required: "Permission required", rate_limited: "Rate limited", api_error: "API unavailable",
@@ -89,27 +90,60 @@ export function AdsKpiGrid() {
     { label: "Leads from Ads", value: fmt(k.leads, 1) },
     { label: "Cost per Lead", value: money(k.cpl) },
     { label: "ROAS", value: k.roas == null ? "—" : `${k.roas}x` },
+    { label: "CTR", value: k.ctr == null ? "—" : `${k.ctr}%` },
   ];
   return <>{kpis.map((kpi, i) => <StatCard key={kpi.label} kpi={kpi} index={i} />)}</>;
 }
 
 export function SpendLeadsTrendPanel() {
   const { state } = useAdsSummary();
+  const [rightMetric, setRightMetric] = useState<"leads" | "cpl">("leads");
+
   return (
     <ChartSection
-      title="Spend & Leads Trend" state={state} provider="Meta Ads / Google Ads" connectHref="/admin/ai-marketing/settings"
+      title="Spend & Leads Trend"
+      state={state}
+      provider="Meta Ads / Google Ads"
+      connectHref="/admin/ai-marketing/settings"
+      action={
+        <div className="flex items-center gap-1 rounded-sm border border-border p-0.5 text-[10px]">
+          <button
+            type="button"
+            onClick={() => setRightMetric("leads")}
+            className={cn(
+              "rounded-sm px-2 py-0.5 transition-colors",
+              rightMetric === "leads" ? "bg-ai/15 text-ai font-medium" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Leads
+          </button>
+          <button
+            type="button"
+            onClick={() => setRightMetric("cpl")}
+            className={cn(
+              "rounded-sm px-2 py-0.5 transition-colors",
+              rightMetric === "cpl" ? "bg-ai/15 text-ai font-medium" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            CPL
+          </button>
+        </div>
+      }
       isEmpty={(d) => d.series.length === 0}
       renderChart={(d) => (
-        <LineChart data={d.series.map((r) => ({ ...r, label: shortDate(r.date) }))} margin={{ top: 8, right: 12, bottom: 0, left: -16 }}>
+        <LineChart data={d.series.map((r) => ({ ...r, label: shortDate(r.date) }))} margin={{ top: 8, right: 12, bottom: 0, left: -10 }}>
           <CartesianGrid stroke="hsl(var(--border))" vertical={false} />
           <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={28} tick={tick} />
-          <YAxis yAxisId="l" tickLine={false} axisLine={false} width={56} tick={tick} />
-          <YAxis yAxisId="r" orientation="right" tickLine={false} axisLine={false} width={40} tick={tick} />
+          <YAxis yAxisId="l" tickLine={false} axisLine={false} width={58} tick={tick} />
+          <YAxis yAxisId="r" orientation="right" tickLine={false} axisLine={false} width={52} tick={tick} />
           <Tooltip {...tooltip} />
           <Legend verticalAlign="bottom" height={28} iconType="plainline" wrapperStyle={{ fontSize: 11 }} />
-          <Line yAxisId="l" type="monotone" dataKey="spend" name="Spend" stroke="hsl(var(--warning))" strokeWidth={2} dot={false} />
-          <Line yAxisId="r" type="monotone" dataKey="leads" name="Leads" stroke="hsl(var(--success))" strokeWidth={2} dot={false} />
-          <Line yAxisId="l" type="monotone" dataKey="cpl" name="CPL" stroke="hsl(var(--info))" strokeWidth={2} dot={false} connectNulls />
+          <Line yAxisId="l" type="monotone" dataKey="spend" name="Spend (Rp)" stroke="hsl(var(--warning))" strokeWidth={2} dot={false} />
+          {rightMetric === "leads" ? (
+            <Line yAxisId="r" type="monotone" dataKey="leads" name="Leads" stroke="hsl(var(--success))" strokeWidth={2} dot={false} />
+          ) : (
+            <Line yAxisId="r" type="monotone" dataKey="cpl" name="CPL (Rp)" stroke="hsl(var(--info))" strokeWidth={2} dot={false} connectNulls />
+          )}
         </LineChart>
       )}
     />
@@ -138,21 +172,27 @@ export function BudgetSplitPanel({ height = 224 }: { height?: number }) {
 }
 
 export function AdsPlatformRows() {
-  const { state } = useAdsSummary();
+  const { query, state } = useAdsSummary();
   const rows: { key: "meta" | "google"; icon: LucideIcon; label: string; note: string }[] = [
     { key: "meta", icon: Megaphone, label: "Meta Ads", note: "Facebook & Instagram — ads_read" },
     { key: "google", icon: Target, label: "Google Ads", note: "Search & Performance Max" },
   ];
+  const platformsData = query.data?.platforms ?? (state.status === "data" ? state.data.platforms : undefined);
   return (
     <div className="space-y-2.5">
       {rows.map(({ key, icon: Icon, label, note }) => {
-        const p = state.status === "data" ? state.data.platforms[key] : undefined;
+        const p = platformsData?.[key];
         const s: MarketingStatus = p?.status ?? "not_configured";
         return (
           <div key={key} className="flex items-center justify-between gap-3 rounded-sm border border-border px-3 py-2.5">
             <div className="flex items-center gap-3">
               <Icon className="size-4 text-muted-foreground" />
-              <div><p className="text-sm text-foreground">{label}</p><p className="text-[11px] text-muted-foreground">{p?.accountId ?? note}</p></div>
+              <div>
+                <p className="text-sm text-foreground">{label}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {s === "ok" ? (p?.accountId ?? note) : (p?.message ?? note)}
+                </p>
+              </div>
             </div>
             <Pill tone={statusTone(s) as never}><StatusDot tone={statusTone(s) as never} />{statusLabel[s]}</Pill>
           </div>
@@ -164,29 +204,112 @@ export function AdsPlatformRows() {
 
 export function ActiveCampaignsTable() {
   const { state } = useAdsSummary();
+  const [search, setSearch] = useState("");
+  const [platformFilter, setPlatformFilter] = useState<"all" | "meta" | "google">("all");
+  const [sortBy, setSortBy] = useState<"spend" | "leads" | "cpl">("spend");
+
+  const rows = useMemo(() => {
+    if (state.status !== "data") return [];
+    const q = search.trim().toLowerCase();
+    return [...state.data.campaigns]
+      .filter((c) => {
+        if (platformFilter !== "all" && c.platform !== platformFilter) return false;
+        if (q && !c.name.toLowerCase().includes(q)) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === "leads") return (b.leads ?? 0) - (a.leads ?? 0);
+        if (sortBy === "cpl") return (a.cpl ?? Infinity) - (b.cpl ?? Infinity);
+        return (b.spend ?? 0) - (a.spend ?? 0);
+      });
+  }, [state, search, platformFilter, sortBy]);
+
   return (
     <Panel className="p-5 sm:p-6">
-      <div className="mb-4 flex items-center justify-between"><h3 className="text-display rule-accent text-lg">Active Campaigns</h3></div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-display rule-accent text-lg">Active Campaigns</h3>
+        {state.status === "data" && state.data.campaigns.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Cari campaign..."
+                className="h-8 w-44 rounded-sm border border-border bg-secondary/60 pl-8 pr-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-ai focus:outline-none"
+              />
+            </div>
+            {(["all", "meta", "google"] as const).map((pf) => (
+              <button
+                key={pf}
+                type="button"
+                onClick={() => setPlatformFilter(pf)}
+                className={cn(
+                  "rounded-sm border px-2.5 py-1 font-mono text-[10px] tracking-[0.1em] uppercase transition-colors",
+                  platformFilter === pf
+                    ? "border-ai/40 bg-ai/12 text-ai"
+                    : "border-border text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {pf === "all" ? "All" : pf === "meta" ? "Meta" : "Google"}
+              </button>
+            ))}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as "spend" | "leads" | "cpl")}
+              className="h-8 rounded-sm border border-border bg-secondary px-2 text-xs text-foreground focus:border-ai focus:outline-none"
+              aria-label="Urutkan campaign"
+            >
+              <option value="spend">Sort: Spend tertinggi</option>
+              <option value="leads">Sort: Leads terbanyak</option>
+              <option value="cpl">Sort: CPL termurah</option>
+            </select>
+          </div>
+        ) : null}
+      </div>
       {state.status === "data" && state.data.campaigns.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead><tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-              {["Campaign", "Platform", "Spend", "Leads", "CPL", "Status"].map((h) => <th key={h} className="pb-2 pr-4 font-medium">{h}</th>)}
-            </tr></thead>
-            <tbody>
-              {state.data.campaigns.map((c) => (
-                <tr key={`${c.platform}-${c.id}`} className="border-t border-border">
-                  <td className="py-2 pr-4 text-foreground">{c.name}</td>
-                  <td className="py-2 pr-4 text-muted-foreground">{c.platform === "meta" ? "Meta Ads" : "Google Ads"}</td>
-                  <td className="py-2 pr-4">{money(c.spend)}</td>
-                  <td className="py-2 pr-4">{fmt(c.leads, 1)}</td>
-                  <td className="py-2 pr-4">{money(c.cpl)}</td>
-                  <td className="py-2 pr-4"><Pill tone={c.status === "active" || c.status === "enabled" ? "success" : "neutral"}>{c.status}</Pill></td>
+        rows.length === 0 ? (
+          <p className="rounded-sm border border-dashed border-border p-8 text-center text-xs text-muted-foreground">
+            Tidak ada campaign yang cocok dengan filter "{search}".
+          </p>
+        ) : (
+          <div className="scroll-rail overflow-x-auto">
+            <table className="w-full min-w-[760px] text-sm">
+              <thead>
+                <tr className="text-left text-[11px] tracking-wide text-muted-foreground uppercase">
+                  {["Campaign", "Platform", "Spend", "Impr.", "Clicks", "CTR", "Leads", "CPL", "Status"].map((h) => (
+                    <th key={h} className="pb-2 pr-4 font-medium">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {rows.map((c) => {
+                  const ctr = c.impressions > 0 ? ((c.clicks / c.impressions) * 100).toFixed(2) : null;
+                  const normalizedStatus = c.status.toLowerCase();
+                  return (
+                    <tr key={`${c.platform}-${c.id}`} className="border-t border-border hover:bg-accent/30">
+                      <td className="py-2.5 pr-4 font-medium text-foreground">{c.name}</td>
+                      <td className="py-2.5 pr-4 text-xs text-muted-foreground">
+                        {c.platform === "meta" ? "Meta Ads" : "Google Ads"}
+                      </td>
+                      <td className="num py-2.5 pr-4">{money(c.spend)}</td>
+                      <td className="num py-2.5 pr-4 text-xs text-muted-foreground">{fmt(c.impressions)}</td>
+                      <td className="num py-2.5 pr-4 text-xs text-muted-foreground">{fmt(c.clicks)}</td>
+                      <td className="num py-2.5 pr-4 text-xs">{ctr ? `${ctr}%` : "—"}</td>
+                      <td className="num py-2.5 pr-4">{fmt(c.leads, 1)}</td>
+                      <td className="num py-2.5 pr-4">{money(c.cpl)}</td>
+                      <td className="py-2.5 pr-4">
+                        <Pill tone={normalizedStatus === "active" || normalizedStatus === "enabled" ? "success" : "neutral"}>
+                          {c.status}
+                        </Pill>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
       ) : state.status === "loading" ? (
         <LoadingBlock height="h-40" />
       ) : (
@@ -196,7 +319,9 @@ export function ActiveCampaignsTable() {
               ? ({ status: "empty", lastUpdatedAt: state.lastUpdatedAt, isRefreshing: state.isRefreshing, retry: state.retry } satisfies NonDataSectionState)
               : state
           }
-          height="h-40" provider="Meta Ads / Google Ads" connectHref="/admin/ai-marketing/settings"
+          height="h-40"
+          provider="Meta Ads / Google Ads"
+          connectHref="/admin/ai-marketing/settings"
         />
       )}
     </Panel>
@@ -230,10 +355,11 @@ function SocialRow({ icon: Icon, label, p }: { icon: LucideIcon; label: string; 
 }
 
 export function SocialPerformanceRows() {
-  const { state } = useContentSummary();
+  const { query, state } = useContentSummary();
+  const platformsData = query.data?.platforms ?? (state.status === "data" ? state.data.platforms : undefined);
   return (
     <div className="space-y-2.5">
-      {socialMeta.map((m) => <SocialRow key={m.key} icon={m.icon} label={m.label} p={state.status === "data" ? state.data.platforms[m.key] : undefined} />)}
+      {socialMeta.map((m) => <SocialRow key={m.key} icon={m.icon} label={m.label} p={platformsData?.[m.key]} />)}
     </div>
   );
 }
@@ -311,7 +437,7 @@ export function AvgEngagementKpiCard({ index = 4 }: { index?: number }) {
     live: true,
     ...deltaLabel(state.data.deltas?.engagementRate),
   };
-  return <KpiCard label="Avg Engagement" index={index} state={{ ...state, data: kpi }} href="/admin/ai-marketing/analytics" />;
+  return <KpiCard label="Avg Engagement" index={index} state={{ ...state, data: kpi }} href="/admin/ai-marketing/content" />;
 }
 
 export function AdRoasKpiCard({ index = 5 }: { index?: number }) {
@@ -403,22 +529,45 @@ export function LeadsFunnelPanel() {
   );
 }
 
+const stageDisplayLabel: Record<string, string> = {
+  new_inquiry: "Baru Masuk",
+  under_review: "Ditinjau",
+  contacted: "Dihubungi",
+  meeting_scheduled: "Jadwal Meeting",
+  in_progress: "Proyek Berjalan",
+  agreement_pending: "Draft Perjanjian",
+  dp_pending: "Menunggu DP",
+  waiting_list: "Waiting List",
+  completed: "Selesai",
+  cancelled: "Dibatalkan",
+  pending: "WA Pending",
+  replied: "WA Dibalas",
+};
+
 /** Agregat status konsultasi periode ini — di samping funnel harian. */
 export function LeadsByStatusPanel() {
   const { state } = useLeadsFunnel();
   return (
     <ChartSection
-      title="Leads by Stage" state={state} provider="Database Livora"
+      title="Leads by Stage"
+      state={state}
+      provider="Database Livora"
       isEmpty={(d) => d.byStatus.length === 0}
-      renderChart={(d) => (
-        <BarChart data={d.byStatus} layout="vertical" margin={{ top: 4, right: 12, bottom: 0, left: 8 }}>
-          <CartesianGrid stroke="hsl(var(--border))" horizontal={false} />
-          <XAxis type="number" tickLine={false} axisLine={false} tick={tick} allowDecimals={false} />
-          <YAxis type="category" dataKey="status" tickLine={false} axisLine={false} width={110} tick={{ ...tick, fontSize: 10 }} />
-          <Tooltip {...tooltip} />
-          <Bar dataKey="count" name="Leads" fill="hsl(var(--brass))" radius={[0, 2, 2, 0]} />
-        </BarChart>
-      )}
+      renderChart={(d) => {
+        const rows = d.byStatus.map((row) => ({
+          ...row,
+          label: stageDisplayLabel[row.status] ?? row.status.replace(/_/g, " "),
+        }));
+        return (
+          <BarChart data={rows} layout="vertical" margin={{ top: 4, right: 16, bottom: 0, left: 8 }}>
+            <CartesianGrid stroke="hsl(var(--border))" horizontal={false} />
+            <XAxis type="number" tickLine={false} axisLine={false} tick={tick} allowDecimals={false} />
+            <YAxis type="category" dataKey="label" tickLine={false} axisLine={false} width={128} tick={{ ...tick, fontSize: 11 }} />
+            <Tooltip {...tooltip} />
+            <Bar dataKey="count" name="Leads" fill="hsl(var(--brass))" radius={[0, 3, 3, 0]} />
+          </BarChart>
+        );
+      }}
     />
   );
 }

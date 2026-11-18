@@ -13,7 +13,8 @@
  * tailwind.config or any other part of the app.
  */
 
-.ai-marketing-scope {
+.ai-marketing-scope,
+.dark.ai-marketing-scope {
   /* --- base surfaces: cool near-black, not warm-charcoal --------- */
   --background: 240 16% 6%;
   --foreground: 220 24% 95%;

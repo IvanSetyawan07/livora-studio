@@ -39,7 +39,7 @@ TXT;
         $result = $this->ai->ask(
             "Kamu adalah {$this->roleLabel()} untuk Livora Studio, brand interior & furniture premium di Indonesia.",
             $prompt,
-            'seo',
+            $recommendation->agent_key ?: 'seo',
         );
 
         $draft = trim($result['text']);

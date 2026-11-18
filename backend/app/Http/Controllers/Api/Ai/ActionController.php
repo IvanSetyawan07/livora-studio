@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api\Ai;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Ai\AiActivityResource;
 use App\Http\Resources\Ai\AiApprovalResource;
 use App\Models\AiActivityLog;
 use App\Models\AiApproval;
 use App\Services\AI\Actions\ActionExecutorRegistry;
 use App\Services\AI\ImpactTrackerService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -20,15 +22,25 @@ class ActionController extends Controller
     ) {
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        return AiApprovalResource::collection(
-            AiApproval::orderByDesc('requested_at')->get()
-        );
+        $query = AiApproval::query()->with('recommendation')->orderByDesc('requested_at');
+
+        if ($status = $request->query('status')) {
+            $query->where('status', $status);
+        }
+
+        if ($agent = $request->query('agent')) {
+            $query->where('agent_key', $agent);
+        }
+
+        $limit = max(1, min((int) $request->query('limit', 120), 250));
+
+        return AiApprovalResource::collection($query->limit($limit)->get());
     }
 
     /**
-     * State machine: pending|approved -> executed.
+     * State machine: pending|approved|failed -> executed.
      *
      * Eksekusi hanya ditandai 'executed' kalau ada eksekutor nyata untuk
      * action_type rekomendasinya DAN eksekusinya sukses. Kalau belum ada
@@ -37,7 +49,7 @@ class ActionController extends Controller
      */
     public function approveAndExecute(AiApproval $action)
     {
-        if (!in_array($action->status, ['pending', 'approved'], true)) {
+        if (!in_array($action->status, ['pending', 'approved', 'failed'], true)) {
             return response()->json([
                 'message' => "Action berstatus \"{$action->status}\" tidak bisa dieksekusi.",
                 'status' => $action->status,
@@ -114,10 +126,14 @@ class ActionController extends Controller
             AiActivityLog::create([
                 'actor' => auth()->user()->name ?? 'Admin',
                 'agent_key' => $action->agent_key,
+                'title' => 'Aksi Dieksekusi · '.$recommendation->title,
                 'message' => $result->summary,
                 'payload' => $result->payload,
                 'kind' => $result->wroteToDatabase ? 'execution' : 'draft',
                 'recommendation_id' => $recommendation->id,
+                'href' => $result->wroteToDatabase
+                    ? ($recommendation->action_type === 'content' ? '/admin/ai-marketing/content' : '/admin/ai-marketing/impact')
+                    : '/admin/ai-marketing/ai-center/actions',
             ]);
         });
 
@@ -134,10 +150,10 @@ class ActionController extends Controller
         ]);
     }
 
-    /** pending|approved -> rejected. */
+    /** pending|approved|failed -> rejected. */
     public function reject(AiApproval $action)
     {
-        if (!in_array($action->status, ['pending', 'approved'], true)) {
+        if (!in_array($action->status, ['pending', 'approved', 'failed'], true)) {
             return response()->json([
                 'message' => "Action berstatus \"{$action->status}\" tidak bisa ditolak.",
                 'status' => $action->status,

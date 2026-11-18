@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { CheckCircle2, Loader2, Unlink } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { CheckCircle2, Globe, Loader2, Unlink } from "lucide-react";
+import { CartesianGrid, Legend, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
+import { toast } from "sonner";
 import { AgentPageShell } from "@/components/ai/agent-page";
+import { ChartSection } from "@/components/ai/dashboard-charts";
 import {
   ConfidenceBar,
   NotConnected,
@@ -19,15 +22,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  extractApiErrorMessage,
   useAgent,
   useAiInsights,
   useGoogleAuthorize,
   useGoogleDisconnect,
   useGoogleIntegrationStatus,
+  useSearchConsoleSites,
   useSearchConsoleSummary,
+  useSelectSearchConsoleSite,
 } from "@/hooks/useAiDashboard";
 import { LocalSeoSection } from "./AiMarketingSeoLocal";
-import { usePageContext } from "@/context/AiMarketingContext";
+import { useAiMarketingContext, usePageContext } from "@/context/AiMarketingContext";
 import type { AIInsight, AISeverity } from "@/lib/ai/types";
 
 /**
@@ -68,16 +74,16 @@ const googleCallbackMessage: Record<string, { tone: "success" | "danger"; text: 
  */
 function GoogleSearchConsoleCard() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const callbackResult = searchParams.get("google");
+  const [callbackResult] = useState(() => searchParams.get("google"));
   const { data: status, isLoading: loading } = useGoogleIntegrationStatus();
   const disconnect = useGoogleDisconnect();
   const authorize = useGoogleAuthorize();
+  const sitesQuery = useSearchConsoleSites(Boolean(status?.connected));
+  const selectSite = useSelectSearchConsoleSite();
   const busy = disconnect.isPending || authorize.isPending;
 
   useEffect(() => {
-    // Bersihkan query param ?google=... dari URL setelah dibaca, supaya
-    // refresh halaman tidak menampilkan pesan callback lama berulang-ulang.
-    if (callbackResult) {
+    if (searchParams.get("google")) {
       const params = new URLSearchParams(searchParams);
       params.delete("google");
       setSearchParams(params, { replace: true });
@@ -85,8 +91,18 @@ function GoogleSearchConsoleCard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleConnect = () => authorize.mutate();
-  const handleDisconnect = () => disconnect.mutate();
+  const handleConnect = () =>
+    authorize.mutate(undefined, {
+      onError: (e) => toast.error(extractApiErrorMessage(e, "Gagal mengambil authorize URL Google.")),
+    });
+
+  const handleDisconnect = () =>
+    disconnect.mutate(undefined, {
+      onSuccess: () => toast.success("Google Search Console berhasil diputus."),
+      onError: (e) => toast.error(extractApiErrorMessage(e, "Gagal memutus koneksi Google.")),
+    });
+
+  const sites = sitesQuery.data?.sites ?? [];
 
   return (
     <>
@@ -118,24 +134,50 @@ function GoogleSearchConsoleCard() {
                 <p className="text-sm font-medium">Google Search Console connected</p>
                 <p className="text-xs text-muted-foreground">
                   {status.email ?? "Unknown account"}
-                  {status.connectedAt ? ` · since ${new Date(status.connectedAt).toLocaleDateString()}` : ""}
+                  {status.connectedAt ? ` · since ${new Date(status.connectedAt).toLocaleDateString("id-ID")}` : ""}
                 </p>
               </div>
             </div>
-            <button
-              onClick={handleDisconnect}
-              disabled={busy}
-              className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive disabled:opacity-50"
-            >
-              {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Unlink className="size-3.5" />}
-              Disconnect
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {sites.length > 0 ? (
+                <div className="flex items-center gap-1.5">
+                  <Globe className="size-3.5 text-muted-foreground" />
+                  <select
+                    value={sitesQuery.data?.selected ?? ""}
+                    disabled={selectSite.isPending}
+                    onChange={(e) =>
+                      selectSite.mutate(e.target.value || null, {
+                        onSuccess: () => toast.success("Properti Search Console diperbarui."),
+                        onError: (err) => toast.error(extractApiErrorMessage(err, "Gagal memilih properti.")),
+                      })
+                    }
+                    className="h-8 rounded-md border border-border bg-secondary px-2 text-xs text-foreground focus:border-ai focus:outline-none"
+                    aria-label="Pilih properti Search Console"
+                  >
+                    <option value="">Otomatis (prioritas livora)</option>
+                    {sites.map((s) => (
+                      <option key={s.siteUrl} value={s.siteUrl}>
+                        {s.siteUrl} ({s.permissionLevel})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+              <button
+                onClick={handleDisconnect}
+                disabled={busy}
+                className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive disabled:opacity-50"
+              >
+                {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Unlink className="size-3.5" />}
+                Disconnect
+              </button>
+            </div>
           </div>
-          <p className="rounded-md border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground">
-            Koneksi Google ini sekarang juga dipakai untuk Google Analytics 4 (scope{" "}
-            <span className="font-mono">analytics.readonly</span>). Kalau angka GA4 masih kosong, klik{" "}
-            <span className="font-medium">Disconnect</span> lalu connect ulang sekali supaya scope barunya ikut ter-grant.
-          </p>
+          {status.hasAnalyticsScope === false ? (
+            <p className="rounded-md border border-warning/40 bg-warning/10 p-3 text-xs text-warning">
+              Scope Google Analytics 4 (<span className="font-mono">analytics.readonly</span>) belum aktif pada token Google ini. Klik Disconnect lalu Connect ulang agar grafik GA4 ikut terisi.
+            </p>
+          ) : null}
         </Panel>
 
       ) : (
@@ -220,21 +262,128 @@ function SeoKpiCards() {
 
 export default function SeoAgentPage() {
   usePageContext("seo");
-  const { agent } = useAgent("seo");
+  const { dateRange } = useAiMarketingContext();
+  const { agent, isLoading: agentLoading } = useAgent("seo");
   const [selected, setSelected] = useState<AIInsight | null>(null);
   const { data: seoInsights, isLoading: insightsLoading } = useAiInsights("all", "seo");
+  const sc = useSearchConsoleSummary();
+  const topQueries = sc.data?.topQueries ?? [];
+  const topPages = sc.data?.topPages ?? [];
 
   return (
-    <AgentPageShell agent={agent}>
+    <AgentPageShell agent={agent} loading={agentLoading}>
       <section className="mt-10">
         <SectionHeading
           title="SEO overview"
-          description="Organic clicks, impressions, average position and CTR — read directly from Google Search Console for the last 28 days."
+          description={`Organic clicks, impressions, average position dan CTR dari Google Search Console (${dateRange.days} hari terakhir).`}
         />
         <div className="mb-4">
           <GoogleSearchConsoleCard />
         </div>
         <SeoKpiCards />
+
+        {sc.data?.series && sc.data.series.length > 0 ? (
+          <div className="mt-4">
+            <ChartSection
+              title="Search Console Daily Trend"
+              state={sc.section}
+              provider="Google Search Console"
+              connectHref="/admin/ai-marketing/settings"
+              isEmpty={(d) => !d.series || d.series.length === 0}
+              renderChart={(d) => (
+                <LineChart
+                  data={(d.series ?? []).map((r) => ({ ...r, label: r.date.slice(5).replace("-", "/") }))}
+                  margin={{ top: 8, right: 12, bottom: 0, left: -12 }}
+                >
+                  <CartesianGrid stroke="hsl(var(--border))" vertical={false} />
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={24} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                  <YAxis yAxisId="l" tickLine={false} axisLine={false} width={48} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                  <YAxis yAxisId="r" orientation="right" tickLine={false} axisLine={false} width={52} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "hsl(var(--popover))",
+                      border: "1px solid hsl(var(--border-strong))",
+                      borderRadius: 4,
+                      fontSize: 12,
+                      color: "hsl(var(--foreground))",
+                    }}
+                  />
+                  <Legend verticalAlign="bottom" height={28} iconType="plainline" wrapperStyle={{ fontSize: 11 }} />
+                  <Line yAxisId="l" type="monotone" dataKey="clicks" name="Clicks" stroke="hsl(var(--ai))" strokeWidth={2} dot={false} />
+                  <Line yAxisId="r" type="monotone" dataKey="impressions" name="Impressions" stroke="hsl(var(--info))" strokeWidth={2} dot={false} />
+                </LineChart>
+              )}
+            />
+          </div>
+        ) : null}
+
+        {topQueries.length > 0 || topPages.length > 0 ? (
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <Panel className="overflow-hidden p-5">
+              <h3 className="text-display rule-accent mb-3 text-base">Top Search Queries</h3>
+              {topQueries.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Belum ada data query Search Console.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-border text-left text-[10px] tracking-wider text-muted-foreground uppercase">
+                        <th className="pb-2 pr-3 font-medium">Keyword</th>
+                        <th className="pb-2 pr-3 text-right font-medium">Clicks</th>
+                        <th className="pb-2 pr-3 text-right font-medium">Impr.</th>
+                        <th className="pb-2 pr-3 text-right font-medium">CTR</th>
+                        <th className="pb-2 text-right font-medium">Pos</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topQueries.slice(0, 10).map((q) => (
+                        <tr key={q.query} className="border-b border-border/50 last:border-0">
+                          <td className="py-2 pr-3 font-medium text-foreground">{q.query}</td>
+                          <td className="num py-2 pr-3 text-right">{q.clicks.toLocaleString("id-ID")}</td>
+                          <td className="num py-2 pr-3 text-right text-muted-foreground">{q.impressions.toLocaleString("id-ID")}</td>
+                          <td className="num py-2 pr-3 text-right">{q.ctr.toFixed(1)}%</td>
+                          <td className="num py-2 text-right text-muted-foreground">{q.position.toFixed(1)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Panel>
+
+            <Panel className="overflow-hidden p-5">
+              <h3 className="text-display rule-accent mb-3 text-base">Top Landing Pages</h3>
+              {topPages.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Belum ada data halaman Search Console.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-border text-left text-[10px] tracking-wider text-muted-foreground uppercase">
+                        <th className="pb-2 pr-3 font-medium">URL Page</th>
+                        <th className="pb-2 pr-3 text-right font-medium">Clicks</th>
+                        <th className="pb-2 pr-3 text-right font-medium">Impr.</th>
+                        <th className="pb-2 text-right font-medium">Pos</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topPages.slice(0, 10).map((pg) => (
+                        <tr key={pg.page} className="border-b border-border/50 last:border-0">
+                          <td className="max-w-[220px] truncate py-2 pr-3 font-mono text-[11px] text-foreground/90" title={pg.page}>
+                            {pg.page.replace(/^https?:\/\/[^/]+/, "") || "/"}
+                          </td>
+                          <td className="num py-2 pr-3 text-right">{pg.clicks.toLocaleString("id-ID")}</td>
+                          <td className="num py-2 pr-3 text-right text-muted-foreground">{pg.impressions.toLocaleString("id-ID")}</td>
+                          <td className="num py-2 text-right text-muted-foreground">{pg.position.toFixed(1)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Panel>
+          </div>
+        ) : null}
       </section>
 
       {/* Local SEO: data asli Google Business Profile. */}
@@ -344,10 +493,17 @@ export default function SeoAgentPage() {
                 </div>
                 <ConfidenceBar value={selected.confidence} />
                 {selected.recommendationId ? (
-                  <p className="text-xs text-muted-foreground">
-                    Rekomendasi dari insight ini sudah dibuat dan menunggu keputusan di halaman
-                    Recommendations.
-                  </p>
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <p className="text-xs text-muted-foreground">
+                      Rekomendasi dari insight ini sudah menunggu keputusan.
+                    </p>
+                    <Link
+                      to="/admin/ai-marketing/ai-center/recommendations"
+                      className="text-xs font-medium text-ai hover:underline"
+                    >
+                      Buka Recommendations →
+                    </Link>
+                  </div>
                 ) : (
                   <p className="text-xs text-muted-foreground">
                     Insight ini murni observasi — AI tidak menemukan langkah konkret yang cukup jelas

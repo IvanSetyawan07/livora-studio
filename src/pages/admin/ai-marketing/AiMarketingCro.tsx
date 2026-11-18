@@ -1,22 +1,27 @@
 // src/pages/admin/ai-marketing/AiMarketingCro.tsx
 import { AgentPageShell } from "@/components/ai/agent-page";
 import { InsightCard } from "@/components/ai/insight-card";
-import { NotConnected, Panel, Reveal, SectionHeading } from "@/components/ai/primitives";
+import { NotConnected, Panel, Pill, Reveal, SectionHeading } from "@/components/ai/primitives";
+import { QueryError } from "@/components/ai/query-error";
 import { useAgent, useAiInsights, useCroFunnelSummary } from "@/hooks/useAiDashboard";
-import { usePageContext } from "@/context/AiMarketingContext";
+import { useAiMarketingContext, usePageContext } from "@/context/AiMarketingContext";
+import { cn } from "@/lib/utils";
 
 export default function CroAgentPage() {
   usePageContext("cro");
-  const { agent } = useAgent("cro");
+  const { dateRange } = useAiMarketingContext();
+  const { agent, isLoading: agentLoading } = useAgent("cro");
   const { data: agentInsights = [], isLoading } = useAiInsights("all", "cro");
   const funnel = useCroFunnelSummary();
+  const periodDays = funnel.data?.period?.days ?? dateRange.days;
+  const topDropStage = funnel.data?.totals?.topDropOffStage;
 
   return (
-    <AgentPageShell agent={agent}>
+    <AgentPageShell agent={agent} loading={agentLoading}>
       <section className="mt-10">
         <SectionHeading
           title="Conversion overview"
-          description="Dihitung langsung dari tabel konsultasi (bukan estimasi AI). Metrik yang sumbernya belum tersambung tidak ditampilkan sebagai angka."
+          description={`Dihitung langsung dari tabel konsultasi & funnel (${periodDays} hari terakhir).`}
         />
         {funnel.isLoading ? (
           <div className="flex items-center justify-center py-12">
@@ -27,9 +32,9 @@ export default function CroAgentPage() {
             />
           </div>
         ) : funnel.isError ? (
-          <NotConnected
-            title="Gagal memuat funnel"
-            description="Endpoint /ai/cro/funnel-summary tidak bisa dibaca. Coba muat ulang halaman."
+          <QueryError
+            message="Endpoint /ai/cro/funnel-summary gagal dimuat."
+            onRetry={() => void funnel.refetch()}
           />
         ) : !funnel.data?.hasData ? (
           <NotConnected
@@ -54,14 +59,14 @@ export default function CroAgentPage() {
               },
               {
                 label: "Top drop-off stage",
-                value: funnel.data.totals!.topDropOffStage ?? "—",
+                value: topDropStage ?? "—",
                 note:
                   funnel.data.totals!.topDropOffCount !== null
                     ? `${funnel.data.totals!.topDropOffCount} batal/ditolak`
                     : "belum ada pembatalan tercatat",
               },
               {
-                label: "Lost (30 hari)",
+                label: `Lost (${periodDays} hari)`,
                 value: String(funnel.data.totals!.lostLast30d),
                 note: `periode sebelumnya ${funnel.data.totals!.lostPrev30d}`,
               },
@@ -81,32 +86,82 @@ export default function CroAgentPage() {
 
         {funnel.data?.hasData && funnel.data.stages.length > 0 && (
           <Panel className="mt-4 overflow-x-auto p-0">
-            <table className="w-full min-w-[560px] text-sm">
+            <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-border/60 text-left">
                   <th className="label-eyebrow px-5 py-3">Stage</th>
                   <th className="label-eyebrow px-5 py-3">Reached</th>
-                  <th className="label-eyebrow px-5 py-3">Rate</th>
+                  <th className="label-eyebrow px-5 py-3 w-48">Conversion Bar</th>
                   <th className="label-eyebrow px-5 py-3">Avg. jam di stage</th>
                   <th className="label-eyebrow px-5 py-3">Lost</th>
                 </tr>
               </thead>
               <tbody>
-                {funnel.data.stages.map((st) => (
-                  <tr key={st.key} className="border-b border-border/40 last:border-0">
-                    <td className="px-5 py-3">{st.label}</td>
-                    <td className="px-5 py-3 font-mono">{st.reached}</td>
-                    <td className="px-5 py-3 font-mono">{st.rate === null ? "—" : `${st.rate}%`}</td>
-                    <td className="px-5 py-3 font-mono">
-                      {st.avgHoursInStage === null ? "—" : st.avgHoursInStage}
-                    </td>
-                    <td className="px-5 py-3 font-mono">{st.lost}</td>
-                  </tr>
-                ))}
+                {funnel.data.stages.map((st) => {
+                  const isBottleneck = Boolean(topDropStage && (st.label === topDropStage || st.key === topDropStage) && st.lost > 0);
+                  const pct = st.rate ?? 0;
+                  return (
+                    <tr
+                      key={st.key}
+                      className={cn(
+                        "border-b border-border/40 last:border-0",
+                        isBottleneck && "bg-warning/[0.04]",
+                      )}
+                    >
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2">
+                          <span>{st.label}</span>
+                          {isBottleneck ? <Pill tone="warning">Bottleneck</Pill> : null}
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 font-mono">{st.reached}</td>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
+                            <div
+                              className={cn("h-full rounded-full", isBottleneck ? "bg-warning" : "bg-ai")}
+                              style={{ width: `${Math.max(4, Math.min(100, pct))}%` }}
+                            />
+                          </div>
+                          <span className="num w-11 text-right text-xs">
+                            {st.rate === null ? "—" : `${st.rate}%`}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 font-mono">
+                        {st.avgHoursInStage === null ? "—" : st.avgHoursInStage}
+                      </td>
+                      <td className={cn("px-5 py-3 font-mono", st.lost > 0 && "text-destructive")}>{st.lost}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </Panel>
         )}
+
+        {funnel.data?.shopAndWa ? (
+          <Panel className="mt-4 p-5">
+            <p className="label-eyebrow mb-3">Shop & WhatsApp LiviBot Funnel ({periodDays}d)</p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-sm border border-border bg-background/40 p-3">
+                <p className="text-[11px] text-muted-foreground">Keranjang Belanja</p>
+                <p className="num mt-1 text-xl font-medium">{funnel.data.shopAndWa.cartItemsAdded.toLocaleString("id-ID")}</p>
+              </div>
+              <div className="rounded-sm border border-border bg-background/40 p-3">
+                <p className="text-[11px] text-muted-foreground">Klik Konsultasi WA dari Shop</p>
+                <p className="num mt-1 text-xl font-medium">{funnel.data.shopAndWa.cartToWaClicks.toLocaleString("id-ID")}</p>
+              </div>
+              <div className="rounded-sm border border-border bg-background/40 p-3">
+                <p className="text-[11px] text-muted-foreground">Inquiry Harga WA LiviBot</p>
+                <p className="num mt-1 text-xl font-medium">{funnel.data.shopAndWa.waPriceInquiries.toLocaleString("id-ID")}</p>
+              </div>
+            </div>
+            {funnel.data.shopAndWa.conversionNote ? (
+              <p className="mt-2.5 text-xs text-muted-foreground">{funnel.data.shopAndWa.conversionNote}</p>
+            ) : null}
+          </Panel>
+        ) : null}
 
         {(funnel.data?.unavailable?.length ?? 0) > 0 && (
           <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
@@ -150,7 +205,7 @@ export default function CroAgentPage() {
 
       <section className="mt-10 grid gap-4 lg:grid-cols-2">
         <Panel className="p-6">
-          <SectionHeading title="Tracked Funnel Events (30d)" />
+          <SectionHeading title={`Tracked Funnel Events (${periodDays}d)`} />
           {funnel.data?.funnelEvents && funnel.data.funnelEvents.length > 0 ? (
             <div className="space-y-2">
               {funnel.data.funnelEvents.map((fe) => (

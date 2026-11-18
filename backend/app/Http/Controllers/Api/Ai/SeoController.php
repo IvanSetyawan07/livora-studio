@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Ai;
 
 use App\Http\Controllers\Controller;
+use App\Models\AiSetting;
 use App\Services\AI\SeoAgentService;
 use App\Services\Google\GoogleOAuthTokenStore;
 use App\Services\Google\GoogleSearchConsoleClient;
@@ -59,21 +60,55 @@ class SeoController extends Controller
                 'period' => null,
                 'totals' => null,
                 'siteUrl' => null,
+                'series' => [],
+                'topQueries' => [],
+                'topPages' => [],
             ]);
         }
 
-        $key = "ai:seo:search-console-summary:{$days}";
+        $key = "ai:seo:search-console-summary:v2:{$days}";
         $payload = Cache::get($key);
 
         if (! is_array($payload)) {
             $payload = $this->fetchSummary($days);
-            // Hasil sukses di-cache lama (hemat kuota API), hasil gagal/ambigu
-            // hanya 1 menit supaya admin yang baru membetulkan setting tidak
-            // perlu menunggu 20 menit atau flush cache manual.
             Cache::put($key, $payload, ($payload['hasData'] ?? false) ? self::CACHE_TTL_SECONDS : 60);
         }
 
         return response()->json($payload);
+    }
+
+    /** GET /api/ai/seo/search-console-sites */
+    public function sites()
+    {
+        if ($this->tokens->getValidAccessToken() === null) {
+            return response()->json(['sites' => [], 'selected' => null]);
+        }
+
+        try {
+            $sites = $this->client->listSites();
+
+            return response()->json([
+                'sites' => $sites,
+                'selected' => AiSetting::get('google_search_console_site'),
+            ]);
+        } catch (Throwable $e) {
+            return response()->json(['sites' => [], 'selected' => null, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    /** POST /api/ai/seo/search-console-site */
+    public function selectSite(Request $request)
+    {
+        $data = $request->validate([
+            'siteUrl' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        AiSetting::set('google_search_console_site', $data['siteUrl'] ?: null);
+        foreach ([7, 14, 28, 30, 60, 90] as $d) {
+            Cache::forget("ai:seo:search-console-summary:v2:{$d}");
+        }
+
+        return response()->json(['ok' => true, 'siteUrl' => $data['siteUrl'] ?: null]);
     }
 
     private function fetchSummary(int $days): array
@@ -88,6 +123,9 @@ class SeoController extends Controller
                 'period' => null,
                 'totals' => null,
                 'siteUrl' => null,
+                'series' => [],
+                'topQueries' => [],
+                'topPages' => [],
             ];
         }
 
@@ -95,8 +133,6 @@ class SeoController extends Controller
         $end = now()->toDateString();
 
         try {
-            // Dimensi ['date'] dipakai supaya totalnya konsisten dengan angka
-            // ringkasan di UI Search Console (bukan cuma total dari top 25 query).
             $rows = $this->client->searchAnalytics($resolved['site'], $start, $end, ['date'], 100);
         } catch (Throwable $e) {
             return [
@@ -106,8 +142,42 @@ class SeoController extends Controller
                 'period' => ['start' => $start, 'end' => $end, 'days' => $days],
                 'totals' => null,
                 'siteUrl' => $resolved['site'],
+                'series' => [],
+                'topQueries' => [],
+                'topPages' => [],
             ];
         }
+
+        $topQueries = [];
+        $topPages = [];
+        try {
+            $topQueries = array_map(fn ($r) => [
+                'query' => (string) ($r['keys'][0] ?? ''),
+                'clicks' => (int) ($r['clicks'] ?? 0),
+                'impressions' => (int) ($r['impressions'] ?? 0),
+                'ctr' => round(((float) ($r['ctr'] ?? 0)) * 100, 2),
+                'position' => round((float) ($r['position'] ?? 0), 1),
+            ], $this->client->searchAnalytics($resolved['site'], $start, $end, ['query'], 20));
+        } catch (Throwable) {
+        }
+        try {
+            $topPages = array_map(fn ($r) => [
+                'page' => (string) ($r['keys'][0] ?? ''),
+                'clicks' => (int) ($r['clicks'] ?? 0),
+                'impressions' => (int) ($r['impressions'] ?? 0),
+                'ctr' => round(((float) ($r['ctr'] ?? 0)) * 100, 2),
+                'position' => round((float) ($r['position'] ?? 0), 1),
+            ], $this->client->searchAnalytics($resolved['site'], $start, $end, ['page'], 12));
+        } catch (Throwable) {
+        }
+
+        $series = array_map(fn ($r) => [
+            'date' => (string) ($r['keys'][0] ?? ''),
+            'clicks' => (int) ($r['clicks'] ?? 0),
+            'impressions' => (int) ($r['impressions'] ?? 0),
+            'ctr' => round(((float) ($r['ctr'] ?? 0)) * 100, 2),
+            'position' => round((float) ($r['position'] ?? 0), 1),
+        ], $rows);
 
         $totals = $this->seoAgent->aggregate($rows);
 
@@ -121,10 +191,13 @@ class SeoController extends Controller
             'totals' => [
                 'clicks' => $totals['clicks'],
                 'impressions' => $totals['impressions'],
-                'ctr' => $totals['ctr'],          // persen, mis. 1.83
-                'position' => $totals['position'], // posisi rata-rata tertimbang impression
+                'ctr' => $totals['ctr'],
+                'position' => $totals['position'],
             ],
             'siteUrl' => $resolved['site'],
+            'series' => $series,
+            'topQueries' => $topQueries,
+            'topPages' => $topPages,
         ];
     }
 }

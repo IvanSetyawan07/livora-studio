@@ -58,7 +58,8 @@ class FollowUpActionExecutor implements ActionExecutor
         }
 
         $message = $this->composeEmail($recommendation);
-        $waText = $this->composeWhatsApp($recommendation, $leads->first()->first_name ?? 'Kak');
+        // Pertahankan placeholder {nama} supaya setiap lead mendapat sapaan namanya masing-masing.
+        $waText = $this->composeWhatsApp($recommendation, '{nama}');
 
         $emailsSent = [];
         $waSent = [];

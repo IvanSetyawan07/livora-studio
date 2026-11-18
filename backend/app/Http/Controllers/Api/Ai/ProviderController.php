@@ -7,13 +7,67 @@ use App\Http\Resources\Ai\AiProviderResource;
 use App\Models\AiProvider;
 use App\Models\AiRoutingStrategy;
 use App\Models\AiSetting;
+use App\Models\AiUsageLog;
+use App\Services\AI\AIProviderManager;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class ProviderController extends Controller
 {
-    public function index()
+    public function index(AIProviderManager $manager)
     {
-        return AiProviderResource::collection(AiProvider::all());
+        $manager->syncConfiguredProviders();
+
+        $providers = AiProvider::all();
+        $totalCost = 0.0;
+        $costByProvider = [];
+        $untrackedByProvider = [];
+
+        if (Schema::hasTable('ai_usage_logs')) {
+            $stats = AiUsageLog::query()
+                ->selectRaw('provider, COALESCE(SUM(cost), 0) as total_cost, SUM(CASE WHEN cost IS NULL THEN 1 ELSE 0 END) as untracked_count')
+                ->groupBy('provider')
+                ->get();
+
+            foreach ($stats as $row) {
+                $c = (float) $row->total_cost;
+                $costByProvider[$row->provider] = $c;
+                $untrackedByProvider[$row->provider] = (int) $row->untracked_count;
+                $totalCost += $c;
+            }
+        }
+
+        foreach ($providers as $p) {
+            $p->precomputed_cost = $costByProvider[$p->provider] ?? 0.0;
+            $p->precomputed_total_cost = $totalCost;
+            $p->precomputed_untracked = $untrackedByProvider[$p->provider] ?? 0;
+        }
+
+        return AiProviderResource::collection($providers);
+    }
+
+    public function sync(AIProviderManager $manager)
+    {
+        $manager->syncConfiguredProviders();
+
+        return $this->index($manager);
+    }
+
+    public function test(string $provider, AIProviderManager $manager)
+    {
+        try {
+            $res = $manager->testProvider($provider);
+
+            return response()->json($res);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 404);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'provider' => $provider,
+                'status' => 'degraded',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 
     public function routingStrategy()

@@ -27,6 +27,7 @@ class ContentAgentService extends BaseAgentService
         private MetaGraphClient $meta,
         private TikTokClient $tiktok,
         private YouTubeClient $youtube,
+        private ?MarketIntelligenceService $market = null,
     ) {
         parent::__construct($ai);
     }
@@ -48,7 +49,7 @@ class ContentAgentService extends BaseAgentService
 
     protected function sourceLabels(array $snapshot): array
     {
-        return array_merge(['Website Content', 'Promo & Catalog'], $snapshot['connected_social_platforms'] ?? []);
+        return array_merge(['Website Content', 'Market Trends'], $snapshot['connected_social_platforms'] ?? []);
     }
 
     protected function emptyMessage(): string
@@ -58,11 +59,13 @@ class ContentAgentService extends BaseAgentService
 
     protected function roleBrief(): string
     {
-        return 'Kamu adalah Creative & Content Strategist untuk Livora Studio (interior design & furniture premium di Jakarta). '
-            .'Analisis produk & proyek yang paling banyak dilihat/di-wishlist, item promo aktif, dan performa sosial media, '
-            .'lalu rekomendasikan konten visual (Instagram Carousel/Reels, Facebook Post, Email Newsletter) yang spesifik. '
-            .'Sertakan `"target_type"` ("item", "project", atau "promo_banner") dan `"target_id"` (angka ID nyata dari snapshot), '
-            .'serta `"channel"` ("instagram"|"facebook"|"email"|"tiktok"), `"headline"`, dan `"caption"` di dalam `recommendation` bila merekomendasikan konten.';
+        return 'Kamu adalah Creative, Market & Content Strategist untuk Livora Studio (interior design & furniture premium di Jakarta). '
+            .'Analisis: (1) tren pasar interior luxury eksternal & format konten yang sedang efektif di industri (di luar akun kita sendiri), '
+            .'(2) produk & proyek yang paling banyak dilihat/di-wishlist, promo aktif, dan performa sosial media, '
+            .'serta (3) daftar draft terakhir agar kamu TIDAK mengulang ide yang sama persis. '
+            .'Rekomendasikan kombinasi konten baru — termasuk ide segar terinspirasi pasar luar (IG Reels/Carousel, TikTok, YouTube, Email Newsletter). '
+            .'Sertakan `"target_type"` ("item", "project", atau "promo_banner") dan `"target_id"` (angka ID nyata dari snapshot bila merujuk aset spesifik, atau null bila kampanye edukasi/brand), '
+            .'serta `"channel"` ("instagram"|"facebook"|"email"|"tiktok"|"youtube"), `"headline"`, dan `"caption"` di dalam `recommendation`.';
     }
 
     protected function buildSnapshot(): ?array
@@ -134,12 +137,18 @@ class ContentAgentService extends BaseAgentService
             return null;
         }
 
+        $recentDrafts = Schema::hasTable('ai_content_drafts')
+            ? DB::table('ai_content_drafts')->orderByDesc('id')->limit(10)->pluck('title')->all()
+            : [];
+
         return [
             'window' => [
                 'from' => $period->fromDate(),
                 'to' => $period->toDate(),
                 'days' => $period->days(),
             ],
+            'market_brief' => $this->market?->compactBrief(),
+            'recent_draft_titles_avoid_duplicate' => $recentDrafts,
             'onsite_content' => [
                 'total_clicks' => (int) $totalClicks,
                 'clicks_by_target_type' => $clicksByType,

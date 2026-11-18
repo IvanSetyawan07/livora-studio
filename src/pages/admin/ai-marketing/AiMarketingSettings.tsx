@@ -1,8 +1,12 @@
-import { useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { ArrowUpRight, Loader2, RefreshCw } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Panel, Pill, SectionHeading, StatusDot } from "@/components/ai/primitives";
+import { QueryError } from "@/components/ai/query-error";
+import { usePageContext } from "@/context/AiMarketingContext";
 import {
+  extractApiErrorMessage,
   useAiAgents,
   useGoogleAuthorize,
   useGoogleDisconnect,
@@ -11,6 +15,7 @@ import {
   useMetaAdsDisconnect,
   useMetaAdsIntegrationStatus,
   useProviders,
+  useSyncProviders,
 } from "@/hooks/useAiDashboard";
 import { toast } from "sonner";
 import type { AIProviderInfo, ConnectionState } from "@/lib/ai/types";
@@ -105,13 +110,13 @@ function GoogleConnectionAction() {
       onDisconnect={() =>
         disconnect.mutate(undefined, {
           onSuccess: () => toast.success("Google Search Console disconnected."),
-          onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Gagal disconnect."),
+          onError: (e: unknown) => toast.error(extractApiErrorMessage(e, "Gagal disconnect.")),
         })
       }
       onConnect={() =>
         authorize.mutate(undefined, {
           onError: (e: unknown) =>
-            toast.error(e instanceof Error ? e.message : "Gagal mengambil authorize URL."),
+            toast.error(extractApiErrorMessage(e, "Gagal mengambil authorize URL.")),
         })
       }
     />
@@ -134,13 +139,13 @@ function MetaAdsConnectionAction() {
       onDisconnect={() =>
         disconnect.mutate(undefined, {
           onSuccess: () => toast.success("Meta Ads disconnected."),
-          onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Gagal disconnect."),
+          onError: (e: unknown) => toast.error(extractApiErrorMessage(e, "Gagal disconnect.")),
         })
       }
       onConnect={() =>
         authorize.mutate(undefined, {
           onError: (e: unknown) =>
-            toast.error(e instanceof Error ? e.message : "Gagal mengambil authorize URL."),
+            toast.error(extractApiErrorMessage(e, "Gagal mengambil authorize URL.")),
         })
       }
     />
@@ -161,16 +166,12 @@ const metaAdsCallbackMessage: Record<string, { tone: "success" | "danger"; text:
   exchange_failed: { tone: "danger", text: "Meta rejected the token exchange — please try again." },
 };
 
-/**
- * Banner hasil redirect dari MetaAdsOAuthCallbackController (?meta_ads=...).
- * Polanya sama seperti GoogleSearchConsoleCard di AiMarketingSeo.tsx.
- */
 function MetaAdsCallbackBanner() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const callbackResult = searchParams.get("meta_ads");
+  const [callbackResult] = useState(() => searchParams.get("meta_ads"));
 
   useEffect(() => {
-    if (callbackResult) {
+    if (searchParams.get("meta_ads")) {
       const params = new URLSearchParams(searchParams);
       params.delete("meta_ads");
       setSearchParams(params, { replace: true });
@@ -195,14 +196,15 @@ function MetaAdsCallbackBanner() {
 }
 
 export default function SettingsPage() {
-  const { data: agents, isLoading: agentsLoading } = useAiAgents();
-  const { data: providers, isLoading: providersLoading } = useProviders();
+  usePageContext("settings");
+  const { data: agents, isLoading: agentsLoading, error: agentsError, refetch: refetchAgents } = useAiAgents();
+  const { data: providers, isLoading: providersLoading, error: providersError, refetch: refetchProviders } = useProviders();
+  const syncProviders = useSyncProviders();
 
   const integrations = new Map<string, ConnectionState>();
   for (const agent of agents ?? []) {
     for (const dep of agent.dependencies) {
       const existing = integrations.get(dep.name);
-      // Prefer showing "connected" if any agent already has it connected.
       if (!existing || existing !== "connected") {
         integrations.set(dep.name, dep.state);
       }
@@ -220,63 +222,95 @@ export default function SettingsPage() {
       <section>
         <SectionHeading
           title="Data source & platform connections"
-          description="Status is read-only. Services with their own OAuth flow can be connected right here; the rest are configured in the Laravel admin."
+          description="Services with their own OAuth flow can be connected right here; the rest are configured in the Laravel backend .env."
         />
         <MetaAdsCallbackBanner />
-        <Panel className="overflow-hidden">
-          {agentsLoading ? (
-            <div className="h-32 animate-pulse bg-surface/40" />
-          ) : integrations.size === 0 ? (
-            <p className="p-6 text-center text-sm text-muted-foreground">
-              No agent dependencies registered yet.
-            </p>
-          ) : (
-            <ul className="divide-y divide-border">
-              {[...integrations.entries()].map(([name, state]) => (
-                <li key={name} className="flex items-center justify-between gap-3 px-5 py-3.5 text-sm">
-                  {name}
-                  <div className="flex items-center gap-3">
-                    <Pill tone={connTone[state]}>
-                      <StatusDot tone={connTone[state]} pulse={state === "connected"} />
-                      {connLabel[state]}
-                    </Pill>
-                    <ConnectionAction name={name} />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
+        {agentsError ? (
+          <QueryError message="Status integrasi tidak bisa dimuat." onRetry={() => void refetchAgents()} />
+        ) : (
+          <Panel className="overflow-hidden">
+            {agentsLoading ? (
+              <div className="h-32 animate-pulse bg-surface/40" />
+            ) : integrations.size === 0 ? (
+              <p className="p-6 text-center text-sm text-muted-foreground">
+                No agent dependencies registered yet.
+              </p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {[...integrations.entries()].map(([name, state]) => (
+                  <li key={name} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 text-sm">
+                    <span>{name}</span>
+                    <div className="flex items-center gap-3">
+                      <Pill tone={connTone[state]}>
+                        <StatusDot tone={connTone[state]} pulse={state === "connected"} />
+                        {connLabel[state]}
+                      </Pill>
+                      <ConnectionAction name={name} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        )}
       </section>
 
       <section className="mt-10">
         <SectionHeading
           title="AI orchestration"
           description="Providers the Laravel backend can fall back across when an agent asks the AI a question."
+          action={
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={syncProviders.isPending}
+                onClick={() =>
+                  syncProviders.mutate(undefined, {
+                    onSuccess: () => toast.success("Model & status provider disinkronkan."),
+                    onError: (e) => toast.error(extractApiErrorMessage(e, "Gagal sinkronisasi provider.")),
+                  })
+                }
+                className="inline-flex items-center gap-1 rounded-sm border border-border px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+              >
+                {syncProviders.isPending ? <Loader2 className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
+                Sync .env
+              </button>
+              <Link
+                to="/admin/ai-marketing/providers"
+                className="inline-flex items-center gap-1 text-xs text-ai hover:underline"
+              >
+                Providers & Routing <ArrowUpRight className="size-3" />
+              </Link>
+            </div>
+          }
         />
-        <Panel className="overflow-hidden">
-          {providersLoading ? (
-            <div className="h-32 animate-pulse bg-surface/40" />
-          ) : (providers ?? []).length === 0 ? (
-            <p className="p-6 text-center text-sm text-muted-foreground">
-              No AI provider registered yet — run the provider seeder on the backend.
-            </p>
-          ) : (
-            <ul className="divide-y divide-border">
-              {(providers ?? []).map((p) => (
-                <li key={p.id} className="flex items-center justify-between px-5 py-3.5 text-sm">
-                  <span className="capitalize">
-                    {p.provider} <span className="text-muted-foreground">— {p.model}</span>
-                  </span>
-                  <Pill tone={providerTone[p.status]}>
-                    <StatusDot tone={providerTone[p.status]} pulse={p.status === "connected"} />
-                    {p.status === "connected" ? "Connected" : p.status === "degraded" ? "Degraded" : "Not connected"}
-                  </Pill>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
+        {providersError ? (
+          <QueryError message="Status AI provider tidak bisa dimuat." onRetry={() => void refetchProviders()} />
+        ) : (
+          <Panel className="overflow-hidden">
+            {providersLoading ? (
+              <div className="h-32 animate-pulse bg-surface/40" />
+            ) : (providers ?? []).length === 0 ? (
+              <p className="p-6 text-center text-sm text-muted-foreground">
+                No AI provider registered yet — run the provider seeder on the backend.
+              </p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {(providers ?? []).map((p) => (
+                  <li key={p.id} className="flex items-center justify-between px-5 py-3.5 text-sm">
+                    <span className="capitalize">
+                      {p.provider} <span className="text-muted-foreground">— {p.model}</span>
+                    </span>
+                    <Pill tone={providerTone[p.status]}>
+                      <StatusDot tone={providerTone[p.status]} pulse={p.status === "connected"} />
+                      {p.status === "connected" ? "Connected" : p.status === "degraded" ? "Degraded" : "Not connected"}
+                    </Pill>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        )}
       </section>
     </>
   );

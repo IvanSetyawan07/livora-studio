@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowUpRight, ChevronDown, ExternalLink } from "lucide-react";
+import { ArrowUpRight, ChevronDown, ExternalLink, Loader2 } from "lucide-react";
 import type { AIInsight, AIInsightType } from "@/lib/ai/types";
 import { useRecommendation } from "@/hooks/useAiDashboard";
 import { ConfidenceBar, Panel, Pill, StatusDot } from "./primitives";
@@ -19,10 +19,12 @@ export function InsightCard({
   insight,
   defaultOpen = false,
   onDismiss,
+  dismissing = false,
 }: {
   insight: AIInsight;
   defaultOpen?: boolean;
   onDismiss?: (id: string) => void;
+  dismissing?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const meta = typeMeta[insight.type];
@@ -100,7 +102,7 @@ export function InsightCard({
             <div className="flex flex-wrap items-center gap-2 pt-1">
               {rec ? (
                 <Link
-                  to="/admin/ai-marketing/approvals"
+                  to="/admin/ai-marketing/ai-center/recommendations"
                   className="inline-flex items-center gap-1.5 rounded-sm bg-brass px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
                 >
                   Review recommendation <ArrowUpRight className="size-3.5" />
@@ -108,7 +110,7 @@ export function InsightCard({
               ) : null}
               {insight.analyticsHref ? (
                 <Link
-                  to="/admin/analytics"
+                  to={insight.analyticsHref}
                   className="inline-flex items-center gap-1.5 rounded-sm border border-border-strong px-3 py-1.5 text-xs transition-colors hover:bg-accent"
                 >
                   View source analytics <ExternalLink className="size-3.5" />
@@ -116,9 +118,12 @@ export function InsightCard({
               ) : null}
               {onDismiss ? (
                 <button
+                  type="button"
+                  disabled={dismissing}
                   onClick={() => onDismiss(insight.id)}
-                  className="rounded-sm px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                  className="inline-flex items-center gap-1 rounded-sm px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
                 >
+                  {dismissing ? <Loader2 className="size-3 animate-spin" /> : null}
                   Dismiss
                 </button>
               ) : null}

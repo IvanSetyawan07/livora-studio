@@ -110,7 +110,18 @@ export function SectionNotice({
         className,
       )}
     >
-      <span className="inline-flex items-center gap-1.5 rounded-sm border border-dashed border-border-strong px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-sm border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em]",
+          meta.tone === "danger"
+            ? "border-destructive/40 bg-destructive/14 text-destructive"
+            : meta.tone === "warning"
+              ? "border-warning/40 bg-warning/12 text-warning"
+              : meta.tone === "info"
+                ? "border-info/40 bg-info/12 text-info"
+                : "border-dashed border-border-strong text-muted-foreground",
+        )}
+      >
         <Icon className={cn("size-3", state.status === "syncing" && "animate-spin")} /> {meta.pillLabel}
       </span>
       {title ? <p className="text-sm font-medium">{title}</p> : null}

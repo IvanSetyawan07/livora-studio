@@ -5,12 +5,22 @@
  * yang tidak tersedia ditampilkan apa adanya dari backend.
  */
 import { useState } from "react";
-import { MapPin, Star, PhoneCall, Navigation, AlertTriangle, MessageSquareReply, Loader2, Sparkles } from "lucide-react";
+import {
+  MapPin,
+  Star,
+  PhoneCall,
+  Navigation,
+  AlertTriangle,
+  ExternalLink,
+  MessageSquareReply,
+  Loader2,
+  Sparkles,
+} from "lucide-react";
+import { CartesianGrid, Legend, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
 import { IntegrationRequired } from "@/components/ai/integration-required";
-import { PlatformRow } from "@/components/ai/offline";
-import { Panel, SectionHeading, StatusDot } from "@/components/ai/primitives";
-import { ChartSection, MultiLineChart } from "@/components/ai/dashboard-charts";
+import { Panel, Pill, SectionHeading, StatusDot } from "@/components/ai/primitives";
+import { ChartSection } from "@/components/ai/dashboard-charts";
 import {
   Dialog,
   DialogContent,
@@ -115,10 +125,22 @@ export function LocalSeoSection() {
       />
 
       {data?.listing?.name && (
-        <p className="mb-4 text-sm text-muted-foreground">
-          Listing: <span className="text-foreground">{data.listing.name}</span>
-          {data.listing.address ? ` — ${data.listing.address}` : ""}
-        </p>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+          <p>
+            Listing: <span className="font-medium text-foreground">{data.listing.name}</span>
+            {data.listing.address ? ` — ${data.listing.address}` : ""}
+          </p>
+          {data.listing.mapsUri ? (
+            <a
+              href={data.listing.mapsUri}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-ai hover:underline"
+            >
+              Buka di Google Maps <ExternalLink className="size-3" />
+            </a>
+          ) : null}
+        </div>
       )}
 
       {data?.message && (
@@ -147,28 +169,87 @@ export function LocalSeoSection() {
           state={seriesState}
           provider="Google Business Profile"
           connectHref="/admin/ai-marketing/settings"
+          isEmpty={(points) => points.length === 0}
           renderChart={(points) => (
-            <MultiLineChart
-              title=""
+            <LineChart
               data={points.map((p) => ({
                 label: p.date.slice(5),
                 mapViews: p.mapViews,
                 directionRequests: p.directionRequests,
                 calls: p.calls,
               }))}
-              series={[
-                { key: "mapViews", label: "Map views", color: "hsl(var(--info))" },
-                { key: "directionRequests", label: "Directions", color: "hsl(var(--success))" },
-                { key: "calls", label: "Calls", color: "hsl(var(--warning))" },
-              ]}
-            />
+              margin={{ top: 8, right: 12, bottom: 0, left: -12 }}
+            >
+              <CartesianGrid stroke="hsl(var(--border))" vertical={false} />
+              <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={24} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+              <YAxis tickLine={false} axisLine={false} width={44} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} allowDecimals={false} />
+              <Tooltip
+                contentStyle={{
+                  background: "hsl(var(--popover))",
+                  border: "1px solid hsl(var(--border-strong))",
+                  borderRadius: 4,
+                  fontSize: 12,
+                  color: "hsl(var(--foreground))",
+                }}
+              />
+              <Legend verticalAlign="bottom" height={28} iconType="plainline" wrapperStyle={{ fontSize: 11 }} />
+              <Line type="monotone" dataKey="mapViews" name="Map views" stroke="hsl(var(--info))" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="directionRequests" name="Directions" stroke="hsl(var(--success))" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="calls" name="Calls" stroke="hsl(var(--warning))" strokeWidth={2} dot={false} />
+            </LineChart>
           )}
         />
+
         <div className="space-y-2.5">
-          <PlatformRow icon={MapPin} label="Google Maps listing" note="business.manage scope" />
-          <PlatformRow icon={Star} label="Reviews & rating" note="reviews.readonly" />
-          <PlatformRow icon={Navigation} label="Direction requests" note="performance API" />
-          <PlatformRow icon={PhoneCall} label="Calls from listing" note="performance API" />
+          {[
+            {
+              icon: MapPin,
+              label: "Google Maps listing",
+              note: data?.listing?.name ?? "business.manage scope",
+              active: connected && Boolean(data?.listing?.name),
+              warn: data?.unavailable?.find((u) => u.metric.toLowerCase().includes("listing")),
+            },
+            {
+              icon: Star,
+              label: "Reviews & rating",
+              note: "reviews.readonly",
+              active: connected && ((data?.reviews?.length ?? 0) > 0 || totals?.averageRating !== null),
+              warn: data?.unavailable?.find((u) => u.metric.toLowerCase().includes("review")),
+            },
+            {
+              icon: Navigation,
+              label: "Direction requests",
+              note: "Business Profile Performance API",
+              active: connected && totals?.directionRequests !== undefined && totals?.directionRequests !== null && !data?.unavailable?.some((u) => u.metric.toLowerCase().includes("map")),
+              warn: data?.unavailable?.find((u) => u.metric.toLowerCase().includes("map")),
+            },
+            {
+              icon: PhoneCall,
+              label: "Calls from listing",
+              note: "Business Profile Performance API",
+              active: connected && totals?.calls !== undefined && totals?.calls !== null && !data?.unavailable?.some((u) => u.metric.toLowerCase().includes("map")),
+              warn: data?.unavailable?.find((u) => u.metric.toLowerCase().includes("map")),
+            },
+          ].map((row) => {
+            const RowIcon = row.icon;
+            const tone = row.active ? "success" : row.warn ? "warning" : "neutral";
+            const badgeText = row.active ? "Connected" : row.warn ? "Limited" : connected ? "No Data" : "Not connected";
+            return (
+              <div key={row.label} className="flex items-center justify-between gap-3 rounded-sm border border-border px-3.5 py-2.5">
+                <div className="flex min-w-0 items-center gap-3">
+                  <RowIcon className="size-4 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0">
+                    <p className="text-sm text-foreground">{row.label}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">{row.note}</p>
+                  </div>
+                </div>
+                <Pill tone={tone} className="shrink-0">
+                  <StatusDot tone={tone} />
+                  {badgeText}
+                </Pill>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -177,11 +258,11 @@ export function LocalSeoSection() {
         {data?.reviews?.length ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-                <thead>
+              <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground">
                   <th className="pb-2 pr-4">Reviewer</th>
                   <th className="pb-2 pr-4">Rating</th>
-                  <th className="pb-2 pr-4">Snippet</th>
+                  <th className="pb-2 pr-4">Comment & Reply</th>
                   <th className="pb-2 pr-4">Replied</th>
                   <th className="pb-2 pr-4">Date</th>
                   <th className="pb-2 text-right">Action</th>
@@ -190,16 +271,21 @@ export function LocalSeoSection() {
               <tbody>
                 {data.reviews.map((r) => (
                   <tr key={r.id} className="border-t border-border align-top">
-                    <td className="py-2 pr-4">{r.reviewer ?? "—"}</td>
-                    <td className="py-2 pr-4 num">{r.rating ?? "—"}</td>
-                    <td className="py-2 pr-4 text-muted-foreground">
-                      {r.comment ? (r.comment.length > 120 ? `${r.comment.slice(0, 120)}…` : r.comment) : "—"}
+                    <td className="py-2.5 pr-4 font-medium">{r.reviewer ?? "—"}</td>
+                    <td className="py-2.5 pr-4 num">{r.rating ?? "—"}</td>
+                    <td className="py-2.5 pr-4 text-muted-foreground">
+                      <p>{r.comment ? (r.comment.length > 140 ? `${r.comment.slice(0, 140)}…` : r.comment) : "—"}</p>
+                      {r.replyComment ? (
+                        <p className="mt-1 rounded bg-secondary/50 px-2 py-1 text-[11px] text-foreground/80">
+                          Balasan: {r.replyComment}
+                        </p>
+                      ) : null}
                     </td>
-                    <td className="py-2 pr-4">{r.replied ? "Ya" : "Belum"}</td>
-                    <td className="py-2 pr-4 text-muted-foreground">
+                    <td className="py-2.5 pr-4">{r.replied ? "Ya" : "Belum"}</td>
+                    <td className="py-2.5 pr-4 text-muted-foreground">
                       {r.createdAt ? new Date(r.createdAt).toLocaleDateString("id-ID") : "—"}
                     </td>
-                    <td className="py-2 text-right">
+                    <td className="py-2.5 text-right">
                       {!r.replied ? (
                         <button
                           type="button"
@@ -209,7 +295,7 @@ export function LocalSeoSection() {
                           <MessageSquareReply className="size-3" /> Balas (AI)
                         </button>
                       ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
+                        <span className="text-xs text-success">Sudah dibalas</span>
                       )}
                     </td>
                   </tr>
@@ -282,9 +368,10 @@ export function LocalSeoSection() {
               <textarea
                 rows={4}
                 value={replyDraft}
+                disabled={draftReply.isPending || sendReply.isPending}
                 onChange={(e) => setReplyDraft(e.target.value)}
                 placeholder="Tulis atau edit balasan sebelum dikirim ke Google Maps..."
-                className="w-full rounded border border-border bg-background p-3 text-sm"
+                className="w-full rounded border border-border bg-background p-3 text-sm text-foreground disabled:opacity-60"
               />
             </div>
             <div className="flex items-center justify-end gap-2">

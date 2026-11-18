@@ -27,15 +27,20 @@ class CroController extends Controller
     /** GET /api/ai/cro/funnel-summary */
     public function funnelSummary()
     {
+        $days = max(7, min((int) request()->query('days', 30), 90));
         $snapshot = $this->cro->buildFunnelSnapshot();
+        $shopAndWa = $this->cro->buildShopAndMerchandisingSnapshot();
 
         if ($snapshot === null) {
             return response()->json([
                 'hasData' => false,
+                'days' => $days,
                 'message' => 'Data konsultasi belum cukup (minimal '.CroAgentService::MIN_SAMPLE
                     .' consultation) untuk menghitung funnel secara jujur.',
                 'totals' => null,
                 'stages' => [],
+                'shopAndWa' => $shopAndWa,
+                'funnelEvents' => $this->funnelEvents30d($days),
                 'unavailable' => $this->unavailableMetrics(),
             ]);
         }
@@ -65,6 +70,7 @@ class CroController extends Controller
 
         return response()->json([
             'hasData' => true,
+            'days' => $days,
             'message' => null,
             'totals' => [
                 'consultations' => $total,
@@ -76,19 +82,20 @@ class CroController extends Controller
                 'lostPrev30d' => (int) $snapshot['cancelled_or_rejected_previous_30_days'],
             ],
             'stages' => $stages,
-            'funnelEvents' => $this->funnelEvents30d(),
+            'shopAndWa' => $shopAndWa,
+            'funnelEvents' => $this->funnelEvents30d($days),
             'unavailable' => $this->unavailableMetrics(),
         ]);
     }
 
-    private function funnelEvents30d(): array
+    private function funnelEvents30d(int $days = 30): array
     {
         if (! Schema::hasTable('funnel_events')) {
             return [];
         }
 
         return DB::table('funnel_events')
-            ->where('created_at', '>=', now()->subDays(30))
+            ->where('created_at', '>=', now()->subDays($days))
             ->selectRaw('event, COUNT(*) as total')
             ->groupBy('event')
             ->orderByDesc('total')

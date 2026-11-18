@@ -7,6 +7,7 @@
  * menampilkan angka contoh — cukup jelaskan apa yang hilang dan di mana
  * kredensialnya dipasang.
  */
+import type { ReactNode } from "react";
 import { KeyRound } from "lucide-react";
 import { Panel } from "./primitives";
 
@@ -18,22 +19,27 @@ export function IntegrationRequired({
   provider,
   envKeys = [],
   configPath = "backend/config/services.php",
+  children,
 }: {
   title: string;
   description: string;
   provider: string;
   envKeys?: IntegrationEnvKey[];
   configPath?: string;
+  children?: ReactNode;
 }) {
   return (
     <Panel className="p-6">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 rounded-sm border border-dashed border-border-strong px-2 py-0.5 font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
-          <KeyRound className="size-3" /> Not connected
-        </span>
-        <span className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
-          {provider}
-        </span>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-sm border border-dashed border-border-strong px-2 py-0.5 font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
+            <KeyRound className="size-3" /> Not connected
+          </span>
+          <span className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
+            {provider}
+          </span>
+        </div>
+        {children}
       </div>
 
       <p className="mt-3 text-sm font-medium">{title}</p>

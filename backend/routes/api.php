@@ -350,6 +350,8 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
     Route::middleware('admin')->prefix('ai')->group(function () {
         Route::get('/cro/funnel-summary', [\App\Http\Controllers\Api\Ai\CroController::class, 'funnelSummary']);
         Route::get('/seo/search-console-summary', [\App\Http\Controllers\Api\Ai\SeoController::class, 'searchConsoleSummary']);
+        Route::get('/seo/search-console-sites', [\App\Http\Controllers\Api\Ai\SeoController::class, 'sites']);
+        Route::post('/seo/search-console-site', [\App\Http\Controllers\Api\Ai\SeoController::class, 'selectSite']);
         Route::get('/seo/local-summary', [\App\Http\Controllers\Api\Ai\BusinessProfileController::class, 'localSummary']);
         Route::post('/seo/local-reviews/{reviewId}/draft-reply', [\App\Http\Controllers\Api\Ai\BusinessProfileController::class, 'draftReviewReply']);
         Route::post('/seo/local-reviews/{reviewId}/reply', [\App\Http\Controllers\Api\Ai\BusinessProfileController::class, 'replyReview']);
@@ -361,8 +363,11 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
 
         Route::get('/insights', [AiInsightController::class, 'index']);
         Route::get('/insights/{insight}', [AiInsightController::class, 'show']);
+        Route::post('/insights/{insight}/dismiss', [AiInsightController::class, 'dismiss']);
 
         Route::get('/activity', [AiActivityController::class, 'index']);
+        Route::post('/activity/read-all', [AiActivityController::class, 'markAllRead']);
+        Route::post('/activity/{activity}/read', [AiActivityController::class, 'markRead']);
 
         Route::get('/recommendations', [AiRecommendationController::class, 'index']);
         Route::get('/recommendations/{recommendation}', [AiRecommendationController::class, 'show']);
@@ -374,20 +379,29 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::post('/actions/{action}/reject', [AiActionController::class, 'reject']);
 
         Route::post('/chat', [AiChatController::class, 'ask']);
+        Route::get('/market/insights', [\App\Http\Controllers\Api\Ai\MarketController::class, 'insights']);
+        Route::post('/market/analyze', [\App\Http\Controllers\Api\Ai\MarketController::class, 'analyze']);
+        Route::get('/learning/summary', [\App\Http\Controllers\Api\Ai\LearningController::class, 'summary']);
+        Route::post('/learning/rules', [\App\Http\Controllers\Api\Ai\LearningController::class, 'storeRule']);
+        Route::delete('/learning/rules/{ruleId}', [\App\Http\Controllers\Api\Ai\LearningController::class, 'deleteRule']);
 
         Route::get('/usage/totals', [AiUsageController::class, 'totals']);
         Route::get('/usage/by-agent', [AiUsageController::class, 'byAgent']);
         Route::get('/usage/by-provider', [AiUsageController::class, 'byProvider']);
 
         Route::get('/providers', [AiProviderController::class, 'index']);
+        Route::post('/providers/sync', [AiProviderController::class, 'sync']);
+        Route::post('/providers/{provider}/test', [AiProviderController::class, 'test']);
         Route::get('/providers/quota', [AiProviderController::class, 'quota']);
         Route::get('/providers/preference', [AiProviderController::class, 'getPreference']);
         Route::post('/providers/preference', [AiProviderController::class, 'updatePreference']);
         Route::get('/routing-strategy', [AiProviderController::class, 'routingStrategy']);
         
         Route::get('/campaigns', [AiCampaignController::class, 'index']);
+        Route::post('/campaigns', [AiCampaignController::class, 'store']);
         Route::post('/campaigns/sync', [AiCampaignController::class, 'sync']);
         Route::get('/campaigns/{campaign}', [AiCampaignController::class, 'show']);
+        Route::patch('/campaigns/{campaign}', [AiCampaignController::class, 'update']);
 
         Route::get('/impact', [AiImpactController::class, 'index']);
         Route::post('/impact/refresh', [AiImpactController::class, 'refresh']);
@@ -412,6 +426,7 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::get('/content/queue', [AiContentController::class, 'queue']);
         Route::post('/content/queue', [AiContentController::class, 'createDraft']);
         Route::patch('/content/queue/{draft}', [AiContentController::class, 'updateDraft']);
+        Route::delete('/content/queue/{draft}', [AiContentController::class, 'deleteDraft']);
         Route::post('/content/queue/{draft}/email-draft', [AiContentController::class, 'pushToEmailCampaign']);
         Route::get('/content/inspiration/library', [AiContentInspirationController::class, 'library']);
         Route::post('/content/inspiration/analyze', [AiContentInspirationController::class, 'analyze']);

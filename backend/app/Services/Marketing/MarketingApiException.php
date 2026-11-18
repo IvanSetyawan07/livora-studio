@@ -62,7 +62,14 @@ class MarketingApiException extends \RuntimeException
             );
         }
 
-        $short = mb_substr($raw, 0, 200);
+        $short = self::extractReadableError($raw);
+
+        if (str_contains($raw, 'REQUESTED_METRICS_FOR_MANAGER')) {
+            return new self(
+                $platform.': GOOGLE_ADS_CUSTOMER_ID saat ini adalah akun Manager (MCC). Isi GOOGLE_ADS_CUSTOMER_ID dengan ID akun iklan klien (tanpa tanda hubung), dan taruh ID Manager ke GOOGLE_ADS_LOGIN_CUSTOMER_ID.',
+                'api_error'
+            );
+        }
 
         return match (true) {
             $httpStatus === 401 => new self("$platform menolak kredensial (401) — token salah atau kedaluwarsa. Buat ulang token lalu isi kembali di backend/.env.", 'invalid_credentials'),
@@ -70,6 +77,29 @@ class MarketingApiException extends \RuntimeException
             $httpStatus === 429 => new self("$platform membatasi jumlah request (429). Kuota akan pulih sendiri, coba lagi nanti.", 'rate_limited'),
             default => new self("$platform gagal merespons ($httpStatus). $short", 'api_error'),
         };
+    }
+
+    private static function extractReadableError(string $raw): string
+    {
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) {
+            $innerError = $decoded['error']['details'][0]['errors'][0] ?? null;
+            if (is_array($innerError)) {
+                $code = is_array($innerError['errorCode'] ?? null)
+                    ? implode(':', array_filter(array_map('strval', $innerError['errorCode'])))
+                    : '';
+                $msg = trim((string) ($innerError['message'] ?? ''));
+                if ($msg !== '') {
+                    return trim(($code !== '' ? "[{$code}] " : '').$msg);
+                }
+            }
+            $topMsg = trim((string) ($decoded['error']['message'] ?? ''));
+            if ($topMsg !== '') {
+                return mb_substr($topMsg, 0, 260);
+            }
+        }
+
+        return mb_substr($raw, 0, 240);
     }
 
 }

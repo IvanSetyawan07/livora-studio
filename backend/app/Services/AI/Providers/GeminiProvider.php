@@ -65,9 +65,13 @@ class GeminiProvider implements AIProviderContract
                 $generationConfig['responseMimeType'] = $options['response_mime_type'];
             }
 
-            // Hindari model Gemini 2.5/3.x menghabiskan kuota output untuk reasoning saat butuh JSON cepat.
-            if (str_contains($candidateModel, 'gemini-2.5') || str_contains($candidateModel, 'gemini-3')) {
+            // Gemini 3.x memakai thinkingLevel ('low'|'medium'|'high'), sedangkan
+            // Gemini 2.5 memakai thinkingBudget (integer). Jangan kirim thinkingLevel
+            // ke gemini-2.5-* karena REST API v1beta akan menolak dengan 400 INVALID_ARGUMENT.
+            if (str_contains($candidateModel, 'gemini-3')) {
                 $generationConfig['thinkingConfig'] = ['thinkingLevel' => $options['thinking_level'] ?? 'low'];
+            } elseif (str_contains($candidateModel, 'gemini-2.5')) {
+                $generationConfig['thinkingConfig'] = ['thinkingBudget' => (int) ($options['thinking_budget'] ?? 1024)];
             }
 
             $payload = [
@@ -91,10 +95,10 @@ class GeminiProvider implements AIProviderContract
             $response = $res;
             $usedModel = $candidateModel;
 
-            // Fallback ke model cadangan kalau model utama 404 / tidak mendukung tool tertentu.
+            // Fallback ke model cadangan kalau model utama 404 / tidak mendukung tool atau thinking param tertentu.
             $shouldFallback = $res->status() === 404
                 || str_contains($res->body(), 'not found')
-                || ($useGoogleSearch && $res->status() === 400);
+                || ($res->status() === 400 && ($useGoogleSearch || str_contains(strtolower($res->body()), 'thinking')));
             if ($res->successful() || !$shouldFallback || $idx === count($modelsToTry) - 1) {
                 break;
             }

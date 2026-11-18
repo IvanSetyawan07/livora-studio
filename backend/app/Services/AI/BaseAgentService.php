@@ -97,9 +97,10 @@ abstract class BaseAgentService
         $sources = $this->sourceLabels($snapshot);
         $insightsCreated = 0;
         $recommendationsCreated = 0;
+        $firstRecommendationId = null;
 
         foreach ($items as $item) {
-            DB::transaction(function () use ($item, $sources, &$insightsCreated, &$recommendationsCreated) {
+            DB::transaction(function () use ($item, $sources, &$insightsCreated, &$recommendationsCreated, &$firstRecommendationId) {
                 $insight = AiInsight::create([
                     'title' => $item['title'],
                     'description' => $item['description'],
@@ -152,6 +153,7 @@ abstract class BaseAgentService
                 AiApproval::ensureForRecommendation($recommendation);
                 $insight->update(['recommendation_id' => $recommendation->id]);
                 $this->maybeCreateContentDraft($recommendation, $recData);
+                $firstRecommendationId ??= $recommendation->id;
                 $recommendationsCreated++;
             });
         }
@@ -169,7 +171,11 @@ abstract class BaseAgentService
         $this->log(
             "menghasilkan {$insightsCreated} insight baru ({$recommendationsCreated} disertai "
             ."rekomendasi) dari ".implode(', ', $sources).", via provider {$result['provider']}.",
-            'insight'
+            $recommendationsCreated > 0 ? 'recommendation' : 'insight',
+            $firstRecommendationId,
+            $recommendationsCreated > 0
+                ? '/admin/ai-marketing/ai-center/recommendations'
+                : "/admin/ai-marketing/{$this->agentKey()}",
         );
 
         return [
@@ -180,13 +186,20 @@ abstract class BaseAgentService
         ];
     }
 
-    protected function log(string $message, string $kind): void
-    {
+    protected function log(
+        string $message,
+        string $kind,
+        ?int $recommendationId = null,
+        ?string $href = null,
+    ): void {
         AiActivityLog::create([
             'actor' => 'AI',
             'agent_key' => $this->agentKey(),
+            'title' => $this->agentLabel().($recommendationId ? ' · Rekomendasi Baru' : ''),
             'message' => $this->agentLabel().' '.$message,
             'kind' => $kind,
+            'recommendation_id' => $recommendationId,
+            'href' => $href ?? "/admin/ai-marketing/{$this->agentKey()}",
         ]);
     }
 
@@ -243,10 +256,18 @@ PROMPT;
     protected function userPrompt(array $snapshot): string
     {
         $json = json_encode($snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        $learningBlock = '';
+        try {
+            $learningBlock = "\n\n".app(AiLearningMemoryService::class)->promptBlock(30);
+        } catch (\Throwable) {
+        }
 
         return "Data Livora Studio saat ini (semua angka nyata dari database/API platform, bukan "
-            ."contoh):\n\n{$json}\n\nAnalisis data di atas dan hasilkan insight sesuai skema yang "
-            .'sudah dijelaskan di system prompt.';
+            ."contoh):\n\n{$json}{$learningBlock}\n\n"
+            ."INSTRUKSI ADAPTIF & PROFIT:\n"
+            ."- Gunakan MEMORI PEMBELAJARAN ADAPTIF di atas: prioritaskan jenis aksi/produk yang terbukti berdampak POSITIF, hindari pola yang terbukti NEGATIF atau pernah ditolak admin, dan patuhi aturan fokus profit Livora.\n"
+            ."- Prioritaskan rekomendasi yang menutup kebocoran profit (prospek WA pending, konsultasi baru, produk demand tinggi) dan menaikkan konversi/omzet nyata.\n"
+            .'Analisis data di atas dan hasilkan insight sesuai skema yang sudah dijelaskan di system prompt.';
     }
 
     protected function parseResponse(string $text): array

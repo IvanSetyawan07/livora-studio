@@ -74,9 +74,9 @@ export default function AiMarketingUsage() {
         description="Simple enough to check at a glance, detailed enough to audit."
       />
 
-      {isError ? (
-        <QueryError message="Data usage tidak bisa dimuat dari server." onRetry={retryAll} />
-      ) : !stats ? (
+      {totalsQuery.isError ? (
+        <QueryError message="Ringkasan usage tidak bisa dimuat dari server." onRetry={() => void totalsQuery.refetch()} />
+      ) : totalsQuery.isLoading || !stats ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="skeleton-shimmer h-32 rounded-lg" />
@@ -87,7 +87,11 @@ export default function AiMarketingUsage() {
       )}
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        {byAgent ? (
+        {byAgentQuery.isError ? (
+          <QueryError message="Data biaya per agent gagal dimuat." onRetry={() => void byAgentQuery.refetch()} />
+        ) : byAgentQuery.isLoading || !byAgent ? (
+          <div className="skeleton-shimmer h-[360px] rounded-lg" />
+        ) : (
           <CategoryBarChart
             title="Cost by Agent"
             data={byAgent.map((u, i) => ({
@@ -97,11 +101,13 @@ export default function AiMarketingUsage() {
             }))}
             height={280}
           />
-        ) : (
-          <div className="skeleton-shimmer h-[360px] rounded-lg" />
         )}
 
-        {byProvider ? (
+        {byProviderQuery.isError ? (
+          <QueryError message="Data biaya per provider gagal dimuat." onRetry={() => void byProviderQuery.refetch()} />
+        ) : byProviderQuery.isLoading || !byProvider ? (
+          <div className="skeleton-shimmer h-[360px] rounded-lg" />
+        ) : (
           <CategoryBarChart
             title="Cost by Provider"
             data={byProvider.map((u, i) => ({
@@ -111,8 +117,6 @@ export default function AiMarketingUsage() {
             }))}
             height={280}
           />
-        ) : (
-          <div className="skeleton-shimmer h-[360px] rounded-lg" />
         )}
       </div>
 

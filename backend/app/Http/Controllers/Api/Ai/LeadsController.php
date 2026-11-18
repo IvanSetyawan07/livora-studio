@@ -29,27 +29,48 @@ class LeadsController extends Controller
     {
         $period = MarketingPeriod::fromRequest(request());
 
-        $payload = Cache::remember($period->cacheKey('leads:funnel'), self::CACHE_TTL, function () use ($period) {
+        $payload = Cache::remember($period->cacheKey('leads:funnel:v2'), self::CACHE_TTL, function () use ($period) {
             $from = $period->fromDate().' 00:00:00';
             $to = $period->toDate().' 23:59:59';
 
-            // Seri harian: konsultasi baru + wishlist adds.
-            $consultByDay = DB::table('consultations')
-                ->selectRaw('DATE(created_at) as d, COUNT(*) as n')
-                ->whereBetween('created_at', [$from, $to])
-                ->groupBy('d')->pluck('n', 'd');
+            // Seri harian: konsultasi baru + cek harga WA LiviBot + wishlist adds.
+            $consultByDay = Schema::hasTable('consultations')
+                ? DB::table('consultations')
+                    ->selectRaw('DATE(created_at) as d, COUNT(*) as n')
+                    ->whereBetween('created_at', [$from, $to])
+                    ->groupBy('d')->pluck('n', 'd')
+                : collect();
 
-            $wishlistByDay = DB::table('wishlists')
-                ->selectRaw('DATE(created_at) as d, COUNT(*) as n')
-                ->whereBetween('created_at', [$from, $to])
-                ->groupBy('d')->pluck('n', 'd');
+            $waByDay = Schema::hasTable('wa_price_inquiries')
+                ? DB::table('wa_price_inquiries')
+                    ->selectRaw('DATE(created_at) as d, COUNT(*) as n')
+                    ->whereBetween('created_at', [$from, $to])
+                    ->groupBy('d')->pluck('n', 'd')
+                : collect();
 
-            // Lead yang ditindaklanjuti = status sudah bukan inquiry baru.
-            $respondedByDay = DB::table('consultations')
-                ->selectRaw('DATE(created_at) as d, COUNT(*) as n')
-                ->whereBetween('created_at', [$from, $to])
-                ->whereNotIn('status', ['new_inquiry'])
-                ->groupBy('d')->pluck('n', 'd');
+            $wishlistByDay = Schema::hasTable('wishlists')
+                ? DB::table('wishlists')
+                    ->selectRaw('DATE(created_at) as d, COUNT(*) as n')
+                    ->whereBetween('created_at', [$from, $to])
+                    ->groupBy('d')->pluck('n', 'd')
+                : collect();
+
+            // Lead yang ditindaklanjuti = konsultasi selain new_inquiry + WA inquiry selain pending.
+            $respondedConsultByDay = Schema::hasTable('consultations')
+                ? DB::table('consultations')
+                    ->selectRaw('DATE(created_at) as d, COUNT(*) as n')
+                    ->whereBetween('created_at', [$from, $to])
+                    ->whereNotIn('status', ['new_inquiry'])
+                    ->groupBy('d')->pluck('n', 'd')
+                : collect();
+
+            $respondedWaByDay = Schema::hasTable('wa_price_inquiries')
+                ? DB::table('wa_price_inquiries')
+                    ->selectRaw('DATE(created_at) as d, COUNT(*) as n')
+                    ->whereBetween('created_at', [$from, $to])
+                    ->where('status', '!=', 'pending')
+                    ->groupBy('d')->pluck('n', 'd')
+                : collect();
 
             $series = [];
             $cursor = new \DateTimeImmutable($period->fromDate());
@@ -58,9 +79,9 @@ class LeadsController extends Controller
                 $d = $cursor->format('Y-m-d');
                 $series[] = [
                     'date' => $d,
-                    'leads' => (int) ($consultByDay[$d] ?? 0),
+                    'leads' => (int) ($consultByDay[$d] ?? 0) + (int) ($waByDay[$d] ?? 0),
                     'wishlistAdds' => (int) ($wishlistByDay[$d] ?? 0),
-                    'responded' => (int) ($respondedByDay[$d] ?? 0),
+                    'responded' => (int) ($respondedConsultByDay[$d] ?? 0) + (int) ($respondedWaByDay[$d] ?? 0),
                 ];
                 $cursor = $cursor->modify('+1 day');
             }
@@ -73,11 +94,15 @@ class LeadsController extends Controller
             $prev = $period->previous();
             $prevFrom = $prev->fromDate().' 00:00:00';
             $prevTo = $prev->toDate().' 23:59:59';
-            $prevLeads = DB::table('consultations')->whereBetween('created_at', [$prevFrom, $prevTo])->count();
-            $prevWishlist = DB::table('wishlists')->whereBetween('created_at', [$prevFrom, $prevTo])->count();
-            $prevResponded = DB::table('consultations')
-                ->whereBetween('created_at', [$prevFrom, $prevTo])
-                ->whereNotIn('status', ['new_inquiry'])->count();
+            $prevLeads = (Schema::hasTable('consultations') ? DB::table('consultations')->whereBetween('created_at', [$prevFrom, $prevTo])->count() : 0)
+                + (Schema::hasTable('wa_price_inquiries') ? DB::table('wa_price_inquiries')->whereBetween('created_at', [$prevFrom, $prevTo])->count() : 0);
+            $prevWishlist = Schema::hasTable('wishlists') ? DB::table('wishlists')->whereBetween('created_at', [$prevFrom, $prevTo])->count() : 0;
+            $prevResponded = (Schema::hasTable('consultations')
+                ? DB::table('consultations')->whereBetween('created_at', [$prevFrom, $prevTo])->whereNotIn('status', ['new_inquiry'])->count()
+                : 0)
+                + (Schema::hasTable('wa_price_inquiries')
+                    ? DB::table('wa_price_inquiries')->whereBetween('created_at', [$prevFrom, $prevTo])->where('status', '!=', 'pending')->count()
+                    : 0);
 
             $delta = fn (float $now, float $before) => $before > 0
                 ? round((($now - $before) / $before) * 100, 1)
@@ -85,6 +110,24 @@ class LeadsController extends Controller
 
             $responseRate = $totalLeads > 0 ? round(($totalResponded / $totalLeads) * 100, 1) : null;
             $prevResponseRate = $prevLeads > 0 ? round(($prevResponded / $prevLeads) * 100, 1) : null;
+
+            $byStatus = Schema::hasTable('consultations')
+                ? DB::table('consultations')
+                    ->selectRaw('status, COUNT(*) as n')
+                    ->whereBetween('created_at', [$from, $to])
+                    ->groupBy('status')->orderByDesc('n')->get()
+                    ->map(fn ($r) => ['status' => (string) $r->status, 'count' => (int) $r->n])->all()
+                : [];
+
+            if (Schema::hasTable('wa_price_inquiries')) {
+                $waStatuses = DB::table('wa_price_inquiries')
+                    ->selectRaw('status, COUNT(*) as n')
+                    ->whereBetween('created_at', [$from, $to])
+                    ->groupBy('status')->orderByDesc('n')->get();
+                foreach ($waStatuses as $ws) {
+                    $byStatus[] = ['status' => 'wa_'.$ws->status, 'count' => (int) $ws->n];
+                }
+            }
 
             return [
                 'status' => 'ok',
@@ -104,12 +147,8 @@ class LeadsController extends Controller
                         : null,
                 ],
                 'series' => $series,
-                // Status per tahap konsultasi (untuk funnel agregat).
-                'byStatus' => DB::table('consultations')
-                    ->selectRaw('status, COUNT(*) as n')
-                    ->whereBetween('created_at', [$from, $to])
-                    ->groupBy('status')->orderByDesc('n')->get()
-                    ->map(fn ($r) => ['status' => $r->status, 'count' => (int) $r->n])->all(),
+                // Status per tahap konsultasi & inquiry WA LiviBot.
+                'byStatus' => $byStatus,
             ];
         });
 

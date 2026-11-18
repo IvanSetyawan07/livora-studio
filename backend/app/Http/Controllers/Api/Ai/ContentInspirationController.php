@@ -30,6 +30,7 @@ class ContentInspirationController extends Controller
         $data = $request->validate([
             'query' => ['nullable', 'string', 'min:3', 'max:160'],
             'mode' => ['nullable', 'string', 'in:auto_brand,topic'],
+            'scope' => ['nullable', 'string', 'in:external,all'],
             'platforms' => ['nullable', 'array', 'max:3'],
             'platforms.*' => ['string', 'in:instagram,youtube,tiktok'],
             'sourceTitle' => ['nullable', 'string', 'max:200'],

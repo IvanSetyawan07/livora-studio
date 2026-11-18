@@ -1,23 +1,46 @@
 // path: src/pages/admin/ai-marketing/AiMarketingContent.tsx
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Instagram, Facebook, Mail, Check, Loader2, RefreshCcw, type LucideIcon } from "lucide-react";
+import {
+  Instagram,
+  Facebook,
+  Mail,
+  Check,
+  Loader2,
+  Pencil,
+  Plus,
+  RefreshCcw,
+  Search,
+  Trash2,
+  type LucideIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { AgentPageShell } from "@/components/ai/agent-page";
 import { IntegrationRequired } from "@/components/ai/integration-required";
 import { LastUpdated } from "@/components/ai/section-state";
 import { NotConnected, Panel, Pill, SectionHeading, StatusDot, type Tone } from "@/components/ai/primitives";
+import { QueryError } from "@/components/ai/query-error";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   extractApiErrorMessage,
   useAgent,
   useContentQueue,
+  useCreateContentDraft,
+  useDeleteContentDraft,
   useMetaIntegrationStatus,
   usePushDraftToEmail,
   useUpdateContentDraft,
 } from "@/hooks/useAiDashboard";
-import { usePageContext } from "@/context/AiMarketingContext";
+import { useAiMarketingContext, usePageContext } from "@/context/AiMarketingContext";
 import { ContentKpiGrid, EngagementTrendPanel, SocialPerformanceRows } from "@/components/ai/marketing-panels";
 import { ContentInspirationPanel } from "@/components/ai/content-inspiration";
-import type { MetaConnectionState } from "@/lib/ai/types";
+import type { AiContentDraftItem, MetaConnectionState } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
 
 function metaStatusMeta(status: MetaConnectionState): { tone: Tone; label: string } {
@@ -138,38 +161,178 @@ function MetaConnectionCard() {
   );
 }
 
+type DraftChannel = AiContentDraftItem["channel"];
+type DraftStatus = AiContentDraftItem["status"];
+
+const DRAFT_CHANNELS: DraftChannel[] = ["instagram", "tiktok", "youtube", "facebook", "email", "website"];
+const DRAFT_STATUSES: DraftStatus[] = ["needs_review", "approved", "scheduled", "published", "draft"];
+
+function toDatetimeLocalValue(iso?: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export default function ContentAgentPage() {
   usePageContext("content");
   const navigate = useNavigate();
-  const { agent } = useAgent("content");
-  const { data: queue = [], isLoading: queueLoading } = useContentQueue();
+  const { dateRange } = useAiMarketingContext();
+  const { agent, isLoading: agentLoading } = useAgent("content");
+  const { data: queue = [], isLoading: queueLoading, isError: queueError, refetch: refetchQueue } = useContentQueue();
+  const createDraft = useCreateContentDraft();
   const updateDraft = useUpdateContentDraft();
+  const deleteDraft = useDeleteContentDraft();
   const pushToEmail = usePushDraftToEmail();
 
+  const [queueSearch, setQueueSearch] = useState("");
+  const [channelFilter, setChannelFilter] = useState<"all" | DraftChannel>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | DraftStatus>("all");
+  const [busyDraftId, setBusyDraftId] = useState<string | null>(null);
+
+  const [newOpen, setNewOpen] = useState(false);
+  const [newForm, setNewForm] = useState({
+    title: "",
+    channel: "instagram" as DraftChannel,
+    headline: "",
+    caption: "",
+    body: "",
+    cta_label: "Jadwalkan Konsultasi",
+  });
+
+  const [editingDraft, setEditingDraft] = useState<AiContentDraftItem | null>(null);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    channel: "instagram" as DraftChannel,
+    headline: "",
+    caption: "",
+    body: "",
+    cta_label: "",
+    status: "needs_review" as DraftStatus,
+    scheduled_for: "",
+  });
+
+  const filteredQueue = useMemo(() => {
+    const q = queueSearch.trim().toLowerCase();
+    return queue.filter((d) => {
+      if (channelFilter !== "all" && d.channel !== channelFilter) return false;
+      if (statusFilter !== "all" && d.status !== statusFilter) return false;
+      if (q && !`${d.title} ${d.caption ?? ""} ${d.headline ?? ""}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [queue, queueSearch, channelFilter, statusFilter]);
+
+  function openEditModal(d: AiContentDraftItem) {
+    setEditingDraft(d);
+    setEditForm({
+      title: d.title,
+      channel: d.channel,
+      headline: d.headline ?? "",
+      caption: d.caption ?? "",
+      body: d.body ?? "",
+      cta_label: d.ctaLabel ?? "Jadwalkan Konsultasi",
+      status: d.status,
+      scheduled_for: toDatetimeLocalValue(d.scheduledFor),
+    });
+  }
+
+  async function handleCreateSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newForm.title.trim()) return;
+    try {
+      await createDraft.mutateAsync({
+        title: newForm.title.trim(),
+        channel: newForm.channel,
+        headline: newForm.headline.trim() || newForm.title.trim(),
+        caption: newForm.caption.trim() || null,
+        body: newForm.body.trim() || newForm.caption.trim() || null,
+        cta_label: newForm.cta_label.trim() || "Jadwalkan Konsultasi",
+      });
+      toast.success("Draft konten baru ditambahkan ke queue.");
+      setNewOpen(false);
+      setNewForm({
+        title: "",
+        channel: "instagram",
+        headline: "",
+        caption: "",
+        body: "",
+        cta_label: "Jadwalkan Konsultasi",
+      });
+    } catch (err) {
+      toast.error(extractApiErrorMessage(err, "Gagal membuat draft konten."));
+    }
+  }
+
+  async function handleSaveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingDraft) return;
+    setBusyDraftId(editingDraft.id);
+    try {
+      await updateDraft.mutateAsync({
+        id: editingDraft.id,
+        body: {
+          title: editForm.title.trim() || editingDraft.title,
+          channel: editForm.channel,
+          headline: editForm.headline.trim(),
+          caption: editForm.caption.trim(),
+          body: editForm.body.trim(),
+          cta_label: editForm.cta_label.trim(),
+          status: editForm.status,
+          ...(editForm.scheduled_for ? { scheduled_for: new Date(editForm.scheduled_for).toISOString() } : {}),
+        },
+      });
+      toast.success("Draft konten diperbarui.");
+      setEditingDraft(null);
+    } catch (err) {
+      toast.error(extractApiErrorMessage(err, "Gagal memperbarui draft."));
+    } finally {
+      setBusyDraftId(null);
+    }
+  }
+
   async function handleApproveDraft(id: string) {
+    setBusyDraftId(id);
     try {
       await updateDraft.mutateAsync({ id, body: { status: "approved" } });
       toast.success("Draft konten disetujui.");
     } catch (err) {
       toast.error(extractApiErrorMessage(err, "Gagal memperbarui draft."));
+    } finally {
+      setBusyDraftId(null);
+    }
+  }
+
+  async function handleDeleteDraft(id: string) {
+    setBusyDraftId(id);
+    try {
+      await deleteDraft.mutateAsync(id);
+      toast.success("Draft dihapus dari Content Queue.");
+    } catch (err) {
+      toast.error(extractApiErrorMessage(err, "Gagal menghapus draft."));
+    } finally {
+      setBusyDraftId(null);
     }
   }
 
   async function handleOpenEmailStudio(id: string) {
+    setBusyDraftId(id);
     try {
       const res = await pushToEmail.mutateAsync(id);
       navigate(res.redirectPath);
     } catch (err) {
       toast.error(extractApiErrorMessage(err, "Gagal membuat draft Email Marketing."));
+    } finally {
+      setBusyDraftId(null);
     }
   }
 
   return (
-    <AgentPageShell agent={agent}>
+    <AgentPageShell agent={agent} loading={agentLoading}>
       <section className="mt-10">
         <SectionHeading
           title="Social media — performance tracking"
-          description="Follower, cadence dan engagement per platform. Kerangka tetap tampil, angka kosong sampai akun sosial tersambung — tidak ada angka ilustratif."
+          description="Follower, cadence dan engagement per platform. Angka kosong sampai akun sosial tersambung — tidak ada angka ilustratif."
         />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <ContentKpiGrid />
@@ -180,7 +343,7 @@ export default function ContentAgentPage() {
         <Panel className="flex h-full flex-col p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="text-display rule-accent text-lg">Platforms</h3>
-            <span className="text-[11px] text-muted-foreground">(30 Days)</span>
+            <span className="text-[11px] text-muted-foreground">({dateRange.days} Days)</span>
           </div>
           <div className="flex-1"><SocialPerformanceRows /></div>
         </Panel>
@@ -189,28 +352,75 @@ export default function ContentAgentPage() {
 
       <section className="mt-6">
         <Panel className="overflow-hidden">
-          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
             <div>
-              <h3 className="text-display text-lg">Content Queue</h3>
+              <h3 className="text-display text-lg">Content Queue ({queue.length})</h3>
               <p className="text-xs text-muted-foreground">
-                Draft konten otomatis dari Content Agent — review, setujui, atau kirim langsung ke Email Marketing Studio.
+                Buat draft manual, kelola jadwal terbit, edit brief/caption, atau kirim ke Email Marketing Studio.
               </p>
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={queueSearch}
+                  onChange={(e) => setQueueSearch(e.target.value)}
+                  placeholder="Cari draft..."
+                  className="h-8 w-40 rounded-sm border border-border bg-secondary/60 pl-8 pr-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-ai focus:outline-none"
+                />
+              </div>
+              <select
+                value={channelFilter}
+                onChange={(e) => setChannelFilter(e.target.value as "all" | DraftChannel)}
+                className="h-8 rounded-sm border border-border bg-secondary px-2 text-xs text-foreground focus:border-ai focus:outline-none"
+              >
+                <option value="all">Semua Channel</option>
+                {DRAFT_CHANNELS.map((ch) => (
+                  <option key={ch} value={ch}>{ch.toUpperCase()}</option>
+                ))}
+              </select>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as "all" | DraftStatus)}
+                className="h-8 rounded-sm border border-border bg-secondary px-2 text-xs text-foreground focus:border-ai focus:outline-none"
+              >
+                <option value="all">Semua Status</option>
+                {DRAFT_STATUSES.map((st) => (
+                  <option key={st} value={st}>{st.replace("_", " ")}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setNewOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-sm bg-ai px-3 py-1.5 text-xs font-semibold text-background transition-opacity hover:opacity-90"
+              >
+                <Plus className="size-3.5" /> Tambah Draft
+              </button>
+            </div>
           </div>
+
           {queueLoading ? (
             <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
               <Loader2 className="size-4 animate-spin" /> Memuat antrian konten…
             </div>
-          ) : queue.length === 0 ? (
+          ) : queueError ? (
+            <div className="p-5">
+              <QueryError message="Gagal memuat Content Queue." onRetry={() => void refetchQueue()} />
+            </div>
+          ) : filteredQueue.length === 0 ? (
             <div className="p-5">
               <NotConnected
-                title="Antrian konten masih kosong"
-                description="Klik tombol Run Analysis di atas untuk membuat draft konten berbasis produk, proyek, dan promo Livora."
+                title={queue.length === 0 ? "Antrian konten masih kosong" : "Tidak ada draft yang cocok"}
+                description={
+                  queue.length === 0
+                    ? "Klik Run Analysis di atas, Tambah Draft manual, atau simpan ide dari Video & Market Recommender di bawah."
+                    : "Ubah filter pencarian/channel/status untuk melihat draft lainnya."
+                }
               />
             </div>
           ) : (
             <div className="scroll-rail">
-              <table className="w-full min-w-[720px] text-sm">
+              <table className="w-full min-w-[780px] text-sm">
                 <thead>
                   <tr className="border-b border-border text-left">
                     {["Draft", "Channel", "Headline / Caption", "Status", "Action"].map((h) => (
@@ -221,12 +431,18 @@ export default function ContentAgentPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {queue.map((d) => {
+                  {filteredQueue.map((d) => {
                     const refUrl = typeof d.meta?.reference_url === "string" ? d.meta.reference_url : null;
+                    const rowBusy = busyDraftId === d.id;
                     return (
-                      <tr key={d.id} className="border-b border-border last:border-0">
+                      <tr key={d.id} className="border-b border-border last:border-0 hover:bg-accent/20">
                         <td className="px-5 py-4 font-medium">
-                          <div>{d.title}</div>
+                          <div className="max-w-xs">{d.title}</div>
+                          {d.scheduledFor ? (
+                            <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+                              Jadwal: {new Date(d.scheduledFor).toLocaleString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          ) : null}
                           {refUrl ? (
                             <a
                               href={refUrl}
@@ -248,24 +464,42 @@ export default function ContentAgentPage() {
                           </Pill>
                         </td>
                         <td className="px-5 py-4">
-                          <div className="flex flex-wrap items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(d)}
+                              disabled={rowBusy}
+                              className="inline-flex items-center gap-1 rounded border border-border px-2.5 py-1 text-xs text-foreground/90 hover:bg-accent disabled:opacity-50"
+                            >
+                              <Pencil className="size-3" /> Edit
+                            </button>
                             {d.status === "needs_review" && (
                               <button
                                 type="button"
                                 onClick={() => handleApproveDraft(d.id)}
-                                disabled={updateDraft.isPending}
+                                disabled={rowBusy}
                                 className="inline-flex items-center gap-1 rounded border border-border px-2.5 py-1 text-xs hover:bg-accent disabled:opacity-50"
                               >
-                                <Check className="size-3" /> Approve
+                                {rowBusy ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
+                                Approve
                               </button>
                             )}
                             <button
                               type="button"
                               onClick={() => handleOpenEmailStudio(d.id)}
-                              disabled={pushToEmail.isPending}
+                              disabled={rowBusy}
                               className="inline-flex items-center gap-1 rounded border border-ai/40 bg-ai/10 px-2.5 py-1 text-xs text-ai hover:bg-ai/20 disabled:opacity-50"
                             >
-                              <Mail className="size-3" /> Edit di Email Studio
+                              <Mail className="size-3" /> Email Studio
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteDraft(d.id)}
+                              disabled={rowBusy}
+                              title="Hapus draft"
+                              className="inline-flex items-center justify-center rounded border border-border p-1.5 text-muted-foreground hover:border-destructive/40 hover:text-destructive disabled:opacity-50"
+                            >
+                              {rowBusy ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />}
                             </button>
                           </div>
                         </td>
@@ -278,6 +512,192 @@ export default function ContentAgentPage() {
           )}
         </Panel>
       </section>
+
+      <Dialog open={newOpen} onOpenChange={setNewOpen}>
+        <DialogContent className="border-border-strong bg-popover text-foreground sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-display text-lg">Buat Draft Konten Baru</DialogTitle>
+            <DialogDescription>Tambahkan ide konten baru untuk dijadwalkan atau diolah lewat Email Studio.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateSubmit} className="space-y-3">
+            <div>
+              <label className="label-eyebrow mb-1 block">Judul Draft *</label>
+              <input
+                required
+                value={newForm.title}
+                onChange={(e) => setNewForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder="Mis. Tren Travertine & Warm Minimalism 2026"
+                className="w-full rounded border border-border bg-secondary/60 px-3 py-2 text-sm text-foreground focus:border-ai focus:outline-none"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label-eyebrow mb-1 block">Channel</label>
+                <select
+                  value={newForm.channel}
+                  onChange={(e) => setNewForm((f) => ({ ...f, channel: e.target.value as DraftChannel }))}
+                  className="w-full rounded border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:border-ai focus:outline-none"
+                >
+                  {DRAFT_CHANNELS.map((ch) => (
+                    <option key={ch} value={ch}>{ch.toUpperCase()}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label-eyebrow mb-1 block">CTA Label</label>
+                <input
+                  value={newForm.cta_label}
+                  onChange={(e) => setNewForm((f) => ({ ...f, cta_label: e.target.value }))}
+                  className="w-full rounded border border-border bg-secondary/60 px-3 py-2 text-sm text-foreground focus:border-ai focus:outline-none"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="label-eyebrow mb-1 block">Hook / Headline</label>
+              <input
+                value={newForm.headline}
+                onChange={(e) => setNewForm((f) => ({ ...f, headline: e.target.value }))}
+                placeholder="Kalimat pembuka 3 detik / subjek email"
+                className="w-full rounded border border-border bg-secondary/60 px-3 py-2 text-sm text-foreground focus:border-ai focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="label-eyebrow mb-1 block">Caption</label>
+              <textarea
+                rows={3}
+                value={newForm.caption}
+                onChange={(e) => setNewForm((f) => ({ ...f, caption: e.target.value }))}
+                placeholder="Tulis caption / CTA utama..."
+                className="w-full rounded border border-border bg-secondary/60 p-3 text-sm text-foreground focus:border-ai focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="label-eyebrow mb-1 block">Brief / Shot List (opsional)</label>
+              <textarea
+                rows={3}
+                value={newForm.body}
+                onChange={(e) => setNewForm((f) => ({ ...f, body: e.target.value }))}
+                placeholder="Detail visual, referensi, atau script singkat"
+                className="w-full rounded border border-border bg-secondary/60 p-3 text-sm text-foreground focus:border-ai focus:outline-none"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setNewOpen(false)}
+                className="rounded border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={createDraft.isPending || !newForm.title.trim()}
+                className="inline-flex items-center gap-1.5 rounded bg-ai px-3.5 py-1.5 text-xs font-semibold text-background disabled:opacity-50"
+              >
+                {createDraft.isPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
+                Simpan Draft
+              </button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editingDraft} onOpenChange={(o) => !o && setEditingDraft(null)}>
+        <DialogContent className="border-border-strong bg-popover text-foreground sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="text-display text-lg">Edit & Jadwalkan Draft</DialogTitle>
+            <DialogDescription>Perbarui copy, status review, atau jadwal publikasi konten.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSaveEdit} className="space-y-3">
+            <div>
+              <label className="label-eyebrow mb-1 block">Judul</label>
+              <input
+                value={editForm.title}
+                onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+                className="w-full rounded border border-border bg-secondary/60 px-3 py-2 text-sm text-foreground focus:border-ai focus:outline-none"
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div>
+                <label className="label-eyebrow mb-1 block">Channel</label>
+                <select
+                  value={editForm.channel}
+                  onChange={(e) => setEditForm((f) => ({ ...f, channel: e.target.value as DraftChannel }))}
+                  className="w-full rounded border border-border bg-secondary px-2.5 py-2 text-xs text-foreground focus:border-ai focus:outline-none"
+                >
+                  {DRAFT_CHANNELS.map((ch) => (
+                    <option key={ch} value={ch}>{ch.toUpperCase()}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label-eyebrow mb-1 block">Status</label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value as DraftStatus }))}
+                  className="w-full rounded border border-border bg-secondary px-2.5 py-2 text-xs text-foreground focus:border-ai focus:outline-none"
+                >
+                  {DRAFT_STATUSES.map((st) => (
+                    <option key={st} value={st}>{st.replace("_", " ")}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label-eyebrow mb-1 block">Jadwal Terbit</label>
+                <input
+                  type="datetime-local"
+                  value={editForm.scheduled_for}
+                  onChange={(e) => setEditForm((f) => ({ ...f, scheduled_for: e.target.value }))}
+                  className="w-full rounded border border-border bg-secondary px-2 py-2 text-xs text-foreground focus:border-ai focus:outline-none"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="label-eyebrow mb-1 block">Headline / Hook</label>
+              <input
+                value={editForm.headline}
+                onChange={(e) => setEditForm((f) => ({ ...f, headline: e.target.value }))}
+                className="w-full rounded border border-border bg-secondary/60 px-3 py-2 text-sm text-foreground focus:border-ai focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="label-eyebrow mb-1 block">Caption</label>
+              <textarea
+                rows={3}
+                value={editForm.caption}
+                onChange={(e) => setEditForm((f) => ({ ...f, caption: e.target.value }))}
+                className="w-full rounded border border-border bg-secondary/60 p-3 text-sm text-foreground focus:border-ai focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="label-eyebrow mb-1 block">Brief / Shot List</label>
+              <textarea
+                rows={4}
+                value={editForm.body}
+                onChange={(e) => setEditForm((f) => ({ ...f, body: e.target.value }))}
+                className="w-full rounded border border-border bg-secondary/60 p-3 text-sm text-foreground focus:border-ai focus:outline-none"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setEditingDraft(null)}
+                className="rounded border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={updateDraft.isPending}
+                className="inline-flex items-center gap-1.5 rounded bg-ai px-3.5 py-1.5 text-xs font-semibold text-background disabled:opacity-50"
+              >
+                {updateDraft.isPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
+                Simpan Perubahan
+              </button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <ContentInspirationPanel />
 

@@ -99,50 +99,54 @@ class CroAgentService
 
         $insightsCreated = 0;
         $recommendationsCreated = 0;
+        $firstRecommendationId = null;
 
-        foreach ($items as $item) {
-            $insight = AiInsight::create([
-                'title' => $item['title'],
-                'description' => $item['description'],
-                'type' => $item['type'],
-                'severity' => $item['severity'],
-                'confidence' => $this->clampConfidence($item['confidence']),
-                'source' => ['Lead Data', 'Site Behaviour'],
-                'agent_key' => self::AGENT_KEY,
-                'reasoning' => $item['reasoning'],
-                'what_happened' => $item['what_happened'],
-                'why_it_matters' => $item['why_it_matters'],
-                'expected_impact' => $item['expected_impact'],
-                'metrics' => null,
-                'analytics_href' => null,
-            ]);
-            $insightsCreated++;
-
-            $recData = $item['recommendation'] ?? null;
-
-            if (is_array($recData) && $this->isValidRecommendation($recData)) {
-                $recommendation = AiRecommendation::create([
-                    'insight_id' => $insight->id,
-                    'title' => $recData['title'],
-                    'description' => $recData['description'],
-                    'action_type' => $recData['action_type'] ?? 'process_change',
-                    'risk' => in_array($recData['risk'] ?? null, ['low', 'medium', 'high'], true)
-                        ? $recData['risk'] : 'low',
-                    'status' => 'pending',
-                    'expected_impact' => $recData['expected_impact'] ?? $item['expected_impact'],
-                    'confidence' => $this->clampConfidence($recData['confidence'] ?? $item['confidence']),
+        DB::transaction(function () use ($items, &$insightsCreated, &$recommendationsCreated, &$firstRecommendationId) {
+            foreach ($items as $item) {
+                $insight = AiInsight::create([
+                    'title' => $item['title'],
+                    'description' => $item['description'],
+                    'type' => $item['type'],
+                    'severity' => $item['severity'],
+                    'confidence' => $this->clampConfidence($item['confidence']),
+                    'source' => ['Lead Data', 'Site Behaviour'],
                     'agent_key' => self::AGENT_KEY,
-                    'priority' => in_array($recData['priority'] ?? null, ['low', 'medium', 'high'], true)
-                        ? $recData['priority'] : 'medium',
-                    'why' => $recData['why'] ?? null,
-                    'suggested_action' => $recData['suggested_action'] ?? null,
+                    'reasoning' => $item['reasoning'],
+                    'what_happened' => $item['what_happened'],
+                    'why_it_matters' => $item['why_it_matters'],
+                    'expected_impact' => $item['expected_impact'],
+                    'metrics' => null,
+                    'analytics_href' => null,
                 ]);
+                $insightsCreated++;
 
-                AiApproval::ensureForRecommendation($recommendation);
-                $insight->update(['recommendation_id' => $recommendation->id]);
-                $recommendationsCreated++;
+                $recData = $item['recommendation'] ?? null;
+
+                if (is_array($recData) && $this->isValidRecommendation($recData)) {
+                    $recommendation = AiRecommendation::create([
+                        'insight_id' => $insight->id,
+                        'title' => $recData['title'],
+                        'description' => $recData['description'],
+                        'action_type' => $recData['action_type'] ?? 'process_change',
+                        'risk' => in_array($recData['risk'] ?? null, ['low', 'medium', 'high'], true)
+                            ? $recData['risk'] : 'low',
+                        'status' => 'pending',
+                        'expected_impact' => $recData['expected_impact'] ?? $item['expected_impact'],
+                        'confidence' => $this->clampConfidence($recData['confidence'] ?? $item['confidence']),
+                        'agent_key' => self::AGENT_KEY,
+                        'priority' => in_array($recData['priority'] ?? null, ['low', 'medium', 'high'], true)
+                            ? $recData['priority'] : 'medium',
+                        'why' => $recData['why'] ?? null,
+                        'suggested_action' => $recData['suggested_action'] ?? null,
+                    ]);
+
+                    AiApproval::ensureForRecommendation($recommendation);
+                    $insight->update(['recommendation_id' => $recommendation->id]);
+                    $firstRecommendationId ??= $recommendation->id;
+                    $recommendationsCreated++;
+                }
             }
-        }
+        });
 
         AiAgent::where('key', self::AGENT_KEY)->update([
             'status' => 'active',
@@ -153,10 +157,15 @@ class CroAgentService
         AiActivityLog::create([
             'actor' => 'AI',
             'agent_key' => self::AGENT_KEY,
+            'title' => $recommendationsCreated > 0 ? 'CRO Agent · Rekomendasi Baru' : 'CRO Agent · Insight Baru',
             'message' => "CRO Agent menghasilkan {$insightsCreated} insight baru "
                 ."({$recommendationsCreated} disertai rekomendasi) dari analisis funnel Livora, "
                 ."via provider {$result['provider']}.",
-            'kind' => 'insight',
+            'kind' => $recommendationsCreated > 0 ? 'recommendation' : 'insight',
+            'recommendation_id' => $firstRecommendationId,
+            'href' => $recommendationsCreated > 0
+                ? '/admin/ai-marketing/ai-center/recommendations'
+                : '/admin/ai-marketing/cro',
         ]);
 
         return [
@@ -353,8 +362,13 @@ PROMPT;
     private function userPrompt(array $snapshot): string
     {
         $json = json_encode($snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        $learningBlock = '';
+        try {
+            $learningBlock = "\n\n".app(AiLearningMemoryService::class)->promptBlock(30);
+        } catch (\Throwable) {
+        }
 
-        return "Data funnel konsultasi, LiviBot WhatsApp, Shop & katalog Livora (angka nyata dari DB):\n\n{$json}\n\nAnalisis data di atas dan hasilkan insight sesuai skema.";
+        return "Data funnel konsultasi, LiviBot WhatsApp, Shop & katalog Livora (angka nyata dari DB):\n\n{$json}{$learningBlock}\n\nFokuskan rekomendasi untuk menutup kebocoran profit (drop-off konsultasi, keranjang belanja, dan inquiry WA LiviBot) serta ikuti memori pembelajaran adaptif Livora. Analisis data di atas dan hasilkan insight sesuai skema.";
     }
 
     private function parseResponse(string $text): array

@@ -69,6 +69,24 @@ class LeadsAgentService extends BaseAgentService
             ? round((($now - $before) / $before) * 100, 1)
             : null;
 
+        $repeatViews = Schema::hasTable('item_views') && Schema::hasTable('items')
+            ? DB::table('item_views')
+                ->join('items', 'items.id', '=', 'item_views.target_id')
+                ->where('item_views.target_type', 'item')
+                ->whereBetween('item_views.viewed_at', [$period->fromDate().' 00:00:00', $period->toDate().' 23:59:59'])
+                ->selectRaw('items.title, COUNT(*) as views, COALESCE(AVG(item_views.duration_seconds), 0) as avg_sec')
+                ->groupBy('items.id', 'items.title')
+                ->orderByDesc('views')
+                ->limit(6)
+                ->get()
+                ->map(fn ($r) => ['item' => $r->title, 'views' => (int) $r->views, 'avg_duration_sec' => (int) round((float) $r->avg_sec)])
+                ->all()
+            : [];
+
+        $activeShopCarts = Schema::hasTable('shop_carts')
+            ? (int) DB::table('shop_carts')->whereBetween('created_at', [$period->fromDate().' 00:00:00', $period->toDate().' 23:59:59'])->count()
+            : 0;
+
         return [
             'window' => [
                 'from' => $period->fromDate(),
@@ -79,6 +97,7 @@ class LeadsAgentService extends BaseAgentService
             'kpis' => [
                 'leads' => $current['leads'],
                 'wishlist_adds' => $current['wishlist'],
+                'shop_carts_30d' => $activeShopCarts,
                 'responded' => $current['responded'],
                 'response_rate_percent' => $current['leads'] > 0
                     ? round($current['responded'] / $current['leads'] * 100, 1) : null,
@@ -97,6 +116,7 @@ class LeadsAgentService extends BaseAgentService
                 'responded' => $delta($current['responded'], $previous['responded']),
             ],
             'leads_by_status' => $current['byStatus'],
+            'high_duration_item_views' => $repeatViews,
             'whatsapp_livibot' => $waStats,
             'stalled_consultations' => $this->stalledConsultations(),
             'utm_sources_30d' => $this->utmBreakdown($period->fromDate(), $period->toDate()),

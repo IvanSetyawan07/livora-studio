@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
 import {
   ConfidenceBar,
@@ -8,6 +8,7 @@ import {
   Pill,
   StatusDot,
 } from "@/components/ai/primitives";
+import { QueryError } from "@/components/ai/query-error";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { usePageContext } from "@/context/AiMarketingContext";
 import { extractApiErrorMessage, useActionDecision, useAiActions, useRecommendations } from "@/hooks/useAiDashboard";
 import type { AIApproval, AIApprovalStatus, AIRisk } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
@@ -33,23 +35,31 @@ const riskTone: Record<AIRisk, "success" | "warning" | "danger"> = {
   high: "danger",
 };
 
-const filters: (AIApprovalStatus | "all")[] = ["all", "pending", "approved", "rejected", "executed"];
+const filters: (AIApprovalStatus | "all")[] = ["all", "pending", "approved", "executed", "failed", "rejected"];
 
 export default function ApprovalsPage() {
+  usePageContext("approvals");
   const [filter, setFilter] = useState<AIApprovalStatus | "all">("all");
+  const [riskFilter, setRiskFilter] = useState<"all" | AIRisk>("all");
+  const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { data, isLoading, error } = useAiActions();
+  const { data, isLoading, error, refetch } = useAiActions();
   const { data: allRecs } = useRecommendations();
   const { approveAndExecute, reject } = useActionDecision();
 
   const approvals = data ?? [];
   const selected: AIApproval | null = approvals.find((a) => a.id === selectedId) ?? null;
 
-  const visible = useMemo(
-    () => approvals.filter((a) => filter === "all" || a.status === filter),
-    [approvals, filter],
-  );
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return approvals.filter((a) => {
+      if (filter !== "all" && a.status !== filter) return false;
+      if (riskFilter !== "all" && a.risk !== riskFilter) return false;
+      if (q && !`${a.title} ${a.summary} ${a.agent}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [approvals, filter, riskFilter, search]);
 
   const pendingCount = approvals.filter((a) => a.status === "pending").length;
   const busy = approveAndExecute.isPending || reject.isPending;
@@ -69,8 +79,8 @@ export default function ApprovalsPage() {
       await reject.mutateAsync(a.id);
       toast("Approval ditolak", { description: a.title });
       setSelectedId(null);
-    } catch {
-      toast.error("Gagal menolak approval");
+    } catch (err) {
+      toast.error(extractApiErrorMessage(err, "Gagal menolak approval"));
     }
   }
 
@@ -92,7 +102,7 @@ export default function ApprovalsPage() {
           <p className="text-display mt-2 text-2xl">{isLoading ? "—" : pendingCount}</p>
         </Panel>
         <Panel className="p-5">
-          <p className="label-eyebrow">Total recommendations</p>
+          <p className="label-eyebrow">Total actions</p>
           <p className="text-display mt-2 text-2xl">{isLoading ? "—" : approvals.length}</p>
         </Panel>
         <Panel className="p-5">
@@ -103,86 +113,110 @@ export default function ApprovalsPage() {
         </Panel>
       </div>
 
-      <div className="scroll-rail mb-6 flex gap-2 pb-2">
-        {filters.map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={cn(
-              "shrink-0 rounded-sm border px-3 py-1.5 font-mono text-[10px] tracking-[0.14em] uppercase transition-colors duration-200",
-              filter === f
-                ? "border-brass/50 bg-brass/10 text-brass"
-                : "border-border text-muted-foreground hover:text-foreground",
-            )}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="scroll-rail flex gap-2 pb-1">
+          {filters.map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={cn(
+                "shrink-0 rounded-sm border px-3 py-1.5 font-mono text-[10px] tracking-[0.14em] uppercase transition-colors duration-200",
+                filter === f
+                  ? "border-brass/50 bg-brass/10 text-brass"
+                  : "border-border text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {f === "all" ? "All" : f}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cari approval..."
+              className="h-8 w-44 rounded-sm border border-border bg-secondary/60 pl-8 pr-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-ai focus:outline-none"
+            />
+          </div>
+          <select
+            value={riskFilter}
+            onChange={(e) => setRiskFilter(e.target.value as "all" | AIRisk)}
+            className="h-8 rounded-sm border border-border bg-secondary px-2 text-xs text-foreground focus:border-ai focus:outline-none"
           >
-            {f === "all" ? "All" : f}
-          </button>
-        ))}
+            <option value="all">Semua Risk</option>
+            <option value="low">Low risk</option>
+            <option value="medium">Medium risk</option>
+            <option value="high">High risk</option>
+          </select>
+        </div>
       </div>
 
-      <Panel className="overflow-hidden">
-        <div className="scroll-rail">
-          <table className="w-full min-w-[760px] text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                {["Recommendation", "Agent", "Risk", "Status", "Requested"].map((h) => (
-                  <th key={h} className="label-eyebrow px-5 py-3 font-normal">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((a) => (
-                <tr
-                  key={a.id}
-                  onClick={() => setSelectedId(a.id)}
-                  className="cursor-pointer border-b border-border transition-colors duration-200 last:border-0 hover:bg-accent/40"
-                >
-                  <td className="px-5 py-4">{a.title}</td>
-                  <td className="px-5 py-4 text-muted-foreground capitalize">{a.agent}</td>
-                  <td className="px-5 py-4">
-                    <Pill tone={riskTone[a.risk]}>{a.risk}</Pill>
-                  </td>
-                  <td className="px-5 py-4">
-                    <Pill tone={statusTone[a.status]}>
-                      <StatusDot tone={statusTone[a.status]} pulse={a.status === "pending"} />
-                      {a.status}
-                    </Pill>
-                  </td>
-                  <td className="px-5 py-4 text-muted-foreground">
-                    {new Date(a.requestedAt).toLocaleDateString("en-GB", {
-                      day: "2-digit",
-                      month: "short",
-                    })}
-                  </td>
+      {error ? (
+        <QueryError message="Approvals tidak bisa dimuat dari server." onRetry={() => void refetch()} />
+      ) : (
+        <Panel className="overflow-hidden">
+          <div className="scroll-rail">
+            <table className="w-full min-w-[760px] text-sm">
+              <thead>
+                <tr className="border-b border-border text-left">
+                  {["Recommendation", "Agent", "Risk", "Status", "Requested"].map((h) => (
+                    <th key={h} className="label-eyebrow px-5 py-3 font-normal">
+                      {h}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {isLoading ? (
-          <p className="p-8 text-center text-sm text-muted-foreground">Memuat approvals…</p>
-        ) : error ? (
-          <p className="p-8 text-center text-sm text-muted-foreground">
-            Approvals tidak bisa dimuat dari server.
-          </p>
-        ) : visible.length === 0 ? (
-          <p className="p-8 text-center text-sm text-muted-foreground">
-            Belum ada approval{filter === "all" ? "" : " di kategori ini"}.
-          </p>
-        ) : null}
-      </Panel>
+              </thead>
+              <tbody>
+                {visible.map((a) => (
+                  <tr
+                    key={a.id}
+                    onClick={() => setSelectedId(a.id)}
+                    className="cursor-pointer border-b border-border transition-colors duration-200 last:border-0 hover:bg-accent/40"
+                  >
+                    <td className="px-5 py-4">{a.title}</td>
+                    <td className="px-5 py-4 text-muted-foreground capitalize">{a.agent}</td>
+                    <td className="px-5 py-4">
+                      <Pill tone={riskTone[a.risk]}>{a.risk}</Pill>
+                    </td>
+                    <td className="px-5 py-4">
+                      <Pill tone={statusTone[a.status]}>
+                        <StatusDot tone={statusTone[a.status]} pulse={a.status === "pending"} />
+                        {a.status}
+                      </Pill>
+                    </td>
+                    <td className="px-5 py-4 text-muted-foreground">
+                      {new Date(a.requestedAt).toLocaleDateString("id-ID", {
+                        day: "2-digit",
+                        month: "short",
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {isLoading ? (
+            <p className="p-8 text-center text-sm text-muted-foreground">Memuat approvals…</p>
+          ) : visible.length === 0 ? (
+            <p className="p-8 text-center text-sm text-muted-foreground">
+              Belum ada approval{filter === "all" && !search && riskFilter === "all" ? "" : " di filter ini"}.
+            </p>
+          ) : null}
+        </Panel>
+      )}
 
       <Dialog open={!!selected} onOpenChange={(o) => !o && setSelectedId(null)}>
-        <DialogContent className="border-border-strong bg-popover sm:max-w-xl">
+        <DialogContent className="border-border-strong bg-popover text-foreground sm:max-w-xl">
           {selected ? (
             <>
               <DialogHeader>
                 <DialogTitle className="text-display text-xl font-light">{selected.title}</DialogTitle>
                 <DialogDescription>
                   {selected.agent} agent · requested{" "}
-                  {new Date(selected.requestedAt).toLocaleDateString("en-GB", {
+                  {new Date(selected.requestedAt).toLocaleDateString("id-ID", {
                     day: "2-digit",
                     month: "short",
                     year: "numeric",
@@ -212,7 +246,7 @@ export default function ApprovalsPage() {
                   </p>
                 ) : null}
 
-                {selected.status === "pending" || selected.status === "approved" ? (
+                {selected.status === "pending" || selected.status === "approved" || selected.status === "failed" ? (
                   <div className="flex flex-wrap gap-2">
                     <button
                       disabled={busy}
@@ -220,7 +254,11 @@ export default function ApprovalsPage() {
                       className="inline-flex items-center gap-1.5 rounded-sm bg-brass px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
                     >
                       {approveAndExecute.isPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                      {selected.status === "approved" ? "Execute" : "Approve & execute"}
+                      {selected.status === "failed"
+                        ? "Retry execute"
+                        : selected.status === "approved"
+                        ? "Execute"
+                        : "Approve & execute"}
                     </button>
                     <button
                       disabled={busy}

@@ -211,6 +211,7 @@ class GoogleBusinessProfileClient
                 'rating' => $starMap[$review['starRating'] ?? ''] ?? null,
                 'comment' => $review['comment'] ?? null,
                 'replied' => isset($review['reviewReply']),
+                'replyComment' => $review['reviewReply']['comment'] ?? null,
                 'createdAt' => $review['createTime'] ?? null,
             ];
         }, array_slice($data['reviews'] ?? [], 0, $limit));

@@ -8,7 +8,9 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
+import { ApiError } from "@/lib/api";
 import { aiServices } from "@/lib/ai/services";
+import type { CreateCampaignRequest, UpdateCampaignRequest } from "@/lib/ai/services/types";
 import { rangeKey, type AiDateRange } from "@/lib/ai/date-range";
 import { toSectionState } from "@/lib/ai/query-state";
 import { rangeParams } from "@/lib/ai/date-range";
@@ -31,6 +33,7 @@ import type {
   AIUsageByProvider,
   AIUsageTotals,
   AiContentDraftItem,
+  AiLearningSummary,
   CreateContentDraftRequest,
   BusinessHealth,
   Campaign,
@@ -40,6 +43,7 @@ import type {
   MetaAdsIntegrationStatus,
   MetaIntegrationStatus,
   PriorityItem,
+  SearchConsoleSiteItem,
   SearchConsoleSummary,
   LocalSeoSummary,
   CroFunnelSummary,
@@ -66,6 +70,7 @@ export const aiKeys = {
   insights: (type?: string, agent?: string) => ["ai", "insights", type ?? "all", agent ?? "all"] as const,
   activity: (agent?: string) => ["ai", "activity", agent ?? "all"] as const,
   searchConsole: (r: AiDateRange) => ["ai", "seo", "search-console", rangeKey(r)] as const,
+  searchConsoleSites: ["ai", "seo", "search-console-sites"] as const,
   localSeo: (r: AiDateRange) => ["ai", "seo", "local", rangeKey(r)] as const,
   croFunnel: (r: AiDateRange) => ["ai", "cro", "funnel", rangeKey(r)] as const,
   campaigns: (r: AiDateRange, platform?: string) =>
@@ -84,6 +89,7 @@ export const aiKeys = {
   googleStatus: ["ai", "integrations", "google", "status"] as const,
   metaStatus: ["ai", "integrations", "meta", "status"] as const,
   metaAdsStatus: ["ai", "integrations", "meta-ads", "status"] as const,
+  learningSummary: (days: number) => ["ai", "learning", "summary", days] as const,
 };
 
 const STALE = 60_000;
@@ -119,9 +125,44 @@ export function useSearchConsoleSummary() {
       provider: "Google Search Console",
       connectHref: "/admin/ai-marketing/settings",
       selectionLabel: "Search Console property",
+      deriveNotConnected: (d) => {
+        const s = d as SearchConsoleSummary;
+        return s.connected ? undefined : (s.message ?? "Search Console belum terhubung.");
+      },
+      isEmpty: (d) => {
+        const s = d as SearchConsoleSummary;
+        return s.connected && !s.hasData;
+      },
       emptyMessage: "Tidak ada data pada rentang tanggal ini.",
     }),
   };
+}
+
+export function useSearchConsoleSites(enabled = true) {
+  return useQuery<{ sites: SearchConsoleSiteItem[]; selected: string | null; message?: string }>({
+    queryKey: aiKeys.searchConsoleSites,
+    queryFn: () =>
+      aiServices.seo.getSearchConsoleSites
+        ? aiServices.seo.getSearchConsoleSites()
+        : Promise.resolve({ sites: [], selected: null }),
+    enabled,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+}
+
+export function useSelectSearchConsoleSite() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (siteUrl: string | null) =>
+      aiServices.seo.selectSearchConsoleSite
+        ? aiServices.seo.selectSearchConsoleSite(siteUrl)
+        : Promise.resolve({ ok: true, siteUrl }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai", "seo"] });
+      qc.invalidateQueries({ queryKey: aiKeys.searchConsoleSites });
+    },
+  });
 }
 
 /** Local SEO (Google Business Profile) — angka mentah listing, bukan LLM. */
@@ -139,6 +180,14 @@ export function useLocalSeoSummary() {
     section: toSectionState(q, {
       provider: "Google Business Profile",
       connectHref: "/admin/ai-marketing/settings",
+      deriveNotConnected: (d) => {
+        const s = d as LocalSeoSummary;
+        return s.connected ? undefined : (s.message ?? "Google Business Profile belum terhubung.");
+      },
+      isEmpty: (d) => {
+        const s = d as LocalSeoSummary;
+        return s.connected && !s.hasData;
+      },
       emptyMessage: "Belum ada aktivitas listing pada rentang tanggal ini.",
     }),
   };
@@ -149,7 +198,7 @@ export function useCroFunnelSummary() {
   const { dateRange } = useAiMarketingContext();
   return useQuery<CroFunnelSummary>({
     queryKey: aiKeys.croFunnel(dateRange),
-    queryFn: () => aiServices.cro.getFunnelSummary(),
+    queryFn: () => aiServices.cro.getFunnelSummary(dateRange.days),
     staleTime: 5 * 60_000,
   });
 }
@@ -413,10 +462,14 @@ export function useMetaAdsAuthorize() {
   });
 }
 
-export function useAiActions() {
+export function useAiActions(status?: string, agent?: string) {
   return useQuery<AIApproval[]>({
-    queryKey: aiKeys.actions,
-    queryFn: () => aiServices.actions.list(),
+    queryKey: [...aiKeys.actions, status ?? "all", agent ?? "all"] as const,
+    queryFn: () =>
+      aiServices.actions.list({
+        ...(status && status !== "all" ? { status } : {}),
+        ...(agent && agent !== "all" ? { agent } : {}),
+      }),
     staleTime: STALE,
   });
 }
@@ -433,10 +486,14 @@ export function useAiInsights(type?: AIInsightType | "all", agent?: AIAgentId | 
   });
 }
 
-export function useAiActivity(agent?: AIAgentId | "all") {
+export function useAiActivity(agent?: AIAgentId | "all", kind?: AIActivity["kind"] | "all") {
   return useQuery<AIActivity[]>({
-    queryKey: aiKeys.activity(agent),
-    queryFn: () => aiServices.activity.list(agent && agent !== "all" ? { agent } : undefined),
+    queryKey: [...aiKeys.activity(agent), kind ?? "all"] as const,
+    queryFn: () =>
+      aiServices.activity.list({
+        ...(agent && agent !== "all" ? { agent } : {}),
+        ...(kind && kind !== "all" ? { kind } : {}),
+      }),
     staleTime: 30_000,
   });
 }
@@ -487,8 +544,11 @@ export function useAiRefresh(queryKey: readonly unknown[]) {
 }
 
 export function extractApiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError && error.message) {
+    return error.message;
+  }
   if (axios.isAxiosError(error)) {
-    const msg = (error.response?.data as { message?: string; error?: string } | undefined);
+    const msg = error.response?.data as { message?: string; error?: string } | undefined;
     if (msg?.message) return msg.message;
     if (msg?.error) return msg.error;
   }
@@ -507,10 +567,10 @@ export function useRunAgent() {
   });
 }
 
-export function useHighIntentLeads() {
+export function useHighIntentLeads(limit = 25) {
   return useQuery<HighIntentLeadsResponse>({
-    queryKey: aiKeys.highIntentLeads,
-    queryFn: () => aiServices.marketing.getHighIntentLeads(),
+    queryKey: [...aiKeys.highIntentLeads, limit] as const,
+    queryFn: () => aiServices.marketing.getHighIntentLeads(limit),
     staleTime: STALE,
   });
 }
@@ -541,7 +601,16 @@ export function useUpdateContentDraft() {
       body,
     }: {
       id: string;
-      body: { status?: string; channel?: string; caption?: string; headline?: string; scheduled_for?: string };
+      body: {
+        title?: string;
+        status?: string;
+        channel?: string;
+        caption?: string;
+        headline?: string;
+        body?: string;
+        cta_label?: string;
+        scheduled_for?: string;
+      };
     }) => aiServices.marketing.updateContentDraft(id, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: aiKeys.contentQueue });
@@ -549,9 +618,128 @@ export function useUpdateContentDraft() {
   });
 }
 
+export function useDeleteContentDraft() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => aiServices.marketing.deleteContentDraft(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: aiKeys.contentQueue });
+    },
+  });
+}
+
 export function usePushDraftToEmail() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => aiServices.marketing.pushContentDraftToEmail(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: aiKeys.contentQueue });
+    },
+  });
+}
+
+export function useCreateCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreateCampaignRequest) => aiServices.campaigns.create(body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai", "campaigns"] });
+      qc.invalidateQueries({ queryKey: ["ai", "dashboard", "kpis"] });
+    },
+  });
+}
+
+export function useUpdateCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: UpdateCampaignRequest }) =>
+      aiServices.campaigns.update(id, body),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["ai", "campaigns"] });
+      qc.invalidateQueries({ queryKey: aiKeys.campaign(vars.id) });
+    },
+  });
+}
+
+export function useSyncProviders() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => aiServices.providers.sync(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: aiKeys.providers });
+    },
+  });
+}
+
+export function useTestProvider() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (provider: string) => aiServices.providers.test(provider),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: aiKeys.providers });
+      qc.invalidateQueries({ queryKey: aiKeys.providerQuota });
+    },
+  });
+}
+
+export function useDismissInsight() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => aiServices.insights.dismiss(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai", "insights"] });
+      qc.invalidateQueries({ queryKey: ["ai", "agents"] });
+    },
+  });
+}
+
+export function useMarkActivityRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => aiServices.activity.markRead(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai", "activity"] });
+    },
+  });
+}
+
+export function useMarkAllActivityRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => aiServices.activity.markAllRead(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai", "activity"] });
+    },
+  });
+}
+
+export function useLearningSummary() {
+  const { dateRange } = useAiMarketingContext();
+  return useQuery<AiLearningSummary>({
+    queryKey: aiKeys.learningSummary(dateRange.days),
+    queryFn: () => aiServices.marketing.getLearningSummary(dateRange.days),
+    staleTime: STALE,
+  });
+}
+
+export function useAddLearningRule() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { rule: string; category?: string }) =>
+      aiServices.marketing.addLearningRule(body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai", "learning"] });
+    },
+  });
+}
+
+export function useDeleteLearningRule() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => aiServices.marketing.deleteLearningRule(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai", "learning"] });
+    },
   });
 }
 

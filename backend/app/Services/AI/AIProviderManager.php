@@ -77,6 +77,79 @@ class AIProviderManager
         return ($this->drivers[$key] ?? null)?->isConfigured() ?? false;
     }
 
+    /**
+     * Sinkronkan tabel `ai_providers` dengan konfigurasi `.env` agar UI tidak
+     * menampilkan "Periksa API key" padahal GEMINI_API_KEY/GROQ_API_KEY sudah terisi.
+     */
+    public function syncConfiguredProviders(): void
+    {
+        foreach ($this->drivers as $key => $driver) {
+            if (! $driver) {
+                continue;
+            }
+            $row = AiProviderModel::firstOrCreate(['provider' => $key], [
+                'model' => $driver->model(),
+                'status' => $driver->isConfigured() ? 'connected' : 'not_connected',
+            ]);
+
+            $update = [];
+            if ($row->model !== $driver->model()) {
+                $update['model'] = $driver->model();
+            }
+            if (! $driver->isConfigured()) {
+                $update['status'] = 'not_connected';
+            } elseif ($row->status === 'not_connected') {
+                $update['status'] = 'connected';
+            }
+
+            if ($update !== []) {
+                $row->update($update);
+            }
+        }
+    }
+
+    /**
+     * Uji koneksi langsung ke satu AI provider dengan prompt sangat ringan.
+     *
+     * @return array{provider: string, model: string, status: string, latencyMs: int, message: string}
+     */
+    public function testProvider(string $key): array
+    {
+        $driver = $this->drivers[$key] ?? null;
+        if (! $driver) {
+            throw new \InvalidArgumentException("Provider \"{$key}\" tidak dikenal.");
+        }
+        if (! $driver->isConfigured()) {
+            AiProviderModel::updateOrCreate(
+                ['provider' => $key],
+                ['model' => $driver->model(), 'status' => 'not_connected']
+            );
+            throw new \RuntimeException("API key {$key} belum diisi di backend/.env.");
+        }
+
+        try {
+            $result = $driver->complete(
+                'Reply with a single word: OK.',
+                'Ping test.',
+                ['max_tokens' => 24, 'temperature' => 0]
+            );
+            $this->recordUsage($key, 'system', $result->model, $result->inputTokens, $result->outputTokens, $result->durationMs, 'success');
+            $this->touchProviderStatus($key, 'connected', $result->durationMs, true, $result);
+
+            return [
+                'provider' => $key,
+                'model' => $result->model,
+                'status' => 'connected',
+                'latencyMs' => $result->durationMs,
+                'message' => "Koneksi ke {$key} ({$result->model}) berhasil dalam {$result->durationMs} ms.",
+            ];
+        } catch (\Throwable $e) {
+            $this->recordUsage($key, 'system', $driver->model(), 0, 0, null, 'error', $e->getMessage());
+            $this->touchProviderStatus($key, 'degraded', null, false);
+            throw $e;
+        }
+    }
+
     /** Provider mana saja yang API key-nya sudah diisi (buat Settings page). */
     public function availableProviders(): array
     {
@@ -125,7 +198,9 @@ class AIProviderManager
         $prevRate = (float) ($row->success_rate ?? ($success ? 100 : 0));
         $newRate = round(($prevRate * 0.8) + (($success ? 100 : 0) * 0.2), 2);
 
+        $driver = $this->drivers[$provider] ?? null;
         $update = [
+            'model' => $driver ? $driver->model() : $row->model,
             'status' => $status,
             'latency_ms' => $latencyMs ?? $row->latency_ms,
             'success_rate' => $newRate,

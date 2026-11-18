@@ -1,14 +1,19 @@
+import { useState } from "react";
+import { Loader2, RefreshCw, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { AnimatedBar, Panel, Pill, SectionHeading, StatusDot } from "@/components/ai/primitives";
 import { QueryError } from "@/components/ai/query-error";
 import { usePageContext } from "@/context/AiMarketingContext";
 import {
+  extractApiErrorMessage,
   useProviderPreference,
   useProviderQuota,
   useProviders,
   useRoutingStrategy,
   useSetProviderPreference,
+  useSyncProviders,
+  useTestProvider,
 } from "@/hooks/useAiDashboard";
 import type { AIProviderStatus } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
@@ -48,6 +53,9 @@ export default function AiMarketingProviders() {
   const quotaQuery = useProviderQuota();
   const preferenceQuery = useProviderPreference();
   const setPreferenceMutation = useSetProviderPreference();
+  const syncProvidersMutation = useSyncProviders();
+  const testProviderMutation = useTestProvider();
+  const [testingProvider, setTestingProvider] = useState<string | null>(null);
 
   const providers = providersQuery.data ?? null;
   const routing = routingQuery.data ?? null;
@@ -62,6 +70,24 @@ export default function AiMarketingProviders() {
     routingQuery.refetch();
     quotaQuery.refetch();
     preferenceQuery.refetch();
+  }
+
+  function handleSyncProviders() {
+    syncProvidersMutation.mutate(undefined, {
+      onSuccess: () => toast.success("Model & status provider disinkronkan dari .env server."),
+      onError: (e) => toast.error(extractApiErrorMessage(e, "Gagal menyinkronkan provider.")),
+    });
+  }
+
+  function handleTestProvider(providerKey: string) {
+    setTestingProvider(providerKey);
+    testProviderMutation.mutate(providerKey, {
+      onSuccess: (res) =>
+        toast.success(res.message || `${providerKey} merespons (${res.latencyMs ?? 0}ms).`),
+      onError: (e) =>
+        toast.error(extractApiErrorMessage(e, `Tes koneksi ${providerKey} gagal.`)),
+      onSettled: () => setTestingProvider(null),
+    });
   }
 
   function choosePreferred(provider: string | null) {
@@ -84,6 +110,21 @@ export default function AiMarketingProviders() {
         eyebrow="AI System"
         title="Providers & Routing"
         description="Livora's AI infrastructure isn't locked to one provider — routing chooses the right model for each task."
+        action={
+          <button
+            type="button"
+            onClick={handleSyncProviders}
+            disabled={syncProvidersMutation.isPending}
+            className="inline-flex items-center gap-1.5 rounded-sm border border-border-strong px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50"
+          >
+            {syncProvidersMutation.isPending ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="size-3.5" />
+            )}
+            Sync .env
+          </button>
+        }
       />
 
       {isError ? (
@@ -141,7 +182,9 @@ export default function AiMarketingProviders() {
           title="Providers"
           description="Gemini, Groq and Anthropic, side by side — live status from the last real request each one handled."
         />
-        {!providers ? (
+        {providersQuery.isError ? (
+          <QueryError message="Daftar provider tidak bisa dimuat." onRetry={() => void providersQuery.refetch()} />
+        ) : !providers ? (
           <div className="grid gap-4 lg:grid-cols-3">
             {[0, 1, 2].map((i) => (
               <div key={i} className="skeleton-shimmer h-48 rounded-lg" />
@@ -151,8 +194,9 @@ export default function AiMarketingProviders() {
           <div className="grid gap-4 lg:grid-cols-3">
             {providers.map((p) => {
               const q = quota?.find((row) => row.provider === p.provider) ?? null;
+              const isTesting = testingProvider === p.provider;
               return (
-                <Panel key={p.id} hover className="p-5">
+                <Panel key={p.id} hover className="flex flex-col p-5">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="text-display text-base capitalize">{providerDisplayName[p.provider] ?? p.provider}</p>
@@ -216,6 +260,18 @@ export default function AiMarketingProviders() {
                       <p className="label-eyebrow mt-0.5">Success</p>
                     </div>
                   </div>
+
+                  <div className="mt-4 border-t border-border pt-3">
+                    <button
+                      type="button"
+                      disabled={isTesting}
+                      onClick={() => handleTestProvider(p.provider)}
+                      className="inline-flex w-full items-center justify-center gap-1.5 rounded-sm border border-border px-3 py-1.5 text-xs font-medium text-foreground/90 transition-colors hover:border-ai/40 hover:bg-ai/10 hover:text-ai disabled:opacity-50"
+                    >
+                      {isTesting ? <Loader2 className="size-3.5 animate-spin" /> : <Zap className="size-3.5" />}
+                      {isTesting ? "Menghubungi provider..." : "Test Koneksi"}
+                    </button>
+                  </div>
                 </Panel>
               );
             })}
@@ -229,10 +285,11 @@ export default function AiMarketingProviders() {
           description="Chooses the best model for each task automatically — quality, speed and cost, balanced."
         />
         <div className="mb-4 rounded-sm border border-border bg-surface/40 px-4 py-3 text-xs text-muted-foreground">
-          This panel is a visual model of an intended routing strategy — it doesn't yet decide which provider
-          actually handles a request. The setting that does that today is "Provider Preference" above.
+          Task-specific fallback tetap mengikuti urutan "Provider Preference" di atas apabila provider utama sedang rate-limited.
         </div>
-        {!routing ? (
+        {routingQuery.isError ? (
+          <QueryError message="Strategi routing gagal dimuat." onRetry={() => void routingQuery.refetch()} />
+        ) : !routing ? (
           <div className="skeleton-shimmer h-64 rounded-lg" />
         ) : (
           <div className="grid gap-4 xl:grid-cols-[1fr_1.3fr]">

@@ -121,78 +121,80 @@ class SeoAgentService
 
         $insightsCreated = 0;
         $recommendationsCreated = 0;
+        $firstRecommendationId = null;
 
-        foreach ($items as $item) {
-            $insight = AiInsight::create([
-                'title' => $item['title'],
-                'description' => $item['description'],
-                'type' => $item['type'],
-                'severity' => $item['severity'],
-                'confidence' => $this->clampConfidence($item['confidence']),
-                'source' => $sources,
-                'agent_key' => self::AGENT_KEY,
-                'reasoning' => $item['reasoning'],
-                'what_happened' => $item['what_happened'],
-                'why_it_matters' => $item['why_it_matters'],
-                'expected_impact' => $item['expected_impact'],
-                'metrics' => null,
-                'analytics_href' => null,
-            ]);
-            $insightsCreated++;
-
-            $recData = $item['recommendation'] ?? null;
-
-            if (is_array($recData) && $this->isValidRecommendation($recData)) {
-                $targetType = isset($recData['target_type']) && is_string($recData['target_type'])
-                    ? strtolower(trim($recData['target_type']))
-                    : null;
-                $targetId = isset($recData['target_id']) && is_numeric($recData['target_id'])
-                    ? (int) $recData['target_id']
-                    : null;
-
-                $actionType = $recData['action_type'] ?? 'on_page';
-
-                // Validasi target_type/target_id terhadap whitelist snapshot agar OnPageActionExecutor
-                // tidak pernah mendapat ID halusinasi. Bila on_page tanpa ID, fallback ke target pertama yang butuh meta.
-                if ($targetType && $targetId && isset($allowedTargets["{$targetType}:{$targetId}"])) {
-                    // Valid target from AI output
-                } elseif ($actionType === 'on_page' && ! empty($allowedTargets)) {
-                    $first = reset($allowedTargets);
-                    $targetType = $first['target_type'];
-                    $targetId = $first['target_id'];
-                } else {
-                    $targetType = null;
-                    $targetId = null;
-                }
-
-                $recommendation = AiRecommendation::create([
-                    'insight_id' => $insight->id,
-                    'title' => $recData['title'],
-                    'description' => $recData['description'],
-                    'action_type' => $actionType,
-                    'target_type' => $targetType,
-                    'target_id' => $targetId,
-                    'risk' => in_array($recData['risk'] ?? null, ['low', 'medium', 'high'], true)
-                        ? $recData['risk'] : 'low',
-                    'status' => 'pending',
-                    'expected_impact' => $recData['expected_impact'] ?? $item['expected_impact'],
-                    'confidence' => $this->clampConfidence($recData['confidence'] ?? $item['confidence']),
+        DB::transaction(function () use ($items, $sources, $allowedTargets, &$insightsCreated, &$recommendationsCreated, &$firstRecommendationId) {
+            foreach ($items as $item) {
+                $insight = AiInsight::create([
+                    'title' => $item['title'],
+                    'description' => $item['description'],
+                    'type' => $item['type'],
+                    'severity' => $item['severity'],
+                    'confidence' => $this->clampConfidence($item['confidence']),
+                    'source' => $sources,
                     'agent_key' => self::AGENT_KEY,
-                    'priority' => in_array($recData['priority'] ?? null, ['low', 'medium', 'high'], true)
-                        ? $recData['priority'] : 'medium',
-                    'why' => $recData['why'] ?? null,
-                    'suggested_action' => $recData['suggested_action'] ?? null,
-                    'change_from' => isset($recData['change_from']) && is_string($recData['change_from'])
-                        ? mb_substr($recData['change_from'], 0, 250) : null,
-                    'change_to' => isset($recData['change_to']) && is_string($recData['change_to'])
-                        ? mb_substr($recData['change_to'], 0, 250) : null,
+                    'reasoning' => $item['reasoning'],
+                    'what_happened' => $item['what_happened'],
+                    'why_it_matters' => $item['why_it_matters'],
+                    'expected_impact' => $item['expected_impact'],
+                    'metrics' => null,
+                    'analytics_href' => null,
                 ]);
+                $insightsCreated++;
 
-                AiApproval::ensureForRecommendation($recommendation);
-                $insight->update(['recommendation_id' => $recommendation->id]);
-                $recommendationsCreated++;
+                $recData = $item['recommendation'] ?? null;
+
+                if (is_array($recData) && $this->isValidRecommendation($recData)) {
+                    $targetType = isset($recData['target_type']) && is_string($recData['target_type'])
+                        ? strtolower(trim($recData['target_type']))
+                        : null;
+                    $targetId = isset($recData['target_id']) && is_numeric($recData['target_id'])
+                        ? (int) $recData['target_id']
+                        : null;
+
+                    $actionType = $recData['action_type'] ?? 'on_page';
+
+                    if ($targetType && $targetId && isset($allowedTargets["{$targetType}:{$targetId}"])) {
+                        // Valid target from AI output
+                    } elseif ($actionType === 'on_page' && ! empty($allowedTargets)) {
+                        $first = reset($allowedTargets);
+                        $targetType = $first['target_type'];
+                        $targetId = $first['target_id'];
+                    } else {
+                        $targetType = null;
+                        $targetId = null;
+                    }
+
+                    $recommendation = AiRecommendation::create([
+                        'insight_id' => $insight->id,
+                        'title' => $recData['title'],
+                        'description' => $recData['description'],
+                        'action_type' => $actionType,
+                        'target_type' => $targetType,
+                        'target_id' => $targetId,
+                        'risk' => in_array($recData['risk'] ?? null, ['low', 'medium', 'high'], true)
+                            ? $recData['risk'] : 'low',
+                        'status' => 'pending',
+                        'expected_impact' => $recData['expected_impact'] ?? $item['expected_impact'],
+                        'confidence' => $this->clampConfidence($recData['confidence'] ?? $item['confidence']),
+                        'agent_key' => self::AGENT_KEY,
+                        'priority' => in_array($recData['priority'] ?? null, ['low', 'medium', 'high'], true)
+                            ? $recData['priority'] : 'medium',
+                        'why' => $recData['why'] ?? null,
+                        'suggested_action' => $recData['suggested_action'] ?? null,
+                        'change_from' => isset($recData['change_from']) && is_string($recData['change_from'])
+                            ? mb_substr($recData['change_from'], 0, 250) : null,
+                        'change_to' => isset($recData['change_to']) && is_string($recData['change_to'])
+                            ? mb_substr($recData['change_to'], 0, 250) : null,
+                    ]);
+
+                    AiApproval::ensureForRecommendation($recommendation);
+                    $insight->update(['recommendation_id' => $recommendation->id]);
+                    $firstRecommendationId ??= $recommendation->id;
+                    $recommendationsCreated++;
+                }
             }
-        }
+        });
 
         AiAgent::where('key', self::AGENT_KEY)->update([
             'status' => 'active',
@@ -207,9 +209,14 @@ class SeoAgentService
         AiActivityLog::create([
             'actor' => 'AI',
             'agent_key' => self::AGENT_KEY,
+            'title' => $recommendationsCreated > 0 ? 'SEO Agent · Rekomendasi Baru' : 'SEO Agent · Insight Baru',
             'message' => "SEO Agent menghasilkan {$insightsCreated} insight baru "
                 ."({$recommendationsCreated} disertai rekomendasi) dari ".implode(', ', $sources).", via provider {$result['provider']}.",
-            'kind' => 'insight',
+            'kind' => $recommendationsCreated > 0 ? 'recommendation' : 'insight',
+            'recommendation_id' => $firstRecommendationId,
+            'href' => $recommendationsCreated > 0
+                ? '/admin/ai-marketing/ai-center/recommendations'
+                : '/admin/ai-marketing/seo',
         ]);
 
         return [
@@ -295,7 +302,7 @@ class SeoAgentService
                 $cols[] = 'is_on_promo';
             }
 
-            $allItems = Item::query()->select($cols)->limit(120)->get()->map(function ($it) use ($clicksMap, $viewsMap, $hasPromo) {
+            $mapItem = function ($it) use ($clicksMap, $viewsMap, $hasPromo) {
                 $k = "item:{$it->id}";
 
                 return [
@@ -310,16 +317,30 @@ class SeoAgentService
                     'views_28d' => $viewsMap[$k] ?? 0,
                     'clicks_28d' => $clicksMap[$k] ?? 0,
                 ];
-            });
+            };
 
-            $itemsNeedingMeta = $allItems
-                ->filter(fn ($i) => blank($i['meta_title']) || blank($i['meta_description']))
+            $missingMetaItems = Item::query()
+                ->select($cols)
+                ->where(function ($q) {
+                    $q->whereNull('meta_title')
+                        ->orWhere('meta_title', '')
+                        ->orWhereNull('meta_description')
+                        ->orWhere('meta_description', '');
+                })
+                ->limit(40)
+                ->get()
+                ->map($mapItem);
+
+            $itemsNeedingMeta = $missingMetaItems
                 ->sortByDesc(fn ($i) => ($i['views_28d'] * 2) + $i['clicks_28d'] + ($i['is_on_promo'] ? 50 : 0))
                 ->take(12)
                 ->values()
                 ->all();
 
-            $topViewedCatalog = $allItems
+            $recentCatalog = Item::query()->select($cols)->orderByDesc('id')->limit(60)->get()->map($mapItem);
+            $topViewedCatalog = $recentCatalog
+                ->merge($missingMetaItems)
+                ->unique('target_id')
                 ->sortByDesc(fn ($i) => $i['views_28d'] + $i['clicks_28d'])
                 ->take(8)
                 ->values()
@@ -474,8 +495,13 @@ PROMPT;
     private function userPrompt(array $snapshot): string
     {
         $json = json_encode($snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $learningBlock = '';
+        try {
+            $learningBlock = "\n\n".app(AiLearningMemoryService::class)->promptBlock(30);
+        } catch (Throwable) {
+        }
 
-        return "Data SEO, Local Business Profile & On-Page Katalog Livora (semua data nyata dari API & database):\n\n{$json}\n\nAnalisis data di atas dan hasilkan insight sesuai skema.";
+        return "Data SEO, Local Business Profile & On-Page Katalog Livora (semua data nyata dari API & database):\n\n{$json}{$learningBlock}\n\nPrioritaskan optimasi on-page pada produk/proyek bernilai tinggi dan ikuti memori pembelajaran adaptif Livora. Analisis data di atas dan hasilkan insight sesuai skema.";
     }
 
     private function parseResponse(string $text): array

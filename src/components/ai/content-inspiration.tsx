@@ -9,8 +9,10 @@
 import { useMemo, useState } from "react";
 import {
   Check,
+  ChevronDown,
   Clapperboard,
   ExternalLink,
+  Globe,
   Instagram,
   Loader2,
   Music2,
@@ -22,7 +24,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { NotConnected, Panel, Pill, SectionHeading, StatusDot } from "@/components/ai/primitives";
-import { extractApiErrorMessage, useCreateContentDraft } from "@/hooks/useAiDashboard";
+import { QueryError } from "@/components/ai/query-error";
+import { extractApiErrorMessage, useContentQueue, useCreateContentDraft } from "@/hooks/useAiDashboard";
 import { useInspirationAnalysis, useInspirationLibrary } from "@/hooks/useMarketing";
 import type {
   InspirationVideo,
@@ -197,6 +200,7 @@ function RecommendedVideoCard({
   saving: boolean;
   onSaveDraft: (rec: RecommendedVideoItem) => void;
 }) {
+  const [showBrief, setShowBrief] = useState(false);
   const dur = duration(rec.durationSeconds);
   const meta = PLATFORM_META[rec.platform] ?? PLATFORM_META.youtube;
   const Icon = meta.Icon;
@@ -205,23 +209,21 @@ function RecommendedVideoCard({
     rec.sourceKind === "livora_benchmark"
       ? "Benchmark Akun Livora"
       : rec.sourceKind === "web_discovered"
-        ? "Search Grounding"
-        : "Referensi Kreator";
+        ? "Riset Web Terbaru"
+        : "Kreator Eksternal";
 
   return (
     <div className="flex flex-col rounded-sm border border-border bg-background/50 p-4 sm:p-5">
-      {/* Header Badges */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <PlatformPill platform={rec.platform} />
-          <Pill tone="neutral">{sourceLabel}</Pill>
+          <Pill tone={rec.sourceKind === "livora_benchmark" ? "neutral" : "info"}>{sourceLabel}</Pill>
         </div>
         <Pill tone={rec.brandFitScore >= 85 ? "success" : "info"}>
           Brand Fit {rec.brandFitScore}%
         </Pill>
       </div>
 
-      {/* Video preview + link */}
       <div className="mt-3 flex gap-3">
         {rec.thumbnail ? (
           <a href={rec.url} target="_blank" rel="noreferrer" className="shrink-0">
@@ -271,8 +273,7 @@ function RecommendedVideoCard({
         </div>
       </div>
 
-      {/* Prominent Link Action */}
-      <div className="mt-3">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         <a
           href={rec.url}
           target="_blank"
@@ -282,16 +283,22 @@ function RecommendedVideoCard({
           Buka Video di {meta.label}
           <ExternalLink className="size-3" />
         </a>
+        <button
+          type="button"
+          onClick={() => setShowBrief((v) => !v)}
+          className="inline-flex items-center gap-1 rounded-sm border border-border px-2.5 py-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+        >
+          Shot List & Caption Brief
+          <ChevronDown className={cn("size-3 transition-transform", showBrief && "rotate-180")} />
+        </button>
       </div>
 
-      {/* Deskripsi Video */}
       <div className="mt-4 space-y-3 text-xs leading-relaxed">
         <div>
           <p className="label-eyebrow mb-1">Deskripsi Video</p>
           <p className="text-foreground/90">{rec.description}</p>
         </div>
 
-        {/* Alasan Rekomendasi AI */}
         <div className="rounded-sm border border-ai/30 bg-ai/5 p-3">
           <p className="label-eyebrow mb-1 text-ai">Alasan Rekomendasi AI (Brand Identity & Traffic)</p>
           <p className="text-foreground/90">{rec.reason}</p>
@@ -303,7 +310,6 @@ function RecommendedVideoCard({
           ) : null}
         </div>
 
-        {/* Konsep Produksi Livora */}
         <div className="rounded-sm border border-border bg-background/70 p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="label-eyebrow">Konsep Adaptasi untuk Livora</p>
@@ -318,22 +324,31 @@ function RecommendedVideoCard({
               <span className="font-medium text-foreground">{rec.livoraAdaptation.targetName}</span>
             </p>
           ) : null}
-          {rec.livoraAdaptation.hook ? (
-            <p className="mt-2 text-foreground/90">
-              <span className="font-medium text-foreground">Hook 3 detik: </span>
-              {rec.livoraAdaptation.hook}
-            </p>
-          ) : null}
-          {rec.livoraAdaptation.shotList.length > 0 ? (
-            <ul className="mt-2 list-disc space-y-1 pl-4 text-muted-foreground">
-              {rec.livoraAdaptation.shotList.map((shot, idx) => (
-                <li key={idx}>{shot}</li>
-              ))}
-            </ul>
-          ) : null}
-          {rec.livoraAdaptation.captionDraft ? (
-            <p className="mt-2 border-t border-border pt-2 italic text-muted-foreground">
-              "{rec.livoraAdaptation.captionDraft}"
+
+          {showBrief ? (
+            <div className="mt-2 space-y-2 border-t border-border/70 pt-2">
+              {rec.livoraAdaptation.hook ? (
+                <p className="text-foreground/90">
+                  <span className="font-medium text-foreground">Hook 3 detik: </span>
+                  {rec.livoraAdaptation.hook}
+                </p>
+              ) : null}
+              {rec.livoraAdaptation.shotList.length > 0 ? (
+                <ul className="list-disc space-y-1 pl-4 text-muted-foreground">
+                  {rec.livoraAdaptation.shotList.map((shot, idx) => (
+                    <li key={idx}>{shot}</li>
+                  ))}
+                </ul>
+              ) : null}
+              {rec.livoraAdaptation.captionDraft ? (
+                <p className="border-t border-border pt-2 italic text-muted-foreground">
+                  "{rec.livoraAdaptation.captionDraft}"
+                </p>
+              ) : null}
+            </div>
+          ) : rec.livoraAdaptation.hook ? (
+            <p className="mt-1.5 line-clamp-1 text-[11px] text-muted-foreground">
+              Hook: {rec.livoraAdaptation.hook}
             </p>
           ) : null}
 
@@ -349,7 +364,7 @@ function RecommendedVideoCard({
             >
               {saved ? (
                 <>
-                  <Check className="size-3.5" /> Tersimpan di Content Queue
+                  <Check className="size-3.5 text-success" /> Tersimpan di Content Queue
                 </>
               ) : saving ? (
                 <>
@@ -372,10 +387,13 @@ export function ContentInspirationPanel() {
   const library = useInspirationLibrary();
   const analysis = useInspirationAnalysis();
   const createDraft = useCreateContentDraft();
+  const { data: queue = [] } = useContentQueue();
 
   const [query, setQuery] = useState("");
+  const [scope, setScope] = useState<"external" | "all">("external");
   const [selectedPlatforms, setSelectedPlatforms] = useState<VideoPlatform[]>(ALL_PLATFORMS);
   const [filterTab, setFilterTab] = useState<"all" | VideoPlatform>("all");
+  const [sortBy, setSortBy] = useState<"brandFit" | "views" | "er">("brandFit");
   const [picked, setPicked] = useState<string | null>(null);
   const [savedIds, setSavedIds] = useState<Record<string, boolean>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -384,6 +402,15 @@ export function ContentInspirationPanel() {
   const ytVideos = library.data?.youtube.videos ?? [];
   const ttVideos = library.data?.tiktok.videos ?? [];
   const ownVideos = useMemo(() => [...igVideos, ...ytVideos, ...ttVideos], [igVideos, ytVideos, ttVideos]);
+
+  const savedUrls = useMemo(() => {
+    const s = new Set<string>();
+    for (const d of queue) {
+      const url = typeof d.meta?.reference_url === "string" ? d.meta.reference_url : null;
+      if (url) s.add(url);
+    }
+    return s;
+  }, [queue]);
 
   function togglePlatform(p: VideoPlatform) {
     setSelectedPlatforms((prev) => {
@@ -400,6 +427,7 @@ export function ContentInspirationPanel() {
     analysis.mutate({
       query: query.trim().length >= 3 ? query.trim() : undefined,
       mode: "auto_brand",
+      scope,
       platforms: selectedPlatforms,
     });
   }
@@ -413,6 +441,7 @@ export function ContentInspirationPanel() {
     analysis.mutate({
       query: topic,
       mode: "topic",
+      scope,
       platforms: selectedPlatforms,
       sourceTitle: source?.title,
       sourcePlatform: source?.platform,
@@ -465,27 +494,40 @@ export function ContentInspirationPanel() {
 
   const result = analysis.data;
   const recommendations = result?.recommendations ?? [];
-  const filteredRecommendations = useMemo(
-    () =>
+  const filteredRecommendations = useMemo(() => {
+    const base =
       filterTab === "all"
         ? recommendations
-        : recommendations.filter((r) => r.platform === filterTab),
-    [filterTab, recommendations],
-  );
+        : recommendations.filter((r) => r.platform === filterTab);
+    return [...base].sort((a, b) => {
+      if (sortBy === "views") return (b.views ?? -1) - (a.views ?? -1);
+      if (sortBy === "er") return (b.engagementRate ?? -1) - (a.engagementRate ?? -1);
+      return (b.brandFitScore ?? 0) - (a.brandFitScore ?? 0);
+    });
+  }, [filterTab, recommendations, sortBy]);
+
+  const brandTopics = useMemo(() => {
+    const ctx = library.data?.brandContext;
+    if (!ctx) return [];
+    return [
+      ...ctx.items.slice(0, 3).map((it) => it.name),
+      ...ctx.projects.slice(0, 2).map((pr) => pr.name),
+      ...ctx.promos.slice(0, 2).map((pm) => pm.name),
+    ].filter(Boolean);
+  }, [library.data?.brandContext]);
 
   return (
     <section className="mt-10">
       <SectionHeading
-        title="Saran Video Brand Identity Livora (Instagram · YouTube · TikTok)"
-        description="AI membaca traffic video di IG, YouTube & TikTok serta katalog proyek/produk Livora, lalu mencari video nyata lintas platform beserta link aslinya, alasan rekomendasi, deskripsi visual, dan konsep siap produksi."
+        title="Saran Video & Ide Pasar Eksternal (Instagram · YouTube · TikTok)"
+        description="AI memadukan sinyal brand Livora dengan riset Google Search terkini untuk mencari inspirasi kreator eksternal terbaru, menganalisis kecocokan pasar, dan menyusun konsep produksi."
       />
 
       <Panel className="p-5 sm:p-6">
-        {/* Controls: One-click Brand Identity AI + Topic Search + Platform Selector */}
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="label-eyebrow mr-1">Platform Target:</span>
+              <span className="label-eyebrow mr-1">Platform:</span>
               {ALL_PLATFORMS.map((p) => {
                 const active = selectedPlatforms.includes(p);
                 const meta = PLATFORM_META[p];
@@ -507,6 +549,31 @@ export function ContentInspirationPanel() {
                   </button>
                 );
               })}
+
+              <span className="mx-1 hidden h-4 w-px bg-border sm:inline-block" />
+
+              <div className="flex items-center gap-1 rounded-sm border border-border p-0.5 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setScope("external")}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-sm px-2.5 py-1 transition-colors",
+                    scope === "external" ? "bg-ai/15 text-ai font-medium" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Globe className="size-3" /> Fokus Eksternal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScope("all")}
+                  className={cn(
+                    "rounded-sm px-2.5 py-1 transition-colors",
+                    scope === "all" ? "bg-ai/15 text-ai font-medium" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  Campur Akun Sendiri
+                </button>
+              </div>
             </div>
 
             <button
@@ -516,7 +583,7 @@ export function ContentInspirationPanel() {
               className="inline-flex items-center justify-center gap-2 rounded-sm border border-ai/50 bg-ai/15 px-4 py-2 text-[11px] font-medium uppercase tracking-[0.1em] text-ai transition-colors hover:bg-ai/25 disabled:opacity-50"
             >
               {analysis.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
-              Generate Saran Video Brand Livora
+              Generate Saran Video & Pasar
             </button>
           </div>
 
@@ -549,6 +616,23 @@ export function ContentInspirationPanel() {
               Analisis Topik
             </button>
           </form>
+
+          {brandTopics.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="label-eyebrow mr-1">Topik cepat dari katalog:</span>
+              {brandTopics.map((topic) => (
+                <button
+                  key={topic}
+                  type="button"
+                  disabled={analysis.isPending}
+                  onClick={() => runTopic(topic)}
+                  className="rounded-full border border-border bg-secondary/50 px-2.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-ai/40 hover:text-ai disabled:opacity-50"
+                >
+                  + {topic}
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         {/* Cross-platform LIVORA traffic overview */}
@@ -556,6 +640,8 @@ export function ContentInspirationPanel() {
           <p className="label-eyebrow mb-3">Ringkasan Traffic Video Akun Livora</p>
           {library.isLoading ? (
             <p className="text-sm text-muted-foreground">Memuat traffic Instagram, YouTube & TikTok…</p>
+          ) : library.isError ? (
+            <QueryError message="Gagal memuat pustaka traffic video." onRetry={() => void library.refetch()} />
           ) : (
             <div className="grid gap-3 md:grid-cols-3">
               {ALL_PLATFORMS.map((p) => (
@@ -657,6 +743,20 @@ export function ContentInspirationPanel() {
                   </div>
                 ) : null}
 
+                {result.trafficAnalysis?.marketSummary || result.marketInsights?.market_summary ? (
+                  <div className="mt-3 rounded-sm border border-ai/25 bg-ai/[0.04] p-3 text-xs leading-relaxed text-foreground/90">
+                    <p className="label-eyebrow mb-1 text-ai">Ringkasan Pasar & Kompetitor Eksternal</p>
+                    <p>{result.trafficAnalysis?.marketSummary || result.marketInsights?.market_summary}</p>
+                    {result.marketInsights?.external_content_angles?.length ? (
+                      <ul className="mt-2 list-disc space-y-0.5 pl-4 text-muted-foreground">
+                        {result.marketInsights.external_content_angles.slice(0, 3).map((ang, idx) => (
+                          <li key={idx}>{ang}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                ) : null}
+
                 {result.brandContextUsed &&
                 (result.brandContextUsed.items.length > 0 ||
                   result.brandContextUsed.projects.length > 0 ||
@@ -698,7 +798,7 @@ export function ContentInspirationPanel() {
                   <h4 className="text-display text-base">
                     Rekomendasi Video ({filteredRecommendations.length})
                   </h4>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     {(["all", ...ALL_PLATFORMS] as const).map((tab) => {
                       const count =
                         tab === "all"
@@ -721,6 +821,16 @@ export function ContentInspirationPanel() {
                         </button>
                       );
                     })}
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as "brandFit" | "views" | "er")}
+                      className="h-7 rounded-sm border border-border bg-secondary px-2 text-xs text-foreground focus:border-ai focus:outline-none"
+                      aria-label="Urutkan rekomendasi video"
+                    >
+                      <option value="brandFit">Sort: Brand Fit</option>
+                      <option value="views">Sort: Views</option>
+                      <option value="er">Sort: ER %</option>
+                    </select>
                   </div>
                 </div>
 
@@ -730,7 +840,7 @@ export function ContentInspirationPanel() {
                       <RecommendedVideoCard
                         key={rec.id}
                         rec={rec}
-                        saved={Boolean(savedIds[rec.id])}
+                        saved={Boolean(savedIds[rec.id]) || savedUrls.has(rec.url)}
                         saving={savingId === rec.id}
                         onSaveDraft={handleSaveToQueue}
                       />

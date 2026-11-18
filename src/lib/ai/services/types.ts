@@ -34,9 +34,14 @@ import type {
   AIUsageTotals,
   AiChatContextKey,
   AiChatMessage,
+  AiLearningRule,
+  AiLearningSummary,
   BusinessHealth,
   Campaign,
+  CampaignGoal,
+  CampaignPlanStep,
   GoogleIntegrationStatus,
+  MarketIntelligenceReport,
   MetaAdsIntegrationStatus,
   ImpactRecord,
   MetaIntegrationStatus,
@@ -59,16 +64,31 @@ export interface AIMarketingService {
   getAdsSummary: (p: { from: string; to: string; days: number }) => Promise<AdsSummary>;
   getContentSummary: (p: { from: string; to: string; days: number }) => Promise<ContentSummary>;
   getLeadsFunnel: (p: { from: string; to: string; days: number }) => Promise<LeadsFunnel>;
-  getHighIntentLeads: () => Promise<HighIntentLeadsResponse>;
+  getHighIntentLeads: (limit?: number) => Promise<HighIntentLeadsResponse>;
   getContentQueue: () => Promise<AiContentDraftItem[]>;
   createContentDraft: (body: CreateContentDraftRequest) => Promise<AiContentDraftItem>;
   updateContentDraft: (
     id: string,
-    body: { status?: string; channel?: string; caption?: string; headline?: string; scheduled_for?: string },
+    body: {
+      title?: string;
+      status?: string;
+      channel?: string;
+      caption?: string;
+      headline?: string;
+      body?: string;
+      cta_label?: string;
+      scheduled_for?: string;
+    },
   ) => Promise<Partial<AiContentDraftItem>>;
+  deleteContentDraft: (id: string) => Promise<{ ok: boolean; id: string }>;
   pushContentDraftToEmail: (id: string) => Promise<{ campaignId: number; redirectPath: string }>;
   getInspirationLibrary: () => Promise<InspirationLibrary>;
   analyzeInspiration: (p: InspirationAnalysisRequest) => Promise<InspirationAnalysis>;
+  getMarketInsights: (focus?: string) => Promise<MarketIntelligenceReport>;
+  analyzeMarket: (p?: { focus?: string; refresh?: boolean }) => Promise<MarketIntelligenceReport>;
+  getLearningSummary: (days?: number) => Promise<AiLearningSummary>;
+  addLearningRule: (body: { rule: string; category?: string }) => Promise<AiLearningRule>;
+  deleteLearningRule: (id: string) => Promise<{ ok: boolean; id: string }>;
 }
 
 export interface AIDashboardService {
@@ -87,13 +107,17 @@ export interface AIRecommendationService {
 }
 
 export interface AIActionService {
-  list(): Promise<AIApproval[]>;
+  list(params?: { status?: string; agent?: string }): Promise<AIApproval[]>;
   approveAndExecute(id: string): Promise<AIApproval>;
   reject(id: string): Promise<AIApproval>;
 }
 
 export interface AIChatService {
-  ask(message: string, context: AiChatContextKey): Promise<AiChatMessage>;
+  ask(
+    message: string,
+    context: AiChatContextKey,
+    opts?: { webSearch?: boolean; history?: { role: "user" | "assistant"; text: string }[] },
+  ): Promise<AiChatMessage>;
 }
 
 export interface AIUsageService {
@@ -104,15 +128,37 @@ export interface AIUsageService {
 
 export interface AIProviderService {
   list(): Promise<AIProviderInfo[]>;
+  sync(): Promise<AIProviderInfo[]>;
+  test(provider: string): Promise<{ provider: string; model?: string; status: string; latencyMs?: number; message: string }>;
   getRoutingStrategy(): Promise<AIRoutingStrategy>;
   getQuota(): Promise<AIProviderQuota[]>;
   getPreference(): Promise<AIProviderPreference>;
   setPreference(provider: string | null): Promise<AIProviderPreference>;
 }
 
+export interface CreateCampaignRequest {
+  name: string;
+  channel: string;
+  summary?: string;
+  budget_daily?: string;
+  health?: "Good" | "Fair" | "Needs Attention";
+  status?: "Active" | "Paused" | "Draft" | "Ended";
+}
+
+export interface UpdateCampaignRequest {
+  status?: "Active" | "Paused" | "Draft" | "Ended";
+  health?: "Good" | "Fair" | "Needs Attention";
+  summary?: string;
+  budget_daily?: string;
+  plan?: CampaignPlanStep[];
+  goals?: CampaignGoal[];
+}
+
 export interface AICampaignService {
   list(params?: AIDateRangeParams): Promise<Campaign[]>;
   getById(id: string): Promise<Campaign | undefined>;
+  create(body: CreateCampaignRequest): Promise<Campaign>;
+  update(id: string, body: UpdateCampaignRequest): Promise<Campaign>;
   sync(): Promise<{ synced: number; campaigns: Campaign[] }>;
 }
 
@@ -124,10 +170,13 @@ export interface AIImpactService {
 export interface AIInsightService {
   list(params?: { type?: AIInsightType; agent?: AIAgentId }): Promise<AIInsight[]>;
   getById(id: string): Promise<AIInsight | undefined>;
+  dismiss(id: string): Promise<{ ok: boolean; id: string }>;
 }
 
 export interface AIActivityService {
   list(params?: { agent?: AIAgentId; kind?: AIActivity["kind"] }): Promise<AIActivity[]>;
+  markRead(id: string): Promise<AIActivity>;
+  markAllRead(): Promise<{ ok: boolean; unreadCount: number }>;
 }
 
 /**

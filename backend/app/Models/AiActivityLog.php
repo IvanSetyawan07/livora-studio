@@ -12,12 +12,14 @@ class AiActivityLog extends Model
     // Tabelnya singular ('ai_activity_log'), beda dari tebakan default Laravel.
     protected $table = 'ai_activity_log';
 
-        protected $fillable = [
-        'actor', 'agent_key', 'message', 'payload', 'kind', 'recommendation_id', 'next_review_at',
+    protected $fillable = [
+        'actor', 'agent_key', 'title', 'message', 'payload', 'kind',
+        'recommendation_id', 'href', 'next_review_at', 'read_at',
     ];
 
     protected $casts = [
         'next_review_at' => 'datetime',
+        'read_at' => 'datetime',
         // {before: {...}, after: {...}} untuk eksekusi yang benar-benar menulis ke DB.
         'payload' => 'array',
     ];

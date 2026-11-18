@@ -13,6 +13,7 @@
  */
 import { useCallback } from "react";
 import axios from "axios";
+import { ApiError } from "@/lib/api";
 import type { UseQueryResult } from "@tanstack/react-query";
 import type {
   NonDataSectionState,
@@ -103,6 +104,29 @@ function describeError(
   error: unknown,
   provider?: string,
 ): SectionStatePermissionRequired | SectionStateRateLimited | SectionStateError {
+  if (error instanceof ApiError) {
+    if (error.kind === "permission_required" || error.kind === "unauthenticated" || error.kind === "invalid_credentials") {
+      return {
+        status: "permission_required",
+        provider,
+        message: error.message,
+      } as SectionStatePermissionRequired;
+    }
+
+    if (error.kind === "rate_limited") {
+      return {
+        status: "rate_limited",
+        retryAfterSeconds: error.retryAfterSeconds,
+      } as SectionStateRateLimited;
+    }
+
+    return {
+      status: "error",
+      message: error.message || "Data tidak bisa dimuat dari server. Coba muat ulang.",
+      retriable: error.retriable,
+    } as SectionStateError;
+  }
+
   if (axios.isAxiosError(error)) {
     const status = error.response?.status;
     const serverMessage = (error.response?.data as { message?: string } | undefined)?.message;

@@ -184,7 +184,7 @@ TXT;
 
     private function pathPrefix(?string $type): string
     {
-        return $type === 'item' ? 'items' : 'projects';
+        return $type === 'item' ? 'furniture' : 'projects';
     }
 
     private function label(?string $type, Model $record): string

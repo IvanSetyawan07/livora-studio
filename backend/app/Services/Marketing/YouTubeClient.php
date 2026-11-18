@@ -18,6 +18,11 @@ class YouTubeClient
         return filled(config('services.youtube.api_key')) && filled(config('services.youtube.channel_id'));
     }
 
+    public function hasApiKey(): bool
+    {
+        return filled(config('services.youtube.api_key'));
+    }
+
     /**
      * @return array{title: string, subscribers: int, total_views: int, videos_in_period: int, views_in_period: int, engagements: int, seriesAvailable: bool, daily: list<array{date: string, views: int, engagements: int}>}
      */
@@ -100,7 +105,7 @@ class YouTubeClient
      */
     public function searchSimilar(string $query, int $max = 12, array $extraParams = []): array
     {
-        if (! $this->isConfigured()) {
+        if (! $this->hasApiKey()) {
             throw MarketingApiException::notConfigured('YouTube belum dikonfigurasi. Isi YOUTUBE_API_KEY di backend/.env.');
         }
 
@@ -109,6 +114,7 @@ class YouTubeClient
             'q' => $query,
             'type' => 'video',
             'order' => 'relevance',
+            'safeSearch' => 'moderate',
             'maxResults' => max(1, min($max, 25)),
         ];
         if (! empty($extraParams['relevanceLanguage'])) {
@@ -116,6 +122,12 @@ class YouTubeClient
         }
         if (! empty($extraParams['regionCode'])) {
             $params['regionCode'] = (string) $extraParams['regionCode'];
+        }
+        if (! empty($extraParams['publishedAfter'])) {
+            $params['publishedAfter'] = (string) $extraParams['publishedAfter'];
+        }
+        if (! empty($extraParams['videoDuration']) && in_array($extraParams['videoDuration'], ['any', 'short', 'medium', 'long'], true)) {
+            $params['videoDuration'] = $extraParams['videoDuration'];
         }
         if (! empty($extraParams['order']) && in_array($extraParams['order'], ['relevance', 'viewCount', 'date'], true)) {
             $params['order'] = $extraParams['order'];
@@ -131,10 +143,15 @@ class YouTubeClient
         $ownChannel = (string) config('services.youtube.channel_id');
         $videos = array_values(array_filter(
             $this->hydrate($ids),
-            fn ($v) => $v['channelId'] !== $ownChannel,
+            fn ($v) => $ownChannel === '' || $v['channelId'] !== $ownChannel,
         ));
 
-        usort($videos, fn ($a, $b) => $b['views'] <=> $a['views']);
+        usort($videos, function ($a, $b) {
+            $scoreA = ($a['views'] ?? 0) * (1 + (($a['engagementRate'] ?? 0) / 10));
+            $scoreB = ($b['views'] ?? 0) * (1 + (($b['engagementRate'] ?? 0) / 10));
+
+            return $scoreB <=> $scoreA;
+        });
 
         return $videos;
     }

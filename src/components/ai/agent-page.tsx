@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ExternalLink, Loader2, Play } from "lucide-react";
+import { ArrowUpRight, ExternalLink, Loader2, Play, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { statusMeta } from "@/components/ai/agent-rail";
@@ -11,6 +11,7 @@ import {
   SectionHeading,
   StatusDot,
 } from "@/components/ai/primitives";
+import { useAiMarketingContext } from "@/context/AiMarketingContext";
 import { extractApiErrorMessage, useRunAgent } from "@/hooks/useAiDashboard";
 import type { AIAgent } from "@/lib/ai/types";
 
@@ -28,13 +29,16 @@ const connTone = {
 
 export function AgentPageShell({
   agent,
+  loading = false,
   children,
 }: {
   agent: AIAgent;
+  loading?: boolean;
   children?: ReactNode;
 }) {
   const meta = statusMeta[agent.status];
   const runAgent = useRunAgent();
+  const { openAsk } = useAiMarketingContext();
 
   async function handleRunNow() {
     try {
@@ -80,6 +84,14 @@ export function AgentPageShell({
               )}
               {runAgent.isPending ? "Running analysis…" : "Run Analysis"}
             </button>
+            <button
+              type="button"
+              onClick={openAsk}
+              className="inline-flex items-center gap-1.5 rounded-sm border border-ai/40 bg-ai/10 px-3 py-2 text-xs font-medium text-ai transition-colors hover:bg-ai/20"
+            >
+              <Sparkles className="size-3.5" />
+              Tanya AI
+            </button>
             <Link
               to="/admin/analytics"
               className="inline-flex items-center gap-1.5 rounded-sm border border-border-strong px-3 py-2 text-xs transition-colors hover:bg-accent"
@@ -92,16 +104,21 @@ export function AgentPageShell({
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          ["Status", meta.label],
-          ["Last run", agent.lastRun ? new Date(agent.lastRun).toLocaleString("id-ID") : "Never"],
-          ["Insights generated", String(agent.insightsCount)],
-          ["Pending approvals", String(agent.pendingApprovals)],
-        ].map(([label, value], i) => (
-          <Reveal key={label} delay={i * 60}>
-            <Panel hover className="p-5">
-              <p className="label-eyebrow">{label}</p>
-              <p className="text-display mt-2 text-xl">{value}</p>
-            </Panel>
+          { label: "Status", value: loading ? "—" : meta.label, to: "/admin/ai-marketing/settings" },
+          { label: "Last run", value: loading ? "—" : agent.lastRun ? new Date(agent.lastRun).toLocaleString("id-ID") : "Never", to: "/admin/ai-marketing/activity" },
+          { label: "Insights generated", value: loading ? "—" : String(agent.insightsCount), to: "/admin/ai-marketing/insights" },
+          { label: "Pending approvals", value: loading ? "—" : String(agent.pendingApprovals), to: "/admin/ai-marketing/ai-center/recommendations" },
+        ].map((item, i) => (
+          <Reveal key={item.label} delay={i * 60}>
+            <Link to={item.to} className="block">
+              <Panel hover className="p-5 transition-colors hover:border-ai/40">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="label-eyebrow">{item.label}</p>
+                  <ArrowUpRight className="size-3.5 text-muted-foreground/60" />
+                </div>
+                <p className="text-display mt-2 text-xl">{item.value}</p>
+              </Panel>
+            </Link>
           </Reveal>
         ))}
       </div>

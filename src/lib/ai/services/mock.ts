@@ -19,7 +19,19 @@ import {
 
 import { campaigns as campaignsFixture, impactRecords as impactFixture } from "../workspace-data";
 import { providers as providersFixture, routingStrategy, usageByAgent, usageByProvider, usageTotals } from "../system-data";
-import type { AICroService, AIApproval, AIRecommendation, AISeoService, AiChatContextKey, AiChatMessage, GoogleIntegrationStatus, MetaAdsIntegrationStatus, MetaIntegrationStatus } from "../types";
+import type {
+  AIActivity,
+  AIApproval,
+  AICroService,
+  AIInsight,
+  AIRecommendation,
+  AISeoService,
+  AiChatContextKey,
+  Campaign,
+  GoogleIntegrationStatus,
+  MetaAdsIntegrationStatus,
+  MetaIntegrationStatus,
+} from "../types";
 import type {
   AIActionService,
   AIActivityService,
@@ -42,6 +54,9 @@ const delay = (ms = 380) => new Promise((resolve) => setTimeout(resolve, ms));
 // within a session without a backend.
 let recommendationsState: AIRecommendation[] = recommendationsFixture.map((r) => ({ ...r }));
 let approvalsState: AIApproval[] = approvalsFixture.map((a) => ({ ...a }));
+let insightsState: AIInsight[] = insightsFixture.map((i) => ({ ...i }));
+let activityState: AIActivity[] = activityFixture.map((a) => ({ ...a, read: a.read ?? false }));
+let campaignsState: Campaign[] = campaignsFixture.map((c) => ({ ...c }));
 
 function syncApprovalFromRecommendation(rec: AIRecommendation) {
   approvalsState = approvalsState.map((a) =>
@@ -108,9 +123,13 @@ const recommendations: AIRecommendationService = {
 };
 
 const actions: AIActionService = {
-  async list() {
+  async list(params) {
     await delay(320);
-    return approvalsState;
+    return approvalsState.filter(
+      (a) =>
+        (!params?.status || a.status === params.status) &&
+        (!params?.agent || a.agent === params.agent),
+    );
   },
   async approveAndExecute(id) {
     await delay(700);
@@ -189,6 +208,20 @@ const providers: AIProviderService = {
     await delay(280);
     return providersFixture;
   },
+  async sync() {
+    await delay(280);
+    return providersFixture;
+  },
+  async test(provider) {
+    await delay(250);
+    return {
+      provider,
+      model: "mock-model",
+      status: "not_connected",
+      latencyMs: 0,
+      message: "Mode mock tidak menjalankan koneksi provider nyata.",
+    };
+  },
   async getRoutingStrategy() {
     await delay(280);
     return routingStrategy;
@@ -210,7 +243,7 @@ const providers: AIProviderService = {
 const insights: AIInsightService = {
   async list(params) {
     await delay(300);
-    return insightsFixture.filter(
+    return insightsState.filter(
       (i) =>
         (!params?.type || i.type === params.type) &&
         (!params?.agent || i.agent === params.agent),
@@ -218,33 +251,92 @@ const insights: AIInsightService = {
   },
   async getById(id) {
     await delay(200);
-    return insightsFixture.find((i) => i.id === id);
+    return insightsState.find((i) => i.id === id);
+  },
+  async dismiss(id) {
+    await delay(200);
+    insightsState = insightsState.filter((i) => i.id !== id);
+    return { ok: true, id };
   },
 };
 
 const activity: AIActivityService = {
   async list(params) {
     await delay(280);
-    return activityFixture.filter(
+    return activityState.filter(
       (a) =>
         (!params?.agent || a.agent === params.agent) &&
         (!params?.kind || a.kind === params.kind),
     );
+  },
+  async markRead(id) {
+    await delay(120);
+    const nowIso = new Date().toISOString();
+    activityState = activityState.map((a) =>
+      a.id === id ? { ...a, read: true, readAt: nowIso } : a,
+    );
+    return activityState.find((a) => a.id === id) ?? { ...activityFixture[0], id, read: true, readAt: nowIso };
+  },
+  async markAllRead() {
+    await delay(120);
+    const nowIso = new Date().toISOString();
+    activityState = activityState.map((a) => ({ ...a, read: true, readAt: a.readAt ?? nowIso }));
+    return { ok: true, unreadCount: 0 };
   },
 };
 
 const campaigns: AICampaignService = {
   async list() {
     await delay(320);
-    return campaignsFixture;
+    return campaignsState;
   },
   async getById(id) {
     await delay(220);
-    return campaignsFixture.find((c) => c.id === id);
+    return campaignsState.find((c) => c.id === id);
+  },
+  async create(body) {
+    await delay(250);
+    const created: Campaign = {
+      id: `cmp_${Date.now()}`,
+      name: body.name,
+      channel: body.channel,
+      health: body.health ?? "Good",
+      status: body.status ?? "Active",
+      summary: body.summary ?? "Kampanye baru",
+      budgetDaily: body.budget_daily,
+      goals: [],
+      plan: [
+        { id: "step_1", label: "Siapkan materi & copy sesuai brand Livora", state: "upcoming" },
+        { id: "step_2", label: "Pantau performa 7 hari pertama", state: "upcoming" },
+      ],
+      activeExperiments: [],
+      relatedRecommendationIds: [],
+      spark: [],
+      metric: { label: "Status", value: body.status ?? "Active", deltaLabel: "Baru dibuat", deltaDirection: "flat" },
+    };
+    campaignsState = [created, ...campaignsState];
+    return created;
+  },
+  async update(id, body) {
+    await delay(200);
+    campaignsState = campaignsState.map((c) =>
+      c.id === id
+        ? {
+            ...c,
+            ...(body.status ? { status: body.status } : {}),
+            ...(body.health ? { health: body.health } : {}),
+            ...(body.summary !== undefined ? { summary: body.summary } : {}),
+            ...(body.budget_daily !== undefined ? { budgetDaily: body.budget_daily } : {}),
+            ...(body.plan ? { plan: body.plan } : {}),
+            ...(body.goals ? { goals: body.goals } : {}),
+          }
+        : c,
+    );
+    return campaignsState.find((c) => c.id === id) as Campaign;
   },
   async sync() {
     await delay(300);
-    return { synced: campaignsFixture.length, campaigns: campaignsFixture };
+    return { synced: campaignsState.length, campaigns: campaignsState };
   },
 };
 
@@ -388,6 +480,10 @@ const marketing: AIMarketingService = {
     await delay(150);
     return { id, status: body.status as any };
   },
+  async deleteContentDraft(id) {
+    await delay(150);
+    return { ok: true, id };
+  },
   async pushContentDraftToEmail() {
     await delay(150);
     return { campaignId: 1, redirectPath: "/admin/marketing" };
@@ -409,6 +505,94 @@ const marketing: AIMarketingService = {
   async analyzeInspiration(p) {
     await delay(200);
     return { status: "not_configured" as const, query: p.query ?? "", references: [], recommendations: [], analysis: null };
+  },
+  async getMarketInsights(focus) {
+    await delay(200);
+    return {
+      status: "not_configured" as const,
+      message: "Mode mock: aktifkan backend Laravel & Gemini untuk analisis pasar web.",
+      generatedAt: new Date().toISOString(),
+      focus: focus ?? "interior design & furniture Indonesia",
+      marketSummary: null,
+      trendingAesthetics: [],
+      externalContentIdeas: [],
+      competitorAngles: [],
+      sources: [],
+    };
+  },
+  async analyzeMarket(p) {
+    return this.getMarketInsights(p?.focus);
+  },
+  async getLearningSummary(days = 30) {
+    await delay(150);
+    return {
+      generatedAt: new Date().toISOString(),
+      periodDays: days,
+      profitGrounding: {
+        ordersAndRevenue: {
+          paidOrdersCount: 0,
+          paidRevenueRp: 0,
+          pipelineOrdersCount: 0,
+          pipelineValueRp: 0,
+          avgOrderValueRp: 0,
+          topSellingItems: [],
+        },
+        consultationsPipeline: {
+          totalPeriod: 0,
+          unrespondedNew: 0,
+          activeHighIntent: 0,
+          completedCount: 0,
+          cancelledCount: 0,
+          byStage: {},
+          topServiceTypes: {},
+          recentHighPriority: [],
+        },
+        whatsappLiviBot: {
+          totalPeriod: 0,
+          pendingCount: 0,
+          answeredCount: 0,
+          pendingInquiries: [],
+        },
+        catalogDemand: {
+          topItems: [],
+          projects: [],
+          activePromos: [],
+        },
+        profitLeaks: [],
+      },
+      learningMemory: {
+        impact: {
+          positive: 0,
+          negative: 0,
+          neutral: 0,
+          monitoring: 0,
+          provenWinners: [],
+          underperforming: [],
+        },
+        governance: {
+          approvedOrExecuted: 0,
+          rejected: 0,
+          pending: 0,
+          preferredActionTypes: {},
+          recentlyRejectedTitles: [],
+        },
+        rules: [],
+      },
+    };
+  },
+  async addLearningRule(body) {
+    await delay(120);
+    return {
+      id: `learn_${Date.now()}`,
+      rule: body.rule,
+      category: body.category ?? "profit_focus",
+      source: "admin",
+      createdAt: new Date().toISOString(),
+    };
+  },
+  async deleteLearningRule(id) {
+    await delay(100);
+    return { ok: true, id };
   },
 };
 // Honest-empty: belum ada koneksi Search Console beneran di mode mock,
@@ -438,6 +622,22 @@ const seo: AISeoService = {
       totals: null,
       siteUrl: null,
     };
+  },
+  async getSearchConsoleSites() {
+    await delay(150);
+    return { sites: [], selected: null };
+  },
+  async selectSearchConsoleSite(siteUrl) {
+    await delay(150);
+    return { ok: true, siteUrl };
+  },
+  async draftReviewReply(reviewId) {
+    await delay(200);
+    return { reviewId, draft: "" };
+  },
+  async replyReview(_reviewId, comment) {
+    await delay(200);
+    return { comment };
   },
 };
 

@@ -81,6 +81,8 @@ export interface AIRecommendation {
   expectedImpact: string;
   confidence: number;
   agent: AIAgentId;
+  targetType?: string | null;
+  targetId?: number | null;
   createdAt: string;
   /** Priority used for Overview surfacing — distinct from execution risk. */
   priority?: AIPriority;
@@ -144,10 +146,15 @@ export interface AIActivity {
   time: string;
   actor: string;
   agent?: AIAgentId;
+  title?: string;
   message: string;
-  kind: "analysis" | "insight" | "recommendation" | "approval" | "execution" | "system";
+  kind: "analysis" | "insight" | "recommendation" | "approval" | "execution" | "draft" | "system";
   /** Optional audit-trail detail, shown on the Governance › Activity timeline. */
   recommendationId?: string;
+  href?: string;
+  read?: boolean;
+  readAt?: string | null;
+  payload?: Record<string, unknown> | null;
   nextReviewAt?: string;
 }
 
@@ -163,6 +170,35 @@ export interface AIKpi {
   spark: number[];
   live?: boolean;
 }
+export interface SearchConsoleQueryRow {
+  query: string;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+}
+
+export interface SearchConsolePageRow {
+  page: string;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+}
+
+export interface SearchConsoleSeriesPoint {
+  date: string;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+}
+
+export interface SearchConsoleSiteItem {
+  siteUrl: string;
+  permissionLevel: string;
+}
+
 export interface SearchConsoleSummary {
   connected: boolean;
   hasData: boolean;
@@ -170,6 +206,9 @@ export interface SearchConsoleSummary {
   period: { start: string; end: string; days: number } | null;
   totals: { clicks: number; impressions: number; ctr: number; position: number } | null;
   siteUrl: string | null;
+  series?: SearchConsoleSeriesPoint[];
+  topQueries?: SearchConsoleQueryRow[];
+  topPages?: SearchConsolePageRow[];
 }
 
 export interface CroFunnelStage {
@@ -183,6 +222,7 @@ export interface CroFunnelStage {
 
 export interface CroFunnelSummary {
   hasData: boolean;
+  days?: number;
   message: string | null;
   totals: {
     consultations: number;
@@ -194,6 +234,14 @@ export interface CroFunnelSummary {
     lostPrev30d: number;
   } | null;
   stages: CroFunnelStage[];
+  shopAndWa?: {
+    shop_carts_30d?: number;
+    wa_price_inquiries_30d?: number;
+    wa_inquiries_currently_pending?: number;
+    cart_to_wa_claim_rate_percent?: number | null;
+    promo_items_avg_views_28d?: number | null;
+    non_promo_items_avg_views_28d?: number | null;
+  };
   funnelEvents?: { event: string; count: number }[];
   unavailable: { metric: string; reason: string }[];
 }
@@ -235,6 +283,9 @@ export interface AiContentDraftItem {
   channel: "instagram" | "facebook" | "email" | "tiktok" | "youtube" | "website";
   headline: string | null;
   caption: string | null;
+  body?: string | null;
+  ctaLabel?: string | null;
+  ctaUrl?: string | null;
   mediaUrl: string | null;
   status: "needs_review" | "approved" | "scheduled" | "published" | "draft";
   scheduledFor: string | null;
@@ -258,7 +309,7 @@ export interface CreateContentDraftRequest {
 }
 
 export interface AICroService {
-  getFunnelSummary(): Promise<CroFunnelSummary>;
+  getFunnelSummary(days?: number): Promise<CroFunnelSummary>;
 }
 
 export interface LocalSeoReview {
@@ -267,6 +318,7 @@ export interface LocalSeoReview {
   rating: number | null;
   comment: string | null;
   replied: boolean;
+  replyComment?: string | null;
   createdAt: string | null;
 }
 
@@ -308,6 +360,8 @@ export interface AISeoService {
     payload: { reviewer?: string | null; rating?: number | null; comment?: string | null },
   ): Promise<{ reviewId: string; draft: string; provider?: string | null }>;
   replyReview?(reviewId: string, comment: string): Promise<{ comment: string; updateTime?: string }>;
+  getSearchConsoleSites?(): Promise<{ sites: SearchConsoleSiteItem[]; selected: string | null; message?: string }>;
+  selectSearchConsoleSite?(siteUrl: string | null): Promise<{ ok: boolean; siteUrl: string | null }>;
 }
 
 export interface SeoOpportunity {
@@ -377,7 +431,8 @@ export type CampaignPlanStepState = "done" | "active" | "upcoming";
 
 export interface CampaignPlanStep {
   id: string;
-  label: string;
+  label?: string;
+  title?: string;
   state: CampaignPlanStepState;
   recommendationId?: string;
 }
@@ -516,20 +571,134 @@ export type AiChatContextKey =
   | "campaigns"
   | "impact"
   | "actions"
+  | "approvals"
+  | "insights"
+  | "activity"
   | "recommendations"
   | "usage"
   | "providers"
+  | "settings"
   | "general";
+
+export interface AiExecutedOperation {
+  type: string;
+  status: "ok" | "error";
+  title: string;
+  detail: string;
+  href: string;
+}
 
 export interface AiChatMessage {
   id: string;
   role: "user" | "assistant";
   text: string;
+  provider?: string | null;
+  model?: string | null;
   createdAt: string;
   /** Set kalau balasan ini menghasilkan rekomendasi baru yang otomatis
    * ditulis ke Recommendations — dipakai buat nampilin kartu konfirmasi
    * kecil di bawah bubble chat. */
   recommendation?: AIRecommendation | null;
+  /** Daftar perintah sistem nyata yang langsung dieksekusi oleh Ask AI. */
+  executedActions?: AiExecutedOperation[];
+}
+
+export interface AiLearningRule {
+  id: string;
+  rule: string;
+  category: string;
+  source: string;
+  createdAt: string;
+}
+
+export interface AiLearningSummary {
+  generatedAt: string;
+  periodDays: number;
+  profitGrounding: {
+    ordersAndRevenue: {
+      paidOrdersCount: number;
+      paidRevenueRp: number;
+      pipelineOrdersCount: number;
+      pipelineValueRp: number;
+      avgOrderValueRp: number;
+      topSellingItems: { itemId: number | null; title: string; qty: number; revenueRp: number }[];
+    };
+    consultationsPipeline: {
+      totalPeriod: number;
+      unrespondedNew: number;
+      activeHighIntent: number;
+      completedCount: number;
+      cancelledCount: number;
+      byStage: Record<string, number>;
+      topServiceTypes: Record<string, number>;
+      recentHighPriority: {
+        id: number;
+        name: string;
+        status: string;
+        serviceType: string | null;
+        area: string | null;
+        phone: string | null;
+      }[];
+    };
+    whatsappLiviBot: {
+      totalPeriod: number;
+      pendingCount: number;
+      answeredCount: number;
+      pendingInquiries: {
+        id: number;
+        customerName: string;
+        phone: string | null;
+        itemsAsked: string[];
+        question: string | null;
+        createdAt: string;
+      }[];
+    };
+    catalogDemand: {
+      topItems: {
+        id: number;
+        title: string;
+        priceRp: number | null;
+        isOnPromo: boolean;
+        views: number;
+        clicks: number;
+        wishlists: number;
+        demandScore: number;
+      }[];
+      projects: { id: number; title: string; location: string | null }[];
+      activePromos: { id: number; title: string; label: string | null; cta: string | null }[];
+    };
+    profitLeaks: string[];
+  };
+  learningMemory: {
+    impact: {
+      positive: number;
+      negative: number;
+      neutral: number;
+      monitoring: number;
+      provenWinners: {
+        agent: string;
+        title: string;
+        metric: string;
+        changePct: number | null;
+        conclusion: string;
+      }[];
+      underperforming: {
+        agent: string;
+        title: string;
+        metric: string;
+        changePct: number | null;
+        conclusion: string;
+      }[];
+    };
+    governance: {
+      approvedOrExecuted: number;
+      rejected: number;
+      pending: number;
+      preferredActionTypes: Record<string, number>;
+      recentlyRejectedTitles: string[];
+    };
+    rules: AiLearningRule[];
+  };
 }
 
 export interface ChannelPerformanceItem {
@@ -554,7 +723,37 @@ export interface GoogleIntegrationStatus {
   connected: boolean;
   email: string | null;
   scope: string | null;
+  hasAnalyticsScope?: boolean;
+  message?: string | null;
   connectedAt: string | null;
+}
+
+export interface MarketExternalContentIdea {
+  id: string;
+  title: string;
+  channel: "instagram" | "tiktok" | "youtube" | "email" | "website" | "facebook";
+  format: string;
+  externalInspiration: string;
+  marketReason: string;
+  captionDraft: string;
+  ctaLabel: string;
+}
+
+export interface MarketIntelligenceReport {
+  status: "ok" | "not_configured" | "error";
+  message?: string;
+  generatedAt: string;
+  focus: string;
+  provider?: string;
+  model?: string;
+  webGrounded?: boolean;
+  cached?: boolean;
+  marketSummary: string | null;
+  trendingAesthetics: { name: string; whyNow: string; recommendedFocus: string }[];
+  externalContentIdeas: MarketExternalContentIdea[];
+  competitorAngles: string[];
+  sources: { title: string; url: string; domain?: string }[];
+  internalSignals?: Record<string, string[]>;
 }
 
 /**
@@ -722,6 +921,7 @@ export interface InspirationLibrary {
 export interface InspirationAnalysisRequest {
   query?: string;
   mode?: "auto_brand" | "topic";
+  scope?: "external" | "all";
   platforms?: VideoPlatform[];
   sourceTitle?: string;
   sourcePlatform?: VideoPlatform;
@@ -766,8 +966,15 @@ export interface RecommendedVideoItem {
 
 export interface CrossPlatformTrafficAnalysis {
   summary: string;
+  marketSummary?: string | null;
   platformNotes?: Partial<Record<VideoPlatform, string>>;
   platforms?: Record<VideoPlatform, PlatformTrafficOverview>;
+}
+
+export interface InspirationMarketInsights {
+  market_summary?: string | null;
+  trending_aesthetics?: { name: string; whyNow: string; recommendedFocus: string }[];
+  external_content_angles?: string[];
 }
 
 export interface InspirationAnalysis {
@@ -775,10 +982,12 @@ export interface InspirationAnalysis {
   message?: string;
   query: string;
   mode?: "auto_brand" | "topic";
+  scope?: "external" | "all";
   generatedAt?: string;
   references: InspirationVideo[];
   recommendations?: RecommendedVideoItem[];
   trafficAnalysis?: CrossPlatformTrafficAnalysis;
+  marketInsights?: InspirationMarketInsights | null;
   brandContextUsed?: LivoraBrandContextSummary;
   discoveryNotes?: Record<string, string>;
   analysis: { text: string; provider: string; model: string } | null;

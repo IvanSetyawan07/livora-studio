@@ -13,12 +13,14 @@ class AiInsight extends Model
         'title', 'description', 'type', 'severity', 'confidence', 'source',
         'agent_key', 'reasoning', 'what_happened', 'why_it_matters',
         'expected_impact', 'metrics', 'analytics_href', 'recommendation_id',
+        'dismissed_at',
     ];
 
     protected $casts = [
         'source' => 'array',
         'metrics' => 'array',
         'confidence' => 'integer',
+        'dismissed_at' => 'datetime',
     ];
 
     public function agent()

@@ -9,11 +9,16 @@ class AiProviderResource extends JsonResource
 {
     public function toArray($request): array
     {
-        // usage_share & cost sengaja tidak disimpan di tabel ai_providers,
-        // dihitung live dari ai_usage_logs supaya tidak pernah basi (lihat
-        // catatan di migration create_ai_providers_table).
-        $totalCost = (float) AiUsageLog::sum('cost');
-        $providerCost = (float) AiUsageLog::where('provider', $this->provider)->sum('cost');
+        // Gunakan agregat yang sudah di-inject controller bila ada (menghindari N+1 query).
+        if (isset($this->precomputed_cost)) {
+            $providerCost = (float) $this->precomputed_cost;
+            $totalCost = (float) ($this->precomputed_total_cost ?? 0.0);
+            $untracked = (int) ($this->precomputed_untracked ?? 0);
+        } else {
+            $totalCost = (float) AiUsageLog::sum('cost');
+            $providerCost = (float) AiUsageLog::where('provider', $this->provider)->sum('cost');
+            $untracked = (int) AiUsageLog::where('provider', $this->provider)->whereNull('cost')->count();
+        }
 
         return [
             'id' => (string) $this->id,
@@ -22,8 +27,7 @@ class AiProviderResource extends JsonResource
             'status' => $this->status,
             'usageShare' => $totalCost > 0 ? round(($providerCost / $totalCost) * 100, 1) : 0,
             'cost' => $providerCost,
-            // Jumlah panggilan yang harganya belum diketahui (cost null).
-            'untrackedRequests' => (int) AiUsageLog::where('provider', $this->provider)->whereNull('cost')->count(),
+            'untrackedRequests' => $untracked,
             'latencyMs' => $this->latency_ms ?? 0,
             'successRate' => (float) ($this->success_rate ?? 0),
         ];

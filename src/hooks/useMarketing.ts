@@ -11,6 +11,7 @@ import type {
   InspirationAnalysisRequest,
   InspirationLibrary,
   LeadsFunnel,
+  MarketIntelligenceReport,
   MarketingStatus,
 } from "@/lib/ai/types";
 
@@ -21,6 +22,7 @@ export const marketingKeys = {
   ads: (k: string) => ["ai", "marketing", "ads", k] as const,
   content: (k: string) => ["ai", "marketing", "content", k] as const,
   leads: (k: string) => ["ai", "marketing", "leads", k] as const,
+  market: (focus = "") => ["ai", "market", "insights", focus] as const,
 };
 
 /** Terjemahkan status envelope backend → status panel UI. */
@@ -113,5 +115,20 @@ export function useInspirationLibrary() {
 export function useInspirationAnalysis() {
   return useMutation<InspirationAnalysis, Error, InspirationAnalysisRequest>({
     mutationFn: (payload) => aiServices.marketing.analyzeInspiration(payload),
+  });
+}
+
+export function useMarketInsights(focus?: string) {
+  return useQuery<MarketIntelligenceReport>({
+    queryKey: marketingKeys.market(focus ?? ""),
+    queryFn: () => aiServices.marketing.getMarketInsights(focus),
+    staleTime: 15 * 60_000,
+    retry: false,
+  });
+}
+
+export function useAnalyzeMarket() {
+  return useMutation<MarketIntelligenceReport, Error, { focus?: string; refresh?: boolean }>({
+    mutationFn: (payload) => aiServices.marketing.analyzeMarket(payload),
   });
 }

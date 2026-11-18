@@ -51,11 +51,18 @@ export function RecommendationCard({
         <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", priorityDotClass[priority])} />
         <div className="min-w-0 flex-1 space-y-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className={cn("text-[11px] font-semibold tracking-wide uppercase", priorityTextClass[priority])}>
-              {impactLabel[priority]}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={cn("text-[11px] font-semibold tracking-wide uppercase", priorityTextClass[priority])}>
+                {impactLabel[priority]}
+              </span>
+              {rec.actionType ? (
+                <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground uppercase">
+                  {rec.actionType.replace(/_/g, " ")}
+                </span>
+              ) : null}
+            </div>
             {rec.status !== "pending" ? (
-              <Pill tone={rec.status === "rejected" ? "danger" : "success"} className="capitalize">
+              <Pill tone={rec.status === "rejected" || rec.status === "failed" ? "danger" : "success"} className="capitalize">
                 {rec.status}
               </Pill>
             ) : null}
@@ -63,6 +70,12 @@ export function RecommendationCard({
 
           <p className="text-sm font-medium text-foreground">{rec.title}</p>
           <p className="text-xs leading-relaxed text-muted-foreground">{rec.why ?? rec.description}</p>
+
+          {rec.suggestedAction ? (
+            <p className="rounded-sm border border-border/70 bg-secondary/40 px-3 py-2 text-xs text-foreground/85">
+              {rec.suggestedAction}
+            </p>
+          ) : null}
 
           {rec.change ? (
             <div className="flex items-center gap-2 font-mono text-xs text-foreground/80">
@@ -111,6 +124,13 @@ export function RecommendationCard({
                   Approve
                 </button>
               </div>
+            ) : rec.status === "approved" ? (
+              <Link
+                to="/admin/ai-marketing/ai-center/actions"
+                className="text-xs font-medium text-ai hover:underline"
+              >
+                Jalankan di Actions →
+              </Link>
             ) : null}
           </div>
         </div>

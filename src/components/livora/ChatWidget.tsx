@@ -125,7 +125,8 @@ export function ChatWidget() {
   const isHidden =
     /^\/collection\/[^/]+/.test(pathname) ||
     pathname === "/login" ||
-    pathname === "/register";
+    pathname === "/register" ||
+    pathname.startsWith("/admin");
   const [visible, setVisible] = useState(!isLanding && !isHidden);
 
   const lastId = messages.length ? messages[messages.length - 1].id : 0;
@@ -431,6 +432,10 @@ export function ChatWidget() {
       : status === "active"
       ? `Terhubung dengan ${session?.admin_name ?? "customer service"}`
       : "Design & product assistant";
+
+  if (isHidden) {
+    return null;
+  }
 
   return (
     <>

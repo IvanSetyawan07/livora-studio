@@ -70,22 +70,86 @@ class MetaGraphClient
 
     /**
      * Reach + engagement harian Facebook Page.
+     * Mencoba metrik Graph API v21+ (page_media_view / page_views_total) dan
+     * fallback ke pembacaan engagement post langsung bila metrik lama ditolak (#100).
+     *
      * @return array{reach: int, engagements: int, daily: list<array{date: string, reach: int, engagements: int}>}
      */
     public function facebookInsights(MarketingPeriod $period): array
     {
         $pageId = $this->pageId() ?? throw MetaGraphException::notConfigured('META_PAGE_ID belum diisi.');
-        $data = $this->get("/{$pageId}/insights", [
-            'metric' => 'page_impressions_unique,page_post_engagements',
-            'period' => 'day',
-            'since' => $period->fromDate(),
-            'until' => $period->to->addDay()->toDateString(),
-        ]);
+        $since = $period->fromDate();
+        $until = $period->to->addDay()->toDateString();
 
-        return $this->foldDaily($data['data'] ?? [], [
+        $metricCandidates = [
+            'page_media_view,page_post_engagements',
+            'page_views_total,page_post_engagements',
+            'page_post_engagements',
+        ];
+
+        $map = [
+            'page_media_view' => 'reach',
+            'page_views_total' => 'reach',
             'page_impressions_unique' => 'reach',
             'page_post_engagements' => 'engagements',
-        ]);
+        ];
+
+        $lastMetricException = null;
+        foreach ($metricCandidates as $metricSet) {
+            try {
+                $data = $this->get("/{$pageId}/insights", [
+                    'metric' => $metricSet,
+                    'period' => 'day',
+                    'since' => $since,
+                    'until' => $until,
+                ]);
+
+                return $this->foldDaily($data['data'] ?? [], $map);
+            } catch (MetaGraphException $e) {
+                if ($e->status === 'invalid_token' || $e->status === 'permission_required') {
+                    throw $e;
+                }
+                $lastMetricException = $e;
+            }
+        }
+
+        // Fallback terakhir bila seluruh metrik Page Insights deprecated/ditolak di Page tipe baru:
+        // baca engagement nyata dari daftar post di periode tersebut.
+        try {
+            $posts = $this->get("/{$pageId}/posts", [
+                'fields' => 'id,created_time,likes.summary(true),comments.summary(true),shares',
+                'since' => $period->from->timestamp,
+                'until' => $period->to->addDay()->timestamp,
+                'limit' => 50,
+            ]);
+
+            $rows = [];
+            $totalEng = 0;
+            foreach ($posts['data'] ?? [] as $post) {
+                $date = substr((string) ($post['created_time'] ?? ''), 0, 10);
+                if ($date === '') {
+                    continue;
+                }
+                $eng = (int) ($post['likes']['summary']['total_count'] ?? 0)
+                    + (int) ($post['comments']['summary']['total_count'] ?? 0)
+                    + (int) ($post['shares']['count'] ?? 0);
+                $totalEng += $eng;
+                $rows[$date] ??= ['date' => $date, 'reach' => 0, 'engagements' => 0];
+                $rows[$date]['engagements'] += $eng;
+            }
+            ksort($rows);
+
+            return [
+                'reach' => 0,
+                'engagements' => $totalEng,
+                'daily' => array_values($rows),
+            ];
+        } catch (\Throwable) {
+            if ($lastMetricException) {
+                throw $lastMetricException;
+            }
+            throw MetaGraphException::fromGraphResponse(['message' => 'Facebook Page insights tidak tersedia.'], 400);
+        }
     }
 
     /**

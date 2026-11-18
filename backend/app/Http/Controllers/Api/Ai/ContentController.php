@@ -225,6 +225,9 @@ class ContentController extends Controller
             'channel' => $d->channel,
             'headline' => $d->headline,
             'caption' => $d->caption,
+            'body' => $d->body,
+            'ctaLabel' => $d->cta_label,
+            'ctaUrl' => $d->cta_url,
             'mediaUrl' => $d->media_url,
             'status' => $d->status,
             'scheduledFor' => optional($d->scheduled_for)->toIso8601String(),
@@ -238,21 +241,32 @@ class ContentController extends Controller
     public function updateDraft(Request $request, AiContentDraft $draft)
     {
         $data = $request->validate([
+            'title' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'in:needs_review,approved,scheduled,published,draft'],
             'channel' => ['nullable', 'in:instagram,facebook,email,tiktok,youtube,website'],
             'caption' => ['nullable', 'string', 'max:4000'],
             'headline' => ['nullable', 'string', 'max:255'],
+            'body' => ['nullable', 'string', 'max:10000'],
+            'cta_label' => ['nullable', 'string', 'max:80'],
             'scheduled_for' => ['nullable', 'date'],
         ]);
 
-        $draft->update(array_filter($data, fn ($v) => $v !== null));
+        foreach (['title', 'status', 'channel', 'caption', 'headline', 'body', 'cta_label', 'scheduled_for'] as $field) {
+            if ($request->exists($field)) {
+                $draft->{$field} = $data[$field] ?? null;
+            }
+        }
+        $draft->save();
 
-        return response()->json([
-            'id' => (string) $draft->id,
-            'status' => $draft->status,
-            'channel' => $draft->channel,
-            'scheduledFor' => optional($draft->scheduled_for)->toIso8601String(),
-        ]);
+        return response()->json($this->formatDraft($draft->fresh()));
+    }
+
+    /** DELETE /api/ai/content/queue/{draft} */
+    public function deleteDraft(AiContentDraft $draft)
+    {
+        $draft->delete();
+
+        return response()->json(['ok' => true, 'id' => (string) $draft->id]);
     }
 
     /** POST /api/ai/content/queue/{draft}/email-draft */

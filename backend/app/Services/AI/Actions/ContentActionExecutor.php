@@ -37,14 +37,18 @@ class ContentActionExecutor implements ActionExecutor
         $mediaUrl = $this->resolveMediaUrl($recommendation);
         $copy = $this->generateCopy($recommendation);
 
-        // 1. Selalu perbarui atau buat Content Draft lokal di `ai_content_drafts`
+        // 1. Selalu perbarui atau buat Content Draft lokal di `ai_content_drafts` tanpa menimpa channel pilihan admin/AI
         $draft = null;
+        $channel = 'instagram';
         if (Schema::hasTable('ai_content_drafts')) {
+            $existingDraft = AiContentDraft::where('recommendation_id', $recommendation->id)->first();
+            $channel = $existingDraft?->channel ?: $this->inferChannel($recommendation);
+
             $draft = AiContentDraft::updateOrCreate(
                 ['recommendation_id' => $recommendation->id],
                 [
                     'title' => $recommendation->title,
-                    'channel' => 'facebook',
+                    'channel' => $channel,
                     'headline' => $copy['headline'],
                     'caption' => $copy['caption'],
                     'body' => $copy['email_body'],
@@ -58,35 +62,49 @@ class ContentActionExecutor implements ActionExecutor
             );
         }
 
-        // 2. Simpan juga draft Email Campaign siap edit di /admin/marketing
+        // 2. Simpan / perbarui draft Email Campaign siap edit di /admin/marketing tanpa duplikasi saat re-run
         $emailCampaign = null;
         if (Schema::hasTable('marketing_campaigns')) {
-            $emailCampaign = MarketingCampaign::create([
-                'campaign_name' => 'AI Content: '.Str::limit($recommendation->title, 80),
-                'subject' => $copy['headline'],
-                'section_label' => 'LIVORA JOURNAL',
-                'headline' => $copy['headline'],
-                'body' => $copy['email_body'],
-                'hero_image' => $mediaUrl,
-                'hero_image_alt' => $copy['headline'],
-                'cta_label' => 'Jelajahi Koleksi',
-                'cta_url' => rtrim((string) config('app.frontend_url', 'https://livoralcr.com'), '/').'/furniture',
-                'signature' => "With warmth,\nThe Livora Team",
-                'target' => 'all',
-                'status' => 'draft',
-            ]);
+            $emailCampaign = $draft?->marketing_campaign_id
+                ? MarketingCampaign::find($draft->marketing_campaign_id)
+                : null;
 
-            if ($draft) {
+            if ($emailCampaign) {
+                $emailCampaign->update([
+                    'subject' => $copy['headline'],
+                    'headline' => $copy['headline'],
+                    'body' => $copy['email_body'],
+                    'hero_image' => $mediaUrl,
+                    'hero_image_alt' => $copy['headline'],
+                ]);
+            } else {
+                $emailCampaign = MarketingCampaign::create([
+                    'campaign_name' => 'AI Content: '.Str::limit($recommendation->title, 80),
+                    'subject' => $copy['headline'],
+                    'section_label' => 'LIVORA JOURNAL',
+                    'headline' => $copy['headline'],
+                    'body' => $copy['email_body'],
+                    'hero_image' => $mediaUrl,
+                    'hero_image_alt' => $copy['headline'],
+                    'cta_label' => 'Jelajahi Koleksi',
+                    'cta_url' => rtrim((string) config('app.frontend_url', 'https://livoralcr.com'), '/').'/furniture',
+                    'signature' => "With warmth,\nThe Livora Team",
+                    'target' => 'all',
+                    'status' => 'draft',
+                ]);
+            }
+
+            if ($draft && $draft->marketing_campaign_id !== $emailCampaign->id) {
                 $draft->update(['marketing_campaign_id' => $emailCampaign->id]);
             }
         }
 
-        // 3. Jika Meta Graph tersambung, dorong unpublished post ke Facebook Page
+        // 3. Jika Meta Graph tersambung & targetnya memang Facebook, dorong unpublished post ke Facebook Page
         $token = config('services.meta_graph.access_token');
         $pageId = config('services.meta_graph.page_id');
         $version = config('services.meta_ads.api_version', 'v21.0');
 
-        if (filled($token) && filled($pageId)) {
+        if ($channel === 'facebook' && filled($token) && filled($pageId)) {
             $isPhotoUrl = $mediaUrl && Str::startsWith($mediaUrl, ['http://', 'https://']);
 
             $response = $isPhotoUrl
@@ -208,5 +226,18 @@ TXT;
             'caption' => $raw !== '' ? $raw : $rec->description,
             'email_body' => $raw !== '' ? $raw : $rec->description,
         ];
+    }
+
+    private function inferChannel(AiRecommendation $rec): string
+    {
+        $text = strtolower($rec->title.' '.$rec->description.' '.$rec->suggested_action);
+
+        return match (true) {
+            str_contains($text, 'tiktok') => 'tiktok',
+            str_contains($text, 'youtube') => 'youtube',
+            str_contains($text, 'email') || str_contains($text, 'newsletter') => 'email',
+            str_contains($text, 'facebook') => 'facebook',
+            default => 'instagram',
+        };
     }
 }

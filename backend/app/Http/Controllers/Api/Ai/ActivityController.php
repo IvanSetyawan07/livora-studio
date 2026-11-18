@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Ai\AiActivityResource;
 use App\Models\AiActivityLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class ActivityController extends Controller
 {
@@ -27,6 +28,41 @@ class ActivityController extends Controller
         $limit = (int) $request->query('limit', 50);
         $limit = max(1, min($limit, 200));
 
-        return AiActivityResource::collection($query->limit($limit)->get());
+        $items = $query->limit($limit)->get();
+        $hasReadCol = Schema::hasColumn('ai_activity_log', 'read_at');
+        $unreadCount = $hasReadCol ? AiActivityLog::whereNull('read_at')->count() : 0;
+
+        return AiActivityResource::collection($items)->additional([
+            'meta' => [
+                'unreadCount' => $unreadCount,
+            ],
+        ]);
+    }
+
+    /** POST /api/ai/activity/{activity}/read */
+    public function markRead(AiActivityLog $activity)
+    {
+        if (Schema::hasColumn('ai_activity_log', 'read_at') && $activity->read_at === null) {
+            $activity->update(['read_at' => now()]);
+        }
+
+        return (new AiActivityResource($activity->fresh()))->additional([
+            'unreadCount' => Schema::hasColumn('ai_activity_log', 'read_at')
+                ? AiActivityLog::whereNull('read_at')->count()
+                : 0,
+        ]);
+    }
+
+    /** POST /api/ai/activity/read-all */
+    public function markAllRead()
+    {
+        if (Schema::hasColumn('ai_activity_log', 'read_at')) {
+            AiActivityLog::whereNull('read_at')->update(['read_at' => now()]);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'unreadCount' => 0,
+        ]);
     }
 }

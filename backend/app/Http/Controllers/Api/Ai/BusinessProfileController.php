@@ -76,9 +76,12 @@ class BusinessProfileController extends Controller
 
         if (! is_array($payload)) {
             $payload = $this->fetchSummary($days);
-            // Hasil sukses di-cache lama (hemat kuota), hasil gagal cuma 1 menit
-            // supaya setelah user membetulkan izin/API, data langsung muncul.
-            Cache::put($key, $payload, $payload['hasData'] ? self::CACHE_TTL_SECONDS : 60);
+            // Saat berhasil, cache 30 menit. Saat gagal, cache 10 menit jika ada error kuota/permission
+            // agar refresh berulang di dashboard tidak menghabiskan sisa kuota API Google.
+            $unavailableText = strtolower(json_encode($payload['unavailable'] ?? []) ?: '');
+            $isQuotaOrPerm = str_contains($unavailableText, 'kuota') || str_contains($unavailableText, '429') || str_contains($unavailableText, 'mybusiness');
+            $ttl = $payload['hasData'] ? self::CACHE_TTL_SECONDS : ($isQuotaOrPerm ? 600 : 60);
+            Cache::put($key, $payload, $ttl);
         }
 
         return response()->json($payload);

@@ -6,21 +6,22 @@ use App\Services\Marketing\MarketingSection;
 use App\Services\Marketing\TikTokClient;
 use App\Services\Marketing\YouTubeClient;
 use App\Services\Meta\MetaGraphClient;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
  * Mesin Saran Video Lintas-Platform (Instagram · YouTube · TikTok) yang selaras
- * dengan Brand Identity LIVORA (PT. Langgeng Cipta Ruang).
+ * dengan Brand Identity LIVORA (PT. Langgeng Cipta Ruang) + Analisis Pasar.
  *
- * Prinsip ketat:
- *  - Setiap URL video WAJIB berasal dari API platform nyata (Meta Graph IG,
- *    TikTok Business API, YouTube Data API) atau Google Search Grounding chunk
- *    terverifikasi — AI tidak pernah mengarang tautan atau angka metrik.
- *  - Menggabungkan analisis traffic multi-platform + sinyal katalog Livora
- *    (produk, proyek interior, promo aktif) untuk memberi alasan, deskripsi,
- *    serta konsep produksi siap pakai ("Simpan ke Content Queue").
+ * Peningkatan utama:
+ *  - Fokus kuat ke konten EKSTERNAL (referensi kreator/kompetitor/tren luar, bukan cuma video sendiri).
+ *  - Pencarian YouTube memprioritaskan video 180 hari terakhir agar selalu update & relevan.
+ *  - Pencarian Google Search Grounding dijalankan per platform (IG Reels, TikTok, YouTube) dengan
+ *    filter URL video yang ketat (menolak blog/halaman profil generik).
+ *  - Setiap rekomendasi mengunci URL & metrik asli lewat `candidateId` + menyertakan alasan
+ *    berbasis Market Fit + Brand Fit + Traffic + konsep eksekusi 1-klik ke Content Queue.
  */
 class BrandVideoRecommendationService
 {
@@ -40,6 +41,7 @@ BRAND;
         private TikTokClient $tiktok,
         private MetaGraphClient $meta,
         private AIProviderManager $ai,
+        private ?MarketIntelligenceService $market = null,
     ) {
     }
 
@@ -82,13 +84,13 @@ BRAND;
             'trafficOverview' => $trafficOverview,
             'brandContext' => $this->readLivoraBrandContext(),
             'tiktokDiscoveryAvailable' => false,
-            'tiktokDiscoveryNote' => 'TikTok Business API & Instagram Graph API membaca video dan traffic akun Livora sendiri; penemuan referensi video publik lintas-kreator IG, TikTok & YouTube dijalankan lewat YouTube Data API + Gemini Google Search Grounding.',
+            'tiktokDiscoveryNote' => 'Video milik Livora ditarik dari Meta Graph IG, YouTube & TikTok Business API; rekomendasi video EKSTERNAL terkini diambil dari YouTube Data API (180 hari terakhir) + Gemini Google Search Grounding lintas platform.',
         ];
     }
 
     /**
-     * Analisis traffic lintas platform dan buat rekomendasi video terstruktur
-     * (beserta link nyata, alasan, deskripsi, dan konsep adaptasi untuk Livora).
+     * Analisis pasar + traffic lintas platform dan buat rekomendasi video terstruktur
+     * (beserta link nyata eksternal/terbaru, alasan, deskripsi, dan konsep adaptasi untuk Livora).
      *
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
@@ -98,26 +100,45 @@ BRAND;
         $query = trim((string) ($payload['query'] ?? ''));
         $requestedPlatforms = $this->normalizePlatforms($payload['platforms'] ?? null);
         $mode = ($payload['mode'] ?? null) ?: ($query === '' ? 'auto_brand' : 'topic');
+        $scope = ($payload['scope'] ?? 'external') === 'all' ? 'all' : 'external';
+        $sourceUrlNorm = strtolower(trim((string) ($payload['sourceUrl'] ?? '')));
 
         $library = $this->library();
         $brandContext = $library['brandContext'] ?? ['items' => [], 'projects' => [], 'promos' => []];
         $effectiveTopic = $query !== '' ? $query : $this->buildBrandDiscoveryQuery($brandContext);
+        $marketBrief = $this->market?->compactBrief();
 
         $discoveryNotes = [];
         $candidates = [];
 
-        // 1. YouTube Data API search (ketika YouTube terkonfigurasi dan platform dipilih).
+        // 1. YouTube Data API search — prioritaskan video TERBARU (180 hari terakhir) agar tren selalu update.
         if (in_array('youtube', $requestedPlatforms, true)) {
-            $ytQueries = [$effectiveTopic];
-            if ($mode === 'auto_brand') {
-                $ytQueries[] = 'luxury modern european interior design architecture house tour custom furniture';
-            }
+            $year = now()->format('Y');
+            $ytQueries = $mode === 'auto_brand'
+                ? [
+                    $effectiveTopic,
+                    "modern luxury interior design tour custom furniture {$year}",
+                    'minimalist european living room architecture showroom tour',
+                ]
+                : [$effectiveTopic];
+
+            $publishedAfter = now()->subDays(180)->toIso8601ZuluString();
             $ytResults = [];
+
             foreach (array_values(array_unique($ytQueries)) as $idx => $qStr) {
-                $section = MarketingSection::attempt(
-                    'content:inspiration:yt:'.md5(mb_strtolower($qStr)),
-                    fn () => ['videos' => $this->youtube->searchSimilar($qStr, $idx === 0 ? 8 : 5)]
-                );
+                $cacheKey = 'content:inspiration:yt:recent:'.md5(mb_strtolower($qStr).':'.$publishedAfter);
+                $section = MarketingSection::attempt($cacheKey, function () use ($qStr, $idx, $publishedAfter) {
+                    $recent = $this->youtube->searchSimilar($qStr, $idx === 0 ? 8 : 5, [
+                        'publishedAfter' => $publishedAfter,
+                    ]);
+                    if ($recent !== []) {
+                        return ['videos' => $recent];
+                    }
+
+                    // Jika 180 hari terakhir masih terlalu sedikit untuk keyword spesifik, perluas ke relevance tanpa batas waktu.
+                    return ['videos' => $this->youtube->searchSimilar($qStr, 6)];
+                });
+
                 if (($section['status'] ?? null) === 'ok') {
                     foreach ($section['videos'] ?? [] as $v) {
                         $ytResults[] = $v + ['sourceKind' => 'reference_creator'];
@@ -126,12 +147,13 @@ BRAND;
                     $discoveryNotes['youtube'] = $section['message'];
                 }
             }
-            foreach (array_slice($this->dedupeVideos($ytResults), 0, 8) as $v) {
+
+            foreach (array_slice($this->dedupeVideos($ytResults, $sourceUrlNorm), 0, 9) as $v) {
                 $candidates[] = $v;
             }
         }
 
-        // 2. Gemini Google Search Grounding untuk video Instagram Reels, TikTok & YouTube publik.
+        // 2. Gemini Google Search Grounding per platform target (IG Reels, TikTok, YouTube) dengan fokus tren 2026 & konten luar.
         if ($this->ai->hasProvider('gemini')) {
             $webDiscovered = $this->discoverViaGeminiSearch($effectiveTopic, $requestedPlatforms, $brandContext);
             foreach ($webDiscovered['candidates'] as $v) {
@@ -144,24 +166,35 @@ BRAND;
             $discoveryNotes['gemini'] = 'GEMINI_API_KEY belum diisi sehingga pencarian web Google Search Grounding untuk Instagram Reels/TikTok tidak dijalankan.';
         }
 
-        // 3. Fallback jujur: sertakan video berforma terbaik akun Livora sendiri bila suatu platform
-        //    terhubung namun belum ada referensi eksternal untuk platform tersebut.
-        $candidates = $this->dedupeVideos($candidates);
+        $candidates = $this->dedupeVideos($candidates, $sourceUrlNorm);
+
+        // 3. Fallback video milik sendiri HANYA jika scope === 'all' atau jika seluruh penemuan eksternal pada platform tsb kosong.
         foreach ($requestedPlatforms as $p) {
-            $hasPlatformExternal = collect($candidates)->contains(fn ($c) => ($c['platform'] ?? null) === $p);
-            if ($hasPlatformExternal) {
+            $hasExternal = collect($candidates)->contains(fn ($c) => ($c['platform'] ?? null) === $p);
+            if ($hasExternal) {
                 continue;
             }
-            $ownVideos = $library[$p]['videos'] ?? [];
-            foreach (array_slice($ownVideos, 0, 2) as $own) {
-                $candidates[] = $own + ['sourceKind' => 'livora_benchmark'];
+            if ($scope === 'all' || ! $this->ai->hasProvider('gemini')) {
+                $ownVideos = $library[$p]['videos'] ?? [];
+                foreach (array_slice($ownVideos, 0, 2) as $own) {
+                    if ($sourceUrlNorm !== '' && strtolower(trim((string) ($own['url'] ?? ''))) === $sourceUrlNorm) {
+                        continue;
+                    }
+                    $candidates[] = $own + ['sourceKind' => 'livora_benchmark'];
+                }
+            } else {
+                $discoveryNotes[$p] = "Belum ada video eksternal terverifikasi untuk {$p} pada topik ini (coba ubah kata kunci atau aktifkan API platform).";
             }
         }
 
-        $candidates = $this->balanceCandidatesByPlatform($this->dedupeVideos($candidates), $requestedPlatforms, 15);
+        $candidates = $this->balanceCandidatesByPlatform(
+            $this->dedupeVideos($candidates, $sourceUrlNorm),
+            $requestedPlatforms,
+            15
+        );
 
         if ($candidates === []) {
-            $anyPlatformConfigured = $this->youtube->isConfigured()
+            $anyPlatformConfigured = $this->youtube->hasApiKey()
                 || $this->meta->isConfigured()
                 || $this->tiktok->isConfigured()
                 || $this->ai->hasProvider('gemini');
@@ -169,15 +202,17 @@ BRAND;
             return [
                 'status' => $anyPlatformConfigured ? 'empty' : 'not_configured',
                 'message' => $anyPlatformConfigured
-                    ? 'Belum ada video terverifikasi yang cocok dari API YouTube, Meta Instagram, TikTok, maupun Google Search Grounding. Coba ubah topik pencarian atau periksa koneksi API.'
+                    ? 'Belum ada video eksternal terverifikasi yang cocok dari YouTube/IG/TikTok/Google Search. Coba perluas topik atau sertakan benchmark akun sendiri.'
                     : 'Belum ada integrasi video atau AI yang aktif. Isi GEMINI_API_KEY, YOUTUBE_API_KEY, META_GRAPH_ACCESS_TOKEN, atau TIKTOK_ACCESS_TOKEN di backend/.env.',
                 'query' => $query !== '' ? $query : $effectiveTopic,
                 'mode' => $mode,
+                'scope' => $scope,
                 'generatedAt' => now()->toIso8601String(),
                 'references' => [],
                 'recommendations' => [],
+                'marketInsights' => $marketBrief,
                 'trafficAnalysis' => [
-                    'summary' => 'Data video belum tersedia untuk dianalisis.',
+                    'summary' => 'Kandidat video belum mencukupi untuk dirangkum.',
                     'platforms' => $library['trafficOverview'],
                 ],
                 'brandContextUsed' => $brandContext,
@@ -186,7 +221,7 @@ BRAND;
             ];
         }
 
-        // Petakan candidateId agar AI hanya memilih video dari kandidat yang URL-nya nyata.
+        // Petakan candidateId agar AI hanya memilih video dari kandidat yang URL-nya nyata & terverifikasi.
         $candidateMap = [];
         foreach ($candidates as $i => $cand) {
             $cid = 'cand_'.($i + 1);
@@ -204,8 +239,10 @@ BRAND;
         try {
             $aiRes = $this->ai->ask(
                 $this->recommendationSystemPrompt($requestedPlatforms),
-                $this->recommendationUserPrompt($payload, $effectiveTopic, $requestedPlatforms, $library['trafficOverview'], $brandContext, $candidateMap),
-                'content'
+                $this->recommendationUserPrompt($payload, $effectiveTopic, $requestedPlatforms, $library['trafficOverview'], $brandContext, $candidateMap, $marketBrief),
+                'content',
+                null,
+                ['response_mime_type' => 'application/json', 'temperature' => 0.35, 'max_tokens' => 4096]
             );
 
             $parsed = self::parseRecommendationPayload($aiRes['text'], $candidateMap, $allowedTargets);
@@ -215,7 +252,7 @@ BRAND;
                 $structured = $parsed;
                 $analysisText = $this->formatSummaryText($parsed);
             } else {
-                $analysisError = 'AI merespons namun format rekomendasi terstruktur tidak valid; menampilkan kandidat video nyata dari platform.';
+                $analysisError = 'AI merespons namun format JSON tidak lengkap; menampilkan daftar video eksternal terverifikasi.';
                 $analysisText = trim((string) $aiRes['text']);
             }
         } catch (\Throwable $e) {
@@ -227,6 +264,7 @@ BRAND;
 
         $trafficAnalysis = [
             'summary' => $structured['trafficSummary'] ?? $this->buildDeterministicTrafficSummary($library['trafficOverview'], $candidateMap),
+            'marketSummary' => $structured['marketSummary'] ?? ($marketBrief['market_summary'] ?? null),
             'platformNotes' => $structured['platformNotes'] ?? $this->defaultPlatformFormatNotes($requestedPlatforms),
             'platforms' => $library['trafficOverview'],
         ];
@@ -235,9 +273,11 @@ BRAND;
             'status' => 'ok',
             'query' => $query !== '' ? $query : $effectiveTopic,
             'mode' => $mode,
+            'scope' => $scope,
             'generatedAt' => now()->toIso8601String(),
             'references' => array_values($candidateMap),
             'recommendations' => $recommendations,
+            'marketInsights' => $marketBrief,
             'trafficAnalysis' => $trafficAnalysis,
             'brandContextUsed' => $brandContext,
             'discoveryNotes' => $discoveryNotes,
@@ -263,8 +303,9 @@ BRAND;
     }
 
     /**
-     * Validasi URL video eksternal hasil API/grounding: tolak skema non-http,
-     * halaman bantuan/login generik, atau URL tanpa host valid.
+     * Validasi ketat URL video eksternal hasil API / Google Search Grounding:
+     * menolak skema non-http, URL palsu, halaman bantuan, halaman profil tanpa video,
+     * maupun domain artikel/blog non-video.
      */
     public static function isSafeExternalVideoUri(string $uri): bool
     {
@@ -274,53 +315,87 @@ BRAND;
         $scheme = strtolower((string) parse_url($uri, PHP_URL_SCHEME));
         $host = strtolower((string) parse_url($uri, PHP_URL_HOST));
         $path = strtolower((string) (parse_url($uri, PHP_URL_PATH) ?? ''));
+        $query = strtolower((string) (parse_url($uri, PHP_URL_QUERY) ?? ''));
 
         if (! in_array($scheme, ['http', 'https'], true) || $host === '') {
             return false;
         }
 
-        // Tolak URL placeholder/internal tidak jelas.
         if (in_array($host, ['example.com', 'localhost', '127.0.0.1'], true)) {
             return false;
         }
 
-        // Tolak halaman bantuan/kebijakan generik IG/TikTok/YT.
-        if (str_starts_with($host, 'help.') || str_starts_with($host, 'support.') || str_contains($path, '/privacy') || str_contains($path, '/terms')) {
+        if (str_starts_with($host, 'help.') || str_starts_with($host, 'support.') || str_contains($path, '/privacy') || str_contains($path, '/terms') || str_contains($path, '/login')) {
             return false;
         }
 
-        // Jika langsung domain IG / TikTok / YT, pastikan bukan root domain kosong ('/').
-        $isSocialHost = str_contains($host, 'instagram.com')
-            || str_contains($host, 'tiktok.com')
-            || str_contains($host, 'youtube.com')
-            || str_contains($host, 'youtu.be');
-        if ($isSocialHost && ($path === '' || $path === '/')) {
-            return false;
+        // Redirect resmi Google Search Grounding selalu berasal dari vertexaisearch.cloud.google.com.
+        if (str_contains($host, 'vertexaisearch.cloud.google.com')) {
+            return true;
         }
 
-        return true;
+        if (str_contains($host, 'instagram.com')) {
+            return (bool) preg_match('~^/(?:reel|reels|p|tv)/[^/]+~', $path);
+        }
+
+        if (str_contains($host, 'tiktok.com')) {
+            return (bool) preg_match('~^/@[^/]+/video/\d+~', $path) || str_contains($path, '/video/');
+        }
+
+        if (str_contains($host, 'youtube.com')) {
+            if (str_starts_with($path, '/shorts/') || str_starts_with($path, '/embed/')) {
+                return strlen($path) > 9;
+            }
+
+            return str_starts_with($path, '/watch') && str_contains($query, 'v=');
+        }
+
+        if ($host === 'youtu.be' || str_ends_with($host, '.youtu.be')) {
+            return strlen(trim($path, '/')) >= 8;
+        }
+
+        // Tolak domain non-video (blog, portal berita, dll.) agar kartu video selalu mengarah ke platform video nyata.
+        return false;
     }
 
     /**
-     * Tentukan platform ('instagram' | 'tiktok' | 'youtube') dari chunk grounding.
+     * Tentukan platform ('instagram' | 'tiktok' | 'youtube') dari chunk grounding secara ketat.
      *
      * @param  array<string, mixed>  $chunk
      */
     public static function inferPlatformFromChunk(array $chunk): ?string
     {
-        $haystack = strtolower(implode(' ', [
-            (string) ($chunk['uri'] ?? ''),
-            (string) ($chunk['domain'] ?? ''),
-            (string) ($chunk['title'] ?? ''),
-            implode(' ', is_array($chunk['snippets'] ?? null) ? $chunk['snippets'] : []),
-        ]));
+        $uri = strtolower((string) ($chunk['uri'] ?? ''));
+        $domain = strtolower((string) ($chunk['domain'] ?? ''));
+        $title = strtolower((string) ($chunk['title'] ?? ''));
+        $snippet = strtolower(implode(' ', is_array($chunk['snippets'] ?? null) ? $chunk['snippets'] : []));
 
-        return match (true) {
-            str_contains($haystack, 'instagram.com') || str_contains($haystack, 'reels') || str_contains($haystack, 'ig reel') => 'instagram',
-            str_contains($haystack, 'tiktok.com') || str_contains($haystack, 'tiktok') => 'tiktok',
-            str_contains($haystack, 'youtube.com') || str_contains($haystack, 'youtu.be') || str_contains($haystack, 'youtube') => 'youtube',
-            default => null,
-        };
+        // Prioritaskan kecocokan host/URI langsung sebelum domain/title.
+        if (str_contains($uri, 'instagram.com') || str_contains($domain, 'instagram.com')) {
+            return 'instagram';
+        }
+        if (str_contains($uri, 'tiktok.com') || str_contains($domain, 'tiktok.com')) {
+            return 'tiktok';
+        }
+        if (str_contains($uri, 'youtube.com') || str_contains($uri, 'youtu.be') || str_contains($domain, 'youtube.com') || str_contains($domain, 'youtu.be')) {
+            return 'youtube';
+        }
+
+        // Jika URI adalah redirect Google Grounding, wajib ada penyebutan platform + sinyal konten video.
+        if (str_contains($uri, 'vertexaisearch.cloud.google.com')) {
+            $combined = $title.' '.$snippet;
+            if (str_contains($combined, 'instagram') || str_contains($combined, 'reels') || str_contains($combined, 'ig reel')) {
+                return 'instagram';
+            }
+            if (str_contains($combined, 'tiktok')) {
+                return 'tiktok';
+            }
+            if (str_contains($combined, 'youtube') || str_contains($combined, 'shorts')) {
+                return 'youtube';
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -507,14 +582,15 @@ BRAND;
 
         return [
             'trafficSummary' => trim((string) ($data['trafficSummary'] ?? '')),
+            'marketSummary' => trim((string) ($data['marketSummary'] ?? '')),
             'platformNotes' => $platformNotes,
             'recommendations' => $recommendations,
         ];
     }
 
     /**
-     * Jalankan Gemini dengan tool google_search untuk menemukan tautan nyata
-     * Instagram Reels, TikTok, & YouTube publik yang cocok dengan identitas Livora.
+     * Jalankan Gemini Google Search Grounding terfokus per platform agar tautan
+     * Instagram Reels, TikTok, dan YouTube eksternal terkumpul seimbang & update (tahun ini).
      *
      * @param  list<string>  $platforms
      * @param  array<string, mixed>  $brandContext
@@ -524,93 +600,105 @@ BRAND;
     {
         $topItemTitle = $brandContext['items'][0]['name'] ?? 'bespoke luxury sofa & walnut table';
         $topProjectTitle = $brandContext['projects'][0]['name'] ?? 'modern European interior residence';
-        $platformList = implode(', ', array_map('strtoupper', $platforms));
+        $year = now()->format('Y');
+
+        $platformQueries = [];
+        foreach ($platforms as $p) {
+            if ($p === 'instagram') {
+                $platformQueries['instagram'] = "site:instagram.com/reel OR \"instagram.com/reel\" {$topic} luxury interior design architecture {$year}";
+            } elseif ($p === 'tiktok') {
+                $platformQueries['tiktok'] = "site:tiktok.com luxury interior design custom furniture tour room makeover {$topic} {$year}";
+            } elseif ($p === 'youtube' && ! $this->youtube->hasApiKey()) {
+                $platformQueries['youtube'] = "site:youtube.com luxury interior architecture tour bespoke furniture {$topic} {$year}";
+            }
+        }
+
+        if ($platformQueries === []) {
+            return ['candidates' => [], 'note' => null];
+        }
+
+        $cacheKey = 'content:inspiration:grounding:'.md5($topic.'|'.implode(',', array_keys($platformQueries)).'|'.$year);
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached)) {
+            return $cached;
+        }
 
         $sys = <<<'PROMPT'
-Kamu asisten riset konten video untuk Livora Studio (interior design, arsitektur & custom furniture mewah di Indonesia).
-Gunakan Google Search untuk mencari contoh VIDEO NYATA lintas platform (Instagram Reels, TikTok, dan YouTube) yang sejalan dengan estetika luxury modern & European quiet luxury.
-
-ATURAN KETAT:
-- JANGAN mengarang URL atau metrik views/likes.
-- Hanya jelaskan video yang benar-benar muncul di hasil pencarian Google Search pada sesi ini.
-- Fokus pada video berkualitas tinggi: room tour mewah, material craftsmanship (marmer/travertine/kayu walnut/bouclé), lighting arsitektural, styling showroom, atau custom cabinetry.
+Kamu adalah Market & Social Video Researcher untuk Livora Studio (arsitek, desain interior luxury Modern/European & custom furniture di Jakarta).
+Gunakan Google Search untuk mencari VIDEO NYATA EKSTERNAL dari kreator/studio/media desain interior — BUKAN halaman blog artikel atau halaman login/homepage umum.
+Jangan pernah mengarang URL atau angka views/likes. Fokus pada video terbaru yang menampilkan pencahayaan arsitektural, room tour vila/apartemen mewah, custom wardrobe/cabinetry, material travertine/marmer/kayu walnut/bouclé.
 PROMPT;
 
-        $user = <<<MSG
-Cari video referensi di platform {$platformList} yang cocok dengan topik "{$topic}" serta konteks brand LIVORA (produk unggulan: "{$topItemTitle}", proyek interior: "{$topProjectTitle}").
-Untuk masing-masing platform yang tersedia dari hasil search, jelaskan judul/kreator dan konsep visual videonya.
+        $candidates = [];
+        $notes = [];
+        $youtubeIdsToHydrate = [];
+
+        foreach ($platformQueries as $targetPlat => $searchFocus) {
+            $user = <<<MSG
+Cari minimal 3-4 VIDEO NYATA di platform {$targetPlat} (bukan milik akun Livora sendiri) untuk inspirasi topik "{$topic}" dan katalog unggulan ("{$topItemTitle}", "{$topProjectTitle}").
+Prioritaskan kata kunci pencarian: {$searchFocus}.
+Jelaskan isi visual tiap video tersebut secara ringkas berdasarkan hasil pencarian.
 MSG;
 
-        try {
-            $res = $this->ai->ask($sys, $user, 'content', 'gemini', [
-                'google_search' => true,
-                'temperature' => 0.2,
-                'max_tokens' => 2500,
-                'thinking_level' => 'low',
-            ]);
-        } catch (\Throwable $e) {
-            return ['candidates' => [], 'note' => 'Google Search Grounding tidak aktif: '.$e->getMessage()];
-        }
-
-        $chunks = is_array($res['groundingChunks'] ?? null) ? $res['groundingChunks'] : [];
-        if ($chunks === []) {
-            return [
-                'candidates' => [],
-                'note' => 'Google Search Grounding tidak mengembalikan sumber web eksternal pada pencarian ini.',
-            ];
-        }
-
-        $youtubeIdsToHydrate = [];
-        $candidates = [];
-
-        foreach ($chunks as $chunk) {
-            $uri = (string) ($chunk['uri'] ?? '');
-            if (! self::isSafeExternalVideoUri($uri)) {
+            try {
+                $res = $this->ai->ask($sys, $user, 'content', 'gemini', [
+                    'google_search' => true,
+                    'temperature' => 0.2,
+                    'max_tokens' => 1400,
+                    'thinking_level' => 'low',
+                ]);
+            } catch (\Throwable $e) {
+                $notes[] = strtoupper($targetPlat).' grounding: '.$e->getMessage();
                 continue;
             }
 
-            $platform = self::inferPlatformFromChunk($chunk);
-            if ($platform === null || ! in_array($platform, $platforms, true)) {
-                continue;
-            }
+            $chunks = is_array($res['groundingChunks'] ?? null) ? $res['groundingChunks'] : [];
+            foreach ($chunks as $chunk) {
+                $uri = (string) ($chunk['uri'] ?? '');
+                if (! self::isSafeExternalVideoUri($uri)) {
+                    continue;
+                }
 
-            // Jika chunk menyebut video ID YouTube eksplisit dan API YouTube aktif, antrekan untuk hydrate metrik nyata.
-            $rawTextForId = $uri.' '.(string) ($chunk['title'] ?? '').' '.implode(' ', $chunk['snippets'] ?? []);
-            if ($platform === 'youtube' && ($ytId = self::extractYouTubeVideoId($rawTextForId)) !== null) {
-                if ($this->youtube->isConfigured()) {
+                $inferred = self::inferPlatformFromChunk($chunk) ?? (str_contains(strtolower($uri), 'vertexaisearch.cloud.google.com') ? $targetPlat : null);
+                if ($inferred === null || ! in_array($inferred, $platforms, true)) {
+                    continue;
+                }
+
+                $rawTextForId = $uri.' '.(string) ($chunk['title'] ?? '').' '.implode(' ', $chunk['snippets'] ?? []);
+                if ($inferred === 'youtube' && ($ytId = self::extractYouTubeVideoId($rawTextForId)) !== null && $this->youtube->hasApiKey()) {
                     $youtubeIdsToHydrate[] = $ytId;
                     continue;
                 }
-            }
 
-            $title = trim((string) ($chunk['title'] ?? ''));
-            $snippet = trim(implode(' ', $chunk['snippets'] ?? []));
-            $genericTitles = ['instagram', 'instagram.com', 'www.instagram.com', 'tiktok', 'tiktok.com', 'www.tiktok.com', 'tiktok - make your day', 'youtube', 'youtube.com', 'www.youtube.com'];
-            if ($title === '' || in_array(strtolower($title), $genericTitles, true)) {
-                if ($snippet === '') {
-                    continue;
+                $title = trim((string) ($chunk['title'] ?? ''));
+                $snippet = trim(implode(' ', $chunk['snippets'] ?? []));
+                $genericTitles = ['instagram', 'instagram.com', 'www.instagram.com', 'tiktok', 'tiktok.com', 'www.tiktok.com', 'tiktok - make your day', 'youtube', 'youtube.com', 'www.youtube.com'];
+                if ($title === '' || in_array(strtolower($title), $genericTitles, true)) {
+                    if ($snippet === '') {
+                        continue;
+                    }
+                    $title = Str::limit($snippet, 95);
                 }
-                $title = Str::limit($snippet, 95);
-            }
 
-            $candidates[] = [
-                'platform' => $platform,
-                'sourceKind' => 'web_discovered',
-                'id' => 'web_'.md5($uri),
-                'title' => $title,
-                'channel' => trim((string) ($chunk['domain'] ?? '')) ?: strtoupper($platform),
-                'thumbnail' => '',
-                'url' => $uri,
-                'publishedAt' => null,
-                'durationSeconds' => null,
-                'views' => null,
-                'likes' => null,
-                'comments' => null,
-                'shares' => null,
-                'engagementRate' => null,
-                'metricsSource' => 'Google Search Grounding',
-                'webSnippet' => $snippet,
-            ];
+                $candidates[] = [
+                    'platform' => $inferred,
+                    'sourceKind' => 'web_discovered',
+                    'id' => 'web_'.md5($uri),
+                    'title' => $title,
+                    'channel' => trim((string) ($chunk['domain'] ?? '')) ?: strtoupper($inferred),
+                    'thumbnail' => '',
+                    'url' => $uri,
+                    'publishedAt' => null,
+                    'durationSeconds' => null,
+                    'views' => null,
+                    'likes' => null,
+                    'comments' => null,
+                    'shares' => null,
+                    'engagementRate' => null,
+                    'metricsSource' => 'Google Search Grounding ('.$year.')',
+                    'webSnippet' => $snippet,
+                ];
+            }
         }
 
         if ($youtubeIdsToHydrate !== []) {
@@ -619,11 +707,20 @@ MSG;
                     $candidates[] = $yt + ['sourceKind' => 'reference_creator'];
                 }
             } catch (\Throwable) {
-                // Jika hydrate gagal, kandidat lain tetap jalan normal.
+                // Kandidat non-YT tetap lanjut.
             }
         }
 
-        return ['candidates' => $this->dedupeVideos($candidates), 'note' => null];
+        $out = [
+            'candidates' => $this->dedupeVideos($candidates),
+            'note' => $notes !== [] ? implode(' | ', $notes) : null,
+        ];
+
+        if ($out['candidates'] !== []) {
+            Cache::put($cacheKey, $out, 15 * 60);
+        }
+
+        return $out;
     }
 
     /**
@@ -723,12 +820,15 @@ MSG;
      * @param  list<array<string, mixed>>  $videos
      * @return list<array<string, mixed>>
      */
-    private function dedupeVideos(array $videos): array
+    private function dedupeVideos(array $videos, string $excludeUrlNorm = ''): array
     {
         $seen = [];
         $out = [];
         foreach ($videos as $v) {
             $urlKey = strtolower(trim((string) ($v['url'] ?? '')));
+            if ($excludeUrlNorm !== '' && $urlKey === $excludeUrlNorm) {
+                continue;
+            }
             $idKey = strtolower((string) ($v['platform'] ?? '').':'.(string) ($v['id'] ?? ''));
             $key = $urlKey !== '' ? $urlKey : $idKey;
             if ($key === '' || isset($seen[$key])) {
@@ -804,28 +904,29 @@ MSG;
         $plats = implode(', ', $requestedPlatforms);
 
         return <<<PROMPT
-Kamu adalah Creative Video Strategist & Social Traffic Analyst untuk LIVORA Studio.
+Kamu adalah Creative Video Strategist, Market Analyst & Social Traffic Analyst untuk LIVORA Studio.
 
 === PROFIL BRAND IDENTITY LIVORA ===
 {$brand}
 
 === TUGAS KAMU ===
-1. Analisis traffic video Livora yang tersedia di berbagai platform ({$plats}) beserta daftar kandidat video nyata yang diberikan di input.
-2. Pilih 4 sampai 8 kandidat video terbaik yang mewakili platform yang tersedia (Instagram, YouTube, TikTok) berdasarkan keselarasan dengan brand identity "Quiet Luxury Modern & European" Livora serta potensi performanya.
-3. Untuk SETIAP video yang kamu rekomendasikan:
-   - Wajib gunakan `candidateId` persis dari daftar kandidat (JANGAN membuat video baru atau mengubah URL/angka metrik).
-   - `description`: Jelaskan secara konkret isi & format visual video tersebut (alur visual, gaya pengambilan gambar, pacing, fokus material/ruangan) dalam 2-3 kalimat.
-   - `reason`: Jelaskan alasan spesifik KENAPA video ini direkomendasikan untuk Livora — kaitkan langsung dengan Brand Identity Livora (luxury European/modern craftsmanship, target audiens high-end Jakarta) DAN analisis traffic/engagement nyata yang terlihat dari datanya (kalau metrik API null/temuan web, katakan jujur bahwa itu berbasis sinyal visibilitas pencarian & kesesuaian format platform).
-   - `trafficInsight`: Ringkasan 1 kalimat tentang performa angka / format durasi / posisi benchmarknya.
-   - `livoraAdaptation`: Buat konsep konten siap produksi versi LIVORA (`conceptTitle`, `hook` 3 detik pertama, `shotList` 3-4 adegan konkret, `captionDraft` elegan tanpa terkesan murahan, `recommendedChannel`, `targetFormat`, serta `targetType` + `targetId` dari daftar produk/proyek/promo Livora bila relevan).
+1. Analisis PASAR saat ini (selera audiens high-end Jakarta/Indonesia, estetika quiet luxury, showcase ruang & craftsmanship) PLUS analisis traffic video nyata pada platform ({$plats}).
+2. Pilih 4 sampai 8 kandidat video TERBAIK (prioritaskan video EKSTERNAL dari kreator/brand luar bila tersedia) yang paling tepat ditiru/diadaptasi untuk mengangkat positioning Livora.
+3. Untuk SETIAP video yang direkomendasikan:
+   - Wajib gunakan `candidateId` persis dari daftar kandidat (JANGAN membuat URL palsu atau mengarang angka metrik).
+   - `description`: Jelaskan secara konkret isi & gaya sinematografi video (opening, transisi kamera, material/ruangan, pacing).
+   - `reason`: Jelaskan alasan tajam KENAPA video ini direkomendasikan — hubungkan **tren pasar luar + estetika Brand Identity Livora + performa traffic/engagement aslinya** (bila temuan Search Grounding tanpa angka view API, nyatakan jujur bahwa nilainya berasal dari visibilitas tren pencarian & relevansi format platform saat ini).
+   - `trafficInsight`: Insight singkat membandingkan metrik/format video ini terhadap performa akun Livora atau benchmark platform.
+   - `livoraAdaptation`: Buat konsep konten siap produksi versi LIVORA (`conceptTitle`, `hook` 3 detik pertama, `shotList` 3-4 adegan konkret, `captionDraft` elegan berkelas tanpa terkesan hard-sell diskon murahan, `recommendedChannel`, `targetFormat`, `targetType` + `targetId` bila relevan ke produk/proyek/promo Livora).
 
 === ATURAN KETAT ===
 - JANGAN mengarang angka views, likes, atau engagement rate yang tidak ada di input.
 - Jawab dengan bahasa Indonesia profesional dan editorial.
-- Balas HANYA JSON valid (tanpa markdown code fence ```json```) mengikuti skema persis ini:
+- Balas HANYA JSON valid sesuai skema berikut:
 
 {
-  "trafficSummary": "ringkasan 2-3 kalimat analisis traffic lintas platform IG/YT/TikTok berdasarkan angka nyata yang diberikan",
+  "trafficSummary": "ringkasan 2 kalimat analisis traffic lintas platform IG/YT/TikTok berdasarkan data nyata",
+  "marketSummary": "ringkasan 2 kalimat analisis peluang pasar & tren konten eksternal saat ini untuk segmen Livora",
   "platformNotes": {
     "instagram": "format & strategi traffic optimal di IG Reels untuk Livora",
     "youtube": "format & strategi traffic optimal di YouTube Long/Shorts untuk Livora",
@@ -836,7 +937,7 @@ Kamu adalah Creative Video Strategist & Social Traffic Analyst untuk LIVORA Stud
       "candidateId": "cand_1",
       "brandFitScore": 92,
       "description": "deskripsi video...",
-      "reason": "alasan rekomendasi untuk brand identity & traffic Livora...",
+      "reason": "alasan rekomendasi untuk brand identity, tren pasar & traffic...",
       "trafficInsight": "insight traffic singkat...",
       "livoraAdaptation": {
         "conceptTitle": "judul konsep konten Livora",
@@ -860,6 +961,7 @@ PROMPT;
      * @param  array<string, mixed>  $trafficOverview
      * @param  array<string, mixed>  $brandContext
      * @param  array<string, array<string, mixed>>  $candidateMap
+     * @param  array<string, mixed>|null  $marketBrief
      */
     private function recommendationUserPrompt(
         array $payload,
@@ -868,6 +970,7 @@ PROMPT;
         array $trafficOverview,
         array $brandContext,
         array $candidateMap,
+        ?array $marketBrief = null,
     ): string {
         $compactCandidates = [];
         foreach ($candidateMap as $cid => $c) {
@@ -878,6 +981,7 @@ PROMPT;
                 'title' => $c['title'],
                 'channel' => $c['channel'] ?? null,
                 'url' => $c['url'],
+                'publishedAt' => $c['publishedAt'] ?? null,
                 'durationSeconds' => $c['durationSeconds'] ?? null,
                 'views' => $c['views'] ?? null,
                 'likes' => $c['likes'] ?? null,
@@ -890,8 +994,10 @@ PROMPT;
         }
 
         $dataBlock = [
+            'tanggal_analisis' => now()->toDateString(),
             'topik_fokus' => $effectiveTopic,
             'platform_dipilih' => $requestedPlatforms,
+            'ringkasan_riset_pasar' => $marketBrief,
             'video_acuan_user' => ! empty($payload['sourceTitle']) ? [
                 'title' => $payload['sourceTitle'],
                 'platform' => $payload['sourcePlatform'] ?? null,
@@ -903,7 +1009,7 @@ PROMPT;
             'kandidat_video_terverifikasi' => $compactCandidates,
         ];
 
-        return "Data nyata Livora & kandidat video untuk dianalisis:\n\n"
+        return "Data nyata Livora, konteks pasar & kandidat video untuk dianalisis:\n\n"
             .json_encode($dataBlock, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
@@ -920,7 +1026,6 @@ PROMPT;
             return $decoded;
         }
 
-        // Coba ekstrak blok {...} pertama bila model menyertakan teks pengantar.
         $start = strpos($clean, '{');
         $end = strrpos($clean, '}');
         if ($start !== false && $end !== false && $end > $start) {
@@ -947,6 +1052,9 @@ PROMPT;
     private function formatSummaryText(array $parsed): string
     {
         $lines = [];
+        if (! empty($parsed['marketSummary'])) {
+            $lines[] = $parsed['marketSummary'];
+        }
         if (! empty($parsed['trafficSummary'])) {
             $lines[] = $parsed['trafficSummary'];
         }
@@ -980,7 +1088,7 @@ PROMPT;
             $platform = (string) ($cand['platform'] ?? 'youtube');
             $viewsStr = isset($cand['views']) && is_numeric($cand['views'])
                 ? number_format((int) $cand['views']).' views'
-                : 'ditemukan lewat pencarian web';
+                : 'ditemukan lewat Google Search Grounding';
             $erStr = isset($cand['engagementRate']) && is_numeric($cand['engagementRate'])
                 ? ', engagement rate '.$cand['engagementRate'].'%'
                 : '';
@@ -1005,8 +1113,8 @@ PROMPT;
                 'description' => ! empty($cand['webSnippet'])
                     ? (string) $cand['webSnippet']
                     : 'Referensi video '.$platform.' dari '.$cand['channel'].' terkait interior design & showcase produk.',
-                'reason' => 'Direkomendasikan sebagai referensi nyata dari '.($cand['metricsSource'] ?? $platform).' ('.$viewsStr.$erStr.') yang relevan dengan segmen interior & furnitur Livora.',
-                'brandFitScore' => 78,
+                'reason' => 'Direkomendasikan sebagai referensi nyata dari '.($cand['metricsSource'] ?? $platform).' ('.$viewsStr.$erStr.') yang relevan dengan segmen interior luxury & furnitur Livora.',
+                'brandFitScore' => 80,
                 'trafficInsight' => $viewsStr.$erStr,
                 'livoraAdaptation' => [
                     'conceptTitle' => 'Adaptasi Konsep: '.Str::limit((string) $cand['title'], 70),

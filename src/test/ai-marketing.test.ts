@@ -1,16 +1,32 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import axios from "axios";
 
-vi.mock("@/lib/api", () => ({
-  api: {
-    get: vi.fn().mockResolvedValue({ data: {} }),
-    post: vi.fn().mockResolvedValue({ data: { ok: true } }),
-    patch: vi.fn().mockResolvedValue({ data: {} }),
-  },
-  API_BASE_URL: "http://127.0.0.1:8000/api",
-}));
+vi.mock("@/lib/api", () => {
+  class MockApiError extends Error {
+    kind: string;
+    status: number | null;
+    retriable: boolean;
+    constructor(init: { kind: string; message: string; status?: number | null; retriable?: boolean }) {
+      super(init.message);
+      this.kind = init.kind;
+      this.status = init.status ?? null;
+      this.retriable = init.retriable ?? true;
+    }
+  }
+  return {
+    ApiError: MockApiError,
+    isApiConfigured: true,
+    api: {
+      get: vi.fn().mockResolvedValue({ data: {} }),
+      post: vi.fn().mockResolvedValue({ data: { ok: true } }),
+      patch: vi.fn().mockResolvedValue({ data: {} }),
+      delete: vi.fn().mockResolvedValue({ data: { ok: true } }),
+    },
+    API_BASE_URL: "http://127.0.0.1:8000/api",
+  };
+});
 
-import { api } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
 import { captureUtmFromUrl, getStoredUtm, trackLivoraEvent } from "@/lib/analytics";
 import { extractApiErrorMessage } from "@/hooks/useAiDashboard";
 import { mockServices } from "@/lib/ai/services/mock";
@@ -58,6 +74,13 @@ describe("AI Marketing analytics & service helpers", () => {
   });
 
   it("extracts Laravel API error messages cleanly", () => {
+    const apiErr = new ApiError({
+      kind: "validation",
+      message: "Draft belum siap.",
+      status: 422,
+    });
+    expect(extractApiErrorMessage(apiErr, "Fallback")).toBe("Draft belum siap.");
+
     const axiosErr = new axios.AxiosError("Request failed", "422", undefined, undefined, {
       status: 422,
       statusText: "Unprocessable",
@@ -84,8 +107,22 @@ describe("AI Marketing analytics & service helpers", () => {
     const synced = await mockServices.campaigns.sync();
     expect(typeof synced.synced).toBe("number");
 
+    const createdCampaign = await mockServices.campaigns.create({
+      name: "Campaign Kemang Q4",
+      channel: "Instagram",
+    });
+    expect(createdCampaign.name).toBe("Campaign Kemang Q4");
+    const updatedCampaign = await mockServices.campaigns.update(createdCampaign.id, {
+      status: "Paused",
+    });
+    expect(updatedCampaign.status).toBe("Paused");
+
     const impact = await mockServices.impact.refresh();
     expect(typeof impact.updated).toBe("number");
+
+    const market = await mockServices.marketing.analyzeMarket({ focus: "japandi" });
+    expect(market.status).toBe("not_configured");
+    expect(market.focus).toBe("japandi");
 
     const lib = await mockServices.marketing.getInspirationLibrary();
     expect(lib.status).toBe("not_configured");
@@ -95,6 +132,7 @@ describe("AI Marketing analytics & service helpers", () => {
 
     const videoRec = await mockServices.marketing.analyzeInspiration({
       mode: "auto_brand",
+      scope: "external",
       platforms: ["instagram", "youtube", "tiktok"],
     });
     expect(videoRec.status).toBe("not_configured");
@@ -109,5 +147,31 @@ describe("AI Marketing analytics & service helpers", () => {
     expect(draft.channel).toBe("instagram");
     expect(draft.status).toBe("needs_review");
     expect(draft.meta?.reference_url).toBe("https://www.instagram.com/reel/abc/");
+
+    const deletedDraft = await mockServices.marketing.deleteContentDraft(draft.id);
+    expect(deletedDraft.ok).toBe(true);
+
+    const actList = await mockServices.activity.list();
+    if (actList.length > 0) {
+      const marked = await mockServices.activity.markRead(actList[0].id);
+      expect(marked.read).toBe(true);
+    }
+    const allRead = await mockServices.activity.markAllRead();
+    expect(allRead.unreadCount).toBe(0);
+
+    const providerPing = await mockServices.providers.test("gemini");
+    expect(providerPing.provider).toBe("gemini");
+
+    const learning = await mockServices.marketing.getLearningSummary(30);
+    expect(learning.periodDays).toBe(30);
+    expect(Array.isArray(learning.learningMemory.rules)).toBe(true);
+
+    const rule = await mockServices.marketing.addLearningRule({
+      rule: "Prioritaskan produk custom wardrobe margin tinggi",
+      category: "profit_focus",
+    });
+    expect(rule.category).toBe("profit_focus");
+    const removedRule = await mockServices.marketing.deleteLearningRule(rule.id);
+    expect(removedRule.ok).toBe(true);
   });
 });

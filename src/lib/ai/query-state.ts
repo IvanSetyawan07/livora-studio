@@ -5,6 +5,7 @@ import type { SectionState } from "./section-state";
 interface Options {
   /** Dianggap empty kalau true. Default: array kosong / null / undefined. */
   isEmpty?: (data: unknown) => boolean;
+  deriveNotConnected?: (data: unknown) => string | undefined;
   emptyMessage?: string;
   provider?: string;
   connectHref?: string;
@@ -56,6 +57,19 @@ export function toSectionState<T>(
   }
 
   if (q.isPending) return { ...base, status: "loading" };
+
+  if (q.data !== undefined) {
+    const notConnMsg = opts.deriveNotConnected?.(q.data);
+    if (notConnMsg !== undefined) {
+      return {
+        ...base,
+        status: "not_connected",
+        provider: opts.provider,
+        connectHref: opts.connectHref,
+        message: notConnMsg,
+      };
+    }
+  }
 
   const empty = (opts.isEmpty ?? defaultIsEmpty)(q.data);
   if (empty) return { ...base, status: "empty", message: opts.emptyMessage };

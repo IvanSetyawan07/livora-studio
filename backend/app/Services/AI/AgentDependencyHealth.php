@@ -31,6 +31,8 @@ class AgentDependencyHealth
 
     public function refresh(): void
     {
+        $this->providers->syncConfiguredProviders();
+
         $googleInfo = $this->googleTokens->connectionInfo();
         $googleConnected = $googleInfo !== null;
         $hasAnalytics = $this->ga4->isConfigured()

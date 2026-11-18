@@ -19,6 +19,8 @@ class AiRecommendationResource extends JsonResource
             'expectedImpact' => $this->expected_impact,
             'confidence' => $this->confidence,
             'agent' => $this->agent_key,
+            'targetType' => $this->target_type,
+            'targetId' => $this->target_id ? (int) $this->target_id : null,
             'createdAt' => optional($this->created_at)->toISOString(),
             'priority' => $this->priority,
             'why' => $this->why,
