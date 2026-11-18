@@ -9,6 +9,7 @@ use App\Services\Marketing\MarketingPeriod;
 use App\Services\Marketing\MarketingSection;
 use App\Services\Marketing\MetaAdsClient;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class AdsController extends Controller
 {
@@ -19,13 +20,22 @@ class AdsController extends Controller
     ) {
     }
 
-    /** GET /api/ai/ads/summary?from&to|days */
+    /** GET /api/ai/ads/summary?from&to|days&refresh=1 */
     public function summary(Request $request)
     {
         $period = MarketingPeriod::fromRequest($request, 30);
+        $metaAccountKey = $this->meta->accountId() ?: 'default';
+        $metaCacheKey = $period->cacheKey("ads:meta:{$metaAccountKey}");
+        $metaLifetimeKey = "ads:meta:lifetime:{$metaAccountKey}";
+
+        if ($request->boolean('refresh')) {
+            Cache::forget($metaCacheKey);
+            Cache::forget($metaLifetimeKey);
+            Cache::forget($period->cacheKey('ads:google'));
+        }
 
         $platforms = [
-            'meta' => MarketingSection::attempt($period->cacheKey('ads:meta'), fn () => [
+            'meta' => MarketingSection::attempt($metaCacheKey, fn () => [
                 'label' => 'Meta Ads',
                 'accountId' => $this->meta->accountId(),
                 'daily' => $this->meta->dailySeries($period),
@@ -38,6 +48,35 @@ class AdsController extends Controller
                 'campaigns' => $this->google->campaigns($period),
             ]),
         ];
+
+        $metaLifetime = null;
+        if ($this->meta->isConfigured()) {
+            $metaLifetime = MarketingSection::attempt($metaLifetimeKey, function () {
+                $summary = $this->meta->lifetimeInsights();
+                $campaigns = $this->meta->lifetimeCampaigns();
+                $accounts = $this->meta->accessibleAdAccounts();
+
+                return $summary + [
+                    'campaigns' => $campaigns,
+                    'accessibleAccounts' => $accounts,
+                ];
+            });
+
+            if (is_array($metaLifetime) && ($metaLifetime['status'] ?? null) === 'ok' && $this->learning !== null) {
+                try {
+                    $metaLifetime['roiAttribution'] = $this->learning->roiAndRoasAttribution(
+                        365,
+                        (float) ($metaLifetime['spend'] ?? 0),
+                        (float) ($metaLifetime['revenue'] ?? 0),
+                        (float) ($metaLifetime['leads'] ?? 0),
+                        (int) ($metaLifetime['clicks'] ?? 0),
+                        (int) ($metaLifetime['impressions'] ?? 0)
+                    );
+                } catch (\Throwable) {
+                    $metaLifetime['roiAttribution'] = null;
+                }
+            }
+        }
 
         $byDate = [];
         $campaigns = [];
@@ -182,10 +221,27 @@ class AdsController extends Controller
                 'ctr' => $totals['impressions'] > 0 ? round($totals['clicks'] / $totals['impressions'] * 100, 2) : null,
             ],
             'roiAttribution' => $roiAttribution,
+            'metaLifetime' => $metaLifetime,
             'series' => $series,
             'budgetSplit' => $split,
             'campaigns' => $campaigns,
             'platforms' => collect($platforms)->map(fn ($p) => collect($p)->except(['daily', 'campaigns'])->all())->all(),
+        ]);
+    }
+
+    /** POST /api/ai/ads/meta-account { accountId: string | null } */
+    public function selectMetaAccount(Request $request)
+    {
+        $data = $request->validate([
+            'accountId' => ['nullable', 'string', 'max:64'],
+        ]);
+
+        $active = $this->meta->setSelectedAccountId($data['accountId'] ?? null);
+        Cache::forget("ads:meta:lifetime:{$active}");
+
+        return response()->json([
+            'ok' => true,
+            'accountId' => $active,
         ]);
     }
 }

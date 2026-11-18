@@ -439,6 +439,10 @@ const marketing: AIMarketingService = {
     return { ...notConfigured(p), kpis: { spend: 0, leads: 0, cpl: null, roas: null, ctr: null }, series: [], budgetSplit: [], campaigns: [],
       platforms: { meta: { status: "not_configured" }, google: { status: "not_configured" } } };
   },
+  async selectMetaAdAccount(accountId) {
+    await delay(100);
+    return { ok: true, accountId };
+  },
   async getContentSummary(p) {
     await delay(200);
     const s = { status: "not_configured" as const };

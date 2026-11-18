@@ -23,7 +23,13 @@ const tooltip = {
 const shortDate = (d: string) => d.slice(5).replace("-", "/");
 const fmt = (n: number | null | undefined, digits = 0) =>
   n == null ? "—" : new Intl.NumberFormat("id-ID", { maximumFractionDigits: digits }).format(n);
-const money = (n: number | null | undefined) => (n == null ? "—" : `Rp ${fmt(n)}`);
+const money = (n: number | null | undefined, currency = "IDR") => {
+  if (n == null) return "—";
+  if (currency.toUpperCase() === "USD") {
+    return `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)}`;
+  }
+  return `Rp ${fmt(n)}`;
+};
 const deltaOf = (d: number | null | undefined): Pick<StatKpi, "delta" | "direction"> =>
   d == null ? {} : { delta: `${d > 0 ? "+" : ""}${d}%`, direction: d >= 0 ? "up" : "down" };
 
@@ -85,11 +91,19 @@ export function AdsKpiGrid() {
     return <Panel className="col-span-full"><SectionNotice state={state} title="Ads KPI" height="h-28" provider="Meta Ads / Instagram Boost" connectHref="/admin/ai-marketing/settings" /></Panel>;
   }
   const k = state.data.kpis;
+  const life = state.data.metaLifetime;
+  const currency = life?.currency || "IDR";
   const roiPct = k.roiPct ?? state.data.roiAttribution?.effectiveRoiPct ?? null;
   const kpis: StatKpi[] = [
-    { label: "Total Spend", value: money(k.spend) },
+    {
+      label: `Spend (${state.data.period.days}d)`,
+      value: money(k.spend, currency),
+      ...(k.spend === 0 && (life?.spend ?? 0) > 0
+        ? { delta: `All-time: ${money(life?.spend, currency)}`, direction: "flat" as const }
+        : {}),
+    },
     { label: "Leads (Ads + Funnel)", value: fmt(k.leads, 1) },
-    { label: "Cost per Lead", value: money(k.cpl) },
+    { label: "Cost per Lead", value: money(k.cpl, currency) },
     {
       label: "Blended ROAS & ROI",
       value: k.roas == null ? "—" : `${k.roas}x`,
@@ -212,13 +226,24 @@ export function AdsPlatformRows() {
 export function ActiveCampaignsTable() {
   const { state } = useAdsSummary();
   const [search, setSearch] = useState("");
+  const [scope, setScope] = useState<"auto" | "period" | "lifetime">("auto");
   const [platformFilter, setPlatformFilter] = useState<"all" | "meta" | "google">("all");
   const [sortBy, setSortBy] = useState<"spend" | "leads" | "cpl">("spend");
 
+  const periodCampaigns = state.status === "data" ? state.data.campaigns : [];
+  const lifetimeCampaigns = state.status === "data" ? (state.data.metaLifetime?.campaigns ?? []) : [];
+  const currency = state.status === "data" ? (state.data.metaLifetime?.currency || "IDR") : "IDR";
+
+  const activeScope: "period" | "lifetime" =
+    scope === "auto"
+      ? (periodCampaigns.length > 0 ? "period" : (lifetimeCampaigns.length > 0 ? "lifetime" : "period"))
+      : scope;
+
+  const sourceRows = activeScope === "lifetime" ? lifetimeCampaigns : periodCampaigns;
+
   const rows = useMemo(() => {
-    if (state.status !== "data") return [];
     const q = search.trim().toLowerCase();
-    return [...state.data.campaigns]
+    return [...sourceRows]
       .filter((c) => {
         if (platformFilter !== "all" && c.platform !== platformFilter) return false;
         if (q && !c.name.toLowerCase().includes(q)) return false;
@@ -229,20 +254,55 @@ export function ActiveCampaignsTable() {
         if (sortBy === "cpl") return (a.cpl ?? Infinity) - (b.cpl ?? Infinity);
         return (b.spend ?? 0) - (a.spend ?? 0);
       });
-  }, [state, search, platformFilter, sortBy]);
+  }, [sourceRows, search, platformFilter, sortBy]);
 
   return (
     <Panel className="p-5 sm:p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-display rule-accent text-lg">Active Campaigns</h3>
-        {state.status === "data" && state.data.campaigns.length > 0 ? (
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-display rule-accent text-lg">
+              {activeScope === "lifetime" ? "Riwayat Semua Pengeluaran Boost & Campaign (All-Time)" : "Active Campaigns"}
+            </h3>
+            {lifetimeCampaigns.length > 0 ? (
+              <div className="inline-flex rounded-sm border border-border p-0.5 text-[10px]">
+                <button
+                  type="button"
+                  onClick={() => setScope("period")}
+                  className={cn(
+                    "rounded-sm px-2 py-0.5 transition-colors",
+                    activeScope === "period" ? "bg-ai/15 font-medium text-ai" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  Periode ({periodCampaigns.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScope("lifetime")}
+                  className={cn(
+                    "rounded-sm px-2 py-0.5 transition-colors",
+                    activeScope === "lifetime" ? "bg-ai/15 font-medium text-ai" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  All-Time ({lifetimeCampaigns.length})
+                </button>
+              </div>
+            ) : null}
+          </div>
+          {activeScope === "lifetime" && periodCampaigns.length === 0 ? (
+            <p className="text-[11px] text-muted-foreground">
+              Menampilkan riwayat seluruh IG Boost & Meta campaign sepanjang waktu karena belum ada transaksi Boost di jendela tanggal periode terpilih.
+            </p>
+          ) : null}
+        </div>
+        {state.status === "data" && sourceRows.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari campaign..."
+                placeholder="Cari campaign / boost..."
                 className="h-8 w-44 rounded-sm border border-border bg-secondary/60 pl-8 pr-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-ai focus:outline-none"
               />
             </div>
@@ -274,17 +334,17 @@ export function ActiveCampaignsTable() {
           </div>
         ) : null}
       </div>
-      {state.status === "data" && state.data.campaigns.length > 0 ? (
+      {state.status === "data" && sourceRows.length > 0 ? (
         rows.length === 0 ? (
           <p className="rounded-sm border border-dashed border-border p-8 text-center text-xs text-muted-foreground">
-            Tidak ada campaign yang cocok dengan filter "{search}".
+            Tidak ada campaign atau IG Boost yang cocok dengan filter "{search}".
           </p>
         ) : (
           <div className="scroll-rail overflow-x-auto">
-            <table className="w-full min-w-[760px] text-sm">
+            <table className="w-full min-w-[820px] text-sm">
               <thead>
                 <tr className="text-left text-[11px] tracking-wide text-muted-foreground uppercase">
-                  {["Campaign", "Platform", "Spend", "Impr.", "Clicks", "CTR", "Leads", "CPL", "Status"].map((h) => (
+                  {["Boost / Campaign", "Platform", "Periode", "Spend", "Impr.", "Clicks", "CTR", "Leads / DM", "CPL", "Status"].map((h) => (
                     <th key={h} className="pb-2 pr-4 font-medium">{h}</th>
                   ))}
                 </tr>
@@ -292,19 +352,23 @@ export function ActiveCampaignsTable() {
               <tbody>
                 {rows.map((c) => {
                   const ctr = c.impressions > 0 ? ((c.clicks / c.impressions) * 100).toFixed(2) : null;
-                  const normalizedStatus = c.status.toLowerCase();
+                  const normalizedStatus = (c.status || "unknown").toLowerCase();
+                  const dateLabel = c.dateStart
+                    ? (c.dateStop && c.dateStop !== c.dateStart ? `${c.dateStart} → ${c.dateStop}` : c.dateStart)
+                    : "—";
                   return (
-                    <tr key={`${c.platform}-${c.id}`} className="border-t border-border hover:bg-accent/30">
-                      <td className="py-2.5 pr-4 font-medium text-foreground">{c.name}</td>
+                    <tr key={`${activeScope}-${c.platform}-${c.id}`} className="border-t border-border hover:bg-accent/30">
+                      <td className="max-w-[260px] py-2.5 pr-4 font-medium text-foreground">{c.name}</td>
                       <td className="py-2.5 pr-4 text-xs text-muted-foreground">
-                        {c.platform === "meta" ? "Meta Ads" : "Google Ads"}
+                        {c.platform === "meta" ? "Meta / IG Boost" : "Google Ads"}
                       </td>
-                      <td className="num py-2.5 pr-4">{money(c.spend)}</td>
+                      <td className="py-2.5 pr-4 font-mono text-[11px] text-muted-foreground whitespace-nowrap">{dateLabel}</td>
+                      <td className="num py-2.5 pr-4 font-semibold text-foreground">{money(c.spend, currency)}</td>
                       <td className="num py-2.5 pr-4 text-xs text-muted-foreground">{fmt(c.impressions)}</td>
                       <td className="num py-2.5 pr-4 text-xs text-muted-foreground">{fmt(c.clicks)}</td>
                       <td className="num py-2.5 pr-4 text-xs">{ctr ? `${ctr}%` : "—"}</td>
                       <td className="num py-2.5 pr-4">{fmt(c.leads, 1)}</td>
-                      <td className="num py-2.5 pr-4">{money(c.cpl)}</td>
+                      <td className="num py-2.5 pr-4">{money(c.cpl, currency)}</td>
                       <td className="py-2.5 pr-4">
                         <Pill tone={normalizedStatus === "active" || normalizedStatus === "enabled" ? "success" : "neutral"}>
                           {c.status}
@@ -451,6 +515,9 @@ export function AdRoasKpiCard({ index = 5 }: { index?: number }) {
   const { query, state } = useAdsSummary();
   const raw = query.data ?? (state.status === "data" ? state.data : undefined);
   const roi = raw?.roiAttribution;
+  const life = raw?.metaLifetime;
+  const lifeRoi = life?.roiAttribution;
+  const currency = life?.currency || "IDR";
   const k = raw?.kpis;
 
   if (state.status === "loading") {
@@ -465,15 +532,40 @@ export function AdRoasKpiCard({ index = 5 }: { index?: number }) {
       value: k.roas,
       decimals: 2,
       suffix: "x",
-      deltaLabel: roiPct != null ? `ROI ${roiPct > 0 ? "+" : ""}${roiPct}%` : `Spend ${money(k.spend)}`,
+      deltaLabel: roiPct != null ? `ROI ${roiPct > 0 ? "+" : ""}${roiPct}%` : `Spend ${money(k.spend, currency)}`,
       deltaDirection: roiPct != null ? (roiPct >= 0 ? "up" : "down") : "flat",
       spark: (raw?.series ?? []).map((r) => (r.spend > 0 ? r.revenue / r.spend : 0)),
-      footnote: `Spend ${money(k.spend)} · CPL ${money(k.cpl)}`,
+      footnote: `Spend ${money(k.spend, currency)} · CPL ${money(k.cpl, currency)}`,
       live: true,
     };
     return (
       <KpiCard
         label="ROAS & ROI (Boost)"
+        index={index}
+        state={{ status: "data", data: kpi, lastUpdatedAt: state.lastUpdatedAt, isRefreshing: state.isRefreshing, retry: state.retry }}
+        href="/admin/ai-marketing/ads"
+      />
+    );
+  }
+
+  if (life && (life.spend ?? 0) > 0) {
+    const lifeRoasVal = lifeRoi?.effectiveRoas ?? 0;
+    const lifeRoiPct = lifeRoi?.effectiveRoiPct ?? null;
+    const kpi: AIKpi = {
+      id: "ads-roas-lifetime",
+      label: "ROAS & ROI (All-Time)",
+      value: lifeRoasVal,
+      decimals: 2,
+      suffix: "x",
+      deltaLabel: lifeRoiPct != null ? `ROI ${lifeRoiPct > 0 ? "+" : ""}${lifeRoiPct}%` : `Total Boost ${money(life.spend, currency)}`,
+      deltaDirection: lifeRoiPct != null ? (lifeRoiPct >= 0 ? "up" : "down") : "flat",
+      spark: [],
+      footnote: `Spend All-Time ${money(life.spend, currency)} · ${fmt(life.clicks)} klik`,
+      live: true,
+    };
+    return (
+      <KpiCard
+        label="ROAS & ROI (All-Time)"
         index={index}
         state={{ status: "data", data: kpi, lastUpdatedAt: state.lastUpdatedAt, isRefreshing: state.isRefreshing, retry: state.retry }}
         href="/admin/ai-marketing/ads"

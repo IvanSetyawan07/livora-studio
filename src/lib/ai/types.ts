@@ -861,6 +861,52 @@ export interface AnalyticsOverview {
 
 export interface AdsPlatformStatus { status: MarketingStatus; message?: string; label?: string; accountId?: string | null }
 
+export interface MetaAdAccountOption {
+  id: string;
+  name: string;
+  currency: string;
+  accountStatus: number;
+  lifetimeSpend: number;
+}
+
+export interface MetaLifetimeCampaign {
+  id: string;
+  name: string;
+  platform: "meta" | "google";
+  status: string;
+  objective?: string | null;
+  spend: number;
+  leads: number;
+  impressions: number;
+  reach?: number;
+  clicks: number;
+  revenue: number;
+  cpl: number | null;
+  dateStart?: string | null;
+  dateStop?: string | null;
+}
+
+export interface MetaLifetimeSummary {
+  status: MarketingStatus;
+  message?: string;
+  accountId?: string;
+  accountName?: string | null;
+  currency?: string;
+  spend?: number;
+  impressions?: number;
+  reach?: number;
+  clicks?: number;
+  leads?: number;
+  revenue?: number;
+  ctr?: number | null;
+  cpl?: number | null;
+  dateStart?: string | null;
+  dateStop?: string | null;
+  campaigns?: MetaLifetimeCampaign[];
+  accessibleAccounts?: MetaAdAccountOption[];
+  roiAttribution?: AiRoiAttribution | null;
+}
+
 export interface AdsSummary {
   status: MarketingStatus;
   period: MarketingPeriodInfo;
@@ -877,9 +923,10 @@ export interface AdsSummary {
     ctr: number | null;
   };
   roiAttribution?: AiRoiAttribution | null;
+  metaLifetime?: MetaLifetimeSummary | null;
   series: { date: string; spend: number; leads: number; clicks: number; impressions: number; revenue: number; cpl: number | null }[];
   budgetSplit: { platform: "meta" | "google"; label: string; spend: number }[];
-  campaigns: { id: string; name: string; platform: "meta" | "google"; spend: number; leads: number; cpl: number | null; status: string; impressions: number; clicks: number; revenue: number }[];
+  campaigns: { id: string; name: string; platform: "meta" | "google"; spend: number; leads: number; cpl: number | null; status: string; impressions: number; clicks: number; revenue: number; reach?: number; dateStart?: string | null; dateStop?: string | null }[];
   platforms: { meta: AdsPlatformStatus; google: AdsPlatformStatus };
 }
 

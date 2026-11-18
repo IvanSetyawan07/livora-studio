@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Calculator, CheckCircle2, Instagram, Loader2, Plus, Sparkles, Trash2, TrendingUp, Unlink } from "lucide-react";
+import { AlertTriangle, Calculator, CheckCircle2, Instagram, Loader2, Plus, RefreshCw, Sparkles, Trash2, TrendingUp, Unlink } from "lucide-react";
 import { toast } from "sonner";
 import { AgentPageShell } from "@/components/ai/agent-page";
 import { InsightCard } from "@/components/ai/insight-card";
@@ -19,9 +19,15 @@ import {
 import { useAdsSummary } from "@/hooks/useMarketing";
 import { useAiMarketingContext, usePageContext } from "@/context/AiMarketingContext";
 import { ActiveCampaignsTable, AdsKpiGrid, AdsPlatformRows, BudgetSplitPanel, CtrImpressionsPanel, SpendLeadsTrendPanel } from "@/components/ai/marketing-panels";
+import { cn } from "@/lib/utils";
 
-const fmtRp = (n: number | null | undefined) =>
-  n == null ? "—" : `Rp ${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(n)}`;
+const fmtRp = (n: number | null | undefined, currency = "IDR") => {
+  if (n == null) return "—";
+  if (currency.toUpperCase() === "USD") {
+    return `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)}`;
+  }
+  return `Rp ${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(n)}`;
+};
 const fmtNum = (n: number | null | undefined) =>
   n == null ? "—" : new Intl.NumberFormat("id-ID", { maximumFractionDigits: 1 }).format(n);
 
@@ -422,6 +428,186 @@ function IgBoostRoiAttributionPanel() {
   );
 }
 
+function MetaLifetimeBoostOverviewPanel() {
+  const { query, refreshLive, selectMetaAccount } = useAdsSummary();
+  const life = query.data?.metaLifetime;
+  const metaStatus = query.data?.platforms?.meta?.status;
+
+  if (!life && metaStatus !== "ok") {
+    return null;
+  }
+
+  const currency = life?.currency || "IDR";
+  const accessible = life?.accessibleAccounts ?? [];
+  const otherAccountWithSpend = accessible.find(
+    (a) => a.id !== life?.accountId && a.lifetimeSpend > 0,
+  );
+  const lifeRoi = life?.roiAttribution;
+
+  return (
+    <Panel className="p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <TrendingUp className="size-4 text-success" />
+            <h3 className="text-display text-lg">Pengeluaran Meta Ads & Instagram Boost (Seumur Hidup / All-Time)</h3>
+            {life?.status === "ok" ? (
+              <Pill tone="success">
+                <StatusDot tone="success" pulse /> {life.accountName || life.accountId}
+              </Pill>
+            ) : null}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Menarik akumulasi pengeluaran langsung dari Meta Marketing API (<code className="font-mono text-foreground">date_preset=maximum</code>) agar semua biaya Boost IG sebelumnya tetap tampil meski di luar filter 28 hari.
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={refreshLive.isPending}
+          onClick={() =>
+            refreshLive.mutate(undefined, {
+              onSuccess: () => toast.success("Data pengeluaran terbaru ditarik langsung dari Meta API."),
+              onError: (e) => toast.error(extractApiErrorMessage(e, "Gagal menarik ulang data Meta API.")),
+            })
+          }
+          className="inline-flex items-center gap-1.5 rounded-sm border border-border-strong px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50"
+        >
+          {refreshLive.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+          Tarik Ulang dari Meta
+        </button>
+      </div>
+
+      {life?.status === "ok" ? (
+        <>
+          {(life.spend ?? 0) === 0 && otherAccountWithSpend ? (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-sm border border-warning/40 bg-warning/10 px-4 py-3 text-xs">
+              <div className="flex items-start gap-2 text-foreground">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
+                <div>
+                  <p className="font-semibold">
+                    Akun aktif ({life.accountId}) memiliki pengeluaran 0, tetapi akun Meta lain ({otherAccountWithSpend.name} · {otherAccountWithSpend.id}) tercatat memiliki pengeluaran {fmtRp(otherAccountWithSpend.lifetimeSpend, otherAccountWithSpend.currency)}!
+                  </p>
+                  <p className="mt-0.5 text-muted-foreground">
+                    Biasanya tombol "Boost Post" di aplikasi Instagram HP memakai Ad Account terpisah dari Business Manager. Klik tombol di kanan untuk langsung memakai akun tersebut.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={selectMetaAccount.isPending}
+                onClick={() =>
+                  selectMetaAccount.mutate(otherAccountWithSpend.id, {
+                    onSuccess: () => toast.success(`Beralih ke Ad Account ${otherAccountWithSpend.name}.`),
+                  })
+                }
+                className="shrink-0 rounded-sm bg-warning px-3 py-1.5 text-xs font-semibold text-background hover:opacity-90 disabled:opacity-50"
+              >
+                Pakai Akun Ini ({otherAccountWithSpend.id})
+              </button>
+            </div>
+          ) : (life.spend ?? 0) === 0 ? (
+            <div className="mt-4 rounded-sm border border-border bg-secondary/25 px-4 py-3 text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">Catatan: </span>
+              Meta API untuk Ad Account <code className="font-mono text-ai">{life.accountId}</code> mengembalikan pengeluaran <strong className="text-foreground">{fmtRp(0, currency)}</strong> sepanjang waktu. Jika Anda menekan "Boost" langsung dari aplikasi Instagram di HP dan menggunakan akun iklan pribadi/prepaid Instagram yang belum masuk Business Manager ini, Anda dapat memilih Ad Account di bawah atau mencatat biayanya di kalkulator IG Boost di bawah ini.
+            </div>
+          ) : null}
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-sm border border-border bg-secondary/20 p-4">
+              <p className="label-eyebrow">Total Spend All-Time</p>
+              <p className="num mt-1.5 text-xl font-bold text-foreground">{fmtRp(life.spend, currency)}</p>
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                {life.dateStart && life.dateStop ? `${life.dateStart} → ${life.dateStop}` : "Seumur hidup akun"}
+              </p>
+            </div>
+
+            <div className="rounded-sm border border-border bg-secondary/20 p-4">
+              <p className="label-eyebrow">Reach & Impressions All-Time</p>
+              <p className="num mt-1.5 text-xl font-bold text-foreground">{fmtNum(life.impressions)}</p>
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                Reach {fmtNum(life.reach)} · {fmtNum(life.clicks)} klik (CTR {life.ctr ?? 0}%)
+              </p>
+            </div>
+
+            <div className="rounded-sm border border-border bg-secondary/20 p-4">
+              <p className="label-eyebrow">DM / WA / Leads dari Boost</p>
+              <p className="num mt-1.5 text-xl font-bold text-foreground">{fmtNum(life.leads)}</p>
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                Cost per Lead API: {fmtRp(life.cpl, currency)} · {life.campaigns?.length ?? 0} campaign
+              </p>
+            </div>
+
+            <div className="rounded-sm border border-success/30 bg-success/[0.05] p-4">
+              <p className="label-eyebrow text-success">Cumulative ROAS & ROI (365d)</p>
+              <div className="mt-1.5 flex items-baseline gap-2">
+                <p className="num text-xl font-bold text-success">
+                  {lifeRoi?.effectiveRoas != null ? `${lifeRoi.effectiveRoas}x` : "—"}
+                </p>
+                {lifeRoi?.effectiveRoiPct != null ? (
+                  <span className="font-mono text-xs text-success">
+                    ({lifeRoi.effectiveRoiPct > 0 ? "+" : ""}{lifeRoi.effectiveRoiPct}% ROI)
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                Omzet + WA Pipeline: {fmtRp(lifeRoi?.totalAttributedValueRp ?? 0)}
+              </p>
+            </div>
+          </div>
+
+          {accessible.length > 0 ? (
+            <div className="mt-5 border-t border-border pt-4">
+              <p className="label-eyebrow mb-2.5">Ad Account Meta yang Dapat Diakses Token ({accessible.length})</p>
+              <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                {accessible.map((acc) => {
+                  const isActive = acc.id === life.accountId;
+                  return (
+                    <div
+                      key={acc.id}
+                      className={cn(
+                        "flex items-center justify-between gap-2 rounded-sm border px-3 py-2.5 text-xs",
+                        isActive ? "border-ai/50 bg-ai/10" : "border-border bg-secondary/15",
+                      )}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-foreground">{acc.name}</p>
+                        <p className="font-mono text-[10px] text-muted-foreground">
+                          {acc.id} · Spend: <span className="text-foreground">{fmtRp(acc.lifetimeSpend, acc.currency)}</span>
+                        </p>
+                      </div>
+                      {isActive ? (
+                        <Pill tone="ai">Aktif</Pill>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={selectMetaAccount.isPending}
+                          onClick={() =>
+                            selectMetaAccount.mutate(acc.id, {
+                              onSuccess: () => toast.success(`Beralih ke Ad Account ${acc.name} (${acc.id}).`),
+                              onError: (e) => toast.error(extractApiErrorMessage(e, "Gagal ganti Ad Account.")),
+                            })
+                          }
+                          className="shrink-0 rounded-sm border border-border-strong px-2 py-1 text-[10px] font-medium text-foreground hover:bg-accent disabled:opacity-50"
+                        >
+                          Pakai Akun Ini
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <div className="mt-4 rounded-sm border border-dashed border-border p-4 text-xs text-muted-foreground">
+          {life?.message || "Menunggu respons Meta Ads API."}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 export default function AdsAgentPage() {
   usePageContext("ads");
   const { agent, isLoading: agentLoading } = useAgent("ads");
@@ -437,6 +623,10 @@ export default function AdsAgentPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <AdsKpiGrid />
         </div>
+      </section>
+
+      <section className="mt-6">
+        <MetaLifetimeBoostOverviewPanel />
       </section>
 
       <section className="mt-6">

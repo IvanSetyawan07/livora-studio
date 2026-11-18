@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAiMarketingContext } from "@/context/AiMarketingContext";
 import { useSectionState, type DerivedNonDataStatus } from "@/hooks/useSectionState";
 import { aiServices } from "@/lib/ai/services";
@@ -56,6 +56,7 @@ export function useAnalyticsOverview() {
 
 export function useAdsSummary() {
   const { dateRange } = useAiMarketingContext();
+  const qc = useQueryClient();
   const q = useQuery<AdsSummary>({
     queryKey: marketingKeys.ads(rangeKey(dateRange)),
     queryFn: () => aiServices.marketing.getAdsSummary(rangeParams(dateRange)),
@@ -63,10 +64,37 @@ export function useAdsSummary() {
   });
   const state = useSectionState(q, {
     provider: "Meta Ads / Google Ads",
-    deriveStatus: (d) => deriveMarketingStatus(d.status, d.platforms?.meta?.message ?? d.platforms?.google?.message, "Meta Ads / Google Ads"),
-    isEmpty: (d) => d.series.length === 0 && d.campaigns.length === 0,
+    deriveStatus: (d) => {
+      if (d.metaLifetime?.status === "ok" && (d.metaLifetime.spend ?? 0) > 0) {
+        return null;
+      }
+      return deriveMarketingStatus(d.status, d.platforms?.meta?.message ?? d.platforms?.google?.message, "Meta Ads / Google Ads");
+    },
+    isEmpty: (d) =>
+      d.series.length === 0 &&
+      d.campaigns.length === 0 &&
+      d.platforms?.meta?.status !== "ok" &&
+      d.platforms?.google?.status !== "ok" &&
+      d.metaLifetime?.status !== "ok",
   });
-  return { query: q, state };
+
+  const refreshLive = useMutation({
+    mutationFn: () => aiServices.marketing.getAdsSummary({ ...rangeParams(dateRange), refresh: true }),
+    onSuccess: (fresh) => {
+      qc.setQueryData(marketingKeys.ads(rangeKey(dateRange)), fresh);
+      qc.invalidateQueries({ queryKey: ["ai", "marketing", "ads"] });
+    },
+  });
+
+  const selectMetaAccount = useMutation({
+    mutationFn: (accountId: string | null) => aiServices.marketing.selectMetaAdAccount(accountId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai", "marketing", "ads"] });
+      qc.invalidateQueries({ queryKey: ["ai"] });
+    },
+  });
+
+  return { query: q, state, refreshLive, selectMetaAccount };
 }
 
 export function useContentSummary() {

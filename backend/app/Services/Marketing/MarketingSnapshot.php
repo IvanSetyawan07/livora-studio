@@ -28,18 +28,43 @@ class MarketingSnapshot
                 $ga4['totals']['pageviews'], $ga4['totals']['engagementRate'], $ga4['totals']['conversions'])
             : '- GA4: belum ada data ter-cache untuk periode ini (buka Overview dulu / integrasi belum tersambung)';
 
-        foreach (['ads:meta' => 'Meta Ads', 'ads:google' => 'Google Ads'] as $key => $label) {
-            $p = Cache::get($period->cacheKey($key));
+        $metaAccountKey = 'default';
+        try {
+            $metaAccountKey = app(MetaAdsClient::class)->accountId() ?: 'default';
+        } catch (Throwable) {
+        }
+
+        $metaCached = Cache::get($period->cacheKey("ads:meta:{$metaAccountKey}")) ?? Cache::get($period->cacheKey('ads:meta'));
+        $googleCached = Cache::get($period->cacheKey('ads:google'));
+
+        foreach (['Meta Ads (Periode)' => $metaCached, 'Google Ads (Periode)' => $googleCached] as $label => $p) {
             if (is_array($p)) {
-                $spend = array_sum(array_column($p['daily'], 'spend'));
-                $leads = array_sum(array_column($p['daily'], 'leads'));
-                $rev = array_sum(array_column($p['daily'], 'revenue'));
+                $spend = array_sum(array_column($p['daily'] ?? [], 'spend'));
+                $leads = array_sum(array_column($p['daily'] ?? [], 'leads'));
+                $rev = array_sum(array_column($p['daily'] ?? [], 'revenue'));
                 $out[] = sprintf('- %s: spend=%.2f, leads=%.1f, CPL=%s, ROAS=%s, campaigns=%d', $label, $spend, $leads,
                     $leads > 0 ? number_format($spend / $leads, 2) : 'n/a',
-                    $spend > 0 ? number_format($rev / $spend, 2).'x' : 'n/a', count($p['campaigns']));
+                    $spend > 0 ? number_format($rev / $spend, 2).'x' : 'n/a', count($p['campaigns'] ?? []));
             } else {
                 $out[] = "- {$label}: tidak ada data (belum tersambung atau belum dimuat)";
             }
+        }
+
+        $metaLife = Cache::get("ads:meta:lifetime:{$metaAccountKey}");
+        if (is_array($metaLife) && ($metaLife['status'] ?? null) === 'ok') {
+            $out[] = sprintf(
+                '- Meta Ads / IG Boost ALL-TIME (%s): total spend=%s %s, reach=%d, impressions=%d, clicks=%d, leads=%.1f, rentang=%s s/d %s, total campaigns=%d',
+                $metaLife['accountId'] ?? $metaAccountKey,
+                number_format((float) ($metaLife['spend'] ?? 0), 0, ',', '.'),
+                $metaLife['currency'] ?? 'IDR',
+                (int) ($metaLife['reach'] ?? 0),
+                (int) ($metaLife['impressions'] ?? 0),
+                (int) ($metaLife['clicks'] ?? 0),
+                (float) ($metaLife['leads'] ?? 0),
+                $metaLife['dateStart'] ?? 'n/a',
+                $metaLife['dateStop'] ?? 'n/a',
+                count($metaLife['campaigns'] ?? [])
+            );
         }
 
         foreach (['instagram', 'facebook', 'tiktok', 'youtube'] as $key) {

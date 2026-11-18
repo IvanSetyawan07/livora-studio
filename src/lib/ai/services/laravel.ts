@@ -221,7 +221,11 @@ export const laravelServices: AIServiceBundle = {
     getAnalyticsOverview: (p) =>
       api.get("/ai/analytics/overview", { params: p }).then((r) => unwrap<AnalyticsOverview>(r.data)),
     getAdsSummary: (p) =>
-      api.get("/ai/ads/summary", { params: p }).then((r) => unwrap<AdsSummary>(r.data)),
+      api
+        .get("/ai/ads/summary", { params: { from: p.from, to: p.to, days: p.days, ...(p.refresh ? { refresh: 1 } : {}) } })
+        .then((r) => unwrap<AdsSummary>(r.data)),
+    selectMetaAdAccount: (accountId) =>
+      api.post("/ai/ads/meta-account", { accountId }).then((r) => unwrap<{ ok: boolean; accountId: string | null }>(r.data)),
     getContentSummary: (p) =>
       api.get("/ai/content/summary", { params: p }).then((r) => unwrap<ContentSummary>(r.data)),
     getLeadsFunnel: (p) =>

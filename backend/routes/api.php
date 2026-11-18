@@ -424,6 +424,7 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::get('/content/meta/instagram', [MetaIntegrationController::class, 'instagram']);
         Route::get('/analytics/overview', [AiAnalyticsController::class, 'overview']);
         Route::get('/ads/summary', [AiAdsController::class, 'summary']);
+        Route::post('/ads/meta-account', [AiAdsController::class, 'selectMetaAccount']);
         Route::get('/content/summary', [AiContentController::class, 'summary']);
         Route::get('/content/queue', [AiContentController::class, 'queue']);
         Route::post('/content/queue', [AiContentController::class, 'createDraft']);

@@ -68,9 +68,10 @@ class AdsAgentService extends BaseAgentService
     protected function buildSnapshot(): ?array
     {
         $period = MarketingPeriod::fromRequest(new Request(['days' => self::WINDOW_DAYS]), self::WINDOW_DAYS);
+        $metaAccountKey = $this->meta->accountId() ?: 'default';
 
         $platforms = [
-            'meta' => MarketingSection::attempt($period->cacheKey('ads:meta'), fn () => [
+            'meta' => MarketingSection::attempt($period->cacheKey("ads:meta:{$metaAccountKey}"), fn () => [
                 'label' => 'Meta Ads',
                 'daily' => $this->meta->dailySeries($period),
                 'campaigns' => $this->meta->campaigns($period),
@@ -124,7 +125,19 @@ class AdsAgentService extends BaseAgentService
             }
         }
 
-        if (empty($connected) || $totals['spend'] <= 0) {
+        $metaLifetime = null;
+        if ($this->meta->isConfigured()) {
+            try {
+                $life = $this->meta->lifetimeInsights();
+                $lifeCampaigns = $this->meta->lifetimeCampaigns();
+                $metaLifetime = $life + ['campaigns' => array_slice($lifeCampaigns, 0, 12)];
+            } catch (\Throwable) {
+                $metaLifetime = null;
+            }
+        }
+
+        $hasLifetimeSpend = is_array($metaLifetime) && (float) ($metaLifetime['spend'] ?? 0) > 0;
+        if (empty($connected) || ($totals['spend'] <= 0 && ! $hasLifetimeSpend)) {
             return null;
         }
 
@@ -164,6 +177,7 @@ class AdsAgentService extends BaseAgentService
             ],
             'per_platform' => $perPlatform,
             'campaigns' => $campaigns,
+            'meta_lifetime_ig_boost' => $metaLifetime,
             'livora_utm_consultations' => $utmConsultations,
         ];
     }

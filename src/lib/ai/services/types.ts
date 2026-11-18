@@ -62,7 +62,8 @@ import type {
 
 export interface AIMarketingService {
   getAnalyticsOverview: (p: { from: string; to: string; days: number }) => Promise<AnalyticsOverview>;
-  getAdsSummary: (p: { from: string; to: string; days: number }) => Promise<AdsSummary>;
+  getAdsSummary: (p: { from: string; to: string; days: number; refresh?: boolean }) => Promise<AdsSummary>;
+  selectMetaAdAccount: (accountId: string | null) => Promise<{ ok: boolean; accountId: string | null }>;
   getContentSummary: (p: { from: string; to: string; days: number }) => Promise<ContentSummary>;
   getLeadsFunnel: (p: { from: string; to: string; days: number }) => Promise<LeadsFunnel>;
   getHighIntentLeads: (limit?: number) => Promise<HighIntentLeadsResponse>;
