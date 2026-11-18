@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useAiMarketingContext } from "@/context/AiMarketingContext";
 import { extractApiErrorMessage } from "@/hooks/useAiDashboard";
@@ -155,7 +155,7 @@ export function AskAIDrawer() {
     return [];
   });
   const [input, setInput] = useState("");
-  const [webSearch, setWebSearch] = useState(true);
+  const [webSearch, setWebSearch] = useState(false);
   const [pending, setPending] = useState(false);
   const [lastError, setLastError] = useState<{ prompt: string; message: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -232,8 +232,12 @@ export function AskAIDrawer() {
     <Sheet open={askOpen} onOpenChange={(open) => !open && closeAsk()}>
       <SheetContent
         side="right"
-        className="flex w-full flex-col gap-0 border-l border-border bg-popover p-0 text-foreground sm:max-w-md"
+        className="flex w-full flex-col gap-0 border-l border-border bg-popover p-0 text-foreground sm:max-w-md [&>button.absolute]:hidden"
       >
+        <SheetTitle className="sr-only">Livora Marketing AI</SheetTitle>
+        <SheetDescription className="sr-only">
+          Chief Marketing and Profit Intelligence Assistant
+        </SheetDescription>
         <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3.5">
           <div className="flex min-w-0 items-center gap-2.5">
             <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-ai/12">

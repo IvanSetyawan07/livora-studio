@@ -36,21 +36,51 @@ class GroqProvider implements AIProviderContract
         }
 
         $start = microtime(true);
+        $modelsToTry = array_values(array_unique(array_filter([
+            $this->modelName,
+            'llama-3.3-70b-versatile',
+            'llama-3.1-8b-instant',
+        ])));
 
-        $response = Http::withToken($this->apiKey)
-            ->timeout(30)
-            ->post("{$this->baseUrl}/chat/completions", [
-                'model' => $this->modelName,
-                'messages' => [
-                    ['role' => 'system', 'content' => $systemPrompt],
-                    ['role' => 'user', 'content' => $userMessage],
-                ],
-                'max_tokens' => $options['max_tokens'] ?? 4096,
-                'temperature' => $options['temperature'] ?? 0.4,
-            ]);
+        $response = null;
+        $usedModel = $this->modelName;
+        $lastErrorBody = 'no response';
 
-        if ($response->failed()) {
-            throw new AIProviderException('Groq API error: '.$response->body());
+        foreach ($modelsToTry as $candidateModel) {
+            try {
+                $res = Http::withToken($this->apiKey)
+                    ->timeout(30)
+                    ->post("{$this->baseUrl}/chat/completions", [
+                        'model' => $candidateModel,
+                        'messages' => [
+                            ['role' => 'system', 'content' => $systemPrompt],
+                            ['role' => 'user', 'content' => $userMessage],
+                        ],
+                        'max_tokens' => min((int) ($options['max_tokens'] ?? 4096), 4096),
+                        'temperature' => $options['temperature'] ?? 0.4,
+                    ]);
+            } catch (\Throwable $e) {
+                $lastErrorBody = $e->getMessage();
+                continue;
+            }
+
+            $response = $res;
+            $usedModel = $candidateModel;
+
+            if ($res->successful()) {
+                break;
+            }
+
+            $lastErrorBody = $res->body() ?: ('HTTP '.$res->status());
+
+            // Jika API key tidak valid (401), jangan lanjut mencoba model lain.
+            if ($res->status() === 401 || str_contains(strtolower($lastErrorBody), 'invalid_api_key')) {
+                break;
+            }
+        }
+
+        if (!$response || $response->failed()) {
+            throw new AIProviderException('Groq API error: '.$lastErrorBody);
         }
 
         $data = $response->json();
@@ -59,7 +89,7 @@ class GroqProvider implements AIProviderContract
 
         return new AIProviderResult(
             text: $text,
-            model: $data['model'] ?? $this->modelName,
+            model: $data['model'] ?? $usedModel,
             inputTokens: (int) ($usage['prompt_tokens'] ?? 0),
             outputTokens: (int) ($usage['completion_tokens'] ?? 0),
             durationMs: (int) ((microtime(true) - $start) * 1000),

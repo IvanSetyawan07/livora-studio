@@ -58,15 +58,22 @@ class ProviderController extends Controller
         try {
             $res = $manager->testProvider($provider);
 
-            return response()->json($res);
+            return response()->json($res + ['ok' => true]);
         } catch (\InvalidArgumentException $e) {
-            return response()->json(['message' => $e->getMessage()], 404);
+            return response()->json(['ok' => false, 'message' => $e->getMessage()], 404);
         } catch (\Throwable $e) {
+            $msg = $e->getMessage();
+            $notConfigured = str_contains(strtolower($msg), 'belum diisi')
+                || str_contains(strtolower($msg), 'belum dikonfigurasi')
+                || str_contains(strtolower($msg), 'kosong');
+
             return response()->json([
+                'ok' => false,
                 'provider' => $provider,
-                'status' => 'degraded',
-                'message' => $e->getMessage(),
-            ], 422);
+                'status' => $notConfigured ? 'not_connected' : 'degraded',
+                'latencyMs' => null,
+                'message' => $msg,
+            ], 200);
         }
     }
 

@@ -82,8 +82,13 @@ export default function AiMarketingProviders() {
   function handleTestProvider(providerKey: string) {
     setTestingProvider(providerKey);
     testProviderMutation.mutate(providerKey, {
-      onSuccess: (res) =>
-        toast.success(res.message || `${providerKey} merespons (${res.latencyMs ?? 0}ms).`),
+      onSuccess: (res: any) => {
+        if (res?.ok === false || (res?.status && res.status !== "connected")) {
+          toast.error(res?.message || `Tes koneksi ${providerKey} gagal.`);
+          return;
+        }
+        toast.success(res.message || `${providerKey} merespons (${res.latencyMs ?? 0}ms).`);
+      },
       onError: (e) =>
         toast.error(extractApiErrorMessage(e, `Tes koneksi ${providerKey} gagal.`)),
       onSettled: () => setTestingProvider(null),

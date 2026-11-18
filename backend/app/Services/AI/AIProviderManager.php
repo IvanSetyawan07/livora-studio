@@ -40,8 +40,11 @@ class AIProviderManager
      */
     public function ask(string $systemPrompt, string $userMessage, ?string $agentKey = null, ?string $forceProvider = null, array $options = []): array
     {
-        $order = $forceProvider ? [$forceProvider] : $this->resolveOrder();
+        $order = $forceProvider
+            ? array_values(array_unique([$forceProvider, ...$this->resolveOrder()]))
+            : $this->resolveOrder();
         $lastError = null;
+        $errors = [];
 
         foreach ($order as $key) {
             $driver = $this->drivers[$key] ?? null;
@@ -62,13 +65,18 @@ class AIProviderManager
                 ];
             } catch (\Throwable $e) {
                 $lastError = $e;
+                $errors[$key] = $e->getMessage();
                 $this->recordUsage($key, $agentKey, $driver->model(), 0, 0, null, 'error', $e->getMessage());
                 $this->touchProviderStatus($key, 'degraded', null, false);
             }
         }
 
+        $detail = $errors !== []
+            ? implode(' | ', array_map(fn ($k, $msg) => strtoupper($k).': '.mb_substr($msg, 0, 220), array_keys($errors), array_values($errors)))
+            : ($lastError?->getMessage() ?? 'Belum ada provider yang dikonfigurasi.');
+
         throw new \RuntimeException(
-            'Tidak ada AI provider yang berhasil merespons. '.($lastError?->getMessage() ?? 'Belum ada provider yang dikonfigurasi.')
+            'Tidak ada AI provider yang berhasil merespons. '.$detail
         );
     }
 
@@ -171,54 +179,62 @@ class AIProviderManager
 
     protected function recordUsage(string $provider, ?string $agentKey, string $model, int $in, int $out, ?int $durationMs, string $status, ?string $error = null): void
     {
-        AiUsageLog::create([
-            // Biaya dihitung dari harga per model. null (bukan 0) kalau harga
-            // model itu belum terdaftar — supaya UI bisa bilang "not tracked yet"
-            // alih-alih menampilkan $0 yang menyesatkan.
-            'cost' => AiPricing::costFor($provider, $model, $in, $out),
-            'agent_key' => $agentKey,
-            'provider' => $provider,
-            'model' => $model,
-            'input_tokens' => $in,
-            'output_tokens' => $out,
-            'duration_ms' => $durationMs,
-            'status' => $status,
-            'error_message' => $error,
-            'user_id' => Auth::id(),
-        ]);
+        try {
+            AiUsageLog::create([
+                // Biaya dihitung dari harga per model. null (bukan 0) kalau harga
+                // model itu belum terdaftar — supaya UI bisa bilang "not tracked yet"
+                // alih-alih menampilkan $0 yang menyesatkan.
+                'cost' => AiPricing::costFor($provider, $model, $in, $out),
+                'agent_key' => $agentKey,
+                'provider' => $provider,
+                'model' => $model,
+                'input_tokens' => $in,
+                'output_tokens' => $out,
+                'duration_ms' => $durationMs,
+                'status' => $status,
+                'error_message' => $error ? mb_substr($error, 0, 1000) : null,
+                'user_id' => Auth::id(),
+            ]);
+        } catch (\Throwable) {
+            // Jangan gagalkan respons AI apabila pencatatan log mengalami kendala.
+        }
     }
 
     protected function touchProviderStatus(string $provider, string $status, ?int $latencyMs, bool $success, ?AIProviderResult $result = null): void
     {
-        $row = AiProviderModel::firstOrCreate(['provider' => $provider], [
-            'model' => $this->drivers[$provider]->model(),
-            'status' => 'not_connected',
-        ]);
+        try {
+            $row = AiProviderModel::firstOrCreate(['provider' => $provider], [
+                'model' => $this->drivers[$provider]->model(),
+                'status' => 'not_connected',
+            ]);
 
-        $prevRate = (float) ($row->success_rate ?? ($success ? 100 : 0));
-        $newRate = round(($prevRate * 0.8) + (($success ? 100 : 0) * 0.2), 2);
+            $prevRate = (float) ($row->success_rate ?? ($success ? 100 : 0));
+            $newRate = round(($prevRate * 0.8) + (($success ? 100 : 0) * 0.2), 2);
 
-        $driver = $this->drivers[$provider] ?? null;
-        $update = [
-            'model' => $driver ? $driver->model() : $row->model,
-            'status' => $status,
-            'latency_ms' => $latencyMs ?? $row->latency_ms,
-            'success_rate' => $newRate,
-        ];
+            $driver = $this->drivers[$provider] ?? null;
+            $update = [
+                'model' => $result?->model ?: ($driver ? $driver->model() : $row->model),
+                'status' => $status,
+                'latency_ms' => $latencyMs ?? $row->latency_ms,
+                'success_rate' => $newRate,
+            ];
 
-        // Kuota cuma ditimpa kalau request ini beneran sukses dan bawa data baru
-        // — supaya request yang gagal duluan (sebelum sempat dapat header) tidak
-        // menghapus snapshot kuota lama dengan null.
-        if ($result) {
-            $update['rl_requests_limit'] = $result->rlRequestsLimit ?? $row->rl_requests_limit;
-            $update['rl_requests_remaining'] = $result->rlRequestsRemaining ?? $row->rl_requests_remaining;
-            $update['rl_tokens_limit'] = $result->rlTokensLimit ?? $row->rl_tokens_limit;
-            $update['rl_tokens_remaining'] = $result->rlTokensRemaining ?? $row->rl_tokens_remaining;
-            $update['rl_requests_reset_at'] = $result->rlRequestsResetAt ?? $row->rl_requests_reset_at;
-            $update['rl_tokens_reset_at'] = $result->rlTokensResetAt ?? $row->rl_tokens_reset_at;
-            $update['rl_note'] = $result->rlNote ?? $row->rl_note;
+            // Kuota cuma ditimpa kalau request ini beneran sukses dan bawa data baru
+            // — supaya request yang gagal duluan (sebelum sempat dapat header) tidak
+            // menghapus snapshot kuota lama dengan null.
+            if ($result) {
+                $update['rl_requests_limit'] = $result->rlRequestsLimit ?? $row->rl_requests_limit;
+                $update['rl_requests_remaining'] = $result->rlRequestsRemaining ?? $row->rl_requests_remaining;
+                $update['rl_tokens_limit'] = $result->rlTokensLimit ?? $row->rl_tokens_limit;
+                $update['rl_tokens_remaining'] = $result->rlTokensRemaining ?? $row->rl_tokens_remaining;
+                $update['rl_requests_reset_at'] = $result->rlRequestsResetAt ?? $row->rl_requests_reset_at;
+                $update['rl_tokens_reset_at'] = $result->rlTokensResetAt ?? $row->rl_tokens_reset_at;
+                $update['rl_note'] = $result->rlNote ?? $row->rl_note;
+            }
+
+            $row->update($update);
+        } catch (\Throwable) {
+            // Abaikan error update metrik status agar alur utama tidak gagal.
         }
-
-        $row->update($update);
     }
 }

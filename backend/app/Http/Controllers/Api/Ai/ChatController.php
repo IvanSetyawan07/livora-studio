@@ -63,7 +63,13 @@ class ChatController extends Controller
         $wantsMarketSearch = (bool) ($validated['webSearch'] ?? false)
             || preg_match('/\b(pasar|market|tren|trend|kompetitor|competitor|luar|eksternal|benchmark|video|tiktok|instagram|youtube)\b/i', $msgLower) === 1;
 
-        $systemPrompt = $this->systemPromptFor($context).$this->groundingBlock($context, $period);
+        try {
+            $grounding = $this->groundingBlock($context, $period);
+        } catch (\Throwable) {
+            $grounding = "\n\n=== DATA NYATA LIVORA ===\nHalaman aktif: {$context}\n=== AKHIR DATA ===\n";
+        }
+
+        $systemPrompt = $this->systemPromptFor($context).$grounding;
 
         $historyBlock = '';
         if (! empty($validated['history'])) {
@@ -78,23 +84,59 @@ class ChatController extends Controller
         }
 
         $userPrompt = $historyBlock.$validated['message'];
+        $result = null;
+        $providerError = null;
 
         try {
             if ($wantsMarketSearch && $this->manager->hasProvider('gemini')) {
-                $result = $this->manager->ask($systemPrompt, $userPrompt, 'chat', 'gemini', [
-                    'google_search' => true,
-                    'max_tokens' => 3500,
-                ]);
+                try {
+                    $result = $this->manager->ask($systemPrompt, $userPrompt, 'chat', 'gemini', [
+                        'google_search' => true,
+                        'max_tokens' => 3500,
+                    ]);
+                } catch (\Throwable) {
+                    $result = $this->manager->ask($systemPrompt, $userPrompt, 'chat', null, [
+                        'max_tokens' => 3500,
+                    ]);
+                }
             } else {
                 $result = $this->manager->ask($systemPrompt, $userPrompt, 'chat', null, [
                     'max_tokens' => 3500,
                 ]);
             }
         } catch (\Throwable $e) {
+            $providerError = $e->getMessage();
+        }
+
+        if ($result === null) {
+            $operations = $this->inferExplicitOperations($validated['message']);
+            $executedActions = [];
+            if ($operations !== [] && $this->commandExecutor !== null) {
+                try {
+                    $executedActions = $this->commandExecutor->executeBatch($operations);
+                } catch (\Throwable) {
+                    // ignore
+                }
+            }
+
+            $fallbackReply = $this->buildLocalAnalyticalReply(
+                $validated['message'],
+                $context,
+                $period,
+                $executedActions,
+                $providerError
+            );
+
             return response()->json([
-                'message' => 'Semua AI provider gagal merespons. Pastikan minimal satu provider (Gemini/Groq) sudah dikonfigurasi dan API key valid.',
-                'error' => $e->getMessage(),
-            ], 503);
+                'id' => 'msg_'.now()->timestamp.'_'.uniqid(),
+                'role' => 'assistant',
+                'text' => $fallbackReply,
+                'provider' => 'livora-db-intelligence',
+                'model' => 'real-data-engine',
+                'createdAt' => now()->toISOString(),
+                'recommendation' => null,
+                'executedActions' => $executedActions,
+            ]);
         }
 
         $parsed = $this->parseChatResponse($result['text']);
@@ -331,16 +373,32 @@ class ChatController extends Controller
             $ops[] = ['type' => 'run_agent', 'agent_key' => strtolower($match[2])];
         }
 
-        if (preg_match('/\b(approve|setujui)\s+(semua\s+)?low[\s-]?risk\b/i', $m)) {
+        if (preg_match('/\b(approve|setujui)\b.*\blow[\s-]?risk\b/i', $m)) {
             $ops[] = ['type' => 'approve_recommendation', 'scope' => 'all_low_risk'];
+        } elseif (preg_match('/\b(approve|setujui)\s+semua\s+rekomendasi\b/i', $m)) {
+            $ops[] = ['type' => 'approve_recommendation', 'scope' => 'all_pending'];
         }
 
-        if (preg_match('/\b(eksekusi|execute|jalankan)\s+(semua\s+)?(action|approved)\b/i', $m)) {
+        if (preg_match('/\b(eksekusi|execute|jalankan)\b.*\b(actions?|approved)\b/i', $m)) {
             $ops[] = ['type' => 'execute_action', 'scope' => 'all_approved'];
         }
 
         if (preg_match('/\b(sync|sinkronkan|sinkronisasi)\s+campaigns?\b/i', $m)) {
             $ops[] = ['type' => 'sync_campaigns'];
+        } elseif (preg_match('/\b(buatkan|buat)\s+campaign\b/i', $m)) {
+            $ops[] = [
+                'type' => 'create_campaign',
+                'name' => 'Livora High-Intent Interior & Bespoke Furniture Push',
+                'channel' => 'Meta Ads + Instagram + WhatsApp LiviBot',
+                'summary' => 'Kampanye fokus produk demand tertinggi & percepatan konversi konsultasi interior Livora.',
+                'status' => 'Active',
+                'health' => 'Good',
+                'plan' => [
+                    'Retargeting pengunjung produk high-demand & proyek unggulan ke WhatsApp LiviBot.',
+                    'Follow-up prioritas semua inquiry harga WA yang belum terjawab dalam < 15 menit.',
+                    'Konten Reels & Carousel studi kasus ruang nyata untuk mendorong booking konsultasi.',
+                ],
+            ];
         }
 
         if (preg_match('/\b(refresh|hitung\s+ulang|perbarui)\s+impact\b/i', $m)) {
@@ -352,6 +410,142 @@ class ChatController extends Controller
         }
 
         return $ops;
+    }
+
+    /**
+     * Mesin analitik lokal berbasis 100% data database nyata Livora ketika
+     * provider LLM eksternal sedang terkena batas kuota / gangguan jaringan.
+     *
+     * @param  array<int, array<string, mixed>>  $executedActions
+     */
+    protected function buildLocalAnalyticalReply(
+        string $message,
+        string $context,
+        MarketingPeriod $period,
+        array $executedActions,
+        ?string $providerError
+    ): string {
+        $days = $period->days();
+        $summary = null;
+        if ($this->learning !== null) {
+            try {
+                $summary = $this->learning->summary($days);
+            } catch (\Throwable) {
+                $summary = null;
+            }
+        }
+
+        $p = $summary['profit'] ?? [];
+        $orders = $p['orders'] ?? [];
+        $consults = $p['consultations'] ?? [];
+        $wa = $p['whatsapp'] ?? [];
+        $topItems = array_slice($p['topDemandItems'] ?? [], 0, 4);
+        $memory = $summary['learning'] ?? [];
+
+        $pendingRecs = AiRecommendation::query()
+            ->where('status', 'pending')
+            ->orderByRaw("CASE priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END")
+            ->latest()
+            ->limit(4)
+            ->get();
+
+        $insightsQuery = AiInsight::query()->latest();
+        if (Schema::hasColumn('ai_insights', 'dismissed_at')) {
+            $insightsQuery->whereNull('dismissed_at');
+        }
+        $latestInsights = $insightsQuery->limit(3)->get();
+
+        $lines = [];
+        $lines[] = "📊 **Analisis Strategis & Prioritas Profit Livora ({$days} Hari Terakhir — Real Database)**";
+
+        if ($executedActions !== []) {
+            $lines[] = "\n✅ **Perintah Sistem yang Baru Saja Dieksekusi:**";
+            foreach ($executedActions as $act) {
+                $lines[] = '- **'.($act['title'] ?? 'Aksi').'**: '.($act['detail'] ?? '');
+            }
+        }
+
+        $lines[] = "\n### 1. Diagnosa Omzet, Konsultasi & Funnel WhatsApp";
+        $lines[] = sprintf(
+            "- **Omzet & Pesanan Shop**: **%s** dari **%d pesanan lunas** (total %d order masuk, AOV **%s**, %d order masih menunggu pembayaran).",
+            $orders['totalRevenueLabel'] ?? 'Rp 0',
+            (int) ($orders['paidOrders'] ?? 0),
+            (int) ($orders['totalOrders'] ?? 0),
+            $orders['avgOrderValueLabel'] ?? 'Rp 0',
+            (int) ($orders['pendingOrders'] ?? 0)
+        );
+        $lines[] = sprintf(
+            "- **Pipeline Konsultasi Interior**: **%d konsultasi masuk** — **%d di pipeline aktif** (pending/contacted/scheduled), **%d selesai (%s%%)**, dan **%d batal (%s%%)**.",
+            (int) ($consults['total'] ?? 0),
+            (int) ($consults['activePipeline'] ?? 0),
+            (int) ($consults['completed'] ?? 0),
+            (string) ($consults['completionRatePct'] ?? 0),
+            (int) ($consults['cancelled'] ?? 0),
+            (string) ($consults['cancellationRatePct'] ?? 0)
+        );
+        $lines[] = sprintf(
+            "- **Antrean Cek Harga WhatsApp LiviBot**: **%d inquiry** dari **%d nomor unik** — **%d belum dijawab** (response rate **%s%%**).",
+            (int) ($wa['totalInquiries'] ?? 0),
+            (int) ($wa['uniqueLeads'] ?? 0),
+            (int) ($wa['unanswered'] ?? 0),
+            (string) ($wa['answeredRatePct'] ?? 100)
+        );
+
+        if ($topItems !== []) {
+            $lines[] = "\n### 2. Produk Katalog dengan Permintaan Tertinggi (Peluang Profit Cepat)";
+            foreach ($topItems as $item) {
+                $lines[] = sprintf(
+                    "- **%s** (%s) — %d views, %d klik, %d wishlist, %d tanya harga WA (Skor Demand: %d).",
+                    $item['title'] ?? 'Item',
+                    $item['priceLabel'] ?? 'Harga kustom',
+                    (int) ($item['views'] ?? 0),
+                    (int) ($item['clicks'] ?? 0),
+                    (int) ($item['wishlists'] ?? 0),
+                    (int) ($item['waInquiries'] ?? 0),
+                    (int) ($item['demandScore'] ?? 0)
+                );
+            }
+        }
+
+        $lines[] = "\n### 3. Prioritas Tindakan Hari Ini (Rekomendasi & Insight Aktif)";
+        if ($pendingRecs->isNotEmpty()) {
+            foreach ($pendingRecs as $rec) {
+                $lines[] = sprintf(
+                    "- **[rec#%d · %s · prioritas %s]** **%s** — %s",
+                    $rec->id,
+                    strtoupper((string) $rec->agent_key),
+                    strtoupper((string) $rec->priority),
+                    $rec->title,
+                    $rec->suggested_action ?: $rec->description
+                );
+            }
+        } elseif ($latestInsights->isNotEmpty()) {
+            foreach ($latestInsights as $ins) {
+                $lines[] = sprintf(
+                    "- **[%s · %s]** **%s** — %s",
+                    strtoupper((string) $ins->agent_key),
+                    strtoupper((string) $ins->severity),
+                    $ins->title,
+                    $ins->description
+                );
+            }
+        } else {
+            $lines[] = "- Klik tombol **▶ Jalankan Semua Agent** di atas untuk memindai peluang SEO, Content, Leads, dan CRO terbaru.";
+        }
+
+        if (! empty($memory['learnedPatterns'])) {
+            $lines[] = "\n### 4. Pembelajaran Adaptif & Strategi Profit";
+            foreach (array_slice($memory['learnedPatterns'], 0, 3) as $pat) {
+                $lines[] = "- {$pat}";
+            }
+        }
+
+        if ($providerError) {
+            $shortErr = mb_substr(preg_replace('/\s+/', ' ', $providerError) ?? $providerError, 0, 220);
+            $lines[] = "\n*(Catatan: Analisis di atas disusun langsung oleh Mesin Data Real Livora karena provider LLM eksternal sedang mengalami batas kuota/kendala: {$shortErr})*";
+        }
+
+        return implode("\n", $lines);
     }
 
     protected function isValidRecommendation(array $rec): bool

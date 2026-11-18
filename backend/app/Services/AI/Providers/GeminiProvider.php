@@ -48,64 +48,88 @@ class GeminiProvider implements AIProviderContract
             $this->modelName,
             config('services.gemini.fallback_model'),
             'gemini-2.5-flash',
+            'gemini-2.5-flash-lite',
+            'gemini-2.0-flash',
         ])));
+
+        $wantGoogleSearch = !empty($options['google_search']);
+        // Jika Google Search Grounding diminta namun gagal (mis. kuota search grounding
+        // habis / 429 / 400 pada model tertentu), otomatis ulangi tanpa google_search
+        // agar chat & agent tetap berhasil merespons.
+        $searchModes = $wantGoogleSearch ? [true, false] : [false];
 
         $response = null;
         $usedModel = $this->modelName;
+        $lastErrorBody = 'no response';
 
-        foreach ($modelsToTry as $idx => $candidateModel) {
-            $useGoogleSearch = !empty($options['google_search']);
-            $generationConfig = [
-                'maxOutputTokens' => $options['max_tokens'] ?? 4096,
-                'temperature' => $options['temperature'] ?? 0.4,
-            ];
+        foreach ($searchModes as $useGoogleSearch) {
+            foreach ($modelsToTry as $candidateModel) {
+                $generationConfig = [
+                    'maxOutputTokens' => $options['max_tokens'] ?? 4096,
+                    'temperature' => $options['temperature'] ?? 0.4,
+                ];
 
-            // Gemini API tidak mengizinkan responseMimeType=application/json bersamaan dengan tools google_search.
-            if (!$useGoogleSearch && !empty($options['response_mime_type'])) {
-                $generationConfig['responseMimeType'] = $options['response_mime_type'];
-            }
+                // Gemini API tidak mengizinkan responseMimeType=application/json bersamaan dengan tools google_search.
+                if (!$useGoogleSearch && !empty($options['response_mime_type'])) {
+                    $generationConfig['responseMimeType'] = $options['response_mime_type'];
+                }
 
-            // Gemini 3.x memakai thinkingLevel ('low'|'medium'|'high'), sedangkan
-            // Gemini 2.5 memakai thinkingBudget (integer). Jangan kirim thinkingLevel
-            // ke gemini-2.5-* karena REST API v1beta akan menolak dengan 400 INVALID_ARGUMENT.
-            if (str_contains($candidateModel, 'gemini-3')) {
-                $generationConfig['thinkingConfig'] = ['thinkingLevel' => $options['thinking_level'] ?? 'low'];
-            } elseif (str_contains($candidateModel, 'gemini-2.5')) {
-                $generationConfig['thinkingConfig'] = ['thinkingBudget' => (int) ($options['thinking_budget'] ?? 1024)];
-            }
+                // Kirim thinkingConfig hanya bila diminta eksplisit & didukung model.
+                if (str_contains($candidateModel, 'gemini-3')) {
+                    $generationConfig['thinkingConfig'] = ['thinkingLevel' => $options['thinking_level'] ?? 'low'];
+                } elseif (
+                    str_contains($candidateModel, 'gemini-2.5')
+                    && !str_contains($candidateModel, 'lite')
+                    && isset($options['thinking_budget'])
+                ) {
+                    $generationConfig['thinkingConfig'] = ['thinkingBudget' => (int) $options['thinking_budget']];
+                }
 
-            $payload = [
-                'contents' => [
-                    ['role' => 'user', 'parts' => [['text' => $userMessage]]],
-                ],
-                'systemInstruction' => [
-                    'parts' => [['text' => $systemPrompt]],
-                ],
-                'generationConfig' => $generationConfig,
-            ];
+                $payload = [
+                    'contents' => [
+                        ['role' => 'user', 'parts' => [['text' => $userMessage]]],
+                    ],
+                    'systemInstruction' => [
+                        'parts' => [['text' => $systemPrompt]],
+                    ],
+                    'generationConfig' => $generationConfig,
+                ];
 
-            if ($useGoogleSearch) {
-                $payload['tools'] = [['google_search' => new \stdClass()]];
-            }
+                if ($useGoogleSearch) {
+                    $payload['tools'] = [['google_search' => new \stdClass()]];
+                }
 
-            $res = Http::withHeaders(['x-goog-api-key' => $this->apiKey])
-                ->timeout(45)
-                ->post("{$this->baseUrl}/models/{$candidateModel}:generateContent", $payload);
+                try {
+                    $res = Http::withHeaders(['x-goog-api-key' => $this->apiKey])
+                        ->timeout(40)
+                        ->post("{$this->baseUrl}/models/{$candidateModel}:generateContent", $payload);
+                } catch (\Throwable $e) {
+                    $lastErrorBody = $e->getMessage();
+                    continue;
+                }
 
-            $response = $res;
-            $usedModel = $candidateModel;
+                $response = $res;
+                $usedModel = $candidateModel;
 
-            // Fallback ke model cadangan kalau model utama 404 / tidak mendukung tool atau thinking param tertentu.
-            $shouldFallback = $res->status() === 404
-                || str_contains($res->body(), 'not found')
-                || ($res->status() === 400 && ($useGoogleSearch || str_contains(strtolower($res->body()), 'thinking')));
-            if ($res->successful() || !$shouldFallback || $idx === count($modelsToTry) - 1) {
-                break;
+                if ($res->successful()) {
+                    $checkData = $res->json();
+                    $hasParts = !empty($checkData['candidates'][0]['content']['parts']);
+                    if ($hasParts) {
+                        break 2;
+                    }
+                }
+
+                $lastErrorBody = $res->body() ?: ('HTTP '.$res->status());
+
+                // Hanya berhenti total jika API key sendiri tidak valid (401 / API_KEY_INVALID).
+                if ($res->status() === 401 || str_contains($lastErrorBody, 'API_KEY_INVALID')) {
+                    break 2;
+                }
             }
         }
 
         if (!$response || $response->failed()) {
-            throw new AIProviderException('Gemini API error: '.($response ? $response->body() : 'no response'));
+            throw new AIProviderException('Gemini API error: '.$lastErrorBody);
         }
 
         $data = $response->json();
