@@ -36,6 +36,7 @@ import type {
   AiChatMessage,
   AiLearningRule,
   AiLearningSummary,
+  IgBoostEntry,
   BusinessHealth,
   Campaign,
   CampaignGoal,
@@ -89,6 +90,16 @@ export interface AIMarketingService {
   getLearningSummary: (days?: number) => Promise<AiLearningSummary>;
   addLearningRule: (body: { rule: string; category?: string }) => Promise<AiLearningRule>;
   deleteLearningRule: (id: string) => Promise<{ ok: boolean; id: string }>;
+  addIgBoost: (body: {
+    title: string;
+    spendRp: number;
+    date?: string;
+    reach?: number;
+    clicks?: number;
+    leads?: number;
+    notes?: string;
+  }) => Promise<IgBoostEntry>;
+  deleteIgBoost: (id: string) => Promise<{ ok: boolean; id: string }>;
 }
 
 export interface AIDashboardService {

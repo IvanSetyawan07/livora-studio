@@ -44,6 +44,7 @@ import type {
   AiChatMessage,
   AiLearningRule,
   AiLearningSummary,
+  IgBoostEntry,
   AnalyticsOverview,
   AdsSummary,
   AgentRunResult,
@@ -253,5 +254,9 @@ export const laravelServices: AIServiceBundle = {
       api.post("/ai/learning/rules", body).then((r) => unwrap<AiLearningRule>(r.data)),
     deleteLearningRule: (id) =>
       api.delete(`/ai/learning/rules/${encodeURIComponent(id)}`).then((r) => unwrap<{ ok: boolean; id: string }>(r.data)),
+    addIgBoost: (body) =>
+      api.post("/ai/learning/ig-boost", body).then((r) => unwrap<IgBoostEntry>(r.data)),
+    deleteIgBoost: (id) =>
+      api.delete(`/ai/learning/ig-boost/${encodeURIComponent(id)}`).then((r) => unwrap<{ ok: boolean; id: string }>(r.data)),
   },
 };

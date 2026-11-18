@@ -97,6 +97,7 @@ class ChatCommandExecutor
             'dismiss_insight' => $this->opDismissInsight($op),
             'set_provider_preference' => $this->opSetProviderPreference($op),
             'save_learning_rule' => $this->opSaveLearningRule($op),
+            'record_ig_boost' => $this->opRecordIgBoost($op),
             default => null,
         };
     }
@@ -671,6 +672,32 @@ class ChatCommandExecutor
             'title' => 'Aturan Strategi & Pembelajaran AI Disimpan',
             'detail' => "[{$saved['category']}] {$saved['rule']}",
             'href' => '/admin/ai-marketing',
+        ];
+    }
+
+    private function opRecordIgBoost(array $op): array
+    {
+        $spendRp = (float) ($op['spendRp'] ?? $op['spend_rp'] ?? $op['spend'] ?? 0);
+        if ($spendRp <= 0) {
+            throw new \InvalidArgumentException('Nominal biaya Boost IG harus lebih dari Rp 0.');
+        }
+
+        $entry = $this->learning->addIgBoostEntry([
+            'title' => $op['title'] ?? 'Instagram Boost Post',
+            'spendRp' => $spendRp,
+            'date' => $op['date'] ?? now()->toDateString(),
+            'reach' => (int) ($op['reach'] ?? 0),
+            'clicks' => (int) ($op['clicks'] ?? 0),
+            'leads' => (int) ($op['leads'] ?? 0),
+            'notes' => $op['notes'] ?? null,
+        ]);
+
+        return [
+            'type' => 'record_ig_boost',
+            'status' => 'ok',
+            'title' => 'Biaya Instagram Boost Dicatat & ROI Dihitung',
+            'detail' => sprintf('%s · Rp %s (%s)', $entry['title'], number_format((float) $entry['spendRp'], 0, ',', '.'), $entry['date']),
+            'href' => '/admin/ai-marketing/ads',
         ];
     }
 }

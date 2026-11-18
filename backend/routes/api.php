@@ -384,6 +384,8 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::get('/learning/summary', [\App\Http\Controllers\Api\Ai\LearningController::class, 'summary']);
         Route::post('/learning/rules', [\App\Http\Controllers\Api\Ai\LearningController::class, 'storeRule']);
         Route::delete('/learning/rules/{ruleId}', [\App\Http\Controllers\Api\Ai\LearningController::class, 'deleteRule']);
+        Route::post('/learning/ig-boost', [\App\Http\Controllers\Api\Ai\LearningController::class, 'storeIgBoost']);
+        Route::delete('/learning/ig-boost/{boostId}', [\App\Http\Controllers\Api\Ai\LearningController::class, 'deleteIgBoost']);
 
         Route::get('/usage/totals', [AiUsageController::class, 'totals']);
         Route::get('/usage/by-agent', [AiUsageController::class, 'byAgent']);

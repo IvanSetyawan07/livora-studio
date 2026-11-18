@@ -611,9 +611,54 @@ export interface AiLearningRule {
   createdAt: string;
 }
 
+export interface IgBoostEntry {
+  id: string;
+  title: string;
+  spendRp: number;
+  date: string;
+  reach: number;
+  clicks: number;
+  leads: number;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface AiRoiAttribution {
+  periodDays: number;
+  fromDate: string;
+  toDate: string;
+  metaApiSpendRp: number;
+  igBoostManualSpendRp: number;
+  totalSpendRp: number;
+  paidShopRevenueRp: number;
+  pipelineOrderRevenueRp: number;
+  grossShopOrderRevenueRp: number;
+  waInquiredValueRp: number;
+  totalAttributedValueRp: number;
+  platformRoas: number | null;
+  realShopRoas: number | null;
+  blendedPipelineRoas: number | null;
+  effectiveRoas: number | null;
+  realShopRoiPct: number | null;
+  blendedPipelineRoiPct: number | null;
+  effectiveRoiPct: number | null;
+  consultationsCount: number;
+  waInquiriesCount: number;
+  totalRealLeads: number;
+  realCplRp: number | null;
+  costPerConsultationRp: number | null;
+  costPerWaLeadRp: number | null;
+  verdict: string;
+  tone: "success" | "info" | "warning" | "neutral";
+  explanation: string;
+  igBoostEntries: IgBoostEntry[];
+  allIgBoostEntries?: IgBoostEntry[];
+}
+
 export interface AiLearningSummary {
   generatedAt: string;
   periodDays: number;
+  roiAttribution?: AiRoiAttribution;
   profitGrounding: {
     ordersAndRevenue: {
       paidOrdersCount: number;
@@ -820,7 +865,18 @@ export interface AdsSummary {
   status: MarketingStatus;
   period: MarketingPeriodInfo;
   generatedAt: string;
-  kpis: { spend: number; leads: number; cpl: number | null; roas: number | null; ctr: number | null };
+  kpis: {
+    spend: number;
+    leads: number;
+    cpl: number | null;
+    roas: number | null;
+    roiPct?: number | null;
+    platformRoas?: number | null;
+    realShopRoas?: number | null;
+    blendedPipelineRoas?: number | null;
+    ctr: number | null;
+  };
+  roiAttribution?: AiRoiAttribution | null;
   series: { date: string; spend: number; leads: number; clicks: number; impressions: number; revenue: number; cpl: number | null }[];
   budgetSplit: { platform: "meta" | "google"; label: string; spend: number }[];
   campaigns: { id: string; name: string; platform: "meta" | "google"; spend: number; leads: number; cpl: number | null; status: string; impressions: number; clicks: number; revenue: number }[];

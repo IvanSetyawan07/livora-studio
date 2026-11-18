@@ -44,4 +44,30 @@ class LearningController extends Controller
 
         return response()->json(['ok' => $removed, 'id' => $ruleId]);
     }
+
+    /** POST /api/ai/learning/ig-boost { title, spendRp, date?, reach?, clicks?, leads?, notes? } */
+    public function storeIgBoost(Request $request)
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:160'],
+            'spendRp' => ['required', 'numeric', 'min:1'],
+            'date' => ['nullable', 'date'],
+            'reach' => ['nullable', 'integer', 'min:0'],
+            'clicks' => ['nullable', 'integer', 'min:0'],
+            'leads' => ['nullable', 'integer', 'min:0'],
+            'notes' => ['nullable', 'string', 'max:300'],
+        ]);
+
+        $entry = $this->learning->addIgBoostEntry($data);
+
+        return response()->json($entry, 201);
+    }
+
+    /** DELETE /api/ai/learning/ig-boost/{boostId} */
+    public function deleteIgBoost(string $boostId)
+    {
+        $removed = $this->learning->removeIgBoostEntry($boostId);
+
+        return response()->json(['ok' => $removed, 'id' => $boostId]);
+    }
 }

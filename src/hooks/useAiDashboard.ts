@@ -743,6 +743,36 @@ export function useDeleteLearningRule() {
   });
 }
 
+export function useAddIgBoost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      title: string;
+      spendRp: number;
+      date?: string;
+      reach?: number;
+      clicks?: number;
+      leads?: number;
+      notes?: string;
+    }) => aiServices.marketing.addIgBoost(body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai"] });
+      qc.invalidateQueries({ queryKey: ["marketing"] });
+    },
+  });
+}
+
+export function useDeleteIgBoost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => aiServices.marketing.deleteIgBoost(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai"] });
+      qc.invalidateQueries({ queryKey: ["marketing"] });
+    },
+  });
+}
+
 export function useSyncCampaigns() {
   const qc = useQueryClient();
   return useMutation({

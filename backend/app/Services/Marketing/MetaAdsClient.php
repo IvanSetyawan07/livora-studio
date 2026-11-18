@@ -89,8 +89,22 @@ class MetaAdsClient
         return $sum;
     }
 
-    private const LEAD_ACTIONS = ['lead', 'onsite_conversion.lead_grouped', 'offsite_conversion.fb_pixel_lead'];
-    private const PURCHASE_ACTIONS = ['purchase', 'offsite_conversion.fb_pixel_purchase'];
+    private const LEAD_ACTIONS = [
+        'lead',
+        'onsite_conversion.lead_grouped',
+        'offsite_conversion.fb_pixel_lead',
+        'onsite_conversion.messaging_conversation_started_7d',
+        'onsite_conversion.messaging_first_reply',
+        'contact_total',
+        'click_to_call_call_confirm',
+    ];
+
+    private const PURCHASE_ACTIONS = [
+        'purchase',
+        'offsite_conversion.fb_pixel_purchase',
+        'omni_purchase',
+        'onsite_web_purchase',
+    ];
 
     /**
      * Deret harian spend / leads / impressions / clicks untuk seluruh akun.

@@ -25,6 +25,7 @@ use Throwable;
 class AiLearningMemoryService
 {
     private const SETTING_KEY = 'ai_learning_rules';
+    private const IG_BOOST_KEY = 'ai_ig_boost_entries_v1';
 
     /**
      * Ringkasan lengkap bisnis, profit, kebocoran konversi, dan memori pembelajaran AI.
@@ -35,12 +36,266 @@ class AiLearningMemoryService
     {
         $profit = $this->profitAndBusinessGrounding($days);
         $memory = $this->learningMemorySnapshot();
+        $roi = $this->roiAndRoasAttribution($days, 0.0, 0.0, 0.0, 0, 0, $profit);
 
         return [
             'generatedAt' => now()->toIso8601String(),
             'periodDays' => $days,
             'profitGrounding' => $profit,
             'learningMemory' => $memory,
+            'roiAttribution' => $roi,
+        ];
+    }
+
+    /**
+     * Ambil daftar catatan biaya Instagram Boost (baik dari IG App langsung maupun manual).
+     *
+     * @return array<int, array{id: string, title: string, spendRp: float, date: string, reach: int, clicks: int, leads: int, notes: ?string, createdAt: string}>
+     */
+    public function getIgBoostEntries(): array
+    {
+        try {
+            if (! Schema::hasTable('ai_settings')) {
+                return [];
+            }
+
+            $raw = AiSetting::get(self::IG_BOOST_KEY);
+            if (! is_string($raw) || trim($raw) === '') {
+                return [];
+            }
+
+            $decoded = json_decode($raw, true);
+
+            return is_array($decoded) ? array_values(array_filter($decoded, 'is_array')) : [];
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * Catat biaya Instagram Boost baru untuk perhitungan ROI & ROAS nyata.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public function addIgBoostEntry(array $data): array
+    {
+        $entries = $this->getIgBoostEntries();
+        $title = trim((string) ($data['title'] ?? 'Instagram Boost Post'));
+        if ($title === '') {
+            $title = 'Instagram Boost Post';
+        }
+
+        $spendRp = max(0.0, (float) ($data['spendRp'] ?? $data['spend_rp'] ?? $data['spend'] ?? 0));
+        $date = trim((string) ($data['date'] ?? now()->toDateString()));
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            $date = now()->toDateString();
+        }
+
+        $entry = [
+            'id' => 'igb_'.now()->format('YmdHis').'_'.substr(md5($title.$spendRp.$date), 0, 5),
+            'title' => mb_substr($title, 0, 160),
+            'spendRp' => round($spendRp, 0),
+            'date' => $date,
+            'reach' => max(0, (int) ($data['reach'] ?? 0)),
+            'clicks' => max(0, (int) ($data['clicks'] ?? 0)),
+            'leads' => max(0, (int) ($data['leads'] ?? 0)),
+            'notes' => isset($data['notes']) && is_string($data['notes']) && trim($data['notes']) !== ''
+                ? mb_substr(trim($data['notes']), 0, 300)
+                : null,
+            'createdAt' => now()->toIso8601String(),
+        ];
+
+        array_unshift($entries, $entry);
+        $entries = array_slice($entries, 0, 60);
+        $this->saveIgBoostEntries($entries);
+
+        return $entry;
+    }
+
+    public function removeIgBoostEntry(string $id): bool
+    {
+        $entries = $this->getIgBoostEntries();
+        $filtered = array_values(array_filter($entries, fn ($e) => ($e['id'] ?? '') !== $id));
+        $this->saveIgBoostEntries($filtered);
+
+        return count($filtered) < count($entries);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $entries
+     */
+    private function saveIgBoostEntries(array $entries): void
+    {
+        try {
+            if (Schema::hasTable('ai_settings')) {
+                AiSetting::set(self::IG_BOOST_KEY, json_encode(array_values($entries), JSON_UNESCAPED_UNICODE));
+            }
+        } catch (Throwable) {
+            // ignore storage failure
+        }
+    }
+
+    /**
+     * Hitung True ROI (%) & Blended ROAS Livora dengan menggabungkan:
+     * - Spend dari Meta/Google Ads API + Spend dari Instagram Boost App
+     * - Omzet Shop Real (Lunas + Pipeline Order) + Nilai Produk yang Ditanyakan di WA LiviBot
+     * - Cost per Consultation & Cost per WA Inquiry
+     *
+     * @param  array<string, mixed>|null  $precomputedProfit
+     * @return array<string, mixed>
+     */
+    public function roiAndRoasAttribution(
+        int $days = 30,
+        float $apiSpendRp = 0.0,
+        float $apiPlatformRevenueRp = 0.0,
+        float $apiLeads = 0.0,
+        int $apiClicks = 0,
+        int $apiImpressions = 0,
+        ?array $precomputedProfit = null
+    ): array {
+        $profit = $precomputedProfit ?? $this->profitAndBusinessGrounding($days);
+        $fromDate = now()->subDays(max(1, $days) - 1)->toDateString();
+        $toDate = now()->toDateString();
+
+        $allBoosts = $this->getIgBoostEntries();
+        $periodBoosts = array_values(array_filter($allBoosts, function ($b) use ($fromDate, $toDate) {
+            $d = (string) ($b['date'] ?? '');
+
+            return $d === '' || ($d >= $fromDate && $d <= $toDate);
+        }));
+
+        $igBoostManualSpendRp = 0.0;
+        $igBoostManualLeads = 0;
+        $igBoostManualClicks = 0;
+        $igBoostManualReach = 0;
+
+        foreach ($periodBoosts as $b) {
+            $igBoostManualSpendRp += (float) ($b['spendRp'] ?? 0);
+            $igBoostManualLeads += (int) ($b['leads'] ?? 0);
+            $igBoostManualClicks += (int) ($b['clicks'] ?? 0);
+            $igBoostManualReach += (int) ($b['reach'] ?? 0);
+        }
+
+        $totalSpendRp = round($apiSpendRp + $igBoostManualSpendRp, 0);
+
+        $orders = $profit['ordersAndRevenue'] ?? [];
+        $paidRevenueRp = (float) ($orders['paidRevenueRp'] ?? 0);
+        $pipelineOrderRevenueRp = (float) ($orders['pipelineValueRp'] ?? 0);
+        $grossShopOrderRevenueRp = $paidRevenueRp + $pipelineOrderRevenueRp;
+
+        $wa = $profit['whatsappLiviBot'] ?? [];
+        $waInquiredValueRp = (float) ($wa['inquiredValueRp'] ?? 0);
+        $waInquiriesCount = (int) ($wa['totalPeriod'] ?? 0);
+
+        $consults = $profit['consultationsPipeline'] ?? [];
+        $consultationsCount = (int) ($consults['totalPeriod'] ?? 0);
+
+        // Total nilai bisnis yang digerakkan: order shop + nilai produk yang ditanyakan di WA LiviBot
+        $totalPipelineAndRevenueRp = $grossShopOrderRevenueRp + $waInquiredValueRp;
+
+        $platformRoas = $totalSpendRp > 0 && $apiPlatformRevenueRp > 0
+            ? round($apiPlatformRevenueRp / $totalSpendRp, 2)
+            : null;
+        $realShopRoas = $totalSpendRp > 0
+            ? round($grossShopOrderRevenueRp / $totalSpendRp, 2)
+            : null;
+        $blendedPipelineRoas = $totalSpendRp > 0
+            ? round($totalPipelineAndRevenueRp / $totalSpendRp, 2)
+            : null;
+
+        $realShopRoiPct = $totalSpendRp > 0
+            ? round((($grossShopOrderRevenueRp - $totalSpendRp) / $totalSpendRp) * 100, 1)
+            : null;
+        $blendedPipelineRoiPct = $totalSpendRp > 0
+            ? round((($totalPipelineAndRevenueRp - $totalSpendRp) / $totalSpendRp) * 100, 1)
+            : null;
+
+        $effectiveRoas = ($realShopRoas !== null && $realShopRoas > 0)
+            ? $realShopRoas
+            : (($blendedPipelineRoas !== null && $blendedPipelineRoas > 0) ? $blendedPipelineRoas : $platformRoas);
+
+        $effectiveRoiPct = ($grossShopOrderRevenueRp > 0 && $realShopRoiPct !== null)
+            ? $realShopRoiPct
+            : $blendedPipelineRoiPct;
+
+        $totalRealLeads = max((float) ($apiLeads + $igBoostManualLeads), (float) ($consultationsCount + $waInquiriesCount));
+        $realCplRp = ($totalSpendRp > 0 && $totalRealLeads > 0)
+            ? round($totalSpendRp / $totalRealLeads, 0)
+            : null;
+        $costPerConsultationRp = ($totalSpendRp > 0 && $consultationsCount > 0)
+            ? round($totalSpendRp / $consultationsCount, 0)
+            : null;
+        $costPerWaLeadRp = ($totalSpendRp > 0 && $waInquiriesCount > 0)
+            ? round($totalSpendRp / $waInquiriesCount, 0)
+            : null;
+
+        if ($totalSpendRp <= 0) {
+            $verdict = 'Belum Ada Data Biaya Boost';
+            $tone = 'neutral';
+            $explanation = 'Belum ada biaya iklan dari Meta Ads API maupun catatan Boost Instagram pada periode ini. Tambahkan biaya Boost IG Anda di panel kalkulator atau hubungkan Ad Account yang aktif melakukan Boost.';
+        } elseif (($effectiveRoas ?? 0) >= 3.0) {
+            $verdict = 'Sangat Profitabel (High ROAS)';
+            $tone = 'success';
+            $explanation = sprintf(
+                'Biaya iklan/Boost Rp %s menghasilkan nilai omzet & pipeline Rp %s (ROAS %sx, ROI %s%%). Pertahankan konten & audiens dengan konversi WA/konsultasi tertinggi.',
+                number_format($totalSpendRp, 0, ',', '.'),
+                number_format($totalPipelineAndRevenueRp, 0, ',', '.'),
+                (string) $effectiveRoas,
+                (string) ($effectiveRoiPct ?? 0)
+            );
+        } elseif (($effectiveRoas ?? 0) >= 1.0) {
+            $verdict = 'Positif / Menutup Modal (Break-Even+)';
+            $tone = 'info';
+            $explanation = sprintf(
+                'Biaya Boost Rp %s menggerakkan nilai bisnis Rp %s (ROAS %sx, ROI %s%%). Percepat follow-up %d prospek WA LiviBot & %d konsultasi agar pipeline berubah menjadi pembayaran lunas.',
+                number_format($totalSpendRp, 0, ',', '.'),
+                number_format($totalPipelineAndRevenueRp, 0, ',', '.'),
+                (string) $effectiveRoas,
+                (string) ($effectiveRoiPct ?? 0),
+                $waInquiriesCount,
+                $consultationsCount
+            );
+        } else {
+            $verdict = 'Perlu Optimasi Konversi Funnel';
+            $tone = 'warning';
+            $explanation = sprintf(
+                'Biaya Boost Rp %s baru menghasilkan nilai terukur Rp %s. Arahkan tombol CTA Instagram Boost langsung ke WhatsApp LiviBot atau halaman produk high-demand agar trafik tidak berhenti di kunjungan profil.',
+                number_format($totalSpendRp, 0, ',', '.'),
+                number_format($totalPipelineAndRevenueRp, 0, ',', '.')
+            );
+        }
+
+        return [
+            'periodDays' => $days,
+            'fromDate' => $fromDate,
+            'toDate' => $toDate,
+            'metaApiSpendRp' => round($apiSpendRp, 0),
+            'igBoostManualSpendRp' => round($igBoostManualSpendRp, 0),
+            'totalSpendRp' => $totalSpendRp,
+            'paidShopRevenueRp' => round($paidRevenueRp, 0),
+            'pipelineOrderRevenueRp' => round($pipelineOrderRevenueRp, 0),
+            'grossShopOrderRevenueRp' => round($grossShopOrderRevenueRp, 0),
+            'waInquiredValueRp' => round($waInquiredValueRp, 0),
+            'totalAttributedValueRp' => round($totalPipelineAndRevenueRp, 0),
+            'platformRoas' => $platformRoas,
+            'realShopRoas' => $realShopRoas,
+            'blendedPipelineRoas' => $blendedPipelineRoas,
+            'effectiveRoas' => $effectiveRoas,
+            'realShopRoiPct' => $realShopRoiPct,
+            'blendedPipelineRoiPct' => $blendedPipelineRoiPct,
+            'effectiveRoiPct' => $effectiveRoiPct,
+            'consultationsCount' => $consultationsCount,
+            'waInquiriesCount' => $waInquiriesCount,
+            'totalRealLeads' => $totalRealLeads,
+            'realCplRp' => $realCplRp,
+            'costPerConsultationRp' => $costPerConsultationRp,
+            'costPerWaLeadRp' => $costPerWaLeadRp,
+            'verdict' => $verdict,
+            'tone' => $tone,
+            'explanation' => $explanation,
+            'igBoostEntries' => $periodBoosts,
+            'allIgBoostEntries' => array_slice($allBoosts, 0, 20),
         ];
     }
 
@@ -306,6 +561,7 @@ class AiLearningMemoryService
             'totalPeriod' => 0,
             'pendingCount' => 0,
             'answeredCount' => 0,
+            'inquiredValueRp' => 0,
             'pendingInquiries' => [],
         ];
 
@@ -314,6 +570,41 @@ class AiLearningMemoryService
                 $waSummary['totalPeriod'] = (int) DB::table('wa_price_inquiries')->where('created_at', '>=', $since)->count();
                 $waSummary['pendingCount'] = (int) DB::table('wa_price_inquiries')->where('status', 'pending')->count();
                 $waSummary['answeredCount'] = (int) DB::table('wa_price_inquiries')->where('status', 'answered')->count();
+
+                // Hitung nilai katalog dari produk yang ditanyakan di WA selama periode ini
+                $itemPriceById = [];
+                $itemPriceByTitle = [];
+                if (Schema::hasTable('items') && Schema::hasColumn('items', 'price')) {
+                    $priceRows = DB::table('items')->select(['id', 'title', 'price'])->get();
+                    foreach ($priceRows as $pr) {
+                        $pVal = (float) ($pr->price ?? 0);
+                        if ($pVal > 0) {
+                            $itemPriceById[(int) $pr->id] = $pVal;
+                            $itemPriceByTitle[mb_strtolower(trim((string) $pr->title))] = $pVal;
+                        }
+                    }
+                }
+
+                $periodWaRows = DB::table('wa_price_inquiries')
+                    ->where('created_at', '>=', $since)
+                    ->get(['items']);
+                $inquiredVal = 0.0;
+                foreach ($periodWaRows as $wRow) {
+                    $arr = json_decode((string) ($wRow->items ?? '[]'), true) ?: [];
+                    foreach ($arr as $it) {
+                        $qty = max(1, (int) ($it['qty'] ?? $it['quantity'] ?? 1));
+                        $unitPrice = (float) ($it['price'] ?? $it['final_price'] ?? 0);
+                        if ($unitPrice <= 0 && ! empty($it['id']) && isset($itemPriceById[(int) $it['id']])) {
+                            $unitPrice = $itemPriceById[(int) $it['id']];
+                        }
+                        if ($unitPrice <= 0 && ! empty($it['title'])) {
+                            $tKey = mb_strtolower(trim((string) $it['title']));
+                            $unitPrice = $itemPriceByTitle[$tKey] ?? 0.0;
+                        }
+                        $inquiredVal += ($unitPrice * $qty);
+                    }
+                }
+                $waSummary['inquiredValueRp'] = (int) round($inquiredVal);
 
                 $pendingRows = DB::table('wa_price_inquiries')
                     ->where('status', 'pending')
@@ -560,16 +851,28 @@ class AiLearningMemoryService
     {
         $profit = $this->profitAndBusinessGrounding($days);
         $memory = $this->learningMemorySnapshot();
+        $roi = $this->roiAndRoasAttribution($days, 0.0, 0.0, 0.0, 0, 0, $profit);
 
         $rev = $profit['ordersAndRevenue'];
         $paidRp = 'Rp '.number_format($rev['paidRevenueRp'], 0, ',', '.');
         $pipeRp = 'Rp '.number_format($rev['pipelineValueRp'], 0, ',', '.');
         $aovRp = 'Rp '.number_format($rev['avgOrderValueRp'], 0, ',', '.');
+        $waValRp = 'Rp '.number_format($profit['whatsappLiviBot']['inquiredValueRp'] ?? 0, 0, ',', '.');
+        $boostSpendRp = 'Rp '.number_format($roi['totalSpendRp'] ?? 0, 0, ',', '.');
 
         $lines = [];
         $lines[] = "=== DATA PROFIT, PENJUALAN & PIPELINE NYATA LIVORA ({$days} HARI TERAKHIR) ===";
         $lines[] = "- Shop Revenue Terealisasi: {$paidRp} dari {$rev['paidOrdersCount']} order lunas (AOV: {$aovRp})";
         $lines[] = "- Pipeline Order Shop Aktif (belum lunas): {$pipeRp} dari {$rev['pipelineOrdersCount']} order";
+        $lines[] = "- Nilai Produk Ditanyakan via WA LiviBot: {$waValRp} ({$profit['whatsappLiviBot']['totalPeriod']} inquiry)";
+        $lines[] = sprintf(
+            "- Analisis Biaya Boost IG & ROAS/ROI: Total Spend=%s, Blended ROAS=%s, Real ROI=%s, Cost per Lead=%s (%s)",
+            $boostSpendRp,
+            $roi['effectiveRoas'] !== null ? $roi['effectiveRoas'].'x' : 'belum ada spend tercatat',
+            $roi['effectiveRoiPct'] !== null ? $roi['effectiveRoiPct'].'%' : 'n/a',
+            $roi['realCplRp'] !== null ? 'Rp '.number_format($roi['realCplRp'], 0, ',', '.') : 'n/a',
+            $roi['verdict'] ?? ''
+        );
 
         if (! empty($rev['topSellingItems'])) {
             $soldStr = implode('; ', array_map(

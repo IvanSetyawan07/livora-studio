@@ -82,14 +82,21 @@ export function AdsKpiGrid() {
     return <Panel className="col-span-full"><LoadingBlock /></Panel>;
   }
   if (state.status !== "data") {
-    return <Panel className="col-span-full"><SectionNotice state={state} title="Ads KPI" height="h-28" provider="Meta Ads / Google Ads" connectHref="/admin/ai-marketing/settings" /></Panel>;
+    return <Panel className="col-span-full"><SectionNotice state={state} title="Ads KPI" height="h-28" provider="Meta Ads / Instagram Boost" connectHref="/admin/ai-marketing/settings" /></Panel>;
   }
   const k = state.data.kpis;
+  const roiPct = k.roiPct ?? state.data.roiAttribution?.effectiveRoiPct ?? null;
   const kpis: StatKpi[] = [
     { label: "Total Spend", value: money(k.spend) },
-    { label: "Leads from Ads", value: fmt(k.leads, 1) },
+    { label: "Leads (Ads + Funnel)", value: fmt(k.leads, 1) },
     { label: "Cost per Lead", value: money(k.cpl) },
-    { label: "ROAS", value: k.roas == null ? "—" : `${k.roas}x` },
+    {
+      label: "Blended ROAS & ROI",
+      value: k.roas == null ? "—" : `${k.roas}x`,
+      ...(roiPct != null
+        ? { delta: `ROI ${roiPct > 0 ? "+" : ""}${roiPct}%`, direction: roiPct >= 0 ? "up" : "down" }
+        : {}),
+    },
     { label: "CTR", value: k.ctr == null ? "—" : `${k.ctr}%` },
   ];
   return <>{kpis.map((kpi, i) => <StatCard key={kpi.label} kpi={kpi} index={i} />)}</>;
@@ -441,22 +448,72 @@ export function AvgEngagementKpiCard({ index = 4 }: { index?: number }) {
 }
 
 export function AdRoasKpiCard({ index = 5 }: { index?: number }) {
-  const { state } = useAdsSummary();
-  if (state.status !== "data" || state.data.kpis.roas == null) {
-    return <KpiCard label="Ad ROAS" index={index} provider="Meta / Google Ads" state={state.status === "loading" ? state : notConnectedState("Meta / Google Ads")} />;
+  const { query, state } = useAdsSummary();
+  const raw = query.data ?? (state.status === "data" ? state.data : undefined);
+  const roi = raw?.roiAttribution;
+  const k = raw?.kpis;
+
+  if (state.status === "loading") {
+    return <KpiCard label="ROAS & ROI (Boost)" index={index} provider="IG Boost / Meta Ads" state={state} />;
   }
-  const k = state.data.kpis;
-  const kpi: AIKpi = {
-    id: "ads-roas",
-    label: "Ad ROAS",
-    value: k.roas ?? 0,
-    decimals: 2,
-    suffix: "x",
-    spark: state.data.series.map((r) => (r.spend > 0 ? r.revenue / r.spend : 0)),
-    footnote: `Spend ${money(k.spend)} · ${fmt(k.leads, 1)} leads`,
-    live: true,
-  };
-  return <KpiCard label="Ad ROAS" index={index} state={{ ...state, data: kpi }} href="/admin/ai-marketing/ads" />;
+
+  if (k && k.roas != null) {
+    const roiPct = k.roiPct ?? roi?.effectiveRoiPct ?? null;
+    const kpi: AIKpi = {
+      id: "ads-roas",
+      label: "ROAS & ROI (Boost)",
+      value: k.roas,
+      decimals: 2,
+      suffix: "x",
+      deltaLabel: roiPct != null ? `ROI ${roiPct > 0 ? "+" : ""}${roiPct}%` : `Spend ${money(k.spend)}`,
+      deltaDirection: roiPct != null ? (roiPct >= 0 ? "up" : "down") : "flat",
+      spark: (raw?.series ?? []).map((r) => (r.spend > 0 ? r.revenue / r.spend : 0)),
+      footnote: `Spend ${money(k.spend)} · CPL ${money(k.cpl)}`,
+      live: true,
+    };
+    return (
+      <KpiCard
+        label="ROAS & ROI (Boost)"
+        index={index}
+        state={{ status: "data", data: kpi, lastUpdatedAt: state.lastUpdatedAt, isRefreshing: state.isRefreshing, retry: state.retry }}
+        href="/admin/ai-marketing/ads"
+      />
+    );
+  }
+
+  if (roi) {
+    const pipeVal = roi.totalAttributedValueRp ?? 0;
+    const kpi: AIKpi = {
+      id: "ads-roas-ready",
+      label: "ROAS & ROI (Boost)",
+      value: 0,
+      decimals: 2,
+      suffix: "x",
+      deltaLabel: "Input biaya Boost IG →",
+      deltaDirection: "flat",
+      spark: [],
+      footnote: pipeVal > 0 ? `Pipeline Rp ${fmt(pipeVal)} siap dihitung` : "Klik untuk kalkulator ROI Boost IG",
+      live: true,
+    };
+    return (
+      <KpiCard
+        label="ROAS & ROI (Boost)"
+        index={index}
+        state={{ status: "data", data: kpi, lastUpdatedAt: state.lastUpdatedAt, isRefreshing: state.isRefreshing, retry: state.retry }}
+        href="/admin/ai-marketing/ads"
+      />
+    );
+  }
+
+  return (
+    <KpiCard
+      label="ROAS & ROI (Boost)"
+      index={index}
+      provider="Meta / IG Boost"
+      state={notConnectedState("Meta / IG Boost")}
+      href="/admin/ai-marketing/ads"
+    />
+  );
 }
 
 /* ---------------- Ads: CTR & Impressions (dari series yang sudah ada) ------ */

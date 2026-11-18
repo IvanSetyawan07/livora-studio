@@ -594,6 +594,24 @@ const marketing: AIMarketingService = {
     await delay(100);
     return { ok: true, id };
   },
+  async addIgBoost(body) {
+    await delay(120);
+    return {
+      id: `igb_${Date.now()}`,
+      title: body.title,
+      spendRp: body.spendRp,
+      date: body.date ?? new Date().toISOString().slice(0, 10),
+      reach: body.reach ?? 0,
+      clicks: body.clicks ?? 0,
+      leads: body.leads ?? 0,
+      notes: body.notes ?? null,
+      createdAt: new Date().toISOString(),
+    };
+  },
+  async deleteIgBoost(id) {
+    await delay(100);
+    return { ok: true, id };
+  },
 };
 // Honest-empty: belum ada koneksi Search Console beneran di mode mock,
 // jadi selalu balikin status disconnected/no-data (bukan angka fiktif).

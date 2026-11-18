@@ -215,7 +215,8 @@ class ChatController extends Controller
             ."- `{\"type\": \"recommend_videos\", \"query\": \"...\", \"scope\": \"external\"|\"all\", \"save_top_to_queue\": true}`\n"
             ."- `{\"type\": \"dismiss_insight\", \"id\": 8}`\n"
             ."- `{\"type\": \"set_provider_preference\", \"provider\": \"gemini\"|\"groq\"|\"anthropic\"|\"auto\"}`\n"
-            ."- `{\"type\": \"save_learning_rule\", \"rule\": \"...\", \"category\": \"profit_focus\"|\"brand_voice\"|\"target_audience\"|\"channel_strategy\"}`\n\n"
+            ."- `{\"type\": \"save_learning_rule\", \"rule\": \"...\", \"category\": \"profit_focus\"|\"brand_voice\"|\"target_audience\"|\"channel_strategy\"}`\n"
+            ."- `{\"type\": \"record_ig_boost\", \"title\": \"Boost Reels/Post ...\", \"spendRp\": 1500000, \"reach\": 12000, \"clicks\": 180, \"leads\": 8}`\n\n"
             ."FORMAT BALASAN — WAJIB JSON VALID TANPA MARKDOWN FENCE:\n"
             .'{"reply": "penjelasan mendalam, tajam, terstruktur (boleh pakai bullet & baris baru) dalam bahasa Indonesia profesional", '
             .'"recommendation": null | {'
@@ -407,6 +408,24 @@ class ChatController extends Controller
 
         if (preg_match('/\b(simpan\s+aturan|ajari\s+ai|catat\s+aturan)\s*:\s*(.+)$/i', trim($message), $ruleMatch)) {
             $ops[] = ['type' => 'save_learning_rule', 'rule' => trim($ruleMatch[2]), 'category' => 'profit_focus'];
+        }
+
+        if (preg_match('/\b(catat|input|tambah|masukkan)\b.*\bboost\b.*?(?:rp\.?\s*)?([\d.,]+)\s*(juta|jt|ribu|rb)?/i', $m, $boostMatch)) {
+            $rawNum = str_replace(['.', ','], ['', '.'], $boostMatch[2]);
+            $amount = (float) $rawNum;
+            $unit = strtolower($boostMatch[3] ?? '');
+            if ($unit === 'juta' || $unit === 'jt') {
+                $amount *= 1_000_000;
+            } elseif ($unit === 'ribu' || $unit === 'rb') {
+                $amount *= 1_000;
+            }
+            if ($amount > 0) {
+                $ops[] = [
+                    'type' => 'record_ig_boost',
+                    'title' => 'Instagram Boost (via Ask AI)',
+                    'spendRp' => $amount,
+                ];
+            }
         }
 
         return $ops;
