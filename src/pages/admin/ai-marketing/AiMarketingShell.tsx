@@ -350,7 +350,7 @@ function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) 
           <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin text-ai")} />
         </button>
 
-        <DropdownMenu open={dateOpen} onOpenChange={setDateOpen}>
+        <DropdownMenu modal={false} open={dateOpen} onOpenChange={setDateOpen}>
           <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-sm border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:px-3 sm:py-2">
             <CalendarDays className="size-3.5 shrink-0" />
             <span className="hidden sm:inline">
@@ -421,7 +421,7 @@ function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) 
           <span className="hidden xs:inline sm:inline">Ask AI</span>
         </button>
 
-        <DropdownMenu open={notifOpen} onOpenChange={setNotifOpen}>
+        <DropdownMenu modal={false} open={notifOpen} onOpenChange={setNotifOpen}>
           <DropdownMenuTrigger
             className="relative flex size-8 items-center justify-center rounded-full border border-border-strong text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-foreground"
             aria-label={unreadCount > 0 ? `${unreadCount} notifikasi belum dibaca` : "Notifikasi"}
@@ -523,7 +523,7 @@ function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) 
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger className="flex size-8 items-center justify-center rounded-full border border-border-strong text-[11px] tracking-widest transition-colors hover:bg-accent">
             {(user?.name || "A").charAt(0).toUpperCase()}
           </DropdownMenuTrigger>

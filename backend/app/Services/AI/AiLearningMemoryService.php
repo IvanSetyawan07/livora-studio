@@ -2,14 +2,12 @@
 
 namespace App\Services\AI;
 
-use App\Models\AiApproval;
-use App\Models\AiCampaign;
-use App\Models\AiContentDraft;
 use App\Models\AiImpactRecord;
 use App\Models\AiRecommendation;
 use App\Models\AiSetting;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Throwable;
 
 /**
  * Otak Pembelajaran Adaptif & Grounding Profit Nyata untuk Livora AI Marketing.
@@ -19,10 +17,9 @@ use Illuminate\Support\Facades\Schema;
  *    - consultations (pipeline proyek interior high-ticket per stage, estimasi area, sumber UTM)
  *    - wa_price_inquiries (prospek panas LiviBot WhatsApp yang tanya harga produk)
  *    - items, projects, promo_banners, wishlists, item_views, item_clicks
- *    - antrean AI Marketing (recommendations, actions, campaigns, content drafts)
  * 2) Mengekstrak pembelajaran (Self-Learning Loop) dari:
  *    - ai_impact_records (aksi mana yang terbukti positif menaikkan metrik vs negatif)
- *    - pola persetujuan/penolakan admin pada ai_recommendations & ai_approvals
+ *    - pola persetujuan/penolakan admin pada ai_recommendations
  *    - aturan strategi & fokus profit yang diajarkan admin (disimpan di AiSetting 'ai_learning_rules')
  */
 class AiLearningMemoryService
@@ -76,9 +73,7 @@ class AiLearningMemoryService
         array_unshift($rules, $entry);
         $rules = array_slice($rules, 0, 30);
 
-        if (Schema::hasTable('ai_settings')) {
-            AiSetting::set(self::SETTING_KEY, $rules);
-        }
+        $this->saveRules($rules);
 
         return $entry;
     }
@@ -88,9 +83,7 @@ class AiLearningMemoryService
         $rules = $this->getRules();
         $filtered = array_values(array_filter($rules, fn ($r) => ($r['id'] ?? '') !== $id));
 
-        if (Schema::hasTable('ai_settings')) {
-            AiSetting::set(self::SETTING_KEY, $filtered);
-        }
+        $this->saveRules($filtered);
 
         return count($filtered) < count($rules);
     }
@@ -100,13 +93,36 @@ class AiLearningMemoryService
      */
     public function getRules(): array
     {
-        if (! Schema::hasTable('ai_settings')) {
+        try {
+            if (! Schema::hasTable('ai_settings')) {
+                return [];
+            }
+
+            $raw = AiSetting::get(self::SETTING_KEY);
+            if (! is_string($raw) || trim($raw) === '') {
+                return [];
+            }
+
+            $decoded = json_decode($raw, true);
+
+            return is_array($decoded) ? array_values(array_filter($decoded, 'is_array')) : [];
+        } catch (Throwable) {
             return [];
         }
+    }
 
-        $val = AiSetting::get(self::SETTING_KEY, []);
-
-        return is_array($val) ? array_values($val) : [];
+    /**
+     * @param  array<int, array<string, mixed>>  $rules
+     */
+    private function saveRules(array $rules): void
+    {
+        try {
+            if (Schema::hasTable('ai_settings')) {
+                AiSetting::set(self::SETTING_KEY, json_encode(array_values($rules), JSON_UNESCAPED_UNICODE));
+            }
+        } catch (Throwable) {
+            // ignore storage failure so requests never 500
+        }
     }
 
     /**
@@ -114,41 +130,46 @@ class AiLearningMemoryService
      */
     public function syncFromImpact(): int
     {
-        if (! Schema::hasTable('ai_impact_records')) {
+        try {
+            if (! Schema::hasTable('ai_impact_records')) {
+                return 0;
+            }
+
+            $added = 0;
+            $records = AiImpactRecord::query()
+                ->whereIn('result', ['positive', 'negative'])
+                ->orderByDesc('updated_at')
+                ->limit(15)
+                ->get();
+
+            foreach ($records as $r) {
+                $changeArr = is_array($r->change_pct) ? $r->change_pct : [];
+                $pct = $changeArr['30'] ?? $changeArr['14'] ?? $changeArr['7'] ?? null;
+                if ($pct === null) {
+                    continue;
+                }
+                $numPct = (float) $pct;
+                if ($r->result === 'positive' && $numPct >= 10) {
+                    $this->addRule(
+                        "[TERBUKTI POSITIF +{$numPct}%] Aksi {$r->agent_key} \"{$r->title}\" meningkatkan {$r->metric_label}. Prioritaskan pola serupa.",
+                        'empirical_win',
+                        'impact_tracker'
+                    );
+                    $added++;
+                } elseif ($r->result === 'negative' && $numPct <= -10) {
+                    $this->addRule(
+                        "[EVALUASI / HINDARI {$numPct}%] Aksi {$r->agent_key} \"{$r->title}\" menurunkan {$r->metric_label}. Ubah pendekatan/sudut copywriting.",
+                        'empirical_avoid',
+                        'impact_tracker'
+                    );
+                    $added++;
+                }
+            }
+
+            return $added;
+        } catch (Throwable) {
             return 0;
         }
-
-        $added = 0;
-        $records = AiImpactRecord::query()
-            ->whereIn('result', ['positive', 'negative'])
-            ->orderByDesc('updated_at')
-            ->limit(15)
-            ->get();
-
-        foreach ($records as $r) {
-            $pct = $r->change_pct['30'] ?? $r->change_pct['14'] ?? $r->change_pct['7'] ?? null;
-            if ($pct === null) {
-                continue;
-            }
-            $numPct = (float) $pct;
-            if ($r->result === 'positive' && $numPct >= 10) {
-                $this->addRule(
-                    "[TERBUKTI POSITIF +{$numPct}%] Aksi {$r->agent_key} \"{$r->title}\" meningkatkan {$r->metric_label}. Prioritaskan pola serupa.",
-                    'empirical_win',
-                    'impact_tracker'
-                );
-                $added++;
-            } elseif ($r->result === 'negative' && $numPct <= -10) {
-                $this->addRule(
-                    "[EVALUASI / HINDARI {$numPct}%] Aksi {$r->agent_key} \"{$r->title}\" menurunkan {$r->metric_label}. Ubah pendekatan/sudut copywriting.",
-                    'empirical_avoid',
-                    'impact_tracker'
-                );
-                $added++;
-            }
-        }
-
-        return $added;
     }
 
     /**
@@ -168,49 +189,52 @@ class AiLearningMemoryService
             'topSellingItems' => [],
         ];
 
-        if (Schema::hasTable('shop_orders')) {
-            $paidStatuses = ['dibayar', 'diproses', 'dikirim', 'selesai', 'paid', 'completed'];
-            $pipelineStatuses = ['menunggu_wa', 'penawaran_dikirim', 'menunggu_pembayaran', 'menunggu_verifikasi'];
+        try {
+            if (Schema::hasTable('shop_orders')) {
+                $paidStatuses = ['dibayar', 'diproses', 'dikirim', 'selesai', 'paid', 'completed'];
+                $pipelineStatuses = ['menunggu_wa', 'penawaran_dikirim', 'menunggu_pembayaran', 'menunggu_verifikasi'];
 
-            $paidQuery = DB::table('shop_orders')
-                ->where('created_at', '>=', $since)
-                ->where(function ($q) use ($paidStatuses) {
-                    $q->whereNotNull('paid_at')->orWhereIn('status', $paidStatuses);
-                });
-
-            $paidCount = (int) (clone $paidQuery)->count();
-            $paidRev = (int) (clone $paidQuery)->sum('grand_total');
-
-            $pipeQuery = DB::table('shop_orders')
-                ->where('created_at', '>=', $since)
-                ->whereNull('paid_at')
-                ->whereIn('status', $pipelineStatuses);
-
-            $pipeCount = (int) (clone $pipeQuery)->count();
-            $pipeVal = (int) (clone $pipeQuery)->sum('grand_total');
-
-            $ordersSummary['paidOrdersCount'] = $paidCount;
-            $ordersSummary['paidRevenueRp'] = $paidRev;
-            $ordersSummary['pipelineOrdersCount'] = $pipeCount;
-            $ordersSummary['pipelineValueRp'] = $pipeVal;
-            $ordersSummary['avgOrderValueRp'] = $paidCount > 0 ? (int) round($paidRev / $paidCount) : 0;
-
-            if (Schema::hasTable('shop_order_items')) {
-                $topSold = DB::table('shop_order_items')
-                    ->selectRaw('item_id, title, SUM(quantity) as total_qty, SUM((unit_price - unit_discount) * quantity) as total_rev')
+                $paidQuery = DB::table('shop_orders')
                     ->where('created_at', '>=', $since)
-                    ->groupBy('item_id', 'title')
-                    ->orderByDesc('total_rev')
-                    ->limit(6)
-                    ->get();
+                    ->where(function ($q) use ($paidStatuses) {
+                        $q->whereNotNull('paid_at')->orWhereIn('status', $paidStatuses);
+                    });
 
-                $ordersSummary['topSellingItems'] = $topSold->map(fn ($r) => [
-                    'itemId' => $r->item_id ? (int) $r->item_id : null,
-                    'title' => (string) $r->title,
-                    'qty' => (int) $r->total_qty,
-                    'revenueRp' => (int) $r->total_rev,
-                ])->values()->all();
+                $paidCount = (int) (clone $paidQuery)->count();
+                $paidRev = (int) (clone $paidQuery)->sum('grand_total');
+
+                $pipeQuery = DB::table('shop_orders')
+                    ->where('created_at', '>=', $since)
+                    ->whereNull('paid_at')
+                    ->whereIn('status', $pipelineStatuses);
+
+                $pipeCount = (int) (clone $pipeQuery)->count();
+                $pipeVal = (int) (clone $pipeQuery)->sum('grand_total');
+
+                $ordersSummary['paidOrdersCount'] = $paidCount;
+                $ordersSummary['paidRevenueRp'] = $paidRev;
+                $ordersSummary['pipelineOrdersCount'] = $pipeCount;
+                $ordersSummary['pipelineValueRp'] = $pipeVal;
+                $ordersSummary['avgOrderValueRp'] = $paidCount > 0 ? (int) round($paidRev / $paidCount) : 0;
+
+                if (Schema::hasTable('shop_order_items')) {
+                    $topSold = DB::table('shop_order_items')
+                        ->selectRaw('item_id, title, SUM(quantity) as total_qty, SUM((unit_price - unit_discount) * quantity) as total_rev')
+                        ->where('created_at', '>=', $since)
+                        ->groupBy('item_id', 'title')
+                        ->orderByDesc('total_rev')
+                        ->limit(6)
+                        ->get();
+
+                    $ordersSummary['topSellingItems'] = $topSold->map(fn ($r) => [
+                        'itemId' => $r->item_id ? (int) $r->item_id : null,
+                        'title' => (string) $r->title,
+                        'qty' => (int) $r->total_qty,
+                        'revenueRp' => (int) $r->total_rev,
+                    ])->values()->all();
+                }
             }
+        } catch (Throwable) {
         }
 
         // 2. Consultations Pipeline (Proyek Interior & Arsitektur High-Ticket)
@@ -225,53 +249,56 @@ class AiLearningMemoryService
             'recentHighPriority' => [],
         ];
 
-        if (Schema::hasTable('consultations')) {
-            $consultSummary['totalPeriod'] = (int) DB::table('consultations')->where('created_at', '>=', $since)->count();
-            $consultSummary['unrespondedNew'] = (int) DB::table('consultations')->where('status', 'new_inquiry')->count();
-            $consultSummary['activeHighIntent'] = (int) DB::table('consultations')
-                ->whereIn('status', ['meeting_scheduled', 'in_progress', 'agreement_pending', 'dp_pending'])
-                ->count();
-            $consultSummary['completedCount'] = (int) DB::table('consultations')
-                ->where('created_at', '>=', $since)
-                ->whereIn('status', ['project_paid', 'project_running', 'completed'])
-                ->count();
-            $consultSummary['cancelledCount'] = (int) DB::table('consultations')
-                ->where('created_at', '>=', $since)
-                ->whereIn('status', ['cancelled', 'rejected', 'declined'])
-                ->count();
+        try {
+            if (Schema::hasTable('consultations')) {
+                $consultSummary['totalPeriod'] = (int) DB::table('consultations')->where('created_at', '>=', $since)->count();
+                $consultSummary['unrespondedNew'] = (int) DB::table('consultations')->where('status', 'new_inquiry')->count();
+                $consultSummary['activeHighIntent'] = (int) DB::table('consultations')
+                    ->whereIn('status', ['meeting_scheduled', 'in_progress', 'agreement_pending', 'dp_pending'])
+                    ->count();
+                $consultSummary['completedCount'] = (int) DB::table('consultations')
+                    ->where('created_at', '>=', $since)
+                    ->whereIn('status', ['project_paid', 'project_running', 'completed'])
+                    ->count();
+                $consultSummary['cancelledCount'] = (int) DB::table('consultations')
+                    ->where('created_at', '>=', $since)
+                    ->whereIn('status', ['cancelled', 'rejected', 'declined'])
+                    ->count();
 
-            $consultSummary['byStage'] = DB::table('consultations')
-                ->selectRaw('status, COUNT(*) as total')
-                ->groupBy('status')
-                ->pluck('total', 'status')
-                ->all();
-
-            if (Schema::hasColumn('consultations', 'service_type')) {
-                $consultSummary['topServiceTypes'] = DB::table('consultations')
-                    ->whereNotNull('service_type')
-                    ->where('service_type', '!=', '')
-                    ->selectRaw('service_type, COUNT(*) as total')
-                    ->groupBy('service_type')
-                    ->orderByDesc('total')
-                    ->limit(5)
-                    ->pluck('total', 'service_type')
+                $consultSummary['byStage'] = DB::table('consultations')
+                    ->selectRaw('status, COUNT(*) as total')
+                    ->groupBy('status')
+                    ->pluck('total', 'status')
                     ->all();
+
+                if (Schema::hasColumn('consultations', 'service_type')) {
+                    $consultSummary['topServiceTypes'] = DB::table('consultations')
+                        ->whereNotNull('service_type')
+                        ->where('service_type', '!=', '')
+                        ->selectRaw('service_type, COUNT(*) as total')
+                        ->groupBy('service_type')
+                        ->orderByDesc('total')
+                        ->limit(5)
+                        ->pluck('total', 'service_type')
+                        ->all();
+                }
+
+                $recentConsults = DB::table('consultations')
+                    ->whereIn('status', ['new_inquiry', 'under_review', 'contacted', 'meeting_scheduled', 'agreement_pending', 'dp_pending'])
+                    ->orderByDesc('updated_at')
+                    ->limit(6)
+                    ->get();
+
+                $consultSummary['recentHighPriority'] = $recentConsults->map(fn ($c) => [
+                    'id' => (int) $c->id,
+                    'name' => trim(($c->first_name ?? '').' '.($c->last_name ?? '')) ?: ($c->email ?? 'Lead'),
+                    'status' => (string) $c->status,
+                    'serviceType' => $c->service_type ?? null,
+                    'area' => $c->estimated_area ?? null,
+                    'phone' => $c->phone ?? null,
+                ])->values()->all();
             }
-
-            $recentConsults = DB::table('consultations')
-                ->whereIn('status', ['new_inquiry', 'under_review', 'contacted', 'meeting_scheduled', 'agreement_pending', 'dp_pending'])
-                ->orderByDesc('updated_at')
-                ->limit(6)
-                ->get();
-
-            $consultSummary['recentHighPriority'] = $recentConsults->map(fn ($c) => [
-                'id' => (int) $c->id,
-                'name' => trim(($c->first_name ?? '').' '.($c->last_name ?? '')) ?: ($c->email ?? 'Lead'),
-                'status' => (string) $c->status,
-                'serviceType' => $c->service_type ?? null,
-                'area' => $c->estimated_area ?? null,
-                'phone' => $c->phone ?? null,
-            ])->values()->all();
+        } catch (Throwable) {
         }
 
         // 3. WhatsApp LiviBot Price Inquiries
@@ -282,30 +309,34 @@ class AiLearningMemoryService
             'pendingInquiries' => [],
         ];
 
-        if (Schema::hasTable('wa_price_inquiries')) {
-            $waSummary['totalPeriod'] = (int) DB::table('wa_price_inquiries')->where('created_at', '>=', $since)->count();
-            $waSummary['pendingCount'] = (int) DB::table('wa_price_inquiries')->where('status', 'pending')->count();
-            $waSummary['answeredCount'] = (int) DB::table('wa_price_inquiries')->where('status', 'answered')->count();
+        try {
+            if (Schema::hasTable('wa_price_inquiries')) {
+                $waSummary['totalPeriod'] = (int) DB::table('wa_price_inquiries')->where('created_at', '>=', $since)->count();
+                $waSummary['pendingCount'] = (int) DB::table('wa_price_inquiries')->where('status', 'pending')->count();
+                $waSummary['answeredCount'] = (int) DB::table('wa_price_inquiries')->where('status', 'answered')->count();
 
-            $pendingRows = DB::table('wa_price_inquiries')
-                ->where('status', 'pending')
-                ->orderByDesc('created_at')
-                ->limit(6)
-                ->get();
+                $pendingRows = DB::table('wa_price_inquiries')
+                    ->where('status', 'pending')
+                    ->orderByDesc('created_at')
+                    ->limit(6)
+                    ->get();
 
-            $waSummary['pendingInquiries'] = $pendingRows->map(function ($w) {
-                $items = json_decode($w->items ?? '[]', true) ?: [];
-                $titles = array_values(array_filter(array_map(fn ($i) => $i['title'] ?? null, $items)));
+                $waSummary['pendingInquiries'] = $pendingRows->map(function ($w) {
+                    $items = json_decode($w->items ?? '[]', true) ?: [];
+                    $titles = array_values(array_filter(array_map(fn ($i) => $i['title'] ?? null, $items)));
+                    $phone = $w->phone ?? $w->customer_phone ?? null;
 
-                return [
-                    'id' => (int) $w->id,
-                    'customerName' => $w->customer_name ?: 'Prospek WA',
-                    'phone' => $w->customer_phone,
-                    'itemsAsked' => $titles,
-                    'question' => $w->customer_question,
-                    'createdAt' => (string) $w->created_at,
-                ];
-            })->values()->all();
+                    return [
+                        'id' => (int) $w->id,
+                        'customerName' => $w->customer_name ?? ($phone ? 'WA '.$phone : 'Prospek WA'),
+                        'phone' => $phone,
+                        'itemsAsked' => $titles,
+                        'question' => $w->customer_question ?? null,
+                        'createdAt' => (string) $w->created_at,
+                    ];
+                })->values()->all();
+            }
+        } catch (Throwable) {
         }
 
         // 4. Top Catalog Demand & High-Margin Products
@@ -315,81 +346,100 @@ class AiLearningMemoryService
             'activePromos' => [],
         ];
 
-        if (Schema::hasTable('items')) {
-            $clicksByItem = Schema::hasTable('item_clicks')
-                ? DB::table('item_clicks')->where('clicked_at', '>=', $since)->selectRaw('item_id, COUNT(*) as c')->groupBy('item_id')->pluck('c', 'item_id')
-                : collect();
-            $viewsByItem = Schema::hasTable('item_views')
-                ? DB::table('item_views')->where('viewed_at', '>=', $since)->selectRaw('item_id, COUNT(*) as v')->groupBy('item_id')->pluck('v', 'item_id')
-                : collect();
-            $wishByItem = Schema::hasTable('wishlists')
-                ? DB::table('wishlists')->where('created_at', '>=', $since)->selectRaw('item_id, COUNT(*) as w')->groupBy('item_id')->pluck('w', 'item_id')
-                : collect();
+        try {
+            if (Schema::hasTable('items')) {
+                $clicksByItem = Schema::hasTable('item_clicks')
+                    ? DB::table('item_clicks')
+                        ->where('target_type', 'item')
+                        ->where('clicked_at', '>=', $since)
+                        ->selectRaw('target_id, COUNT(*) as c')
+                        ->groupBy('target_id')
+                        ->pluck('c', 'target_id')
+                    : collect();
 
-            $hasPrice = Schema::hasColumn('items', 'price');
-            $hasFinalPrice = Schema::hasColumn('items', 'final_price');
-            $hasPromo = Schema::hasColumn('items', 'is_on_promo');
-            $cols = ['id', 'title'];
-            if ($hasPrice) {
-                $cols[] = 'price';
+                $viewsByItem = Schema::hasTable('item_views')
+                    ? DB::table('item_views')
+                        ->where('target_type', 'item')
+                        ->where('viewed_at', '>=', $since)
+                        ->selectRaw('target_id, COUNT(*) as v')
+                        ->groupBy('target_id')
+                        ->pluck('v', 'target_id')
+                    : collect();
+
+                $wishByItem = Schema::hasTable('wishlists') && Schema::hasColumn('wishlists', 'wishlistable_id')
+                    ? DB::table('wishlists')
+                        ->where('created_at', '>=', $since)
+                        ->selectRaw('wishlistable_id, COUNT(*) as w')
+                        ->groupBy('wishlistable_id')
+                        ->pluck('w', 'wishlistable_id')
+                    : collect();
+
+                $hasPrice = Schema::hasColumn('items', 'price');
+                $hasFinalPrice = Schema::hasColumn('items', 'final_price');
+                $hasPromo = Schema::hasColumn('items', 'is_on_promo');
+                $cols = ['id', 'title'];
+                if ($hasPrice) {
+                    $cols[] = 'price';
+                }
+                if ($hasFinalPrice) {
+                    $cols[] = 'final_price';
+                }
+                if ($hasPromo) {
+                    $cols[] = 'is_on_promo';
+                }
+
+                $allItems = DB::table('items')->select($cols)->limit(120)->get();
+                $scoredItems = $allItems->map(function ($it) use ($clicksByItem, $viewsByItem, $wishByItem) {
+                    $v = (int) ($viewsByItem[$it->id] ?? 0);
+                    $c = (int) ($clicksByItem[$it->id] ?? 0);
+                    $w = (int) ($wishByItem[$it->id] ?? 0);
+                    $price = isset($it->final_price) && $it->final_price > 0
+                        ? (int) $it->final_price
+                        : (isset($it->price) ? (int) $it->price : null);
+
+                    return [
+                        'id' => (int) $it->id,
+                        'title' => (string) $it->title,
+                        'priceRp' => $price,
+                        'isOnPromo' => (bool) ($it->is_on_promo ?? false),
+                        'views' => $v,
+                        'clicks' => $c,
+                        'wishlists' => $w,
+                        'demandScore' => $v + ($c * 3) + ($w * 5),
+                    ];
+                })->sortByDesc('demandScore')->take(8)->values()->all();
+
+                $catalogDemand['topItems'] = $scoredItems;
             }
-            if ($hasFinalPrice) {
-                $cols[] = 'final_price';
+
+            if (Schema::hasTable('projects')) {
+                $catalogDemand['projects'] = DB::table('projects')
+                    ->select(['id', 'title', 'location', 'is_highlighted'])
+                    ->orderByDesc('is_highlighted')
+                    ->orderByDesc('id')
+                    ->limit(6)
+                    ->get()
+                    ->map(fn ($p) => [
+                        'id' => (int) $p->id,
+                        'title' => (string) $p->title,
+                        'location' => $p->location,
+                    ])->values()->all();
             }
-            if ($hasPromo) {
-                $cols[] = 'is_on_promo';
+
+            if (Schema::hasTable('promo_banners')) {
+                $catalogDemand['activePromos'] = DB::table('promo_banners')
+                    ->where('is_active', true)
+                    ->orderBy('order_index')
+                    ->limit(5)
+                    ->get(['id', 'title', 'label', 'cta_text'])
+                    ->map(fn ($b) => [
+                        'id' => (int) $b->id,
+                        'title' => (string) $b->title,
+                        'label' => $b->label,
+                        'cta' => $b->cta_text,
+                    ])->values()->all();
             }
-
-            $allItems = DB::table('items')->select($cols)->limit(120)->get();
-            $scoredItems = $allItems->map(function ($it) use ($clicksByItem, $viewsByItem, $wishByItem) {
-                $v = (int) ($viewsByItem[$it->id] ?? 0);
-                $c = (int) ($clicksByItem[$it->id] ?? 0);
-                $w = (int) ($wishByItem[$it->id] ?? 0);
-                $price = isset($it->final_price) && $it->final_price > 0
-                    ? (int) $it->final_price
-                    : (isset($it->price) ? (int) $it->price : null);
-
-                return [
-                    'id' => (int) $it->id,
-                    'title' => (string) $it->title,
-                    'priceRp' => $price,
-                    'isOnPromo' => (bool) ($it->is_on_promo ?? false),
-                    'views' => $v,
-                    'clicks' => $c,
-                    'wishlists' => $w,
-                    'demandScore' => $v + ($c * 3) + ($w * 5),
-                ];
-            })->sortByDesc('demandScore')->take(8)->values()->all();
-
-            $catalogDemand['topItems'] = $scoredItems;
-        }
-
-        if (Schema::hasTable('projects')) {
-            $catalogDemand['projects'] = DB::table('projects')
-                ->select(['id', 'title', 'location', 'is_highlighted'])
-                ->orderByDesc('is_highlighted')
-                ->orderByDesc('id')
-                ->limit(6)
-                ->get()
-                ->map(fn ($p) => [
-                    'id' => (int) $p->id,
-                    'title' => (string) $p->title,
-                    'location' => $p->location,
-                ])->values()->all();
-        }
-
-        if (Schema::hasTable('promo_banners')) {
-            $catalogDemand['activePromos'] = DB::table('promo_banners')
-                ->where('is_active', true)
-                ->orderBy('order_index')
-                ->limit(5)
-                ->get(['id', 'title', 'label', 'cta_text'])
-                ->map(fn ($b) => [
-                    'id' => (int) $b->id,
-                    'title' => (string) $b->title,
-                    'label' => $b->label,
-                    'cta' => $b->cta_text,
-                ])->values()->all();
+        } catch (Throwable) {
         }
 
         // 5. Deteksi Kebocoran Profit Otomatis (Immediate Profit Leaks)
@@ -430,32 +480,36 @@ class AiLearningMemoryService
             'underperforming' => [],
         ];
 
-        if (Schema::hasTable('ai_impact_records')) {
-            $records = AiImpactRecord::orderByDesc('approved_at')->limit(30)->get();
-            foreach ($records as $r) {
-                $res = $r->result ?: 'monitoring';
-                if (isset($impactStats[$res])) {
-                    $impactStats[$res]++;
-                }
-                $pct = $r->change_pct['30'] ?? $r->change_pct['14'] ?? $r->change_pct['7'] ?? null;
-                if ($res === 'positive' && count($impactStats['provenWinners']) < 5) {
-                    $impactStats['provenWinners'][] = [
-                        'agent' => $r->agent_key,
-                        'title' => $r->title,
-                        'metric' => $r->metric_label,
-                        'changePct' => $pct,
-                        'conclusion' => $r->ai_conclusion,
-                    ];
-                } elseif ($res === 'negative' && count($impactStats['underperforming']) < 5) {
-                    $impactStats['underperforming'][] = [
-                        'agent' => $r->agent_key,
-                        'title' => $r->title,
-                        'metric' => $r->metric_label,
-                        'changePct' => $pct,
-                        'conclusion' => $r->ai_conclusion,
-                    ];
+        try {
+            if (Schema::hasTable('ai_impact_records')) {
+                $records = AiImpactRecord::orderByDesc('approved_at')->limit(30)->get();
+                foreach ($records as $r) {
+                    $res = $r->result ?: 'monitoring';
+                    if (isset($impactStats[$res])) {
+                        $impactStats[$res]++;
+                    }
+                    $changeArr = is_array($r->change_pct) ? $r->change_pct : [];
+                    $pct = $changeArr['30'] ?? $changeArr['14'] ?? $changeArr['7'] ?? null;
+                    if ($res === 'positive' && count($impactStats['provenWinners']) < 5) {
+                        $impactStats['provenWinners'][] = [
+                            'agent' => $r->agent_key,
+                            'title' => $r->title,
+                            'metric' => $r->metric_label,
+                            'changePct' => $pct,
+                            'conclusion' => $r->ai_conclusion,
+                        ];
+                    } elseif ($res === 'negative' && count($impactStats['underperforming']) < 5) {
+                        $impactStats['underperforming'][] = [
+                            'agent' => $r->agent_key,
+                            'title' => $r->title,
+                            'metric' => $r->metric_label,
+                            'changePct' => $pct,
+                            'conclusion' => $r->ai_conclusion,
+                        ];
+                    }
                 }
             }
+        } catch (Throwable) {
         }
 
         $governanceStats = [
@@ -466,27 +520,30 @@ class AiLearningMemoryService
             'recentlyRejectedTitles' => [],
         ];
 
-        if (Schema::hasTable('ai_recommendations')) {
-            $governanceStats['approvedOrExecuted'] = AiRecommendation::whereIn('status', ['approved', 'executed'])->count();
-            $governanceStats['rejected'] = AiRecommendation::where('status', 'rejected')->count();
-            $governanceStats['pending'] = AiRecommendation::where('status', 'pending')->count();
+        try {
+            if (Schema::hasTable('ai_recommendations')) {
+                $governanceStats['approvedOrExecuted'] = AiRecommendation::whereIn('status', ['approved', 'executed'])->count();
+                $governanceStats['rejected'] = AiRecommendation::where('status', 'rejected')->count();
+                $governanceStats['pending'] = AiRecommendation::where('status', 'pending')->count();
 
-            $preferred = AiRecommendation::query()
-                ->whereIn('status', ['approved', 'executed'])
-                ->selectRaw('action_type, COUNT(*) as total')
-                ->groupBy('action_type')
-                ->orderByDesc('total')
-                ->limit(4)
-                ->pluck('total', 'action_type')
-                ->all();
-            $governanceStats['preferredActionTypes'] = $preferred;
+                $preferred = AiRecommendation::query()
+                    ->whereIn('status', ['approved', 'executed'])
+                    ->selectRaw('action_type, COUNT(*) as total')
+                    ->groupBy('action_type')
+                    ->orderByDesc('total')
+                    ->limit(4)
+                    ->pluck('total', 'action_type')
+                    ->all();
+                $governanceStats['preferredActionTypes'] = $preferred;
 
-            $governanceStats['recentlyRejectedTitles'] = AiRecommendation::query()
-                ->where('status', 'rejected')
-                ->latest('updated_at')
-                ->limit(5)
-                ->pluck('title')
-                ->all();
+                $governanceStats['recentlyRejectedTitles'] = AiRecommendation::query()
+                    ->where('status', 'rejected')
+                    ->latest('updated_at')
+                    ->limit(5)
+                    ->pluck('title')
+                    ->all();
+            }
+        } catch (Throwable) {
         }
 
         return [

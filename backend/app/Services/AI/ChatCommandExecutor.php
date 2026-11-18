@@ -645,7 +645,7 @@ class ChatCommandExecutor
     {
         $provider = strtolower(trim((string) ($op['provider'] ?? 'auto')));
         $val = in_array($provider, ['gemini', 'groq', 'anthropic'], true) ? $provider : null;
-        AiSetting::set('preferred_provider', $val);
+        AiSetting::set('preferred_ai_provider', $val);
 
         return [
             'type' => 'set_provider_preference',

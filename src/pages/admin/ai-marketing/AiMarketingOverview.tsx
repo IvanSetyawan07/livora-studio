@@ -380,6 +380,17 @@ export default function AiMarketingOverview() {
                 <div key={i} className="skeleton-shimmer h-24 rounded-md" />
               ))}
             </div>
+          ) : learningQuery.isError ? (
+            <div className="mt-4 flex flex-col items-center justify-center gap-2 rounded-sm border border-dashed border-border-strong p-5 text-center text-xs text-muted-foreground">
+              <p>Ringkasan profit & pembelajaran adaptif belum dapat dimuat.</p>
+              <button
+                type="button"
+                onClick={() => void learningQuery.refetch()}
+                className="inline-flex items-center gap-1.5 rounded-sm border border-border-strong px-3 py-1 text-xs text-foreground hover:bg-accent"
+              >
+                <RotateCcw className="size-3" /> Coba lagi
+              </button>
+            </div>
           ) : learningQuery.data ? (
             <div className="mt-4 space-y-5">
               {/* Real Revenue & Pipeline Strip */}
