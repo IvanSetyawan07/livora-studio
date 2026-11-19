@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
+import { removeItemBackgroundWithAi } from "@/lib/itemCutout";
 import { toast } from "sonner";
 import {
   Pencil,
@@ -29,11 +30,22 @@ import {
   Wand2,
   Scissors,
   RotateCcw,
+  Palette,
+  Star,
+  ChevronUp,
+  ChevronDown,
+  ImagePlus,
 } from "lucide-react";
 import ItemQRCode from "@/components/livora/ItemQRCode";
 import BulkDiscountModal from "@/components/admin/BulkDiscountModal";
 import BatchGeminiCutoutModal from "@/components/admin/BatchGeminiCutoutModal";
 import { bulkDiscountItems } from "@/lib/promoApi";
+import { invalidateAllItemsCache } from "@/lib/itemsApi";
+import {
+  LUXURY_COLOR_PRESETS,
+  resolveSwatchHex,
+  type VariantCategory,
+} from "@/lib/furnitureColors";
 
 type SortKey = "name-asc" | "name-desc" | "date-desc" | "date-asc";
 type ViewMode = "grid" | "table";
@@ -108,6 +120,7 @@ export default function AdminItems() {
   const del = async (i: any) => {
     if (!confirm(`Hapus item "${i.title}"?`)) return;
     await api.delete(`/admin/items/${i.id}`);
+    invalidateAllItemsCache();
     load();
   };
 
@@ -472,12 +485,12 @@ export default function AdminItems() {
                 }`}
               >
                 {/* Visual Image Container */}
-                <div className="relative aspect-square w-full bg-[#181818] overflow-hidden">
+                <div className="relative aspect-[4/5] w-full bg-[#F3EFE8] overflow-hidden">
                   {i.image ? (
                     <img
                       src={imgUrl(i.image)}
                       alt={i.title}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      className="w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
@@ -551,6 +564,41 @@ export default function AdminItems() {
                       <span className="font-mono">{i.code || "—"}</span>
                       <span>{i.type?.name || "—"}</span>
                     </div>
+
+                    {/* Swatch Warna Produk */}
+                    <div className="mt-2.5 flex items-center gap-1.5 min-h-[18px]">
+                      {(i.variants ?? []).length > 0 ? (
+                        <>
+                          {(i.variants ?? []).slice(0, 6).map((v: any) => (
+                            <span
+                              key={v.id}
+                              title={v.color_name || v.variant_name}
+                              className={`w-4 h-4 rounded-full border border-black/15 shrink-0 ${
+                                v.is_default ? "ring-1 ring-foreground ring-offset-1 ring-offset-card" : ""
+                              }`}
+                              style={{ backgroundColor: resolveSwatchHex(v) }}
+                            />
+                          ))}
+                          {(i.variants ?? []).length > 6 && (
+                            <span className="text-[10px] text-muted-foreground font-medium">
+                              +{i.variants.length - 6}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditing(i);
+                            setShowForm(true);
+                          }}
+                          className="text-[10px] text-muted-foreground/75 hover:text-[#A88247] inline-flex items-center gap-1"
+                        >
+                          <Palette className="w-3 h-3" /> + Tambah warna
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Card Actions (di bawah) */}
@@ -612,6 +660,7 @@ export default function AdminItems() {
                   )}
                   <th className="text-left p-3">Image</th>
                   <th className="text-left p-3">Title</th>
+                  <th className="text-left p-3">Warna</th>
                   <th className="text-left p-3">Status Promo</th>
                   <th className="text-left p-3">Code</th>
                   <th className="text-left p-3">Type</th>
@@ -673,6 +722,39 @@ export default function AdminItems() {
                       {/* Title */}
                       <td className="p-3 font-medium">
                         <div>{i.title}</div>
+                      </td>
+
+                      {/* Warna / Swatches */}
+                      <td className="p-3">
+                        {(i.variants ?? []).length > 0 ? (
+                          <div className="flex items-center gap-1.5 flex-wrap max-w-[160px]">
+                            {(i.variants ?? []).slice(0, 5).map((v: any) => (
+                              <span
+                                key={v.id}
+                                title={v.color_name || v.variant_name}
+                                className={`w-4 h-4 rounded-full border border-black/15 shrink-0 ${
+                                  v.is_default ? "ring-1 ring-foreground ring-offset-1 ring-offset-card" : ""
+                                }`}
+                                style={{ backgroundColor: resolveSwatchHex(v) }}
+                              />
+                            ))}
+                            {(i.variants ?? []).length > 5 && (
+                              <span className="text-[11px] text-muted-foreground">+{i.variants.length - 5}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditing(i);
+                              setShowForm(true);
+                            }}
+                            className="text-xs text-muted-foreground/70 hover:text-[#A88247] hover:underline whitespace-nowrap"
+                          >
+                            + Warna
+                          </button>
+                        )}
                       </td>
 
                       {/* Promo Status Badge */}
@@ -879,6 +961,7 @@ export default function AdminItems() {
           onClose={() => setShowForm(false)}
           onSaved={(saved: any, isNew: boolean) => {
             setShowForm(false);
+            invalidateAllItemsCache();
             load();
             if (isNew && saved?.slug) setQrItem(saved);
           }}
@@ -898,7 +981,21 @@ export default function AdminItems() {
   );
 }
 
-// ── Form Tambah / Edit Item Furnitur dengan Live Image Preview & Fit Adjuster ──
+type ColorDraftRow = {
+  uid: string;
+  id?: number | null;
+  color_name: string;
+  color_code: string;
+  category: VariantCategory;
+  material_name: string;
+  is_default: boolean;
+  existingImage: string | null;
+  imageFile: File | null;
+  imagePreview: string | null;
+  removeImage: boolean;
+};
+
+// ── Form Tambah / Edit Item Furnitur dengan Live Image Preview & Color Swatch CRUD ──
 function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: any) {
   const [title, setTitle] = useState(item?.title || "");
   const [code, setCode] = useState(item?.code || "");
@@ -910,6 +1007,24 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
   const [collectionId, setCollectionId] = useState(item?.collection_id?.toString() || item?.collection?.id?.toString() || "");
   const [themeIds, setThemeIds] = useState<number[]>(item?.themes?.map((t: any) => t.id) || []);
   const [catIds, setCatIds] = useState<number[]>(item?.categories?.map((c: any) => c.id) || []);
+
+  // Pilihan Warna / Swatch per Item (disinkronkan ke furniture_variants)
+  const [colorRows, setColorRows] = useState<ColorDraftRow[]>(() =>
+    ((item?.variants ?? []) as any[]).map((v, idx) => ({
+      uid: `v-${v.id ?? idx}`,
+      id: v.id ?? null,
+      color_name: v.color_name || v.variant_name || "",
+      color_code: resolveSwatchHex(v),
+      category: (v.category as VariantCategory) || "fabric",
+      material_name: v.material_name || "",
+      is_default: Boolean(v.is_default),
+      existingImage: v.furniture_image ? imgUrl(v.furniture_image) : null,
+      imageFile: null,
+      imagePreview: v.furniture_image ? imgUrl(v.furniture_image) : null,
+      removeImage: false,
+    })),
+  );
+  const [previewColorIdx, setPreviewColorIdx] = useState<number>(0);
 
   // Image Upload & 2 AI Action Buttons (Hapus Background & Upscale)
   const [file, setFile] = useState<File | null>(null);
@@ -925,15 +1040,97 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
   const [isUpscaling, setIsUpscaling] = useState(false);
   const [isModifiedByAi, setIsModifiedByAi] = useState(false);
 
-  // Promo settings
+  // Promo & Badge settings (tanpa CRUD harga / nominal Rupiah)
   const [isOnPromo, setIsOnPromo] = useState<boolean>(item?.is_on_promo || false);
-  const [discountType, setDiscountType] = useState<string>(item?.discount_type || "PERCENTAGE");
   const [discountValue, setDiscountValue] = useState<string>(
-    item?.discount_value ? item.discount_value.toString() : ""
+    item?.discount_type === "PERCENTAGE" && item?.discount_value
+      ? item.discount_value.toString()
+      : "",
   );
   const [promoBadgeText, setPromoBadgeText] = useState<string>(item?.promo_badge_text || "");
 
   const [saving, setSaving] = useState(false);
+
+  const addPresetColor = (preset: (typeof LUXURY_COLOR_PRESETS)[number]) => {
+    const existsIdx = colorRows.findIndex(
+      (r) => r.color_name.trim().toLowerCase() === preset.name.toLowerCase(),
+    );
+    if (existsIdx >= 0) {
+      setPreviewColorIdx(existsIdx);
+      toast.info(`Warna "${preset.name}" sudah ada pada item ini.`);
+      return;
+    }
+    setColorRows((prev) => [
+      ...prev,
+      {
+        uid: `new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        id: null,
+        color_name: preset.name,
+        color_code: preset.hex,
+        category: preset.category,
+        material_name: preset.material || "",
+        is_default: prev.length === 0,
+        existingImage: null,
+        imageFile: null,
+        imagePreview: null,
+        removeImage: false,
+      },
+    ]);
+    setPreviewColorIdx(colorRows.length);
+  };
+
+  const addCustomColor = () => {
+    setColorRows((prev) => [
+      ...prev,
+      {
+        uid: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        id: null,
+        color_name: "",
+        color_code: "#D8CFC2",
+        category: "fabric",
+        material_name: "",
+        is_default: prev.length === 0,
+        existingImage: null,
+        imageFile: null,
+        imagePreview: null,
+        removeImage: false,
+      },
+    ]);
+    setPreviewColorIdx(colorRows.length);
+  };
+
+  const updateColorRow = (uid: string, patch: Partial<ColorDraftRow>) => {
+    setColorRows((prev) =>
+      prev.map((row) => (row.uid === uid ? { ...row, ...patch } : row)),
+    );
+  };
+
+  const setDefaultColor = (uid: string) => {
+    setColorRows((prev) =>
+      prev.map((row) => ({ ...row, is_default: row.uid === uid })),
+    );
+  };
+
+  const removeColorRow = (uid: string) => {
+    setColorRows((prev) => {
+      const next = prev.filter((row) => row.uid !== uid);
+      if (next.length > 0 && !next.some((r) => r.is_default)) {
+        next[0] = { ...next[0], is_default: true };
+      }
+      return next;
+    });
+    setPreviewColorIdx(0);
+  };
+
+  const moveColorRow = (idx: number, dir: -1 | 1) => {
+    const target = idx + dir;
+    setColorRows((prev) => {
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return next;
+    });
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -947,63 +1144,34 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
     }
   };
 
-  // Helper untuk mendapatkan Blob dari preview gambar
-  const getImageBlob = async (): Promise<Blob> => {
-    if (file) return file;
-    const resp = await fetch(previewImgUrl, { mode: "cors" });
-    return await resp.blob();
-  };
-
-  // ── 1. BUTTON HAPUS BACKGROUND (Google Gemini AI Vision) ──
+  // ── 1. BUTTON HAPUS BACKGROUND (IS-Net Neural + Gemini Vision Pixel Matte) ──
   const handleRemoveBg = async () => {
     if (!previewImgUrl) return;
     setIsRemovingBg(true);
-    const toastId = toast.loading("Google Gemini AI sedang memindai objek & menghapus background...");
+    const toastId = toast.loading("AI sedang memindai objek & menghapus background secara presisi...");
 
     try {
-      const fd = new FormData();
-      if (file) {
-        fd.append("image", file);
-      } else {
-        fd.append("image", previewImgUrl);
-      }
-      fd.append("action", "remove_bg");
+      const result = await removeItemBackgroundWithAi({
+        file,
+        imageUrl: previewImgUrl,
+        baseName: file?.name || title || "furniture",
+      });
 
-      const res = await api.post("/admin/items/gemini-process", fd);
-      if (res.data?.success && (res.data?.base64 || res.data?.url)) {
-        const outUrl = res.data.base64 || res.data.url;
-        const fetchRes = await fetch(outUrl);
-        const blob = await fetchRes.blob();
-        const cleanFile = new File([blob], (file?.name || "furniture").replace(/\.[^/.]+$/, "") + "-gemini-nobg.png", {
-          type: "image/png",
-        });
-        setFile(cleanFile);
-        setPreviewImgUrl(URL.createObjectURL(cleanFile));
-        setIsModifiedByAi(true);
+      setFile(result.file);
+      setPreviewImgUrl(result.url);
+      setIsModifiedByAi(true);
 
-        const modelUsed = res.data?.model || "Gemini Vision";
-        const detected = res.data?.gemini_analysis?.furniture_name || "Objek furnitur";
-        toast.success(`Berhasil! Google Gemini AI [${modelUsed}] mendeteksi "${detected}" & mengisolasi barang.`, { id: toastId });
-      } else {
-        throw new Error(res.data?.message || "Gagal memproses dengan Gemini");
-      }
+      const detectedLabel = result.detectedName ? ` ("${result.detectedName}")` : "";
+      toast.success(
+        `Background berhasil dihapus bersih [${result.modelUsed}]${detectedLabel}!`,
+        { id: toastId },
+      );
     } catch (err: any) {
-      console.error("Gemini Remove BG error:", err);
-      // Fallback lokal jika backend terhambat koneksi luar
-      try {
-        const rawBlob = await getImageBlob();
-        // @ts-ignore
-        const imgly = await import(/* @vite-ignore */ "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.7/+esm");
-        const removeBackground = imgly.removeBackground || imgly.default;
-        const fallbackBlob = await removeBackground(rawBlob);
-        const cleanFile = new File([fallbackBlob], (file?.name || "furniture").replace(/\.[^/.]+$/, "") + "-nobg.png", { type: "image/png" });
-        setFile(cleanFile);
-        setPreviewImgUrl(URL.createObjectURL(cleanFile));
-        setIsModifiedByAi(true);
-        toast.success("Background berhasil dihapus!", { id: toastId });
-      } catch (fErr) {
-        toast.error(err?.response?.data?.message || err?.message || "Gagal memproses dengan Google Gemini.", { id: toastId });
-      }
+      console.error("Remove BG error:", err);
+      toast.error(
+        err?.response?.data?.message || err?.message || "Gagal menghapus background foto.",
+        { id: toastId },
+      );
     } finally {
       setIsRemovingBg(false);
     }
@@ -1091,17 +1259,13 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
     toast.info("Foto dikembalikan ke versi asli.");
   };
 
-  // Auto-update promo badge saat nilai diskon berubah
+  // Auto-update promo badge saat persentase diskon berubah
   const handleDiscountChange = (valStr: string) => {
     setDiscountValue(valStr);
     const num = parseFloat(valStr);
     if (!isNaN(num) && num > 0) {
       setIsOnPromo(true);
-      if (discountType === "PERCENTAGE") {
-        setPromoBadgeText(`${Math.round(num)}% OFF`);
-      } else {
-        setPromoBadgeText(`HEMAT Rp ${Math.round(num).toLocaleString("id-ID")}`);
-      }
+      setPromoBadgeText(`${Math.min(100, Math.round(num))}% OFF`);
     } else {
       setIsOnPromo(false);
       setPromoBadgeText("");
@@ -1113,6 +1277,13 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const incompleteColor = colorRows.find((r) => !r.color_name.trim());
+    if (incompleteColor) {
+      toast.error("Mohon lengkapi nama semua warna yang ditambahkan (atau hapus baris kosong).");
+      return;
+    }
+
     setSaving(true);
     try {
       const fd = new FormData();
@@ -1128,18 +1299,39 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
       catIds.forEach((id) => fd.append("category_ids[]", id.toString()));
       if (file) fd.append("image", file);
 
-      // Promo data
+      // Kirim pilihan warna / swatches per item
+      const serializedColors = colorRows.map((row, idx) => {
+        const imageField = row.imageFile ? `color_image_${idx}` : null;
+        if (row.imageFile && imageField) {
+          fd.append(imageField, row.imageFile);
+        }
+        return {
+          id: row.id ?? null,
+          color_name: row.color_name.trim(),
+          color_code: row.color_code.trim() || "#D8CFC2",
+          category: row.category || "fabric",
+          material_name: row.material_name.trim() || null,
+          is_default: row.is_default,
+          sort_order: idx,
+          image_field: imageField,
+          remove_image: row.removeImage,
+        };
+      });
+      fd.append("colors_json", JSON.stringify(serializedColors));
+
+      // Promo & badge data (tanpa field harga — harga diatur di backoffice)
       fd.append("is_on_promo", isOnPromo ? "1" : "0");
-      if (discountValue) {
-        fd.append("discount_type", discountType);
+      fd.append("promo_badge_text", promoBadgeText.trim());
+      if (discountValue && parseFloat(discountValue) > 0) {
+        fd.append("discount_type", "PERCENTAGE");
         fd.append("discount_value", discountValue);
-        if (promoBadgeText) fd.append("promo_badge_text", promoBadgeText);
       } else {
         fd.append("discount_value", "0");
       }
 
       const url = item ? `/admin/items/${item.id}` : "/admin/items";
       const res = await api.post(url, fd, { headers: { "Content-Type": "multipart/form-data" } });
+      toast.success(item ? "Item & pilihan warna berhasil diperbarui" : "Item baru berhasil ditambahkan");
       onSaved(res.data, !item);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Gagal menyimpan item");
@@ -1298,11 +1490,20 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
 
             {previewImgUrl && (
               <div className="sm:col-span-4 flex justify-center">
-                <div className="w-28 h-28 rounded-lg overflow-hidden bg-black/20 border border-border shadow-sm flex items-center justify-center relative">
+                <div className="w-28 h-28 rounded-lg overflow-hidden bg-muted/40 border border-border shadow-sm flex items-center justify-center relative">
+                  <div
+                    className="absolute inset-0 opacity-35 pointer-events-none"
+                    style={{
+                      backgroundImage:
+                        "linear-gradient(45deg, #c8c4bc 25%, transparent 25%), linear-gradient(-45deg, #c8c4bc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #c8c4bc 75%), linear-gradient(-45deg, transparent 75%, #c8c4bc 75%)",
+                      backgroundSize: "12px 12px",
+                      backgroundPosition: "0 0, 0 6px, 6px -6px, -6px 0px",
+                    }}
+                  />
                   <img
                     src={previewImgUrl}
                     alt="Preview"
-                    className={`w-full h-full ${imageFit === "contain" ? "object-contain" : "object-cover"}`}
+                    className={`relative z-[1] w-full h-full p-1 ${imageFit === "contain" ? "object-contain" : "object-cover"}`}
                   />
                 </div>
               </div>
@@ -1310,12 +1511,265 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
           </div>
         </div>
 
-        {/* Promo Settings Section */}
+        {/* Pilihan Warna / Swatch Produk (CRUD Interaktif) */}
+        <div className="p-4 rounded-xl bg-[#FAF8F5] dark:bg-muted/30 border border-border space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] font-semibold text-foreground">
+                <Palette className="w-4 h-4 text-[#A88247]" />
+                Pilihan Warna / Swatch Produk
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Tambahkan warna apa saja yang tersedia untuk item ini. Warna akan tampil sebagai lingkaran interaktif pada kartu furnitur.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={addCustomColor}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-foreground text-background text-xs font-medium hover:opacity-90 transition-opacity"
+            >
+              <Plus className="w-3.5 h-3.5" /> Tambah Warna Custom
+            </button>
+          </div>
+
+          {/* Palet Kurasi Cepat (1 klik langsung tambah) */}
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground mb-2">
+              Tambah Cepat dari Palet Kurasi LIVORA
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {LUXURY_COLOR_PRESETS.map((preset) => {
+                const alreadyAdded = colorRows.some(
+                  (r) => r.color_name.trim().toLowerCase() === preset.name.toLowerCase(),
+                );
+                return (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    onClick={() => addPresetColor(preset)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] border transition-all ${
+                      alreadyAdded
+                        ? "bg-foreground text-background border-foreground font-medium"
+                        : "bg-card hover:bg-muted border-border text-foreground"
+                    }`}
+                  >
+                    <span
+                      className="w-3 h-3 rounded-full border border-black/20 shrink-0"
+                      style={{ backgroundColor: preset.hex }}
+                    />
+                    <span>{preset.name}</span>
+                    {alreadyAdded && <Check className="w-3 h-3" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Daftar Warna Aktif untuk Item Ini */}
+          {colorRows.length > 0 ? (
+            <div className="space-y-2.5">
+              {colorRows.map((row, idx) => (
+                <div
+                  key={row.uid}
+                  className={`p-3 rounded-lg bg-card border transition-colors ${
+                    row.is_default ? "border-[#A88247]/70 shadow-sm" : "border-border"
+                  }`}
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
+                    {/* Color Picker + Hex */}
+                    <div className="sm:col-span-3 flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={/^#[0-9A-Fa-f]{6}$/.test(row.color_code) ? row.color_code : "#D8CFC2"}
+                        onChange={(e) =>
+                          updateColorRow(row.uid, { color_code: e.target.value.toUpperCase() })
+                        }
+                        title="Pilih kode warna"
+                        className="w-9 h-9 rounded-full border border-border cursor-pointer shrink-0 p-0.5 bg-background"
+                      />
+                      <input
+                        value={row.color_code}
+                        onChange={(e) =>
+                          updateColorRow(row.uid, { color_code: e.target.value.toUpperCase() })
+                        }
+                        placeholder="#D8CFC2"
+                        maxLength={9}
+                        className="ui-input text-xs font-mono"
+                      />
+                    </div>
+
+                    {/* Nama Warna */}
+                    <div className="sm:col-span-3">
+                      <input
+                        value={row.color_name}
+                        onChange={(e) => updateColorRow(row.uid, { color_name: e.target.value })}
+                        placeholder="Nama warna (mis. Oatmeal Linen)"
+                        className="ui-input text-xs"
+                        required
+                      />
+                    </div>
+
+                    {/* Material & Kategori */}
+                    <div className="sm:col-span-3 flex items-center gap-1.5">
+                      <select
+                        value={row.category}
+                        onChange={(e) =>
+                          updateColorRow(row.uid, { category: e.target.value as VariantCategory })
+                        }
+                        className="ui-input text-xs"
+                      >
+                        <option value="fabric">Fabric</option>
+                        <option value="leather">Leather</option>
+                        <option value="wood">Wood</option>
+                        <option value="marble">Marble</option>
+                        <option value="metal">Metal</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+
+                    {/* Foto Khusus Warna + Utama + Urut + Hapus */}
+                    <div className="sm:col-span-3 flex items-center justify-end gap-1">
+                      {/* Upload foto khusus warna ini (opsional) */}
+                      <label
+                        title={
+                          row.imagePreview
+                            ? "Ganti foto khusus warna ini"
+                            : "Upload foto produk untuk warna ini (opsional)"
+                        }
+                        className="relative w-8 h-8 rounded-md border border-border bg-muted/40 hover:bg-muted flex items-center justify-center cursor-pointer overflow-hidden shrink-0"
+                      >
+                        {row.imagePreview ? (
+                          <img
+                            src={row.imagePreview}
+                            alt={row.color_name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <ImagePlus className="w-3.5 h-3.5 text-muted-foreground" />
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (!f) return;
+                            updateColorRow(row.uid, {
+                              imageFile: f,
+                              imagePreview: URL.createObjectURL(f),
+                              removeImage: false,
+                            });
+                          }}
+                        />
+                      </label>
+
+                      {row.imagePreview && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateColorRow(row.uid, {
+                              imageFile: null,
+                              imagePreview: null,
+                              existingImage: null,
+                              removeImage: true,
+                            })
+                          }
+                          title="Hapus foto khusus warna"
+                          className="p-1 text-muted-foreground hover:text-destructive rounded"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => setDefaultColor(row.uid)}
+                        title={row.is_default ? "Warna utama di kartu" : "Jadikan warna utama"}
+                        className={`p-1.5 rounded transition-colors ${
+                          row.is_default
+                            ? "text-[#A88247] bg-[#D7B483]/20"
+                            : "text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        <Star className={`w-3.5 h-3.5 ${row.is_default ? "fill-current" : ""}`} />
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={() => moveColorRow(idx, -1)}
+                        title="Pindah ke atas"
+                        className="p-1 rounded hover:bg-muted text-muted-foreground disabled:opacity-30"
+                      >
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={idx === colorRows.length - 1}
+                        onClick={() => moveColorRow(idx, 1)}
+                        title="Pindah ke bawah"
+                        className="p-1 rounded hover:bg-muted text-muted-foreground disabled:opacity-30"
+                      >
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeColorRow(row.uid)}
+                        title="Hapus warna"
+                        className="p-1.5 rounded text-destructive hover:bg-destructive/15"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Mini Pratinjau Baris Swatch Kartu */}
+              <div className="mt-2 px-3.5 py-2.5 rounded-lg bg-[#FAF8F5] border border-[#E6E0D6] flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#8C7A64]">
+                    Pratinjau Tampilan Kartu
+                  </p>
+                  <p className="text-xs font-medium text-[#1D1B18] truncate mt-0.5">
+                    {title || "Nama Furnitur"} ·{" "}
+                    <span className="font-normal text-[#7D756B]">
+                      {colorRows[previewColorIdx]?.color_name || colorRows[0]?.color_name || "Warna"}
+                    </span>
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {colorRows.slice(0, 6).map((r, i) => (
+                    <button
+                      key={r.uid}
+                      type="button"
+                      onClick={() => setPreviewColorIdx(i)}
+                      title={r.color_name || r.color_code}
+                      className={`w-5 h-5 rounded-full transition-all ${
+                        previewColorIdx === i
+                          ? "ring-[1.5px] ring-[#1D1B18] ring-offset-2 ring-offset-[#FAF8F5]"
+                          : "ring-1 ring-inset ring-black/15"
+                      }`}
+                      style={{ backgroundColor: r.color_code || "#D8CFC2" }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4 px-3 rounded-lg border border-dashed border-border text-xs text-muted-foreground">
+              Belum ada warna ditambahkan. Klik salah satu palet di atas atau tombol{" "}
+              <strong>+ Tambah Warna Custom</strong>.
+            </div>
+          )}
+        </div>
+
+        {/* Promo & Badge Editorial Section (Tanpa CRUD harga — harga diatur di backoffice) */}
         <div className="p-4 rounded-lg bg-muted/40 border border-[#D7B483]/35 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs uppercase tracking-[0.2em] font-medium text-[#A88247]">
               <Sparkles className="w-4 h-4 text-[#D7B483]" />
-              Pengaturan Promosi & Diskon
+              Badge & Program Promosi
             </div>
             <label className="flex items-center gap-2 cursor-pointer text-xs">
               <input
@@ -1324,54 +1778,62 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
                 onChange={(e) => setIsOnPromo(e.target.checked)}
                 className="w-4 h-4 rounded border-border"
               />
-              <span className="font-medium">Status Promo Aktif</span>
+              <span className="font-medium">Tampilkan di Halaman Promo</span>
             </label>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
-            <Field label="Tipe Diskon">
-              <select
-                className="ui-input text-xs"
-                value={discountType}
-                onChange={(e) => {
-                  setDiscountType(e.target.value);
-                  handleDiscountChange(discountValue);
-                }}
-              >
-                <option value="PERCENTAGE">Persentase (%)</option>
-                <option value="FIXED_AMOUNT">Potongan Tetap (Rp)</option>
-              </select>
-            </Field>
-
-            <Field label={discountType === "PERCENTAGE" ? "Nilai Diskon (%)" : "Potongan (Rp)"}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <Field label="Persentase Promo (%) — Opsional">
               <input
                 type="number"
                 min="0"
-                max={discountType === "PERCENTAGE" ? "100" : undefined}
+                max="100"
                 className="ui-input text-xs"
                 value={discountValue}
                 onChange={(e) => handleDiscountChange(e.target.value)}
-                placeholder={discountType === "PERCENTAGE" ? "misal: 30" : "misal: 2000000"}
+                placeholder="misal: 20 (kosongkan jika hanya badge editorial)"
               />
             </Field>
 
-            <Field label="Label Badge Promo">
+            <Field label="Label Badge Kartu">
               <input
                 className="ui-input text-xs"
                 value={promoBadgeText}
                 onChange={(e) => setPromoBadgeText(e.target.value)}
-                placeholder="misal: 30% OFF"
+                placeholder="misal: Ikonik / Edisi Terbatas / 20% OFF"
               />
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {["Ikonik", "Edisi Terbatas", "Terbaru", "Pilihan Kurator"].map((lbl) => (
+                  <button
+                    key={lbl}
+                    type="button"
+                    onClick={() => setPromoBadgeText(lbl)}
+                    className={`px-2 py-0.5 rounded-full text-[10px] border transition-colors ${
+                      promoBadgeText === lbl
+                        ? "bg-foreground text-background border-foreground"
+                        : "bg-background hover:bg-muted border-border text-muted-foreground"
+                    }`}
+                  >
+                    {lbl}
+                  </button>
+                ))}
+                {promoBadgeText && (
+                  <button
+                    type="button"
+                    onClick={() => setPromoBadgeText("")}
+                    className="px-2 py-0.5 rounded-full text-[10px] text-muted-foreground hover:text-foreground underline"
+                  >
+                    Kosongkan
+                  </button>
+                )}
+              </div>
             </Field>
           </div>
 
-          {isOnPromo && (
-            <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#A88247]" />
-              Item ini akan tampil di halaman <strong>/promo</strong> dan membawa badge{" "}
-              <strong className="text-[#A88247]">"{promoBadgeText || "PROMO"}"</strong>.
-            </p>
-          )}
+          <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#A88247]" />
+            Harga produk tidak ditampilkan di katalog publik dan hanya dikelola melalui backoffice / rincian internal.
+          </p>
         </div>
 
         <Field label="Description">

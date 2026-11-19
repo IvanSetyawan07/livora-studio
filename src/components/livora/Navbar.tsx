@@ -10,6 +10,8 @@ import NotificationBell from "@/components/livora/NotificationBell.tsx";
 import { getMyActivities, markMyActivitiesRead, type ConsultationActivity } from "@/lib/consultations";
 import { api, authStorage } from "@/lib/api";
 import { getAllThumbnails, subscribeThumbnails } from "@/lib/themeThumbnails";
+import { openShortlistDrawer, useShortlist } from "@/components/livora/furniture/shortlistStore";
+import livoraMark from "@/assets/_opt/logo-livora-160.webp";
 import { toast } from "sonner";
 type NavLink = {
   label: string;
@@ -60,8 +62,22 @@ export const Navbar = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [activities, setActivities] = useState<ConsultationActivity[]>([]);
   const profileRef = useRef<HTMLDivElement>(null);
- const location = useLocation();
+  const location = useLocation();
   const navigate = useNavigate();
+  const { count: shortlistCount } = useShortlist();
+  const isFurniturePage = location.pathname === "/furniture";
+
+  // Shortcut keyboard Cmd/Ctrl + K untuk Search Overlay
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   // Halaman login/register: di mobile navbar menimpa foto hero (teks putih),
   // di desktop berada di strip putih (teks gelap).
@@ -98,11 +114,12 @@ export const Navbar = () => {
   { key: "appointment", label: t("nav.appointment"), to: "/appointment" },
 ];
 
-  // Quick links always visible on desktop header.
+  // Quick links always visible on desktop header (brand continuity with livoralcr.com).
   const desktopQuickLinks: NavLink[] = [
     { key: "promo", label: "PROMO", to: "/promo" },
     { key: "about", label: t("nav.about"), to: "/about" },
     { key: "style", label: t("nav.style"), hash: "style" },
+    { key: "furniture", label: t("nav.furniture"), to: "/furniture" },
     { key: "scope", label: t("nav.scope"), hash: "scope" },
     { key: "contact", label: t("nav.contact"), hash: "contact" },
   ];
@@ -111,6 +128,7 @@ export const Navbar = () => {
   const lightText =
     !scrolled &&
     (location.pathname === "/" ||
+      location.pathname === "/furniture" ||
       (isAuthPage && isMobileView) ||
       location.pathname === "/appointment" ||
       location.pathname === "/promo" ||
@@ -263,6 +281,7 @@ export const Navbar = () => {
     if (l.to) {
       if (l.to === "/about") return location.pathname.startsWith("/about");
       if (l.to === "/projects") return location.pathname.startsWith("/projects");
+      if (l.to === "/furniture") return location.pathname.startsWith("/furniture");
       return location.pathname === l.to;
     }
     if (l.hash) return location.pathname === "/" && location.hash === `#${l.hash}`;
@@ -380,84 +399,161 @@ export const Navbar = () => {
     );
   };
 
-  // Small hash-link renderer for desktop quick links.
+  // Small hash-link renderer for desktop quick links (LIVORA Deep Navy / Sky palette).
   const renderQuickLink = (l: NavLink) => {
-    const cls = `underline-grow transition-colors ${
+    const active = isActive(l);
+    const cls = `underline-grow relative py-1 transition-colors duration-300 whitespace-nowrap ${
       lightText
-        ? "text-white/90 hover:text-white"
-        : isActive(l)
-        ? "text-foreground is-active"
-        : "text-foreground/80 hover:text-foreground"
+        ? active
+          ? "text-white font-medium"
+          : "text-white/90 hover:text-white"
+        : active
+        ? "text-[#0B426E] font-semibold"
+        : "text-[#4B5E71] hover:text-[#0B426E]"
     }`;
-    const shadow = lightText ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined;
+    const shadow = lightText ? { textShadow: "0 1px 10px rgba(11,66,110,0.45)" } : undefined;
+    const activeDot = active ? (
+      <span
+        aria-hidden
+        className={`absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-4 h-[2px] rounded-full transition-colors ${
+          lightText ? "bg-white" : "bg-[#0B426E]"
+        }`}
+      />
+    ) : null;
+
     if (l.to) {
       return (
         <Link to={l.to} className={cls} style={shadow}>
           {l.label}
+          {activeDot}
         </Link>
       );
     }
     return (
       <a href={`/#${l.hash}`} className={cls} style={shadow} onClick={handleHashClick(l.hash!)}>
         {l.label}
+        {activeDot}
       </a>
     );
+  };
+
+  const handleShortlistTrigger = () => {
+    setOpen(false);
+    if (isFurniturePage) {
+      openShortlistDrawer();
+    } else {
+      navigate("/furniture?shortlist=1");
+    }
   };
 
   return (
     <>
       <header
-  className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-    headerTransparent ? "bg-transparent" : "bg-background/75 backdrop-blur-[6px]"
-  } ${hidden ? "-translate-y-full" : "translate-y-0"}`}
->
-        <div className="container-livora h-20 flex items-center justify-between relative">
-          {/* Logo */}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+          headerTransparent
+            ? "bg-transparent"
+            : "bg-white/88 backdrop-blur-md border-b border-[#0B426E]/10 shadow-[0_8px_28px_-20px_rgba(11,66,110,0.18)]"
+        } ${hidden ? "-translate-y-full" : "translate-y-0"}`}
+      >
+        <div className="container-livora h-20 flex items-center justify-between gap-4 relative">
+          {/* Logo: Faceted Hexagonal LIVORA Mark + Serif Wordmark */}
           <Link
             to="/"
-            className={`serif text-2xl tracking-[0.35em] font-light transition-colors duration-500 ${
-              headerLight ? "text-white" : "text-foreground"
+            className={`inline-flex items-center gap-2.5 shrink-0 transition-colors duration-500 ${
+              headerLight ? "text-white" : "text-[#0B426E]"
             }`}
-            style={headerLight ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined}
+            style={headerLight ? { textShadow: "0 1px 10px rgba(11,66,110,0.45)" } : undefined}
             onClick={() => setOpen(false)}
           >
-            LIVORA
+            <img
+              src={livoraMark}
+              alt=""
+              width={26}
+              height={26}
+              className="w-[26px] h-[26px] object-contain shrink-0 drop-shadow-[0_1px_4px_rgba(11,66,110,0.22)]"
+            />
+            <span className="serif text-xl sm:text-2xl tracking-[0.32em] font-light leading-none">
+              LIVORA
+            </span>
           </Link>
 
-          {/* Desktop quick links: Style · Scope · Contact + Make an Appointment */}
-          <ul className="hidden md:flex items-center gap-8 text-xs uppercase tracking-[0.2em]">
+          {/* Desktop Center Navigation Links */}
+          <ul className="hidden lg:flex items-center gap-5 xl:gap-7 text-[11px] xl:text-xs uppercase tracking-[0.15em]">
             {desktopQuickLinks.map((l) => (
               <li key={l.key}>{renderQuickLink(l)}</li>
             ))}
             <li>
               <Link
                 to="/appointment"
-                className={`underline-grow transition-colors ${
+                className={`underline-grow relative py-1 transition-colors duration-300 whitespace-nowrap ${
                   lightText
-                    ? "text-white/90 hover:text-white"
+                    ? location.pathname === "/appointment"
+                      ? "text-white font-medium"
+                      : "text-white/90 hover:text-white"
                     : location.pathname === "/appointment"
-                    ? "text-foreground is-active"
-                    : "text-foreground/80 hover:text-foreground"
+                    ? "text-[#0B426E] font-semibold"
+                    : "text-[#4B5E71] hover:text-[#0B426E]"
                 }`}
-                style={lightText ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined}
+                style={lightText ? { textShadow: "0 1px 10px rgba(11,66,110,0.45)" } : undefined}
               >
                 {t("nav.appointment_full")}
+                {location.pathname === "/appointment" && (
+                  <span
+                    aria-hidden
+                    className={`absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-4 h-[2px] rounded-full ${
+                      lightText ? "bg-white" : "bg-[#0B426E]"
+                    }`}
+                  />
+                )}
               </Link>
             </li>
           </ul>
 
-          {/* Actions */}
-          <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
+          {/* Right Utility Controls */}
+          <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 shrink-0">
+            {/* Search Trigger */}
             <button
+              type="button"
               aria-label="Search"
               onClick={() => setSearchOpen(true)}
-              className={`min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-full transition-colors duration-500 ${
-                headerLight ? "text-white/90 hover:text-white" : "text-foreground/80 hover:text-foreground"
+              className={`inline-flex items-center justify-center gap-2 rounded-full transition-all duration-300 min-w-[40px] min-h-[40px] xl:px-3.5 xl:h-9 xl:border ${
+                headerLight
+                  ? "text-white/95 hover:text-white xl:bg-white/12 xl:hover:bg-white/20 xl:border-white/25 xl:backdrop-blur-sm"
+                  : "text-[#0B426E]/85 hover:text-[#0B426E] xl:bg-[#F4F6F8] xl:hover:bg-[#EAF4FA] xl:border-[#0B426E]/12"
               }`}
             >
-              <Search size={20} />
+              <Search size={17} />
+              <span className="hidden xl:inline text-[11px] tracking-[0.04em] font-normal">
+                Cari
+              </span>
             </button>
-            {authUser && <CartNavButton light={headerLight} />}
+
+            {/* Saved Pieces / Shortlist Drawer Trigger */}
+            <button
+              type="button"
+              onClick={handleShortlistTrigger}
+              aria-label={`Saved pieces${shortlistCount ? ` (${shortlistCount})` : ""}`}
+              title="Saved Pieces / Shortlist"
+              className={`relative min-w-[40px] min-h-[40px] inline-flex items-center justify-center rounded-full transition-all duration-300 ${
+                headerLight
+                  ? "text-white/95 hover:text-white hover:bg-white/12"
+                  : "text-[#0B426E]/85 hover:text-[#0B426E] hover:bg-[#EAF4FA]"
+              }`}
+            >
+              <Bookmark
+                size={18}
+                className={shortlistCount > 0 ? "fill-current" : ""}
+              />
+              {shortlistCount > 0 && (
+                <span className="absolute top-1 right-0.5 min-w-[17px] h-[17px] px-1 rounded-full bg-[#1E88C7] text-white text-[9.5px] font-semibold flex items-center justify-center shadow-sm">
+                  {shortlistCount > 99 ? "99+" : shortlistCount}
+                </span>
+              )}
+            </button>
+
+            {/* Existing Cart button preserved on non-Furniture pages only */}
+            {authUser && !isFurniturePage && <CartNavButton light={headerLight} />}
+
             {authUser && (
               <NotificationBell
                 activities={activities}
@@ -483,22 +579,22 @@ export const Navbar = () => {
                   onClick={() => setProfileOpen((v) => !v)}
                   aria-label="Account menu"
                   className={`p-1.5 flex items-center gap-2 transition-colors duration-500 ${
-                    headerLight ? "text-white/90 hover:text-white" : "text-foreground/80 hover:text-foreground"
+                    headerLight ? "text-white/95 hover:text-white" : "text-[#0B426E]/85 hover:text-[#0B426E]"
                   }`}
                 >
                   <span className="relative">
                     <span
-                      className={`w-8 h-8 flex items-center justify-center rounded-full text-[11px] font-medium tracking-wide ${
+                      className={`w-8 h-8 flex items-center justify-center rounded-full text-[11px] font-medium tracking-wide transition-colors ${
                         headerLight
-                          ? "bg-white/15 border border-white/40 text-white backdrop-blur-sm"
-                          : "bg-foreground text-background"
+                          ? "bg-white/18 border border-white/40 text-white backdrop-blur-sm"
+                          : "bg-[#0B426E] text-white"
                       }`}
                     >
                       {initial}
                     </span>
                     {unreadCount > 0 && (
                       <span
-                        className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-red-500 text-white text-[9px] font-semibold flex items-center justify-center border-2 border-background"
+                        className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-[#1E88C7] text-white text-[9px] font-semibold flex items-center justify-center border-2 border-white"
                         aria-label={`${unreadCount} unread messages`}
                       >
                         {unreadCount > 9 ? "9+" : unreadCount}
@@ -506,44 +602,44 @@ export const Navbar = () => {
                     )}
                   </span>
                   <span
-                    className="hidden md:inline text-xs tracking-[0.1em] max-w-[120px] truncate"
-                    style={headerLight ? { textShadow: "0 1px 8px rgba(0,0,0,0.5)" } : undefined}
+                    className="hidden xl:inline text-xs tracking-[0.06em] max-w-[110px] truncate"
+                    style={headerLight ? { textShadow: "0 1px 8px rgba(11,66,110,0.45)" } : undefined}
                   >
                     {displayName}
                   </span>
                   <ChevronDown size={14} className={`transition-transform ${profileOpen ? "rotate-180" : ""}`} />
                 </button>
                 {profileOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-64 bg-background border border-border rounded-lg shadow-xl overflow-hidden z-[70] animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="px-4 py-3 border-b border-border">
-                      <p className="text-sm font-medium truncate">{rawName || displayName}</p>
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-[#0B426E]/12 rounded-2xl shadow-[0_20px_50px_-20px_rgba(11,66,110,0.28)] overflow-hidden z-[70] animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="px-4 py-3 border-b border-[#0B426E]/10 bg-[#F8F9FB]">
+                      <p className="text-sm font-medium text-[#0B426E] truncate">{rawName || displayName}</p>
                       {authUser.email && (
-                        <p className="text-xs text-muted-foreground truncate">{authUser.email}</p>
+                        <p className="text-xs text-[#4B5E71] truncate">{authUser.email}</p>
                       )}
                     </div>
-                    <div className="py-1 text-sm">
+                    <div className="py-1 text-sm text-[#0B426E]">
                       <Link
                         to="/profile"
                         onClick={() => setProfileOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60"
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#EAF4FA]/70 transition-colors"
                       >
-                        <User size={16} /> Profile Detail
+                        <User size={16} className="text-[#1E88C7]" /> Profile Detail
                       </Link>
                       <Link
                         to="/profile/saved"
                         onClick={() => setProfileOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60"
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#EAF4FA]/70 transition-colors"
                       >
-                        <Bookmark size={16} /> Saved Items
+                        <Bookmark size={16} className="text-[#1E88C7]" /> Saved Items
                       </Link>
                       <Link
                         to="/profile/consultations"
                         onClick={() => setProfileOpen(false)}
-                        className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-secondary/60"
+                        className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-[#EAF4FA]/70 transition-colors"
                       >
-                        <span className="flex items-center gap-3"><ClipboardList size={16} /> My Consultations</span>
+                        <span className="flex items-center gap-3"><ClipboardList size={16} className="text-[#1E88C7]" /> My Consultations</span>
                         {unreadCount > 0 && (
-                          <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
+                          <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-[#1E88C7] text-white text-[10px] font-semibold flex items-center justify-center">
                             {unreadCount > 9 ? "9+" : unreadCount}
                           </span>
                         )}
@@ -552,33 +648,33 @@ export const Navbar = () => {
                       <Link
                         to="/sales/scan"
                         onClick={() => setProfileOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60 border-t border-border"
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#EAF4FA]/70 border-t border-[#0B426E]/10 transition-colors"
                       >
-                        <Camera size={16} /> Scan QR
+                        <Camera size={16} className="text-[#1E88C7]" /> Scan QR
                       </Link>
                     )}
                       {authUser.role === "admin" && (
                         <Link
                           to="/admin"
                           onClick={() => setProfileOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60 border-t border-border"
+                          className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#EAF4FA]/70 border-t border-[#0B426E]/10 transition-colors"
                         >
-                          <Shield size={16} /> Admin Panel
+                          <Shield size={16} className="text-[#1E88C7]" /> Admin Panel
                         </Link>
                       )}
                       {authUser.role === "admin" && (
                         <Link
                           to="/admin/ai-marketing"
                           onClick={() => setProfileOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60  "
+                          className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#EAF4FA]/70 transition-colors"
                         >
-                          <Sparkles size={16} /> AI Marketing
+                          <Sparkles size={16} className="text-[#1E88C7]" /> AI Marketing
                         </Link>
                       )}
 
                       <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60 border-t border-border text-red-600"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 border-t border-[#0B426E]/10 text-red-600 transition-colors"
                       >
                         <LogOut size={16} /> Logout
                       </button>
@@ -591,19 +687,23 @@ export const Navbar = () => {
               <Link
                 to="/login"
                 aria-label="Login"
-                className={`min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-full gap-2 transition-colors duration-500 ${
-                  headerLight ? "text-white/90 hover:text-white" : "text-foreground/80 hover:text-foreground"
+                className={`min-w-[40px] min-h-[40px] inline-flex items-center justify-center rounded-full gap-2 transition-all duration-300 ${
+                  headerLight
+                    ? "text-white/95 hover:text-white hover:bg-white/12"
+                    : "text-[#0B426E]/85 hover:text-[#0B426E] hover:bg-[#EAF4FA]"
                 }`}
                 onClick={() => setOpen(false)}
               >
-                <User size={20} />
+                <User size={19} />
               </Link>
             )}
             <button
               aria-label="Toggle menu"
               onClick={() => setOpen((v) => !v)}
-              className={`min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-full transition-all duration-500 relative z-[70] ${
-                headerLight ? "text-white" : "text-foreground"
+              className={`min-w-[40px] min-h-[40px] inline-flex items-center justify-center rounded-full transition-all duration-300 relative z-[70] ${
+                headerLight
+                  ? "text-white hover:bg-white/12"
+                  : "text-[#0B426E] hover:bg-[#EAF4FA]"
               }`}
             >
               <span className="relative inline-block w-[22px] h-[22px]">
@@ -623,12 +723,8 @@ export const Navbar = () => {
             </button>
           </div>
 
-          {!open && (
-            <div
-              className={`absolute bottom-0 left-8 right-8 lg:left-16 lg:right-16 h-px transition-colors duration-500 ${
-                transparentTop ? "bg-white/25" : "bg-foreground/15"
-              }`}
-            />
+          {!open && transparentTop && (
+            <div className="absolute bottom-0 left-8 right-8 lg:left-16 lg:right-16 h-px bg-white/25 transition-colors duration-500" />
           )}
         </div>
       </header>
@@ -637,9 +733,9 @@ export const Navbar = () => {
       {open &&
         createPortal(
           <div className="fixed inset-0 z-[55]">
-            {/* Backdrop — full dark blur di mobile, tipis+hangat di desktop */}
+            {/* Backdrop — Deep Livora Navy glass tint */}
             <div
-              className="absolute inset-0 backdrop-blur-2xl bg-black/55 md:bg-black/20 md:backdrop-blur-sm animate-in fade-in duration-300"
+              className="absolute inset-0 backdrop-blur-2xl bg-[#07243D]/65 md:bg-[#07243D]/25 md:backdrop-blur-sm animate-in fade-in duration-300"
               onClick={() => setOpen(false)}
             />
 
@@ -648,7 +744,7 @@ export const Navbar = () => {
             <div className="w-full md:w-auto md:absolute md:inset-auto md:top-0 md:right-0 h-[100dvh] flex flex-row-reverse">
               <div
                 data-lenis-prevent
-                className="nav-overlay relative z-0 h-full w-full md:w-[420px] lg:w-[460px] md:bg-neutral-900/40 md:backdrop-blur-3xl md:border-l md:border-white/10 flex flex-col justify-between px-6 sm:px-8 md:px-10 pt-24 pb-[max(2.5rem,env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain max-w-5xl md:max-w-none mx-auto md:mx-0 animate-in fade-in md:slide-in-from-right duration-500"
+                className="nav-overlay relative z-0 h-full w-full md:w-[420px] lg:w-[460px] md:bg-[#0B426E]/88 md:backdrop-blur-3xl md:border-l md:border-white/15 flex flex-col justify-between px-6 sm:px-8 md:px-10 pt-24 pb-[max(2.5rem,env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain max-w-5xl md:max-w-none mx-auto md:mx-0 animate-in fade-in md:slide-in-from-right duration-500"
               >
                 <ul className="flex flex-col gap-5 sm:gap-7 text-lg md:text-2xl uppercase tracking-[0.25em] font-light text-right">
                   {menuLinks.map((l, i) => (
@@ -716,7 +812,7 @@ export const Navbar = () => {
                       setOverlayView("main");
                     }
                   }}
-                  className="fixed inset-0 md:relative md:inset-auto z-10 h-[100dvh] md:h-full w-full md:w-[380px] lg:w-[420px] bg-neutral-900/95 md:bg-neutral-900/40 backdrop-blur-3xl md:border-l md:border-white/10 flex flex-col px-6 sm:px-8 md:px-10 pt-24 pb-[max(2.5rem,env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain transition-[clip-path,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                  className="fixed inset-0 md:relative md:inset-auto z-10 h-[100dvh] md:h-full w-full md:w-[380px] lg:w-[420px] bg-[#083154]/95 md:bg-[#083154]/85 backdrop-blur-3xl md:border-l md:border-white/15 flex flex-col px-6 sm:px-8 md:px-10 pt-24 pb-[max(2.5rem,env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain transition-[clip-path,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
                   style={{
                     clipPath: furnitureShown ? "inset(0 0 0 0%)" : "inset(0 0 0 100%)",
                     opacity: furnitureShown ? 1 : 0,

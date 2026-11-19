@@ -75,6 +75,11 @@ interface ApiItem {
   availability?: string | null;
   description?: string | null;
   image?: string | null;
+  width_cm?: number | null;
+  depth_cm?: number | null;
+  height_cm?: number | null;
+  weight_kg?: number | null;
+  material_detail?: string | null;
   price?: number | null;
   original_price?: number | null;
   discount_type?: "PERCENTAGE" | "FIXED_AMOUNT" | null;
@@ -104,12 +109,35 @@ export interface RichItem extends Item {
   gallery?: GalleryImage[];
   lifestyle?: LifestyleImage[];
   story?: FurnitureStory | null;
-  related?: { slug: string; name: string; image?: string; code?: string }[];
+  related?: RichItem[];
   description?: string;
 }
 
+const mapVariants = (variants?: FurnitureVariant[]): FurnitureVariant[] =>
+  (variants ?? []).map((v) => ({
+    ...v,
+    preview_image: v.preview_image ? imgUrl(v.preview_image) : null,
+    furniture_image: v.furniture_image ? imgUrl(v.furniture_image) : null,
+    gallery: (v.gallery ?? []).map((g) => ({ ...g, image: imgUrl(g.image) })),
+  }));
+
 export const mapApiItem = (it: ApiItem): RichItem => {
   const textures = (it.texture ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const dimParts = [it.width_cm, it.depth_cm, it.height_cm].filter(
+    (n): n is number => n != null && !Number.isNaN(Number(n)) && Number(n) > 0,
+  );
+  const dimensions =
+    dimParts.length === 3
+      ? `${Math.round(Number(it.width_cm))} × ${Math.round(Number(it.depth_cm))} × ${Math.round(Number(it.height_cm))} cm`
+      : dimParts.length === 2
+      ? `${Math.round(Number(dimParts[0]))} × ${Math.round(Number(dimParts[1]))} cm`
+      : "Custom — Made to Order";
+  const weight =
+    it.weight_kg != null && Number(it.weight_kg) > 0
+      ? `${Number(it.weight_kg)} kg`
+      : "—";
+  const material = (it.material_detail || it.texture || "—").trim() || "—";
+
   return {
     slug: it.slug,
     name: it.title,
@@ -118,10 +146,10 @@ export const mapApiItem = (it: ApiItem): RichItem => {
     type: it.type ?? null,
     type_id: it.type?.id ?? null,
     specs: {
-      dimensions: "—",
-      material: it.texture ?? "—",
+      dimensions,
+      material,
       finish: it.finish ?? "—",
-      weight: "—",
+      weight,
       availability: it.availability ?? "Made to Order",
     },
     themes: (it.themes ?? []).map((t) => t.name),
@@ -139,30 +167,20 @@ export const mapApiItem = (it: ApiItem): RichItem => {
     promo_badge_text: it.promo_badge_text ?? null,
     price: it.final_price != null ? Number(it.final_price) : (it.price != null ? Number(it.price) : null),
     collection: it.collection ?? null,
-    variants: (it.variants ?? []).map((v) => ({
-      ...v,
-      preview_image: v.preview_image ? imgUrl(v.preview_image) : null,
-      furniture_image: v.furniture_image ? imgUrl(v.furniture_image) : null,
-      gallery: (v.gallery ?? []).map((g) => ({ ...g, image: imgUrl(g.image) })),
-    })),
+    variants: mapVariants(it.variants),
     gallery: (it.gallery ?? []).map((g) => ({ ...g, image: imgUrl(g.image) })),
     lifestyle: (it.lifestyle ?? []).map((l) => ({ ...l, image: imgUrl(l.image) })),
     story: it.story
       ? { ...it.story, feature_image: it.story.feature_image ? imgUrl(it.story.feature_image) : null }
       : null,
-    related: (it.related ?? []).map((r) => ({
-      slug: r.slug,
-      name: r.title,
-      image: r.image ? imgUrl(r.image) : undefined,
-      code: r.code ?? "",
-    })),
+    related: (it.related ?? []).map((r) => mapApiItem(r)),
     description: it.description ?? undefined,
   } as RichItem;
 };
 
-const mergeBySlug = (a: Item[], b: Item[]) => {
+const mergeBySlug = (a: RichItem[], b: RichItem[]) => {
   const seen = new Set<string>();
-  const out: Item[] = [];
+  const out: RichItem[] = [];
   for (const it of [...a, ...b]) {
     if (seen.has(it.slug)) continue;
     seen.add(it.slug);
@@ -171,11 +189,16 @@ const mergeBySlug = (a: Item[], b: Item[]) => {
   return out;
 };
 
-let cachedAllItems: Item[] = staticItems;
+let cachedAllItems: RichItem[] = staticItems as RichItem[];
 let itemsFetched = false;
 const itemListeners = new Set<() => void>();
 
 const notifyItemListeners = () => itemListeners.forEach((fn) => fn());
+
+export const invalidateAllItemsCache = () => {
+  itemsFetched = false;
+  itemCache.clear();
+};
 
 const fetchAllItemsOnce = () => {
   if (itemsFetched) return;
@@ -186,7 +209,7 @@ const fetchAllItemsOnce = () => {
     .then((r) => {
       const mapped = r.data.map(mapApiItem);
       mapped.forEach((it) => itemCache.set(it.slug, it));
-      cachedAllItems = mergeBySlug(staticItems, mapped);
+      cachedAllItems = mergeBySlug(staticItems as RichItem[], mapped);
       notifyItemListeners();
     })
     .catch(() => {
@@ -194,7 +217,7 @@ const fetchAllItemsOnce = () => {
     });
 };
 
-export const useAllItems = (enabled = true) => {
+export const useAllItems = (enabled = true): RichItem[] => {
   const [, setTick] = useState(0);
   useEffect(() => {
     if (!enabled) return;

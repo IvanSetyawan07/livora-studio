@@ -18,38 +18,29 @@ export default function BulkDiscountModal({
   onClose,
   onSuccess,
 }: BulkDiscountModalProps) {
-  const [discountType, setDiscountType] = useState<"PERCENTAGE" | "FIXED_AMOUNT">("PERCENTAGE");
-  const [discountValue, setDiscountValue] = useState<string>("30");
-  const [badgeText, setBadgeText] = useState<string>("30% OFF");
+  const [discountValue, setDiscountValue] = useState<string>("20");
+  const [badgeText, setBadgeText] = useState<string>("20% OFF");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
-  // Auto-update badge text when discount value changes
+  // Auto-update badge text when percentage changes
   useEffect(() => {
     const val = parseFloat(discountValue);
     if (!isNaN(val) && val > 0) {
-      if (discountType === "PERCENTAGE") {
-        setBadgeText(`${Math.round(val)}% OFF`);
-      } else {
-        setBadgeText(`HEMAT Rp ${Math.round(val).toLocaleString("id-ID")}`);
-      }
+      setBadgeText(`${Math.min(100, Math.round(val))}% OFF`);
     } else {
       setBadgeText("");
     }
-  }, [discountValue, discountType]);
+  }, [discountValue]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const val = parseFloat(discountValue);
-    if (isNaN(val) || val <= 0) {
-      toast.error("Masukkan nilai diskon yang valid (lebih dari 0)");
-      return;
-    }
-    if (discountType === "PERCENTAGE" && val > 100) {
-      toast.error("Diskon persentase maksimal 100%");
+    if (isNaN(val) || val <= 0 || val > 100) {
+      toast.error("Masukkan persentase diskon yang valid (1 – 100%)");
       return;
     }
 
@@ -57,16 +48,16 @@ export default function BulkDiscountModal({
     try {
       const res = await bulkDiscountItems({
         item_ids: selectedIds,
-        discount_type: discountType,
+        discount_type: "PERCENTAGE",
         discount_value: val,
         promo_badge_text: badgeText.trim() || undefined,
         promo_start_date: startDate || undefined,
         promo_end_date: endDate || undefined,
       });
-      toast.success(res.message || `Diskon berhasil diterapkan pada ${selectedIds.length} item.`);
+      toast.success(res.message || `Promo berhasil diterapkan pada ${selectedIds.length} item.`);
       onSuccess();
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Gagal menerapkan diskon massal");
+      toast.error(err?.response?.data?.message || "Gagal menerapkan promo massal");
     } finally {
       setSaving(false);
     }
@@ -101,57 +92,29 @@ export default function BulkDiscountModal({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Discount Type Selector */}
-          <div>
-            <label className="text-xs uppercase tracking-[0.16em] text-muted-foreground font-medium block mb-1.5">
-              Tipe Diskon
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setDiscountType("PERCENTAGE")}
-                className={`py-2 px-3 rounded-lg border text-xs uppercase tracking-wider font-medium transition-all ${
-                  discountType === "PERCENTAGE"
-                    ? "border-foreground bg-foreground text-background"
-                    : "border-border hover:bg-muted text-muted-foreground"
-                }`}
-              >
-                Persentase (%)
-              </button>
-              <button
-                type="button"
-                onClick={() => setDiscountType("FIXED_AMOUNT")}
-                className={`py-2 px-3 rounded-lg border text-xs uppercase tracking-wider font-medium transition-all ${
-                  discountType === "FIXED_AMOUNT"
-                    ? "border-foreground bg-foreground text-background"
-                    : "border-border hover:bg-muted text-muted-foreground"
-                }`}
-              >
-                Nominal Tetap (Rp)
-              </button>
-            </div>
-          </div>
-
-          {/* Discount Value */}
+          {/* Discount Percentage Value */}
           <div>
             <label className="text-xs uppercase tracking-[0.16em] text-muted-foreground font-medium block mb-1">
-              {discountType === "PERCENTAGE" ? "Persentase Diskon (%) *" : "Potongan Harga (Rp) *"}
+              Persentase Promo (%) *
             </label>
             <div className="relative">
               <input
                 required
                 type="number"
                 min="1"
-                max={discountType === "PERCENTAGE" ? "100" : undefined}
+                max="100"
                 value={discountValue}
                 onChange={(e) => setDiscountValue(e.target.value)}
-                placeholder={discountType === "PERCENTAGE" ? "contoh: 30" : "contoh: 2500000"}
+                placeholder="contoh: 20"
                 className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-foreground"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">
-                {discountType === "PERCENTAGE" ? "%" : "IDR"}
+                %
               </span>
             </div>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Harga produk tetap dikelola eksklusif di backoffice dan tidak tampil di katalog publik.
+            </p>
           </div>
 
           {/* Badge Text */}

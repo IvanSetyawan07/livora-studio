@@ -87,9 +87,11 @@ class Item extends Model {
             } else {
                 $item->final_price = $orig > 0 ? $orig : null;
                 $item->is_on_promo = false;
-                $item->promo_badge_text = null;
                 $item->discount_value = 0;
                 $item->discount_type = null;
+                // Izinkan label badge editorial (mis. "Ikonik", "Edisi Terbatas") tetap tersimpan meski bukan item promo
+                $trimmedBadge = trim((string) ($item->promo_badge_text ?? ''));
+                $item->promo_badge_text = $trimmedBadge !== '' ? $trimmedBadge : null;
                 if ($orig > 0) {
                     $item->price = $orig;
                 }

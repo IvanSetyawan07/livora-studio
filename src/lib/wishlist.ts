@@ -53,9 +53,16 @@ export const getWishlist = (forceRefresh = false): Promise<WishlistEntry[]> => {
   return inFlightWishlist;
 };
 
+const notifyWishlistChanged = () => {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("livora-wishlist-changed"));
+  }
+};
+
 export const addToWishlist = (type: WishlistType, id: number) =>
   api.post("/wishlist", { type, id }).then((res) => {
     invalidateWishlistCache();
+    notifyWishlistChanged();
     return res.data;
   });
 
@@ -64,5 +71,6 @@ export const removeFromWishlist = (type: WishlistType, id: number) =>
     if (cachedWishlist) {
       cachedWishlist = cachedWishlist.filter((r) => !(r.type === type && r.entity_id === id));
     }
+    notifyWishlistChanged();
     return res.data;
   });

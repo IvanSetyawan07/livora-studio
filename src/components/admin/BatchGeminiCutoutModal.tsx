@@ -15,8 +15,8 @@ import {
   ArrowRight,
   ExternalLink,
 } from "lucide-react";
-import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
+import { removeItemBackgroundWithAi } from "@/lib/itemCutout";
 import { toast } from "sonner";
 
 export interface BatchImageItem {
@@ -97,34 +97,21 @@ export default function BatchGeminiCutoutModal({
     setQueue((prev) => prev.filter((it) => it.id !== id));
   };
 
-  // Jalankan pemrosesan Gemini AI untuk 1 item
+  // Jalankan pemrosesan Hybrid Cutout (IS-Net Neural + Gemini Vision Pixel Matte) untuk 1 item
   const processSingleItem = async (item: BatchImageItem): Promise<Partial<BatchImageItem>> => {
-    const fd = new FormData();
-    if (item.originalFile) {
-      fd.append("image", item.originalFile);
-    } else {
-      fd.append("image", item.originalUrl);
-    }
-    fd.append("action", "remove_bg");
-    if (item.itemId) {
-      fd.append("item_id", item.itemId.toString());
-    }
-
-    const res = await api.post("/admin/items/gemini-process", fd);
-    if (!res.data?.success) {
-      throw new Error(res.data?.message || "Gagal memproses dengan Gemini AI");
-    }
-
-    const outUrl = res.data.base64 || res.data.url;
-    const fetchBlob = await fetch(outUrl);
-    const blob = await fetchBlob.blob();
+    const result = await removeItemBackgroundWithAi({
+      file: item.originalFile,
+      imageUrl: item.originalUrl,
+      baseName: item.title,
+      itemId: item.itemId,
+    });
 
     return {
       status: "done",
-      processedUrl: URL.createObjectURL(blob),
-      processedBlob: blob,
-      geminiModel: res.data.model || "Gemini Vision",
-      detectedName: res.data.gemini_analysis?.furniture_name || item.title,
+      processedUrl: result.url,
+      processedBlob: result.blob,
+      geminiModel: result.modelUsed,
+      detectedName: result.detectedName || item.title,
     };
   };
 

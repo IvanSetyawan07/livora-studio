@@ -1,10 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowUpDown, Filter, Loader2, Sparkles, Tag, Search, X, ArrowRight } from "lucide-react";
+import { ChevronDown, Loader2, Sparkles, Tag, Search, X } from "lucide-react";
 import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
-import { PromoBadge } from "@/components/livora/PromoPriceTag";
-import { ItemIllustration } from "@/components/livora/ItemIllustration";
+import {
+  CatalogColumnToggle,
+  FurnitureCard,
+  getCatalogGridClass,
+  type CatalogColumns,
+} from "@/components/livora/FurnitureCard";
 import { getPromoItems } from "@/lib/promoApi";
 import { api } from "@/lib/api";
 import { trackLivoraEvent } from "@/lib/analytics";
@@ -19,6 +23,7 @@ export default function PromoPage() {
   const [selectedType, setSelectedType] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<SortOption>("discount_desc");
+  const [columns, setColumns] = useState<CatalogColumns>(4);
 
   useEffect(() => {
     document.title = "Promo Spesial & Penawaran Terbatas | LIVORA";
@@ -49,28 +54,28 @@ export default function PromoPage() {
   const filteredItems = useMemo(() => {
     let result = [...items];
 
-    // Filter type
     if (selectedType !== "all") {
       result = result.filter(
         (i) =>
           i.category.toLowerCase() === selectedType.toLowerCase() ||
-          (i as any).type?.slug === selectedType ||
-          (i as any).type?.name?.toLowerCase() === selectedType.toLowerCase()
+          i.type?.slug === selectedType ||
+          i.type?.name?.toLowerCase() === selectedType.toLowerCase(),
       );
     }
 
-    // Filter search query
     const q = searchQuery.trim().toLowerCase();
     if (q) {
       result = result.filter(
         (i) =>
           i.name?.toLowerCase().includes(q) ||
           i.code?.toLowerCase().includes(q) ||
-          i.category?.toLowerCase().includes(q)
+          i.category?.toLowerCase().includes(q) ||
+          (i.variants ?? []).some((v) =>
+            (v.color_name || "").toLowerCase().includes(q),
+          ),
       );
     }
 
-    // Sort
     result.sort((a, b) => {
       switch (sortBy) {
         case "discount_desc":
@@ -87,13 +92,12 @@ export default function PromoPage() {
   }, [items, selectedType, searchQuery, sortBy]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
+    <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#1D1B18]">
       <Navbar />
 
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative pt-32 pb-16 md:pt-40 md:pb-24 bg-[#141414] text-white overflow-hidden">
-          {/* Subtle architectural background texture */}
           <div
             className="absolute inset-0 opacity-20 pointer-events-none bg-cover bg-center"
             style={{ backgroundImage: `url('/assets/hero-update-800-Da07bWV0.webp')` }}
@@ -112,24 +116,24 @@ export default function PromoPage() {
 
             <p className="mt-4 md:mt-6 text-sm sm:text-base text-stone-300 font-light leading-relaxed max-w-xl mx-auto">
               Wujudkan interior impian dengan furnitur pilihan kurasi LIVORA.
-              Penawaran diskon terbatas untuk koleksi siap kirim maupun custom bespoke.
+              Penawaran eksklusif untuk koleksi siap kirim maupun custom bespoke.
             </p>
           </div>
         </section>
 
-        {/* Toolbar: Category Filter, Search & Sorting */}
-        <section className="border-b border-border bg-card/50 sticky top-16 md:top-20 z-30 backdrop-blur-md">
-          <div className="container-livora py-4 px-4">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        {/* Toolbar: Category Pills, Search, Sort & Column Switcher */}
+        <section className="border-b border-[#EAE4DB] bg-[#FAF8F5]/92 sticky top-16 md:top-[72px] z-30 backdrop-blur-md">
+          <div className="container-livora py-3.5 md:py-4">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
               {/* Category pills */}
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 md:pb-0">
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5 lg:pb-0">
                 <button
                   type="button"
                   onClick={() => setSelectedType("all")}
-                  className={`px-3.5 py-1.5 rounded-full text-xs uppercase tracking-[0.14em] transition-all whitespace-nowrap min-h-[38px] ${
+                  className={`px-4 py-2 rounded-full text-[13px] transition-all whitespace-nowrap shrink-0 ${
                     selectedType === "all"
-                      ? "bg-foreground text-background font-medium"
-                      : "border border-border hover:bg-muted text-muted-foreground hover:text-foreground"
+                      ? "bg-[#181614] text-[#FAF8F5] font-medium shadow-sm"
+                      : "bg-white border border-[#E6E0D6] text-[#4C4740] hover:border-[#181614]/40 hover:text-[#181614]"
                   }`}
                 >
                   Semua ({items.length})
@@ -139,10 +143,10 @@ export default function PromoPage() {
                     key={t.id}
                     type="button"
                     onClick={() => setSelectedType(t.slug)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs uppercase tracking-[0.14em] transition-all whitespace-nowrap min-h-[38px] ${
+                    className={`px-4 py-2 rounded-full text-[13px] transition-all whitespace-nowrap shrink-0 ${
                       selectedType === t.slug
-                        ? "bg-foreground text-background font-medium"
-                        : "border border-border hover:bg-muted text-muted-foreground hover:text-foreground"
+                        ? "bg-[#181614] text-[#FAF8F5] font-medium shadow-sm"
+                        : "bg-white border border-[#E6E0D6] text-[#4C4740] hover:border-[#181614]/40 hover:text-[#181614]"
                     }`}
                   >
                     {t.name}
@@ -150,75 +154,81 @@ export default function PromoPage() {
                 ))}
               </div>
 
-              {/* Search & Sort Dropdown */}
-              <div className="flex items-center gap-3 w-full md:w-auto">
-                {/* Search */}
-                <div className="relative flex-1 md:w-56">
-                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              {/* Search, Sort & Columns */}
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                <div className="relative flex-1 min-w-[160px] sm:w-48">
+                  <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8A8277]" />
                   <input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Cari item promo..."
-                    className="w-full pl-8 pr-7 py-1.5 rounded-md border border-border bg-background text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-foreground"
+                    className="w-full h-9 pl-9 pr-7 rounded-full border border-[#E6E0D6] bg-white text-[13px] focus:outline-none focus:border-[#181614]/60"
                   />
                   {searchQuery && (
                     <button
+                      type="button"
                       onClick={() => setSearchQuery("")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8A8277] hover:text-[#1D1B18]"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
 
-                {/* Sort */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" />
+                <div className="relative">
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as SortOption)}
                     aria-label="Urutkan"
-                    className="py-1.5 px-2 rounded-md border border-border bg-background text-xs sm:text-sm focus:outline-none"
+                    className="appearance-none h-9 pl-3.5 pr-8 rounded-full border border-[#E6E0D6] bg-white text-[13px] text-[#2F2B26] focus:outline-none cursor-pointer"
                   >
-                    <option value="discount_desc">Diskon Terbesar</option>
-                    <option value="name_asc">Nama (A → Z)</option>
+                    <option value="discount_desc">Penawaran Terbaik</option>
+                    <option value="name_asc">Nama A – Z</option>
                     <option value="newest">Terbaru</option>
                   </select>
+                  <ChevronDown className="pointer-events-none w-3.5 h-3.5 text-[#7D756B] absolute right-3 top-1/2 -translate-y-1/2" />
                 </div>
+
+                <CatalogColumnToggle value={columns} onChange={setColumns} />
               </div>
             </div>
           </div>
         </section>
 
         {/* Product Grid */}
-        <section className="py-12 md:py-20">
-          <div className="container-livora px-4">
+        <section className="py-10 md:py-16">
+          <div className="container-livora">
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-24 gap-3 text-muted-foreground">
-                <Loader2 className="w-7 h-7 animate-spin text-foreground" />
+              <div className="flex flex-col items-center justify-center py-24 gap-3 text-[#7D756B]">
+                <Loader2 className="w-7 h-7 animate-spin text-[#1D1B18]" />
                 <p className="text-sm">Memuat item promosi…</p>
               </div>
             ) : filteredItems.length === 0 ? (
               <div className="text-center py-20 max-w-md mx-auto">
-                <Tag className="w-12 h-12 mx-auto text-muted-foreground/40 mb-3" strokeWidth={1.5} />
+                <Tag className="w-12 h-12 mx-auto text-[#8A8277]/40 mb-3" strokeWidth={1.5} />
                 <h3 className="serif text-2xl font-light">Belum Ada Item Promo yang Sesuai</h3>
-                <p className="text-sm text-muted-foreground mt-2">
+                <p className="text-sm text-[#7D756B] mt-2">
                   Coba ubah kata kunci pencarian atau pilih kategori lain untuk melihat koleksi promo kami.
                 </p>
                 <button
+                  type="button"
                   onClick={() => {
                     setSelectedType("all");
                     setSearchQuery("");
                   }}
-                  className="mt-6 px-6 py-2.5 rounded-full border border-foreground text-xs uppercase tracking-[0.2em] hover:bg-foreground hover:text-background transition-colors"
+                  className="mt-6 px-6 py-2.5 rounded-full bg-[#181614] text-[#FAF8F5] text-xs uppercase tracking-[0.2em] hover:opacity-90 transition-opacity"
                 >
                   Reset Filter
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
+              <div className={getCatalogGridClass(columns)}>
                 {filteredItems.map((item) => (
-                  <PromoItemCard key={item.slug} item={item} />
+                  <FurnitureCard
+                    key={item.slug}
+                    item={item}
+                    compact={columns === 5}
+                  />
                 ))}
               </div>
             )}
@@ -226,23 +236,23 @@ export default function PromoPage() {
         </section>
 
         {/* Bottom Consultation Banner */}
-        <section className="py-16 bg-muted/40 border-t border-border">
+        <section className="py-16 bg-[#F3EFE8] border-t border-[#E6E0D6]">
           <div className="container-livora text-center max-w-2xl mx-auto px-4">
-            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2">Bespoke Design</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-[#8C7A64] mb-2">Bespoke Design</p>
             <h2 className="serif text-3xl sm:text-4xl font-light">Punya Rencana Proyek Interior Khusus?</h2>
-            <p className="text-sm text-foreground/75 font-light mt-3 leading-relaxed">
+            <p className="text-sm text-[#6E675E] font-light mt-3 leading-relaxed">
               Tim arsitek dan desainer LIVORA siap mendampingi Anda mewujudkan ruang hunian dan komersial dengan penawaran eksklusif.
             </p>
             <div className="mt-6 flex items-center justify-center gap-4 flex-wrap">
               <Link
                 to="/appointment"
-                className="px-6 py-3 rounded-full bg-foreground text-background text-xs uppercase tracking-[0.2em] hover:opacity-90 transition-opacity"
+                className="px-6 py-3 rounded-full bg-[#181614] text-[#FAF8F5] text-xs uppercase tracking-[0.2em] hover:opacity-90 transition-opacity"
               >
                 Jadwalkan Konsultasi
               </Link>
               <Link
                 to="/furniture"
-                className="px-6 py-3 rounded-full border border-border text-xs uppercase tracking-[0.2em] hover:bg-card transition-colors"
+                className="px-6 py-3 rounded-full border border-[#D8D0C4] bg-white text-[#1D1B18] text-xs uppercase tracking-[0.2em] hover:border-[#181614] transition-colors"
               >
                 Lihat Seluruh Katalog
               </Link>
@@ -253,68 +263,5 @@ export default function PromoPage() {
 
       <Footer />
     </div>
-  );
-}
-
-function PromoItemCard({ item }: { item: RichItem }) {
-  return (
-    <Link
-      to={`/items/${item.slug}`}
-      className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <div
-        className="relative active:scale-[0.98] transition-all duration-300"
-        style={{
-          background: "#FAFAF8",
-          border: "1px solid #E8E4DF",
-          borderRadius: "12px",
-          overflow: "hidden",
-          aspectRatio: "31 / 22",
-          boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        {/* Promo Badge at top-left corner */}
-        {item.is_on_promo && (
-          <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-10">
-            <PromoBadge text={item.promo_badge_text || "PROMO"} />
-          </div>
-        )}
-
-        {item.image ? (
-          <img
-            src={item.image}
-            alt={item.name}
-            className="w-full h-full object-contain p-3 sm:p-4 transition-transform duration-500 group-hover:scale-105"
-          />
-        ) : (
-          <div className="w-2/3 h-2/3 transition-transform duration-500 group-hover:scale-105">
-            <ItemIllustration name={item.name} size={220} />
-          </div>
-        )}
-      </div>
-
-      <div className="mt-3 sm:mt-4 px-1">
-        <h3 className="text-sm font-medium text-foreground leading-snug group-hover:text-[#A88247] transition-colors">
-          {item.name}
-        </h3>
-        {item.code && (
-          <p className="text-[10px] uppercase tracking-[0.15em] text-foreground/50 mt-0.5">
-            {item.code}
-          </p>
-        )}
-
-        <div className="mt-2.5 flex items-center justify-between text-xs text-foreground/60 group-hover:text-foreground transition-colors pt-2 border-t border-border/50">
-          <span className="uppercase tracking-[0.15em] text-[10px]">
-            {item.category || "Furniture"}
-          </span>
-          <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.15em] font-medium text-[#A88247]">
-            Detail <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-          </span>
-        </div>
-      </div>
-    </Link>
   );
 }

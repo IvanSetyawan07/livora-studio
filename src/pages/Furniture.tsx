@@ -1,387 +1,545 @@
-import { getAllThumbnails, subscribeThumbnails } from "@/lib/themeThumbnails";
-import React, { useMemo, useState, useEffect } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { Armchair, Sofa as SofaIcon, Table2, LayoutGrid, ArrowLeft, Package, Search } from "lucide-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import gsap from "gsap";
+import {
+  Bookmark,
+  ChevronDown,
+  Search,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
 import { Navbar } from "@/components/livora/Navbar";
 import { Footer } from "@/components/livora/Footer";
-import { ItemIllustration } from "@/components/livora/ItemIllustration";
-import { PromoBadge, PromoPriceTag } from "@/components/livora/PromoPriceTag";
-import { type Item } from "@/data/items";
-import { useAllItems } from "@/lib/itemsApi";
-import { api } from "@/lib/api";
-import { getAllBanners, getBanners, subscribeBanners, type ThemeBanner } from "@/lib/themeBanners";
+import { FurnitureSkyHero } from "@/components/livora/furniture/FurnitureSkyHero";
+import { FurnitureShowcaseCard } from "@/components/livora/furniture/FurnitureShowcaseCard";
+import { FurnitureShortlistDrawer } from "@/components/livora/furniture/FurnitureShortlistDrawer";
+import { FurnitureShowroomBanner } from "@/components/livora/furniture/FurnitureShowroomBanner";
+import { useFurnitureCatalog } from "@/components/livora/furniture/useFurnitureCatalog";
+import {
+  SHORTLIST_OPEN_EVENT,
+  updateShortlistFinish,
+  useShortlist,
+} from "@/components/livora/furniture/shortlistStore";
+import type {
+  FurnitureFinishOption,
+  FurnitureShowcaseItem,
+  GridColumns,
+} from "@/components/livora/furniture/types";
+import { authStorage } from "@/lib/api";
+import { addToWishlist, removeFromWishlist } from "@/lib/wishlist";
 
-type ThemeKey = string;
+type SortKey = "curated" | "newest" | "name_asc" | "name_desc";
 
-type ThemeMeta = {
-  icon: typeof Armchair;
-  tagline: string;
-  slugs: string[];
-};
-
-const themePresets: Record<string, ThemeMeta> = {
-  Chair: {
-    icon: Armchair,
-    tagline: "Sculpted seating for quiet moments.",
-    slugs: ["white-chair", "coco-chair", "work-chair"],
-  },
-  Sofa: {
-    icon: SofaIcon,
-    tagline: "Generous silhouettes built for slow living.",
-    slugs: ["lounge-sofa", "modular-sofa"],
-  },
-  Table: {
-    icon: Table2,
-    tagline: "Considered surfaces in stone, brass, and wood.",
-    slugs: ["coco-table", "coffee-table"],
-  },
-};
-
-const defaultMeta = (name: string): ThemeMeta => ({
-  icon: Package,
-  tagline: `Curated ${name.toLowerCase()} pieces in our collection.`,
-  slugs: [],
-});
-
-const getMeta = (name: string): ThemeMeta =>
-  themePresets[name] ?? defaultMeta(name);
-
-const allMeta: ThemeMeta = {
-  icon: LayoutGrid,
-  tagline: "Every piece in our collection, in one place.",
-  slugs: [],
-};
-type FurnitureType = { id: number; name: string; slug: string; image?: string | null };
-
-const findItem = (slug: string, all: Item[]): Item | undefined =>
-  all.find((i) => i.slug === slug);
-
-const ThemeCard = ({
-  themeKey,
-  onOpen,
-  allItems,
-  count,
-  thumbnailImage,
-}: {
-  themeKey: ThemeKey;
-  onOpen: (k: ThemeKey) => void;
-  allItems: Item[];
-  count: number;
-  thumbnailImage?: string;
-}) => {
-  const { icon: Icon, tagline, slugs } =
-    themeKey === "All" ? allMeta : getMeta(themeKey);
-
-  const previewSlug = slugs[0];
-  const previewItem = !thumbnailImage && previewSlug
-    ? findItem(previewSlug, allItems)
-    : undefined;
-
+function DensityIcon({ cols }: { cols: GridColumns }) {
   return (
-    <button
-      onClick={() => onOpen(themeKey)}
-      className="group text-left bg-card border border-border hover:border-foreground/40 transition-all duration-500 hover:-translate-y-1 hover:shadow-[var(--shadow-elegant)] flex flex-col"
-    >
-      <div className="relative aspect-[31/20] bg-secondary/60 overflow-hidden flex items-center justify-center">
-        {thumbnailImage ? (
-          <img
-            src={thumbnailImage}
-            alt={themeKey}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-          />
-        ) : previewItem ? (
-          <div className="w-1/2 h-1/2 transition-transform duration-700 group-hover:scale-110">
-            <ItemIllustration name={previewItem.name} size={240} />
-          </div>
-        ) : (
-          <Icon className="w-20 h-20 text-foreground/30" strokeWidth={1} />
-        )}
-        <span className="absolute top-4 left-4 text-[10px] uppercase tracking-[0.3em] text-foreground/60 bg-background/80 px-2.5 py-1">
-          Theme
-        </span>
-      </div>
-      <div className="p-6 flex flex-col gap-3 flex-1">
-        <h3 className="serif text-2xl font-light leading-tight">{themeKey}</h3>
-        <p className="text-sm text-foreground/65 font-light">{tagline}</p>
-        <div className="mt-auto pt-4 flex items-end justify-between border-t border-border/60">
-          <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/60">
-            {count} {count === 1 ? "piece" : "pieces"}
-          </p>
-          <span className="text-[10px] uppercase tracking-[0.3em] text-foreground/60 group-hover:text-foreground transition-colors">
-            Explore →
-          </span>
-        </div>
-      </div>
-    </button>
-  );
-};
-
-const ItemCard = ({ item }: { item: Item }) => (
-  <Link
-    to={`/items/${item.slug}`}
-    className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-  >
-    <div
-      className="item-card active:scale-[0.98] relative"
-      style={{
-        background: "#FAFAF8",
-        border: "1px solid #E8E4DF",
-        borderRadius: "10px",
-        overflow: "hidden",
-        aspectRatio: "31 / 20",
-        boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
-        transition: "all 0.3s ease",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        cursor: "pointer",
-      }}
-    >
-      {item.is_on_promo && (
-        <div className="absolute top-2.5 left-2.5 z-10">
-          <PromoBadge text={item.promo_badge_text || "PROMO"} />
-        </div>
-      )}
-      {item.image ? (
-        <img
-          src={item.image}
-          alt={item.name}
-          className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+    <span className="inline-flex items-center gap-[2px]" aria-hidden>
+      {Array.from({ length: cols }).map((_, idx) => (
+        <span
+          key={idx}
+          className="block w-[2.5px] h-[11px] rounded-[1px] bg-current opacity-85"
         />
-      ) : (
-        <div className="w-2/3 h-2/3 transition-transform duration-500 group-hover:scale-105">
-          <ItemIllustration name={item.name} size={260} />
-        </div>
-      )}
-    </div>
-    <div className="mt-4 px-1">
-      <h3 className="text-sm font-normal text-foreground leading-snug">{item.name}</h3>
-      <p className="text-[11px] uppercase tracking-[0.15em] text-foreground/50 mt-1">{item.code}</p>
-    </div>
-  </Link>
-);
+      ))}
+    </span>
+  );
+}
 
-const Furniture = () => {
-  const allItems = useAllItems();
-  const [searchParams] = useSearchParams();
-  const [activeTheme, setActiveTheme] = useState<ThemeKey | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [types, setTypes] = useState<FurnitureType[]>([]);
-  const [banners, setBanners] = useState(() => getAllBanners());
-  const [thumbnails, setThumbnails] = useState<Record<string, any>>({});
+const Furniture: React.FC = () => {
+  const { items, categories, loading } = useFurnitureCatalog();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const shortlist = useShortlist();
+
+  const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [sortBy, setSortBy] = useState<SortKey>("curated");
+  const [columns, setColumns] = useState<GridColumns>(4);
+  const [navbarHidden, setNavbarHidden] = useState(false);
+  const [shortlistOpen, setShortlistOpen] = useState(false);
+
+  const catalogRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    api
-      .get<FurnitureType[]>("/taxonomies/furniture-types")
-      .then((r) => setTypes(r.data ?? []))
-      .catch(() => setTypes([]));
+    document.title = "Livora Furniture — Architectural Collection | LIVORA";
   }, []);
 
+  // Sinkron posisi sticky filter bar dengan perilaku auto-hide/reveal Navbar saat scroll
   useEffect(() => {
-    setBanners(getAllBanners());
-    const unsub = subscribeBanners(() => setBanners(getAllBanners()));
-    const onFocus = () => setBanners(getAllBanners());
-    window.addEventListener("focus", onFocus);
-    return () => {
-      unsub();
-      window.removeEventListener("focus", onFocus);
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (Math.abs(y - lastY) > 5) {
+        if (y > lastY && y > 80) setNavbarHidden(true);
+        else setNavbarHidden(false);
+        lastY = y;
+      }
     };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Load thumbnails awal
+  // Dengarkan event buka Shortlist Drawer dari Navbar & query ?shortlist=1
   useEffect(() => {
-    getAllThumbnails().then(setThumbnails);
-  }, []);
-
-  // Subscribe thumbnails dengan focus listener
-  useEffect(() => {
-    const unsub = subscribeThumbnails(() => getAllThumbnails().then(setThumbnails));
-    const onFocus = () => getAllThumbnails().then(setThumbnails);
-    window.addEventListener("focus", onFocus);
-    return () => {
-      unsub();
-      window.removeEventListener("focus", onFocus);
-    };
+    const openHandler = () => setShortlistOpen(true);
+    window.addEventListener(SHORTLIST_OPEN_EVENT, openHandler);
+    return () => window.removeEventListener(SHORTLIST_OPEN_EVENT, openHandler);
   }, []);
 
   useEffect(() => {
-    setBanners(getAllBanners());
-    getAllThumbnails().then(setThumbnails);
-  }, [activeTheme]);
+    if (searchParams.get("shortlist") === "1") {
+      setShortlistOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("shortlist");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
-  const themeKeys: ThemeKey[] = useMemo(() => {
-    const names = types.length
-      ? types.map((t) => t.name)
-      : Object.keys(themePresets);
-    return ["All", ...names];
-  }, [types]);
-
-  const typeImageByName = useMemo(() => {
-  const m: Record<string, string> = {};
-  types.forEach((t) => { if (t.image) m[t.name] = t.image; });
-  return m;
-}, [types]);
-
-  const slugToName = useMemo(() => {
-    const m: Record<string, string> = {
-      "new-arrivals": "All",
-      sofas: "Sofa",
-      chairs: "Chair",
-      tables: "Table",
-      beds: "Bed",
-    };
-    for (const t of types) m[t.slug] = t.name;
-    return m;
-  }, [types]);
-
+  // Sinkron query ?category= dari halaman Home / menu navbar
   useEffect(() => {
-    const categoryParam = searchParams.get("category");
-    if (!categoryParam) return;
-    const theme = slugToName[categoryParam];
-    if (theme) setActiveTheme(theme);
-  }, [searchParams, slugToName]);
-
-  const itemsForTheme = (key: ThemeKey): Item[] => {
-    if (key === "All") return allItems;
-    const keyword = key.toLowerCase();
-    const matched = allItems.filter(
-      (i) =>
-        i.category?.toLowerCase() === keyword ||
-        i.name.toLowerCase().includes(keyword),
+    const raw = (searchParams.get("category") || "").toLowerCase().trim();
+    if (!raw || raw === "all" || raw === "new-arrivals") {
+      setActiveCategory("all");
+      return;
+    }
+    const matched = categories.find(
+      (c) =>
+        c.slug.toLowerCase() === raw ||
+        c.name.toLowerCase() === raw ||
+        `${c.slug.toLowerCase()}s` === raw ||
+        `${c.name.toLowerCase()}s` === raw,
     );
-    const meta = getMeta(key);
-    const ordered = meta.slugs
-      .map((s) => matched.find((i) => i.slug === s))
-      .filter((i): i is Item => Boolean(i));
-    const rest = matched.filter((i) => !ordered.includes(i));
-    return [...ordered, ...rest];
+    if (matched) {
+      setActiveCategory(matched.slug);
+      return;
+    }
+    const alias: Record<string, string> = {
+      sofas: "sofa",
+      chairs: "chair",
+      tables: "table",
+      beds: "bed",
+      accessories: "accessories",
+    };
+    const mappedAlias = alias[raw];
+    if (mappedAlias) {
+      const byAlias = categories.find(
+        (c) =>
+          c.slug.toLowerCase().includes(mappedAlias) ||
+          c.name.toLowerCase().includes(mappedAlias),
+      );
+      if (byAlias) setActiveCategory(byAlias.slug);
+    }
+  }, [searchParams, categories]);
+
+  const activeCategoryName = useMemo(() => {
+    if (activeCategory === "all") return null;
+    return (
+      categories.find((c) => c.slug === activeCategory)?.name ?? activeCategory
+    );
+  }, [activeCategory, categories]);
+
+  const filteredItems = useMemo(() => {
+    let list = items;
+
+    if (activeCategory !== "all") {
+      const catKey = activeCategory.toLowerCase();
+      const catLabel = (activeCategoryName || "").toLowerCase();
+      list = list.filter(
+        (it) =>
+          it.categorySlug.toLowerCase() === catKey ||
+          it.category.toLowerCase() === catLabel ||
+          it.category.toLowerCase().includes(catKey),
+      );
+    }
+
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter((it) => {
+        const finishHit = it.finishes.some(
+          (f) =>
+            f.name.toLowerCase().includes(q) ||
+            (f.material || "").toLowerCase().includes(q),
+        );
+        return (
+          it.name.toLowerCase().includes(q) ||
+          it.code.toLowerCase().includes(q) ||
+          it.category.toLowerCase().includes(q) ||
+          (it.series || "").toLowerCase().includes(q) ||
+          it.materialLabel.toLowerCase().includes(q) ||
+          finishHit
+        );
+      });
+    }
+
+    const sorted = [...list];
+    sorted.sort((a, b) => {
+      switch (sortBy) {
+        case "name_asc":
+          return a.name.localeCompare(b.name);
+        case "name_desc":
+          return b.name.localeCompare(a.name);
+        case "newest":
+          return (b.apiId ?? 0) - (a.apiId ?? 0);
+        case "curated":
+        default: {
+          const scoreA = (a.editorialTag ? 2 : 0) + (a.finishes.length > 0 ? 1 : 0);
+          const scoreB = (b.editorialTag ? 2 : 0) + (b.finishes.length > 0 ? 1 : 0);
+          if (scoreB !== scoreA) return scoreB - scoreA;
+          return (b.apiId ?? 0) - (a.apiId ?? 0);
+        }
+      }
+    });
+
+    return sorted;
+  }, [items, activeCategory, activeCategoryName, searchQuery, sortBy]);
+
+  // Transisi grid halus berbasis GSAP saat filter / sort / densitas kolom berubah
+  useEffect(() => {
+    if (loading || !gridRef.current) return;
+    const ctx = gsap.context(() => {
+      const cards = gridRef.current?.querySelectorAll(".furniture-showcase-item");
+      if (!cards || cards.length === 0) return;
+      gsap.fromTo(
+        cards,
+        { opacity: 0, y: 16 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.44,
+          stagger: 0.022,
+          ease: "power3.out",
+          clearProps: "transform,opacity",
+        },
+      );
+    }, gridRef);
+
+    return () => ctx.revert();
+  }, [activeCategory, sortBy, columns, searchQuery, loading, filteredItems.length]);
+
+  const handleSelectCategory = (slug: string) => {
+    setActiveCategory(slug);
+    const next = new URLSearchParams(searchParams);
+    if (slug === "all") next.delete("category");
+    else next.set("category", slug);
+    setSearchParams(next, { replace: true });
   };
 
-  const themedItems = useMemo(() => {
-    if (!activeTheme) return [];
-    const base = itemsForTheme(activeTheme);
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return base;
-    return base.filter(
-      (i) =>
-        i.name.toLowerCase().includes(q) ||
-        (i.code ?? "").toLowerCase().includes(q) ||
-        (i.category ?? "").toLowerCase().includes(q),
-    );
-  }, [activeTheme, allItems, types, searchQuery]);
+  const handleToggleSave = (
+    item: FurnitureShowcaseItem,
+    activeFinish: FurnitureFinishOption,
+  ) => {
+    const result = shortlist.toggle({
+      slug: item.slug,
+      apiId: item.apiId,
+      name: item.name,
+      code: item.code,
+      category: item.category,
+      image: activeFinish.furnitureImage || activeFinish.previewImage || item.image || null,
+      finishId: activeFinish.id,
+      finishName: activeFinish.name,
+      finishHex: activeFinish.hex,
+      dimensionsLabel: item.dimensionsLabel,
+      materialLabel: activeFinish.material || item.materialLabel,
+    });
 
-  const activeBanners: ThemeBanner[] = activeTheme ? getBanners(activeTheme) : [];
+    // Sinkron opsional dengan wishlist server jika user sedang login
+    if (item.apiId && authStorage.getToken()) {
+      if (result.saved) {
+        addToWishlist("item", item.apiId).catch(() => {});
+      } else {
+        removeFromWishlist("item", item.apiId).catch(() => {});
+      }
+    }
+
+    if (result.saved) {
+      toast.success(`${item.name} (${activeFinish.name}) disimpan ke shortlist`, {
+        action: {
+          label: "Lihat Shortlist",
+          onClick: () => setShortlistOpen(true),
+        },
+      });
+    } else {
+      toast.info(`${item.name} dihapus dari shortlist`);
+    }
+  };
+
+  const handleFinishChange = (
+    item: FurnitureShowcaseItem,
+    finish: FurnitureFinishOption,
+  ) => {
+    if (shortlist.isSaved(item.slug)) {
+      updateShortlistFinish(item.slug, {
+        id: finish.id,
+        name: finish.name,
+        hex: finish.hex,
+        image: finish.furnitureImage || finish.previewImage || item.image || null,
+      });
+    }
+  };
+
+  const gridColsClass =
+    columns === 3
+      ? "grid grid-cols-2 md:grid-cols-3 gap-x-4 sm:gap-x-6 lg:gap-x-8 gap-y-9 sm:gap-y-12"
+      : columns === 5
+      ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 sm:gap-x-5 gap-y-8 sm:gap-y-10"
+      : "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 sm:gap-x-6 gap-y-9 sm:gap-y-11";
+
+  const hasFilters = activeCategory !== "all" || searchQuery.trim().length > 0;
 
   return (
-    <main className="min-h-screen bg-background">
+    <div className="min-h-screen flex flex-col bg-[#F8F9FB] text-[#0B426E]">
       <Navbar />
 
-      <section className="pt-28 pb-12 md:pt-48 md:pb-24 border-b border-border">
-        <div className="container-livora text-center max-w-4xl">
-          <p className="text-[10px] uppercase tracking-[0.45em] text-foreground/60 mb-4 md:mb-6">
-            Livora | Furniture
-          </p>
-          <h1 className="serif text-4xl sm:text-5xl md:text-7xl font-light leading-[1.08] text-balance">
-            {activeTheme ? (
-              <><em className="italic">{activeTheme}</em> Collection</>
-            ) : (
-              <>Our Furniture <em className="italic">Collection</em></>
-            )}
-          </h1>
-          <p className="mt-4 md:mt-6 text-sm sm:text-base text-foreground/70 font-light max-w-xl mx-auto">
-            {activeTheme
-              ? (activeTheme === "All" ? allMeta : getMeta(activeTheme)).tagline
-              : "Browse by theme — choose a category to explore the curated pieces inside."}
-          </p>
-        </div>
-      </section>
+      <main className="flex-1">
+        {/* A. ATMOSPHERIC SKY-TO-STONE HERO */}
+        <FurnitureSkyHero
+          activeCategoryLabel={activeCategoryName}
+          totalCount={items.length}
+          onScrollToCatalog={() =>
+            catalogRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+          }
+        />
 
-      <section className="py-10 md:py-24">
-        <div className="container-livora">
-          {!activeTheme ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 animate-fade-in">
-              {themeKeys.map((k) => (
-                <ThemeCard
-                  key={k}
-                  themeKey={k}
-                  onOpen={(k2) => { setSearchQuery(""); setActiveTheme(k2); }}
-                  allItems={allItems}
-                  count={itemsForTheme(k).length}
-                  thumbnailImage={typeImageByName[k] || thumbnails[k]?.image}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="animate-fade-in">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 md:mb-10">
+        {/* B. STICKY FILTER, SEARCH & GRID DENSITY BAR */}
+        <div
+          ref={catalogRef}
+          className={`sticky z-30 bg-[#F8F9FB]/92 backdrop-blur-md border-b border-[#0B426E]/10 transition-[top] duration-500 ${
+            navbarHidden ? "top-0" : "top-20"
+          }`}
+        >
+          <div className="container-livora py-3.5 md:py-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              {/* Left: Pill Category Filter Tabs */}
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5 lg:pb-0 -mx-1 px-1">
                 <button
-                  onClick={() => { setActiveTheme(null); setSearchQuery(""); }}
-                  className="inline-flex items-center gap-2 min-h-[44px] py-2 text-[10px] uppercase tracking-[0.3em] text-foreground/75 hover:text-foreground transition-colors self-start"
+                  type="button"
+                  onClick={() => handleSelectCategory("all")}
+                  className={`px-4 py-2 rounded-full text-[12.5px] tracking-[0.02em] transition-all duration-200 whitespace-nowrap shrink-0 ${
+                    activeCategory === "all"
+                      ? "bg-[#0B426E] text-white font-medium"
+                      : "bg-white border border-[#0B426E]/12 text-[#4B5E71] hover:border-[#1E88C7]/50 hover:text-[#0B426E]"
+                  }`}
                 >
-                  <ArrowLeft size={14} /> Back to Themes
+                  All Collection
                 </button>
-                <div className="relative w-full sm:w-64">
-                  <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+
+                {categories.map((cat) => {
+                  const active = activeCategory === cat.slug;
+                  return (
+                    <button
+                      key={cat.slug}
+                      type="button"
+                      onClick={() => handleSelectCategory(cat.slug)}
+                      className={`px-4 py-2 rounded-full text-[12.5px] tracking-[0.02em] transition-all duration-200 whitespace-nowrap shrink-0 ${
+                        active
+                          ? "bg-[#0B426E] text-white font-medium"
+                          : "bg-white border border-[#0B426E]/12 text-[#4B5E71] hover:border-[#1E88C7]/50 hover:text-[#0B426E]"
+                      }`}
+                    >
+                      {cat.name}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Right: Search, Piece Count, Sort & 3/4/5 Column Density Switcher */}
+              <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 shrink-0">
+                {/* Compact Inline Search */}
+                <div className="relative flex-1 min-w-[155px] sm:w-44">
+                  <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#4B5E71]/70" />
                   <input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder={`Filter ${activeTheme.toLowerCase()}...`}
-                    aria-label="Filter furniture"
-                    className="w-full h-11 pl-10 pr-3 border border-border rounded bg-background text-base sm:text-sm font-light outline-none focus:border-foreground transition-colors"
+                    placeholder="Cari karya / material..."
+                    aria-label="Cari furnitur atau material"
+                    className="w-full h-9 pl-9 pr-7 rounded-full border border-[#0B426E]/12 bg-white text-[12.5px] text-[#0B426E] placeholder:text-[#4B5E71]/65 outline-none focus:border-[#1E88C7] transition-colors"
                   />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      aria-label="Bersihkan pencarian"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#4B5E71] hover:text-[#0B426E]"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Subtle Piece Count */}
+                <span className="hidden sm:inline-block text-xs text-[#4B5E71] tabular-nums px-1">
+                  {loading
+                    ? "Memuat…"
+                    : `${filteredItems.length} ${filteredItems.length === 1 ? "Piece" : "Pieces"}`}
+                </span>
+
+                <span
+                  aria-hidden
+                  className="hidden sm:inline-block h-4 w-px bg-[#0B426E]/12"
+                />
+
+                {/* Sort Select (STRICTLY NO PRICE SORT) */}
+                <div className="relative">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as SortKey)}
+                    aria-label="Urutkan koleksi"
+                    className="appearance-none h-9 pl-3.5 pr-8 rounded-full border border-[#0B426E]/12 bg-white text-[12.5px] text-[#0B426E] outline-none hover:border-[#1E88C7]/50 focus:border-[#1E88C7] transition-colors cursor-pointer"
+                  >
+                    <option value="curated">Kurasi LIVORA</option>
+                    <option value="newest">Terbaru</option>
+                    <option value="name_asc">Nama A – Z</option>
+                    <option value="name_desc">Nama Z – A</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none w-3.5 h-3.5 text-[#4B5E71] absolute right-3 top-1/2 -translate-y-1/2" />
+                </div>
+
+                {/* Desktop Grid Density Switcher: 3 | 4 (Default) | 5 Columns */}
+                <div
+                  role="group"
+                  aria-label="Kepadatan kolom katalog"
+                  className="hidden lg:inline-flex items-center rounded-full bg-[#EEF1F5] border border-[#0B426E]/10 p-1"
+                >
+                  {([3, 4, 5] as GridColumns[]).map((cols) => {
+                    const active = columns === cols;
+                    return (
+                      <button
+                        key={cols}
+                        type="button"
+                        onClick={() => setColumns(cols)}
+                        aria-pressed={active}
+                        title={`${cols} Kolom`}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] transition-all duration-200 whitespace-nowrap ${
+                          active
+                            ? "bg-[#0B426E] text-white font-medium"
+                            : "text-[#4B5E71] hover:text-[#0B426E]"
+                        }`}
+                      >
+                        <DensityIcon cols={cols} />
+                        <span>{cols} Kolom</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-              <style>{`
-                .furniture-grid { grid-auto-flow: dense; }
-                @media (min-width: 1024px) {
-                  ${activeBanners.map((_, i) => {
-                    const n = i + 1;
-                    const colStart = n % 2 === 1 ? 1 : 3;
-                    const rowStart = 1 + i * 5;
-                    return `.furniture-grid [data-banner="${n}"]{grid-column:${colStart} / span 2;grid-row:${rowStart} / span 2;}`;
-                  }).join("\n")}
-                }
-              `}</style>
-              <div className="furniture-grid grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 sm:gap-x-5 gap-y-8 sm:gap-y-10">
-                {(() => {
-                  const nodes: React.ReactNode[] = themedItems.map((item) => (
-                    <ItemCard key={item.slug} item={item} />
-                  ));
-                  activeBanners.forEach((b, i) => {
-                    const insertIdx = Math.min(i * 12, nodes.length);
-                    const banner = (
-                      <div
-                        key={`__banner_${i}__`}
-                        data-banner={i + 1}
-                        className="col-span-2 row-span-2 bg-secondary/40 border border-border rounded-[10px] overflow-hidden relative h-full w-full min-h-[300px]"
-                      >
-                        <img
-                          src={b.image}
-                          alt={b.title || `${activeTheme} banner ${i + 1}`}
-                          className="absolute inset-0 w-full h-full object-cover"
-                        />
-                        {b.title && (
-                          <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/60 to-transparent">
-                            <p className="serif text-2xl text-white font-light">
-                              {b.title}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                    nodes.splice(insertIdx, 0, banner);
-                  });
-                  return nodes;
-                })()}
-              </div>
-
             </div>
-          )}
+          </div>
         </div>
-      </section>
+
+        {/* C. FRAMELESS ARCHITECTURAL FURNITURE GRID */}
+        <section className="py-8 sm:py-12 md:py-14 bg-[#F8F9FB]">
+          <div className="container-livora">
+            {/* Subtle Active Filter / Shortlist Strip */}
+            {(hasFilters || shortlist.count > 0) && (
+              <div className="mb-7 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#EAF4FA]/70 border border-[#1E88C7]/15 px-4 py-2.5 text-xs">
+                <div className="flex items-center flex-wrap gap-2 text-[#0B426E]">
+                  <span>
+                    Menampilkan <strong>{filteredItems.length}</strong> karya
+                    {activeCategoryName ? ` dalam kategori ${activeCategoryName}` : " koleksi LIVORA"}
+                    {searchQuery.trim() ? ` untuk "${searchQuery.trim()}"` : ""}.
+                  </span>
+                  {hasFilters && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleSelectCategory("all");
+                        setSearchQuery("");
+                      }}
+                      className="inline-flex items-center gap-1 text-[#1E88C7] hover:text-[#0B426E] font-medium underline underline-offset-4 ml-1"
+                    >
+                      <X className="w-3 h-3" /> Tampilkan Semua
+                    </button>
+                  )}
+                </div>
+
+                {shortlist.count > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShortlistOpen(true)}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#0B426E]/12 px-3.5 py-1 text-[11.5px] font-medium text-[#0B426E] hover:border-[#1E88C7] transition-colors"
+                  >
+                    <Bookmark className="w-3.5 h-3.5 fill-[#1E88C7] text-[#1E88C7]" />
+                    <span>Shortlist ({shortlist.count})</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Loading Skeletons */}
+            {loading ? (
+              <div className={gridColsClass}>
+                {Array.from({ length: 8 }).map((_, idx) => (
+                  <div key={idx} className="animate-pulse">
+                    <div className="aspect-[4/5] w-full rounded-2xl bg-[#EEF1F5]" />
+                    <div className="pt-3.5 space-y-2">
+                      <div className="h-2.5 w-20 rounded bg-[#E6ECF2]" />
+                      <div className="h-4 w-3/4 rounded bg-[#DDE5EE]" />
+                      <div className="h-3 w-2/3 rounded bg-[#E6ECF2]" />
+                      <div className="flex gap-2 pt-1">
+                        <div className="w-3.5 h-3.5 rounded-full bg-[#DDE5EE]" />
+                        <div className="w-3.5 h-3.5 rounded-full bg-[#DDE5EE]" />
+                        <div className="w-3.5 h-3.5 rounded-full bg-[#DDE5EE]" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredItems.length === 0 ? (
+              <div className="py-24 text-center max-w-md mx-auto">
+                <div className="w-12 h-12 rounded-2xl bg-[#EAF4FA] text-[#1E88C7] mx-auto mb-4 flex items-center justify-center">
+                  <SlidersHorizontal className="w-5 h-5" />
+                </div>
+                <h2 className="serif text-3xl font-light text-[#0B426E]">
+                  Belum Ada Karya yang Sesuai
+                </h2>
+                <p className="text-sm text-[#4B5E71] mt-2 leading-relaxed">
+                  Coba ubah kategori atau kata kunci material untuk menelusuri seluruh kurasi furnitur LIVORA.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleSelectCategory("all");
+                    setSearchQuery("");
+                  }}
+                  className="mt-6 rounded-full bg-[#0B426E] hover:bg-[#083559] text-white px-6 py-2.5 text-xs uppercase tracking-[0.18em] transition-colors"
+                >
+                  Reset Filter
+                </button>
+              </div>
+            ) : (
+              <div ref={gridRef} className={gridColsClass}>
+                {filteredItems.map((item) => (
+                  <FurnitureShowcaseCard
+                    key={item.slug}
+                    item={item}
+                    columns={columns}
+                    saved={shortlist.isSaved(item.slug)}
+                    onToggleSave={handleToggleSave}
+                    onFinishChange={handleFinishChange}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* E. SIGNATURE BOTTOM BANNER: "Designing Better Spaces Together." */}
+        <FurnitureShowroomBanner />
+      </main>
+
+      {/* D. SAVED SHORTLIST DRAWER */}
+      <FurnitureShortlistDrawer
+        open={shortlistOpen}
+        items={shortlist.items}
+        onClose={() => setShortlistOpen(false)}
+        onRemove={shortlist.remove}
+        onClear={() => {
+          shortlist.clear();
+          toast.info("Shortlist dibersihkan");
+        }}
+      />
 
       <Footer />
-    </main>
+    </div>
   );
 };
 

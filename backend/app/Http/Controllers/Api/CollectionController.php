@@ -22,16 +22,28 @@ class CollectionController extends Controller
         return $q->get();
     }
 
+    private const ITEM_INTERNAL_FIELDS = ['stock', 'warehouse_note', 'price', 'original_price', 'final_price'];
+
     public function show($slug) {
         $q = Collection::where('slug', $slug);
         if (!$this->isStaff()) $q->where(fn($x) => $x->where('status', 'published')->orWhereNull('status'));
-        return $q
+        $col = $q
             ->with([
                 'story',
                 'packages.items.type',
+                'packages.items.variants',
                 'items.type',
+                'items.variants',
             ])
             ->firstOrFail();
+
+        if (!$this->isStaff()) {
+            $col->items->each->makeHidden(self::ITEM_INTERNAL_FIELDS);
+            foreach ($col->packages as $pkg) {
+                $pkg->items->each->makeHidden(self::ITEM_INTERNAL_FIELDS);
+            }
+        }
+        return $col;
     }
 
     public function store(Request $r) {
@@ -90,7 +102,7 @@ class CollectionController extends Controller
         if ($r->hasFile('banner')) $data['banner'] = \App\Services\ImageOptimizer::storePublicWebp($r->file('banner'), 'collections');
         $pkg = CollectionPackage::create($data);
         if ($itemIds) $pkg->items()->sync($itemIds);
-        return $pkg->load('items.type');
+        return $pkg->load(['items.type', 'items.variants']);
     }
 
     public function packageUpdate(Request $r, CollectionPackage $package) {
@@ -107,7 +119,7 @@ class CollectionController extends Controller
         if ($r->hasFile('banner')) $data['banner'] = \App\Services\ImageOptimizer::storePublicWebp($r->file('banner'), 'collections');
         $package->update($data);
         if ($itemIds !== null) $package->items()->sync($itemIds);
-        return $package->load('items.type');
+        return $package->load(['items.type', 'items.variants']);
     }
 
     public function packageDestroy(CollectionPackage $package) {

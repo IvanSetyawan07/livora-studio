@@ -77,13 +77,18 @@ function VariantsPanel({ itemId, initial }: { itemId: number; initial: any[] }) 
         {list.map((v) => (
           <div key={v.id} className="bg-card border border-border rounded-lg p-3">
             <div className="grid grid-cols-2 gap-1 mb-2">
-              <div className="aspect-square bg-muted rounded overflow-hidden relative">
+              <div
+                className="aspect-square rounded overflow-hidden relative border border-black/10"
+                style={{ backgroundColor: v.color_code || "#F3EFE8" }}
+              >
                 {v.preview_image && <img src={imgUrl(v.preview_image)} className="w-full h-full object-cover" alt="" />}
-                <span className="absolute bottom-1 left-1 text-[8px] uppercase tracking-wider bg-background/80 px-1 rounded">Swatch</span>
+                <span className="absolute bottom-1 left-1 text-[8px] uppercase tracking-wider bg-background/85 px-1 rounded">
+                  {v.preview_image ? "Swatch" : (v.color_code || "Color")}
+                </span>
               </div>
               <div className="aspect-square bg-muted rounded overflow-hidden relative">
                 {v.furniture_image && <img src={imgUrl(v.furniture_image)} className="w-full h-full object-cover" alt="" />}
-                <span className="absolute bottom-1 left-1 text-[8px] uppercase tracking-wider bg-background/80 px-1 rounded">Furniture</span>
+                <span className="absolute bottom-1 left-1 text-[8px] uppercase tracking-wider bg-background/85 px-1 rounded">Furniture</span>
               </div>
             </div>
             <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{v.category}</p>

@@ -1,5 +1,6 @@
 import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
+import type { FurnitureVariant } from "@/lib/itemsApi";
 
 export interface CollectionItemRef {
   id: number;
@@ -7,7 +8,14 @@ export interface CollectionItemRef {
   title: string;
   code?: string | null;
   image?: string | null;
+  texture?: string | null;
+  finish?: string | null;
+  availability?: string | null;
+  is_on_promo?: boolean;
+  promo_badge_text?: string | null;
   type?: { id: number; name: string; slug: string } | null;
+  collection?: { id: number; name: string; slug: string } | null;
+  variants?: FurnitureVariant[];
 }
 
 export interface CollectionPackage {
@@ -50,6 +58,16 @@ export interface Collection {
   items?: CollectionItemRef[];
 }
 
+const normalizeItemRef = (it: CollectionItemRef): CollectionItemRef => ({
+  ...it,
+  image: it.image ? imgUrl(it.image) : null,
+  variants: (it.variants ?? []).map((v) => ({
+    ...v,
+    preview_image: v.preview_image ? imgUrl(v.preview_image) : null,
+    furniture_image: v.furniture_image ? imgUrl(v.furniture_image) : null,
+  })),
+});
+
 const withUrls = (c: Collection): Collection => ({
   ...c,
   hero_banner: c.hero_banner ? imgUrl(c.hero_banner) : null,
@@ -61,9 +79,9 @@ const withUrls = (c: Collection): Collection => ({
   packages: (c.packages ?? []).map((p) => ({
     ...p,
     banner: p.banner ? imgUrl(p.banner) : null,
-    items: (p.items ?? []).map((it) => ({ ...it, image: it.image ? imgUrl(it.image) : null })),
+    items: (p.items ?? []).map(normalizeItemRef),
   })),
-  items: (c.items ?? []).map((it) => ({ ...it, image: it.image ? imgUrl(it.image) : null })),
+  items: (c.items ?? []).map(normalizeItemRef),
 });
 
 export const listCollections = async (): Promise<Collection[]> => {
@@ -83,7 +101,7 @@ export const getCollectionItems = async (
   const params: any = { collection: collectionSlug };
   if (typeSlug && typeSlug !== "all") params.type = typeSlug;
   const r = await api.get<CollectionItemRef[]>("/items", { params });
-  return r.data.map((it) => ({ ...it, image: it.image ? imgUrl(it.image) : null }));
+  return r.data.map(normalizeItemRef);
 };
 
 export const CATEGORY_TABS: { slug: string; label: string }[] = [

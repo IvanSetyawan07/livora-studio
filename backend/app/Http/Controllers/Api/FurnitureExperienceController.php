@@ -17,15 +17,23 @@ class FurnitureExperienceController extends Controller
 
     public function variantStore(Request $r, Item $item) {
         $data = $this->validateVariant($r);
-        if ($r->hasFile('preview_image')) $data['preview_image'] = '/storage/'.$r->file('preview_image')->store('variants','public');
-        if ($r->hasFile('furniture_image')) $data['furniture_image'] = '/storage/'.$r->file('furniture_image')->store('variants','public');
+        if ($r->hasFile('preview_image')) $data['preview_image'] = \App\Services\ImageOptimizer::storePublicWebp($r->file('preview_image'), 'variants');
+        if ($r->hasFile('furniture_image')) $data['furniture_image'] = \App\Services\ImageOptimizer::storePublicWebp($r->file('furniture_image'), 'variants');
         $data['item_id'] = $item->id;
+        if (!empty($data['is_default'])) {
+            $item->variants()->update(['is_default' => false]);
+        }
         return FurnitureVariant::create($data);
     }
     public function variantUpdate(Request $r, FurnitureVariant $variant) {
         $data = $this->validateVariant($r);
-        if ($r->hasFile('preview_image')) $data['preview_image'] = '/storage/'.$r->file('preview_image')->store('variants','public');
-        if ($r->hasFile('furniture_image')) $data['furniture_image'] = '/storage/'.$r->file('furniture_image')->store('variants','public');
+        if ($r->hasFile('preview_image')) $data['preview_image'] = \App\Services\ImageOptimizer::storePublicWebp($r->file('preview_image'), 'variants');
+        if ($r->hasFile('furniture_image')) $data['furniture_image'] = \App\Services\ImageOptimizer::storePublicWebp($r->file('furniture_image'), 'variants');
+        if (!empty($data['is_default'])) {
+            FurnitureVariant::where('item_id', $variant->item_id)
+                ->where('id', '!=', $variant->id)
+                ->update(['is_default' => false]);
+        }
         $variant->update($data);
         return $variant;
     }
@@ -36,10 +44,12 @@ class FurnitureExperienceController extends Controller
             'variant_name'=>'required|string|max:150',
             'category'=>'required|string|in:fabric,leather,wood,metal,marble,other',
             'color_name'=>'nullable|string|max:100',
+            'color_code'=>'nullable|string|max:9',
             'material_name'=>'nullable|string|max:100',
             'description'=>'nullable|string',
             'sort_order'=>'nullable|integer',
             'is_active'=>'nullable|boolean',
+            'is_default'=>'nullable|boolean',
             'preview_image'=>'nullable|file|image',
             'furniture_image'=>'nullable|file|image',
         ]);
