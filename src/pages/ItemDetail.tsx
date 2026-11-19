@@ -10,8 +10,8 @@ import {
   Expand,
   MessageCircle,
   Moon,
-  Plus,
   QrCode,
+  ShoppingBag,
   Sparkles,
   Sun,
 } from "lucide-react";
@@ -288,8 +288,8 @@ const ItemDetail = () => {
     });
     setAddedToQuote(true);
     window.setTimeout(() => setAddedToQuote(false), 1800);
-    toast.success(`${item.name} ditambahkan ke daftar penawaran`, {
-      action: { label: "Lihat Daftar", onClick: () => navigate("/cart") },
+    toast.success(`${item.name} ditambahkan ke keranjang`, {
+      action: { label: "Lihat Keranjang", onClick: () => navigate("/cart") },
     });
   };
 
@@ -703,29 +703,30 @@ const ItemDetail = () => {
 
                   <button
                     type="button"
-                    onClick={handleToggleSave}
-                    className={`h-11 inline-flex items-center justify-center gap-2 rounded-full px-4 text-[12.5px] font-medium border transition-colors ${
-                      saved
+                    onClick={handleAddToQuoteList}
+                    disabled={!item.apiId}
+                    className={`h-11 inline-flex items-center justify-center gap-2 rounded-full px-4 text-[12.5px] font-medium border transition-colors disabled:opacity-50 ${
+                      addedToQuote
                         ? "bg-[#EAF4FA] border-[#1E88C7]/40 text-[#0B426E]"
                         : "bg-white border-[#0B426E]/18 hover:border-[#0B426E] text-[#0B426E]"
                     }`}
                   >
-                    {saved ? (
+                    {addedToQuote ? (
                       <>
                         <Check className="w-3.5 h-3.5 text-[#1E88C7]" />
-                        <span>Tersimpan</span>
+                        <span>Di Keranjang</span>
                       </>
                     ) : (
                       <>
-                        <Bookmark className="w-3.5 h-3.5 text-[#1E88C7]" />
-                        <span>Simpan Shortlist</span>
+                        <ShoppingBag className="w-3.5 h-3.5 text-[#1E88C7]" />
+                        <span>Keranjang</span>
                       </>
                     )}
                   </button>
                 </div>
 
-                {/* Quiet Editorial Utility Links (No competing pills) */}
-                <div className="pt-2 flex items-center justify-between flex-wrap gap-3 text-[12px] text-[#4B5E71]">
+                {/* Quiet Editorial Concierge Link */}
+                <div className="pt-1.5 flex items-center justify-between flex-wrap gap-3 text-[12px] text-[#4B5E71]">
                   <button
                     type="button"
                     onClick={() =>
@@ -740,26 +741,6 @@ const ItemDetail = () => {
                     <Sparkles className="w-3.5 h-3.5 text-[#1E88C7]" />
                     <span>Tanya LIVORA Concierge</span>
                   </button>
-
-                  {item.apiId && (
-                    <button
-                      type="button"
-                      onClick={handleAddToQuoteList}
-                      className="inline-flex items-center gap-1.5 hover:text-[#0B426E] transition-colors"
-                    >
-                      {addedToQuote ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-[#1E88C7]" />
-                          <span className="text-[#0B426E] font-medium">Masuk Daftar Penawaran</span>
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-3.5 h-3.5 text-[#1E88C7]" />
-                          <span>Tambah ke Daftar Penawaran</span>
-                        </>
-                      )}
-                    </button>
-                  )}
                 </div>
 
                 <p className="text-[11.5px] text-[#4B5E71]/80 pt-1 leading-relaxed">
