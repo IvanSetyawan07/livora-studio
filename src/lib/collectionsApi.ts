@@ -49,6 +49,9 @@ export interface Collection {
   featured_image?: string | null;
   display_order?: number;
   status?: string;
+  is_featured?: boolean;
+  items_count?: number;
+  packages_count?: number;
   seo_title?: string | null;
   seo_description?: string | null;
   cta_text?: string | null;
@@ -84,8 +87,9 @@ const withUrls = (c: Collection): Collection => ({
   items: (c.items ?? []).map(normalizeItemRef),
 });
 
-export const listCollections = async (): Promise<Collection[]> => {
-  const r = await api.get<Collection[]>("/collections");
+export const listCollections = async (opts?: { featured?: boolean }): Promise<Collection[]> => {
+  const params = opts?.featured ? { featured: 1 } : undefined;
+  const r = await api.get<Collection[]>("/collections", { params });
   return r.data.map(withUrls);
 };
 

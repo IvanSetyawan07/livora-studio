@@ -6,6 +6,7 @@ use App\Models\Collection;
 use App\Models\CollectionStory;
 use App\Models\CollectionPackage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class CollectionController extends Controller
@@ -16,9 +17,12 @@ class CollectionController extends Controller
         return $u && in_array($u->role, ['admin', 'sales'], true);
     }
 
-    public function index() {
-        $q = Collection::orderBy('display_order')->orderBy('name');
+    public function index(Request $r) {
+        $q = Collection::withCount(['items', 'packages'])->orderBy('display_order')->orderBy('name');
         if (!$this->isStaff()) $q->where(fn($x) => $x->where('status', 'published')->orWhereNull('status'));
+        if ($r->boolean('featured') && Schema::hasColumn('collections', 'is_featured')) {
+            $q->where('is_featured', true);
+        }
         return $q->get();
     }
 
@@ -67,6 +71,22 @@ class CollectionController extends Controller
     public function destroy(Collection $collection) {
         $collection->delete();
         return ['ok' => true];
+    }
+
+    /** Toggle cepat Featured Collection untuk tampil di landing page. */
+    public function toggleFeatured(Collection $collection) {
+        if (!Schema::hasColumn('collections', 'is_featured')) {
+            return response()->json([
+                'message' => 'Kolom is_featured belum ada di database. Jalankan: php artisan migrate di folder backend.',
+            ], 422);
+        }
+        $collection->is_featured = !((bool) $collection->is_featured);
+        $collection->save();
+        return [
+            'ok' => true,
+            'id' => $collection->id,
+            'is_featured' => (bool) $collection->is_featured,
+        ];
     }
 
     // ─── STORY ───
@@ -134,6 +154,7 @@ class CollectionController extends Controller
             'short_description' => 'nullable|string|max:500',
             'display_order' => 'nullable|integer',
             'status' => 'nullable|string|in:published,draft',
+            'is_featured' => 'nullable|boolean',
             'seo_title' => 'nullable|string|max:200',
             'seo_description' => 'nullable|string|max:500',
             'cta_text' => 'nullable|string|max:100',

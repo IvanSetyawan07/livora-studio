@@ -52,7 +52,7 @@ export const FurnitureShortlistDrawer: React.FC<FurnitureShortlistDrawerProps> =
   const waListLines = items
     .map(
       (it, idx) =>
-        `${idx + 1}. ${it.name} (${it.code}) — Finish: ${it.finishName} · ${it.dimensionsLabel}`,
+        `${idx + 1}. ${it.name} (${it.code})${it.finishName ? ` — Finish: ${it.finishName}` : ""} · ${it.dimensionsLabel}`,
     )
     .join("\n");
 
@@ -182,13 +182,17 @@ export const FurnitureShortlistDrawer: React.FC<FurnitureShortlistDrawerProps> =
                   </div>
 
                   <div className="mt-2 space-y-1">
-                    <div className="inline-flex items-center gap-1.5 rounded-full bg-[#F8F9FB] border border-[#0B426E]/10 px-2.5 py-0.5 text-[11px] text-[#0B426E]">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full ring-1 ring-inset ring-black/15 shrink-0"
-                        style={{ backgroundColor: piece.finishHex }}
-                      />
-                      <span className="truncate">{piece.finishName}</span>
-                    </div>
+                    {piece.finishName && (
+                      <div className="inline-flex items-center gap-1.5 rounded-full bg-[#F8F9FB] border border-[#0B426E]/10 px-2.5 py-0.5 text-[11px] text-[#0B426E]">
+                        {piece.finishHex && (
+                          <span
+                            className="w-2.5 h-2.5 rounded-full ring-1 ring-inset ring-black/15 shrink-0"
+                            style={{ backgroundColor: piece.finishHex }}
+                          />
+                        )}
+                        <span className="truncate">{piece.finishName}</span>
+                      </div>
+                    )}
                     <p className="text-[11.5px] text-[#4B5E71] truncate">
                       {piece.dimensionsLabel}
                     </p>

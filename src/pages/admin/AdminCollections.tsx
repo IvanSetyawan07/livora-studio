@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import TranslationPanel from "@/components/admin/TranslationPanel";
 import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
-import { Pencil, Trash2, Plus, X, Upload } from "lucide-react";
+import { Pencil, Trash2, Plus, X, Upload, Star } from "lucide-react";
 
 interface Collection {
   id: number;
@@ -15,6 +15,9 @@ interface Collection {
   featured_image?: string;
   display_order?: number;
   status?: string;
+  is_featured?: boolean;
+  items_count?: number;
+  packages_count?: number;
   seo_title?: string;
   seo_description?: string;
   cta_text?: string;
@@ -79,6 +82,19 @@ export default function AdminCollections() {
     load();
   };
 
+  const toggleFeatured = async (c: Collection) => {
+    try {
+      const r = await api.patch<{ ok: boolean; is_featured: boolean }>(
+        `/admin/collections/${c.id}/toggle-featured`,
+      );
+      setList((prev) =>
+        prev.map((x) => (x.id === c.id ? { ...x, is_featured: r.data.is_featured } : x)),
+      );
+    } catch {
+      alert("Gagal mengubah status Featured Collection");
+    }
+  };
+
   const refreshEditing = async (slug: string) => {
     const r = await api.get<Collection>(`/collections/${slug}`);
     setEditing(r.data);
@@ -105,6 +121,7 @@ export default function AdminCollections() {
             <tr>
               <th className="text-left p-3">Name</th>
               <th className="text-left p-3">Slug</th>
+              <th className="text-left p-3">Featured Landing</th>
               <th className="text-left p-3">Status</th>
               <th className="text-left p-3">Order</th>
               <th></th>
@@ -115,6 +132,21 @@ export default function AdminCollections() {
               <tr key={c.id} className="border-t border-border">
                 <td className="p-3 font-medium">{c.name}</td>
                 <td className="p-3 text-muted-foreground">{c.slug}</td>
+                <td className="p-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleFeatured(c)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                      c.is_featured
+                        ? "bg-[#0B426E] text-white border-[#0B426E]"
+                        : "bg-background text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground"
+                    }`}
+                    title="Tampilkan koleksi ini di section Featured Collection landing page"
+                  >
+                    <Star className={`w-3 h-3 ${c.is_featured ? "fill-current" : ""}`} />
+                    <span>{c.is_featured ? "Featured" : "Jadikan Featured"}</span>
+                  </button>
+                </td>
                 <td className="p-3 text-xs text-muted-foreground">{c.status ?? "published"}</td>
                 <td className="p-3 text-xs text-muted-foreground">{c.display_order ?? 0}</td>
                 <td className="p-3 text-right whitespace-nowrap">
@@ -132,7 +164,7 @@ export default function AdminCollections() {
             ))}
             {list.length === 0 && (
               <tr>
-                <td colSpan={5} className="p-6 text-center text-muted-foreground">
+                <td colSpan={6} className="p-6 text-center text-muted-foreground">
                   No collections yet.
                 </td>
               </tr>
@@ -223,6 +255,7 @@ function DetailsForm({
     description: collection?.description ?? "",
     display_order: collection?.display_order ?? 0,
     status: collection?.status ?? "published",
+    is_featured: Boolean(collection?.is_featured),
     seo_title: collection?.seo_title ?? "",
     seo_description: collection?.seo_description ?? "",
     cta_text: collection?.cta_text ?? "",
@@ -238,7 +271,10 @@ function DetailsForm({
     setSaving(true);
     try {
       const fd = new FormData();
-      Object.entries(f).forEach(([k, v]) => fd.append(k, String(v)));
+      Object.entries(f).forEach(([k, v]) => {
+        if (k === "is_featured") fd.append(k, v ? "1" : "0");
+        else fd.append(k, String(v));
+      });
       if (hero) fd.append("hero_banner", hero);
       if (card) fd.append("card_banner", card);
       if (featured) fd.append("featured_image", featured);
@@ -336,7 +372,7 @@ function DetailsForm({
         </Field>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
         <Field label="Status">
           <select
             className="ui-input w-full"
@@ -347,14 +383,27 @@ function DetailsForm({
             <option value="draft">Draft</option>
           </select>
         </Field>
-        <Field label="SEO Title">
+        <label className="flex items-center gap-2.5 px-3.5 py-2.5 rounded border border-border bg-muted/30 cursor-pointer">
           <input
-            className="ui-input w-full"
-            value={f.seo_title}
-            onChange={(e) => setF({ ...f, seo_title: e.target.value })}
+            type="checkbox"
+            checked={f.is_featured}
+            onChange={(e) => setF({ ...f, is_featured: e.target.checked })}
+            className="w-4 h-4 rounded border-border"
           />
-        </Field>
+          <div>
+            <p className="text-xs font-medium text-foreground">Featured Collection (Landing Page)</p>
+            <p className="text-[11px] text-muted-foreground">Tampilkan koleksi ini di section Featured Collection halaman utama</p>
+          </div>
+        </label>
       </div>
+
+      <Field label="SEO Title">
+        <input
+          className="ui-input w-full"
+          value={f.seo_title}
+          onChange={(e) => setF({ ...f, seo_title: e.target.value })}
+        />
+      </Field>
 
       <Field label="SEO Description">
         <textarea

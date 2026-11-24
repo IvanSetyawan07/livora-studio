@@ -72,7 +72,7 @@ export default function AdminItems() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [singlePromoItem, setSinglePromoItem] = useState<any | null>(null);
-  const [promoOnlyFilter, setPromoOnlyFilter] = useState(false);
+  const [quickFilterTab, setQuickFilterTab] = useState<"all" | "new_arrival" | "promo">("all");
   const [clearingPromo, setClearingPromo] = useState(false);
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [batchInitialItems, setBatchInitialItems] = useState<any[]>([]);
@@ -122,6 +122,26 @@ export default function AdminItems() {
     await api.delete(`/admin/items/${i.id}`);
     invalidateAllItemsCache();
     load();
+  };
+
+  const handleToggleNewArrival = async (i: any) => {
+    try {
+      const r = await api.patch<{ ok: boolean; is_new_arrival: boolean }>(
+        `/admin/items/${i.id}/toggle-new-arrival`,
+      );
+      const nextVal = Boolean(r.data?.is_new_arrival);
+      setItems((prev) =>
+        prev.map((x) => (x.id === i.id ? { ...x, is_new_arrival: nextVal } : x)),
+      );
+      invalidateAllItemsCache();
+      toast.success(
+        nextVal
+          ? `"${i.title}" ditandai sebagai New Arrival`
+          : `"${i.title}" dihapus dari New Arrival`,
+      );
+    } catch {
+      toast.error("Gagal memperbarui status New Arrival");
+    }
   };
 
   const downloadImage = async (i: any) => {
@@ -184,6 +204,7 @@ export default function AdminItems() {
   };
 
   const promoCount = useMemo(() => items.filter((i) => i.is_on_promo).length, [items]);
+  const newArrivalCount = useMemo(() => items.filter((i) => i.is_new_arrival).length, [items]);
 
   const filtered = useMemo(() => {
     let list = [...items];
@@ -198,8 +219,10 @@ export default function AdminItems() {
     if (typeFilter) {
       list = list.filter((i) => String(i.type?.id ?? i.type_id ?? "") === typeFilter);
     }
-    if (promoOnlyFilter) {
+    if (quickFilterTab === "promo") {
       list = list.filter((i) => i.is_on_promo);
+    } else if (quickFilterTab === "new_arrival") {
+      list = list.filter((i) => i.is_new_arrival);
     }
     list.sort((a, b) => {
       switch (sortBy) {
@@ -211,7 +234,7 @@ export default function AdminItems() {
       }
     });
     return list;
-  }, [items, query, typeFilter, promoOnlyFilter, sortBy]);
+  }, [items, query, typeFilter, quickFilterTab, sortBy]);
 
   const allVisibleSelected =
     filtered.length > 0 && filtered.every((i) => selectedIds.includes(i.id));
@@ -222,7 +245,7 @@ export default function AdminItems() {
   );
 
   const activeFilterCount =
-    (typeFilter ? 1 : 0) + (sortBy !== "date-desc" ? 1 : 0) + (promoOnlyFilter ? 1 : 0);
+    (typeFilter ? 1 : 0) + (sortBy !== "date-desc" ? 1 : 0) + (quickFilterTab !== "all" ? 1 : 0);
 
   const fmtDate = (d?: string) => {
     if (!d) return "—";
@@ -334,22 +357,32 @@ export default function AdminItems() {
 
       {/* Toolbar: Filter, Search, Tab Promo, & View Switcher (Galeri vs Tabel) */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* Tab Filter Cepat: Semua vs Sedang Promo */}
+        {/* Tab Filter Cepat: Semua vs New Arrival vs Sedang Promo */}
         <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg border border-border text-xs">
           <button
             type="button"
-            onClick={() => setPromoOnlyFilter(false)}
+            onClick={() => setQuickFilterTab("all")}
             className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-              !promoOnlyFilter ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              quickFilterTab === "all" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Semua ({items.length})
           </button>
           <button
             type="button"
-            onClick={() => setPromoOnlyFilter(true)}
+            onClick={() => setQuickFilterTab("new_arrival")}
             className={`px-3 py-1.5 rounded-md font-medium transition-colors inline-flex items-center gap-1.5 ${
-              promoOnlyFilter ? "bg-card text-[#A88247] shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"
+              quickFilterTab === "new_arrival" ? "bg-card text-[#0B426E] shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Star className="w-3.5 h-3.5 text-[#1E88C7]" />
+            New Arrival ({newArrivalCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setQuickFilterTab("promo")}
+            className={`px-3 py-1.5 rounded-md font-medium transition-colors inline-flex items-center gap-1.5 ${
+              quickFilterTab === "promo" ? "bg-card text-[#A88247] shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-[#D7B483]" />
@@ -444,7 +477,7 @@ export default function AdminItems() {
                 </div>
                 <div className="flex justify-between pt-1">
                   <button
-                    onClick={() => { setTypeFilter(""); setSortBy("date-desc"); setPromoOnlyFilter(false); }}
+                    onClick={() => { setTypeFilter(""); setSortBy("date-desc"); setQuickFilterTab("all"); }}
                     className="text-xs text-muted-foreground hover:text-foreground underline"
                   >
                     Reset
@@ -498,12 +531,39 @@ export default function AdminItems() {
                     </div>
                   )}
 
-                  {/* Promo Badge di pojok atas */}
-                  {i.is_on_promo && (
-                    <div className="absolute top-2.5 left-2.5 z-10 inline-flex items-center gap-1 text-[10px] font-semibold tracking-wider text-black bg-[#D7B483] px-2.5 py-0.5 rounded-full shadow-md uppercase">
-                      <Sparkles className="w-2.5 h-2.5" />
-                      {i.promo_badge_text || `${i.discount_value}% OFF`}
-                    </div>
+                  {/* Badge New Arrival & Promo di pojok kiri atas */}
+                  <div className="absolute top-2.5 left-2.5 z-10 flex flex-col items-start gap-1">
+                    {i.is_new_arrival && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold tracking-wider text-white bg-[#0B426E] px-2.5 py-0.5 rounded-full shadow-md uppercase">
+                        <Star className="w-2.5 h-2.5 fill-current" />
+                        New Arrival
+                      </span>
+                    )}
+                    {i.is_on_promo && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold tracking-wider text-black bg-[#D7B483] px-2.5 py-0.5 rounded-full shadow-md uppercase">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        {i.promo_badge_text || `${i.discount_value}% OFF`}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Quick Toggle New Arrival (pojok kanan atas saat normal mode) */}
+                  {!isPromoSelectMode && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleNewArrival(i);
+                      }}
+                      title={i.is_new_arrival ? "Hapus dari New Arrival" : "Tandai sebagai New Arrival"}
+                      className={`absolute top-2.5 right-2.5 z-20 w-7 h-7 rounded-full flex items-center justify-center transition-all shadow-sm ${
+                        i.is_new_arrival
+                          ? "bg-[#0B426E] text-white"
+                          : "bg-white/85 text-muted-foreground hover:text-[#0B426E] hover:bg-white"
+                      }`}
+                    >
+                      <Star className={`w-3.5 h-3.5 ${i.is_new_arrival ? "fill-current" : ""}`} />
+                    </button>
                   )}
 
                   {/* Indikator Terpilih (Khusus Mode Seleksi Promo) */}
@@ -661,6 +721,7 @@ export default function AdminItems() {
                   <th className="text-left p-3">Image</th>
                   <th className="text-left p-3">Title</th>
                   <th className="text-left p-3">Warna</th>
+                  <th className="text-left p-3">New Arrival</th>
                   <th className="text-left p-3">Status Promo</th>
                   <th className="text-left p-3">Code</th>
                   <th className="text-left p-3">Type</th>
@@ -755,6 +816,26 @@ export default function AdminItems() {
                             + Warna
                           </button>
                         )}
+                      </td>
+
+                      {/* New Arrival Toggle */}
+                      <td className="p-3">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleNewArrival(i);
+                          }}
+                          className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-0.5 rounded-full border transition-colors whitespace-nowrap ${
+                            i.is_new_arrival
+                              ? "bg-[#0B426E] text-white border-[#0B426E]"
+                              : "bg-background text-muted-foreground border-border hover:border-[#0B426E]/40 hover:text-[#0B426E]"
+                          }`}
+                          title="Tampilkan item ini pada spotlight New Arrival di landing page"
+                        >
+                          <Star className={`w-3 h-3 ${i.is_new_arrival ? "fill-current" : ""}`} />
+                          {i.is_new_arrival ? "New Arrival" : "Set New"}
+                        </button>
                       </td>
 
                       {/* Promo Status Badge */}
@@ -1042,6 +1123,7 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
 
   // Promo & Badge settings (tanpa CRUD harga / nominal Rupiah)
   const [isOnPromo, setIsOnPromo] = useState<boolean>(item?.is_on_promo || false);
+  const [isNewArrival, setIsNewArrival] = useState<boolean>(Boolean(item?.is_new_arrival));
   const [discountValue, setDiscountValue] = useState<string>(
     item?.discount_type === "PERCENTAGE" && item?.discount_value
       ? item.discount_value.toString()
@@ -1321,6 +1403,7 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
 
       // Promo & badge data (tanpa field harga — harga diatur di backoffice)
       fd.append("is_on_promo", isOnPromo ? "1" : "0");
+      fd.append("is_new_arrival", isNewArrival ? "1" : "0");
       fd.append("promo_badge_text", promoBadgeText.trim());
       if (discountValue && parseFloat(discountValue) > 0) {
         fd.append("discount_type", "PERCENTAGE");
@@ -1766,20 +1849,31 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
 
         {/* Promo & Badge Editorial Section (Tanpa CRUD harga — harga diatur di backoffice) */}
         <div className="p-4 rounded-lg bg-muted/40 border border-[#D7B483]/35 space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-1.5 text-xs uppercase tracking-[0.2em] font-medium text-[#A88247]">
               <Sparkles className="w-4 h-4 text-[#D7B483]" />
-              Badge & Program Promosi
+              Badge, New Arrival &amp; Promosi
             </div>
-            <label className="flex items-center gap-2 cursor-pointer text-xs">
-              <input
-                type="checkbox"
-                checked={isOnPromo}
-                onChange={(e) => setIsOnPromo(e.target.checked)}
-                className="w-4 h-4 rounded border-border"
-              />
-              <span className="font-medium">Tampilkan di Halaman Promo</span>
-            </label>
+            <div className="flex flex-wrap items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer text-xs">
+                <input
+                  type="checkbox"
+                  checked={isNewArrival}
+                  onChange={(e) => setIsNewArrival(e.target.checked)}
+                  className="w-4 h-4 rounded border-border accent-[#0B426E]"
+                />
+                <span className="font-medium text-[#0B426E]">Tandai sebagai New Arrival</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-xs">
+                <input
+                  type="checkbox"
+                  checked={isOnPromo}
+                  onChange={(e) => setIsOnPromo(e.target.checked)}
+                  className="w-4 h-4 rounded border-border"
+                />
+                <span className="font-medium">Tampilkan di Halaman Promo</span>
+              </label>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">

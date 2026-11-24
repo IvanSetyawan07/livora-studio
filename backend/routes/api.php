@@ -202,6 +202,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/items', [ItemController::class, 'store']);
         Route::post('/items/gemini-process', [\App\Http\Controllers\Api\GeminiItemImageController::class, 'process']);
         Route::post('/items/bulk-discount', [ItemController::class, 'bulkDiscount']);
+        Route::patch('/items/{item}/toggle-new-arrival', [ItemController::class, 'toggleNewArrival']);
         Route::post('/items/{item}', [ItemController::class, 'update']);
         Route::delete('/items/{item}', [ItemController::class, 'destroy']);
 
@@ -214,6 +215,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Collections
         Route::post('/collections', [CollectionController::class, 'store']);
+        Route::patch('/collections/{collection}/toggle-featured', [CollectionController::class, 'toggleFeatured']);
         Route::post('/collections/{collection}', [CollectionController::class, 'update']);
         Route::put('/collections/{collection}', [CollectionController::class, 'update']);
         Route::delete('/collections/{collection}', [CollectionController::class, 'destroy']);

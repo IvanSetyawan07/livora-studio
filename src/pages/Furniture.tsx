@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import gsap from "gsap";
 import {
+  ArrowLeft,
   Bookmark,
   ChevronDown,
   Search,
@@ -28,8 +29,43 @@ import type {
 } from "@/components/livora/furniture/types";
 import { authStorage } from "@/lib/api";
 import { addToWishlist, removeFromWishlist } from "@/lib/wishlist";
+import {
+  ensureBannersLoaded,
+  getAllBannersList,
+  subscribeBanners,
+  type ThemeBanner,
+} from "@/lib/themeBanners";
+import {
+  getAllThumbnails,
+  subscribeThumbnails,
+  type ThemeThumbnail,
+} from "@/lib/themeThumbnails";
+import {
+  categoriesMatch,
+  getFallbackCategoryImage,
+  getFallbackCategoryMeta,
+  lookupCategoryBanners,
+  lookupCategoryThumbnail,
+  matchesFallbackItemCategory,
+} from "@/lib/furnitureCategoryMedia";
 
 type SortKey = "curated" | "newest" | "name_asc" | "name_desc";
+
+function parseInitialCategoryParam(rawParam: string | null): string {
+  const clean = (rawParam || "").toLowerCase().trim();
+  if (!clean || clean === "all" || clean === "new-arrivals") return "all";
+  return clean;
+}
+
+function formatCategoryFallbackLabel(slug: string): string {
+  const preset = getFallbackCategoryMeta(slug);
+  if (preset) return preset.name;
+  return slug
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
 
 function DensityIcon({ cols }: { cols: GridColumns }) {
   return (
@@ -45,22 +81,55 @@ function DensityIcon({ cols }: { cols: GridColumns }) {
 }
 
 const Furniture: React.FC = () => {
-  const { items, categories, loading } = useFurnitureCatalog();
+  const { items, categories, loading, usingFallback } = useFurnitureCatalog();
   const [searchParams, setSearchParams] = useSearchParams();
   const shortlist = useShortlist();
 
-  const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [activeCategory, setActiveCategory] = useState<string>(() =>
+    parseInitialCategoryParam(searchParams.get("category")),
+  );
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<SortKey>("curated");
   const [columns, setColumns] = useState<GridColumns>(4);
   const [navbarHidden, setNavbarHidden] = useState(false);
   const [shortlistOpen, setShortlistOpen] = useState(false);
+  const [bannersStore, setBannersStore] = useState<Record<string, ThemeBanner[]>>(() =>
+    getAllBannersList(),
+  );
+  const [thumbnailsStore, setThumbnailsStore] = useState<
+    Record<string, ThemeThumbnail>
+  >({});
 
   const catalogRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    document.title = "Livora Furniture — Architectural Collection | LIVORA";
+    let alive = true;
+    void ensureBannersLoaded().then((store) => {
+      if (alive) setBannersStore({ ...store });
+    });
+    const unsubBanners = subscribeBanners(() => {
+      setBannersStore({ ...getAllBannersList() });
+    });
+
+    getAllThumbnails()
+      .then((thumbs) => {
+        if (alive) setThumbnailsStore(thumbs);
+      })
+      .catch(() => {});
+    const unsubThumbs = subscribeThumbnails(() => {
+      getAllThumbnails()
+        .then((thumbs) => {
+          if (alive) setThumbnailsStore(thumbs);
+        })
+        .catch(() => {});
+    });
+
+    return () => {
+      alive = false;
+      unsubBanners();
+      unsubThumbs();
+    };
   }, []);
 
   // Sinkron posisi sticky filter bar dengan perilaku auto-hide/reveal Navbar saat scroll
@@ -94,61 +163,65 @@ const Furniture: React.FC = () => {
     }
   }, [searchParams, setSearchParams]);
 
-  // Sinkron query ?category= dari halaman Home / menu navbar
+  // Sinkron query ?category= dari halaman Home / Permanent Gallery / menu navbar
   useEffect(() => {
-    const raw = (searchParams.get("category") || "").toLowerCase().trim();
-    if (!raw || raw === "all" || raw === "new-arrivals") {
+    const raw = parseInitialCategoryParam(searchParams.get("category"));
+    if (raw === "all") {
       setActiveCategory("all");
       return;
     }
+
     const matched = categories.find(
       (c) =>
         c.slug.toLowerCase() === raw ||
         c.name.toLowerCase() === raw ||
-        `${c.slug.toLowerCase()}s` === raw ||
-        `${c.name.toLowerCase()}s` === raw,
+        categoriesMatch(c.slug, raw) ||
+        categoriesMatch(c.name, raw),
     );
     if (matched) {
       setActiveCategory(matched.slug);
-      return;
-    }
-    const alias: Record<string, string> = {
-      sofas: "sofa",
-      chairs: "chair",
-      tables: "table",
-      beds: "bed",
-      accessories: "accessories",
-    };
-    const mappedAlias = alias[raw];
-    if (mappedAlias) {
-      const byAlias = categories.find(
-        (c) =>
-          c.slug.toLowerCase().includes(mappedAlias) ||
-          c.name.toLowerCase().includes(mappedAlias),
-      );
-      if (byAlias) setActiveCategory(byAlias.slug);
+    } else {
+      setActiveCategory(raw);
     }
   }, [searchParams, categories]);
 
   const activeCategoryName = useMemo(() => {
     if (activeCategory === "all") return null;
-    return (
-      categories.find((c) => c.slug === activeCategory)?.name ?? activeCategory
+    const matched = categories.find(
+      (c) =>
+        c.slug === activeCategory ||
+        categoriesMatch(c.slug, activeCategory) ||
+        categoriesMatch(c.name, activeCategory),
     );
+    return matched?.name ?? formatCategoryFallbackLabel(activeCategory);
   }, [activeCategory, categories]);
+
+  useEffect(() => {
+    document.title = activeCategoryName
+      ? `${activeCategoryName} Collection — Livora Furniture | LIVORA`
+      : "Livora Furniture — Architectural Collection | LIVORA";
+  }, [activeCategoryName]);
 
   const filteredItems = useMemo(() => {
     let list = items;
 
     if (activeCategory !== "all") {
-      const catKey = activeCategory.toLowerCase();
-      const catLabel = (activeCategoryName || "").toLowerCase();
-      list = list.filter(
+      const strictMatches = list.filter(
         (it) =>
-          it.categorySlug.toLowerCase() === catKey ||
-          it.category.toLowerCase() === catLabel ||
-          it.category.toLowerCase().includes(catKey),
+          categoriesMatch(it.categorySlug, activeCategory) ||
+          categoriesMatch(it.category, activeCategory) ||
+          (activeCategoryName
+            ? categoriesMatch(it.category, activeCategoryName)
+            : false),
       );
+
+      if (strictMatches.length > 0 || !usingFallback) {
+        list = strictMatches;
+      } else {
+        list = list.filter((it) =>
+          matchesFallbackItemCategory(it, activeCategoryName || activeCategory),
+        );
+      }
     }
 
     const q = searchQuery.trim().toLowerCase();
@@ -190,7 +263,39 @@ const Furniture: React.FC = () => {
     });
 
     return sorted;
-  }, [items, activeCategory, activeCategoryName, searchQuery, sortBy]);
+  }, [items, activeCategory, activeCategoryName, usingFallback, searchQuery, sortBy]);
+
+  /**
+   * Lifestyle Category Banners (Admin -> Taxonomies -> Banner Dalam Kategori,
+   * falling back to Thumbnail Kartu or curated category interior scene).
+   * Shown inside a specific category view when search is empty, creating the
+   * iconic 2x2 editorial banner + product grid rhythm.
+   */
+  const activeBanners = useMemo<ThemeBanner[]>(() => {
+    if (activeCategory === "all" || searchQuery.trim().length > 0) return [];
+    const adminBanners = lookupCategoryBanners(
+      bannersStore,
+      activeCategoryName,
+      activeCategory,
+    );
+    if (adminBanners.length > 0) return adminBanners;
+
+    const thumbFallback = lookupCategoryThumbnail(
+      thumbnailsStore,
+      activeCategoryName,
+      activeCategory,
+    );
+    const lifestyleFallback =
+      thumbFallback || getFallbackCategoryImage(activeCategoryName || activeCategory);
+
+    return [
+      {
+        image: lifestyleFallback,
+        title: "",
+        updatedAt: 0,
+      },
+    ];
+  }, [activeCategory, activeCategoryName, searchQuery, bannersStore, thumbnailsStore]);
 
   // Transisi grid halus berbasis GSAP saat filter / sort / densitas kolom berubah
   useEffect(() => {
@@ -225,7 +330,7 @@ const Furniture: React.FC = () => {
 
   const handleToggleSave = (
     item: FurnitureShowcaseItem,
-    activeFinish: FurnitureFinishOption,
+    activeFinish: FurnitureFinishOption | null,
   ) => {
     const result = shortlist.toggle({
       slug: item.slug,
@@ -233,12 +338,12 @@ const Furniture: React.FC = () => {
       name: item.name,
       code: item.code,
       category: item.category,
-      image: activeFinish.furnitureImage || activeFinish.previewImage || item.image || null,
-      finishId: activeFinish.id,
-      finishName: activeFinish.name,
-      finishHex: activeFinish.hex,
+      image: activeFinish?.furnitureImage || activeFinish?.previewImage || item.image || null,
+      finishId: activeFinish?.id ?? null,
+      finishName: activeFinish?.name || "",
+      finishHex: activeFinish?.hex || "",
       dimensionsLabel: item.dimensionsLabel,
-      materialLabel: activeFinish.material || item.materialLabel,
+      materialLabel: activeFinish?.material || item.materialLabel,
     });
 
     // Sinkron opsional dengan wishlist server jika user sedang login
@@ -251,12 +356,15 @@ const Furniture: React.FC = () => {
     }
 
     if (result.saved) {
-      toast.success(`${item.name} (${activeFinish.name}) disimpan ke shortlist`, {
-        action: {
-          label: "Lihat Shortlist",
-          onClick: () => setShortlistOpen(true),
+      toast.success(
+        `${item.name}${activeFinish?.name ? ` (${activeFinish.name})` : ""} disimpan ke shortlist`,
+        {
+          action: {
+            label: "Lihat Shortlist",
+            onClick: () => setShortlistOpen(true),
+          },
         },
-      });
+      );
     } else {
       toast.info(`${item.name} dihapus dari shortlist`);
     }
@@ -323,7 +431,9 @@ const Furniture: React.FC = () => {
                 </button>
 
                 {categories.map((cat) => {
-                  const active = activeCategory === cat.slug;
+                  const active =
+                    activeCategory === cat.slug ||
+                    categoriesMatch(activeCategory, cat.slug);
                   return (
                     <button
                       key={cat.slug}
@@ -349,7 +459,11 @@ const Furniture: React.FC = () => {
                   <input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Cari karya / material..."
+                    placeholder={
+                      activeCategoryName
+                        ? `Filter ${activeCategoryName.toLowerCase()}...`
+                        : "Cari karya / material..."
+                    }
                     aria-label="Cari furnitur atau material"
                     className="w-full h-9 pl-9 pr-7 rounded-full border border-[#0B426E]/12 bg-white text-[12.5px] text-[#0B426E] placeholder:text-[#4B5E71]/65 outline-none focus:border-[#1E88C7] transition-colors"
                   />
@@ -428,40 +542,83 @@ const Furniture: React.FC = () => {
         {/* C. FRAMELESS ARCHITECTURAL FURNITURE GRID */}
         <section className="py-8 sm:py-12 md:py-14 bg-[#F8F9FB]">
           <div className="container-livora">
-            {/* Subtle Active Filter / Shortlist Strip */}
-            {(hasFilters || shortlist.count > 0) && (
-              <div className="mb-7 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#EAF4FA]/70 border border-[#1E88C7]/15 px-4 py-2.5 text-xs">
-                <div className="flex items-center flex-wrap gap-2 text-[#0B426E]">
-                  <span>
-                    Menampilkan <strong>{filteredItems.length}</strong> karya
-                    {activeCategoryName ? ` dalam kategori ${activeCategoryName}` : " koleksi LIVORA"}
-                    {searchQuery.trim() ? ` untuk "${searchQuery.trim()}"` : ""}.
+            {/* Editorial Category Header (`← Back to All Categories` like Screenshot 2) */}
+            {activeCategory !== "all" ? (
+              <div className="mb-7 md:mb-9 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSelectCategory("all");
+                      setSearchQuery("");
+                    }}
+                    className="group inline-flex items-center gap-2 py-1.5 text-[10.5px] uppercase tracking-[0.28em] font-medium text-[#4B5E71] hover:text-[#0B426E] transition-colors"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5 transition-transform duration-200 group-hover:-translate-x-0.5" />
+                    <span>Back to Themes</span>
+                  </button>
+
+                  <span
+                    aria-hidden
+                    className="hidden sm:inline-block h-4 w-px bg-[#0B426E]/15"
+                  />
+
+                  <span className="text-xs text-[#4B5E71]">
+                    <strong className="font-medium text-[#0B426E]">
+                      {activeCategoryName}
+                    </strong>{" "}
+                    · {filteredItems.length}{" "}
+                    {filteredItems.length === 1 ? "piece" : "pieces"}
+                    {searchQuery.trim() ? ` matching "${searchQuery.trim()}"` : ""}
                   </span>
-                  {hasFilters && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleSelectCategory("all");
-                        setSearchQuery("");
-                      }}
-                      className="inline-flex items-center gap-1 text-[#1E88C7] hover:text-[#0B426E] font-medium underline underline-offset-4 ml-1"
-                    >
-                      <X className="w-3 h-3" /> Tampilkan Semua
-                    </button>
-                  )}
                 </div>
 
                 {shortlist.count > 0 && (
                   <button
                     type="button"
                     onClick={() => setShortlistOpen(true)}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#0B426E]/12 px-3.5 py-1 text-[11.5px] font-medium text-[#0B426E] hover:border-[#1E88C7] transition-colors"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#0B426E]/12 px-3.5 py-1.5 text-[11.5px] font-medium text-[#0B426E] hover:border-[#1E88C7] transition-colors"
                   >
                     <Bookmark className="w-3.5 h-3.5 fill-[#1E88C7] text-[#1E88C7]" />
                     <span>Shortlist ({shortlist.count})</span>
                   </button>
                 )}
               </div>
+            ) : (
+              (hasFilters || shortlist.count > 0) && (
+                <div className="mb-7 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#EAF4FA]/70 border border-[#1E88C7]/15 px-4 py-2.5 text-xs">
+                  <div className="flex items-center flex-wrap gap-2 text-[#0B426E]">
+                    <span>
+                      Menampilkan <strong>{filteredItems.length}</strong> karya
+                      koleksi LIVORA
+                      {searchQuery.trim() ? ` untuk "${searchQuery.trim()}"` : ""}.
+                    </span>
+                    {hasFilters && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleSelectCategory("all");
+                          setSearchQuery("");
+                        }}
+                        className="inline-flex items-center gap-1 text-[#1E88C7] hover:text-[#0B426E] font-medium underline underline-offset-4 ml-1"
+                      >
+                        <X className="w-3 h-3" /> Tampilkan Semua
+                      </button>
+                    )}
+                  </div>
+
+                  {shortlist.count > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShortlistOpen(true)}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#0B426E]/12 px-3.5 py-1 text-[11.5px] font-medium text-[#0B426E] hover:border-[#1E88C7] transition-colors"
+                    >
+                      <Bookmark className="w-3.5 h-3.5 fill-[#1E88C7] text-[#1E88C7]" />
+                      <span>Shortlist ({shortlist.count})</span>
+                    </button>
+                  )}
+                </div>
+              )
             )}
 
             {/* Loading Skeletons */}
@@ -506,18 +663,78 @@ const Furniture: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <div ref={gridRef} className={gridColsClass}>
-                {filteredItems.map((item) => (
-                  <FurnitureShowcaseCard
-                    key={item.slug}
-                    item={item}
-                    columns={columns}
-                    saved={shortlist.isSaved(item.slug)}
-                    onToggleSave={handleToggleSave}
-                    onFinishChange={handleFinishChange}
-                  />
-                ))}
-              </div>
+              <>
+                {activeBanners.length > 0 && (
+                  <style>{`
+                    .furniture-category-grid { grid-auto-flow: dense; }
+                    @media (min-width: 1024px) {
+                      ${activeBanners
+                        .map((_, i) => {
+                          const n = i + 1;
+                          const rightColStart =
+                            columns === 3 ? 2 : columns === 5 ? 4 : 3;
+                          const colStart = n % 2 === 1 ? 1 : rightColStart;
+                          const rowStart = 1 + i * 5;
+                          const rowSpan = filteredItems.length >= 3 ? 2 : 1;
+                          return `.furniture-category-grid [data-banner="${n}"]{grid-column:${colStart} / span 2;grid-row:${rowStart} / span ${rowSpan};}`;
+                        })
+                        .join("\n")}
+                    }
+                  `}</style>
+                )}
+
+                <div
+                  ref={gridRef}
+                  className={`${
+                    activeBanners.length > 0 ? "furniture-category-grid " : ""
+                  }${gridColsClass}`}
+                >
+                  {(() => {
+                    const nodes: React.ReactNode[] = filteredItems.map((item) => (
+                      <FurnitureShowcaseCard
+                        key={item.slug}
+                        item={item}
+                        columns={columns}
+                        saved={shortlist.isSaved(item.slug)}
+                        onToggleSave={handleToggleSave}
+                        onFinishChange={handleFinishChange}
+                      />
+                    ));
+
+                    activeBanners.forEach((b, i) => {
+                      const insertIdx = Math.min(i * 12, nodes.length);
+                      const bannerEl = (
+                        <div
+                          key={`__cat_banner_${activeCategory}_${i}__`}
+                          data-banner={i + 1}
+                          className="furniture-showcase-item col-span-2 relative overflow-hidden rounded-2xl border border-[#0B426E]/8 bg-[#EEF1F5] aspect-[16/10] sm:aspect-[16/9] lg:aspect-auto lg:h-full lg:min-h-[380px]"
+                        >
+                          <img
+                            src={b.image}
+                            alt={
+                              b.title ||
+                              `${activeCategoryName || "Furniture"} editorial banner ${i + 1}`
+                            }
+                            loading={i === 0 ? "eager" : "lazy"}
+                            decoding="async"
+                            className="absolute inset-0 w-full h-full object-cover object-center"
+                          />
+                          {b.title && (
+                            <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6 bg-gradient-to-t from-black/60 via-black/20 to-transparent">
+                              <p className="serif text-2xl sm:text-3xl text-white font-light">
+                                {b.title}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                      nodes.splice(insertIdx, 0, bannerEl);
+                    });
+
+                    return nodes;
+                  })()}
+                </div>
+              </>
             )}
           </div>
         </section>

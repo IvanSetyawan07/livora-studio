@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { motion, useScroll, useTransform, useMotionTemplate } from "framer-motion";
 import {
   Lightbulb,
@@ -116,7 +117,12 @@ const Eyebrow = ({ children, light = false }: { children: React.ReactNode; light
 /* ────────── Page ────────── */
 
 export default function Appointment() {
-  const [meetChoice, setMeetChoice] = useState<string>("showroom");
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const [meetChoice, setMeetChoice] = useState<string>(() => {
+    const qMeet = searchParams.get("meet");
+    return qMeet && ["showroom", "virtual", "at_space"].includes(qMeet) ? qMeet : "showroom";
+  });
   const [helpChoice, setHelpChoice] = useState<string>("");
   const [helpChoiceOther, setHelpChoiceOther] = useState<string>("");
   const [videoPlaying, setVideoPlaying] = useState(false);
@@ -157,10 +163,42 @@ export default function Appointment() {
   const navbarBlur = useMotionTemplate`blur(${navbarBlurAmount}px)`;
 
   const [form, setForm] = useState({
-    name: "", email: "", phone: "", contact_method: "", location: "", 
-    project_type: "", project_type_other: "", estimated_area: "", message: "", 
-    agree_terms: false, agree_privacy: false,
+    name: searchParams.get("name") || "",
+    email: "",
+    phone: "",
+    contact_method: "",
+    location: "",
+    project_type: "",
+    project_type_other: "",
+    estimated_area: "",
+    message: searchParams.get("note") || "",
+    agree_terms: false,
+    agree_privacy: false,
   });
+
+  // Hand-off dari Landing Page Split-Door Portal: pre-fill & auto-scroll ke form
+  useEffect(() => {
+    const qMeet = searchParams.get("meet");
+    const qName = searchParams.get("name");
+    const qNote = searchParams.get("note");
+    if (qMeet && ["showroom", "virtual", "at_space"].includes(qMeet)) {
+      setMeetChoice(qMeet);
+    }
+    if (qName || qNote) {
+      setForm((prev) => ({
+        ...prev,
+        name: qName || prev.name,
+        message: qNote || prev.message,
+      }));
+    }
+    if (location.hash === "#appointment-form" || qMeet || qName || qNote) {
+      const t = setTimeout(() => {
+        const el = document.getElementById("appointment-form");
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 220);
+      return () => clearTimeout(t);
+    }
+  }, [location.hash, searchParams]);
   const [preferredStyles, setPreferredStyles] = useState<string[]>([]);
   const togglePreferredStyle = (style: string) => {
     setPreferredStyles((prev) => prev.includes(style) ? prev.filter((s) => s !== style) : [...prev, style]);

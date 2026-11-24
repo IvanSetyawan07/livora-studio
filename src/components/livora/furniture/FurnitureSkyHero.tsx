@@ -67,15 +67,21 @@ export const FurnitureSkyHero: React.FC<FurnitureSkyHeroProps> = ({
     return () => ctx.revert();
   }, []);
 
-  const headingTitle =
-    activeCategoryLabel && activeCategoryLabel !== "all"
-      ? `${activeCategoryLabel} Collection`
-      : "Livora Furniture";
+  const isCategoryView = Boolean(
+    activeCategoryLabel && activeCategoryLabel.toLowerCase() !== "all",
+  );
+  const headingTitle = isCategoryView
+    ? `${activeCategoryLabel} Collection`
+    : "Livora Furniture";
 
   return (
     <section
       ref={heroRef}
-      className="relative w-full min-h-[48vh] sm:min-h-[52vh] md:min-h-[54vh] flex flex-col justify-between overflow-hidden select-none bg-[#1B6EB1]"
+      className={`relative w-full flex flex-col justify-between overflow-hidden select-none bg-[#1B6EB1] ${
+        isCategoryView
+          ? "min-h-[30vh] sm:min-h-[34vh] md:min-h-[36vh]"
+          : "min-h-[48vh] sm:min-h-[52vh] md:min-h-[54vh]"
+      }`}
     >
       {/* 1. Atmospheric Golden-Hour Sky Base (reusing homepage sky asset + Livora cerulean gradient) */}
       <div aria-hidden className="absolute inset-0 pointer-events-none">
@@ -147,10 +153,14 @@ export const FurnitureSkyHero: React.FC<FurnitureSkyHeroProps> = ({
       </div>
 
       {/* Top spacer to clear transparent fixed Navbar */}
-      <div className="h-24 sm:h-28 shrink-0" />
+      <div className={isCategoryView ? "h-20 sm:h-24 shrink-0" : "h-24 sm:h-28 shrink-0"} />
 
       {/* Center Editorial Content */}
-      <div className="relative z-10 container-livora text-center max-w-4xl py-6 sm:py-10">
+      <div
+        className={`relative z-10 container-livora text-center max-w-4xl ${
+          isCategoryView ? "py-4 sm:py-6" : "py-6 sm:py-10"
+        }`}
+      >
         <p
           className="fhero-eyebrow text-[10px] sm:text-[11px] uppercase tracking-[0.38em] text-white/95 font-medium mb-3 sm:mb-4"
           style={{ textShadow: "0 1px 10px rgba(11,66,110,0.35)" }}
@@ -159,38 +169,48 @@ export const FurnitureSkyHero: React.FC<FurnitureSkyHeroProps> = ({
         </p>
 
         <h1
-          className="fhero-title serif font-light text-white text-[42px] sm:text-[60px] md:text-[74px] leading-[1.03] tracking-[-0.015em] text-balance"
+          className={`fhero-title serif font-light text-white leading-[1.03] tracking-[-0.015em] text-balance ${
+            isCategoryView
+              ? "text-[36px] sm:text-[48px] md:text-[58px]"
+              : "text-[42px] sm:text-[60px] md:text-[74px]"
+          }`}
           style={{ textShadow: "0 4px 26px rgba(11,66,110,0.28)" }}
         >
           {headingTitle}
         </h1>
 
         <p
-          className="fhero-sub mt-3.5 sm:mt-4 text-[11px] sm:text-xs uppercase tracking-[0.26em] text-white/90 font-normal"
+          className="fhero-sub mt-3 sm:mt-3.5 text-[11px] sm:text-xs uppercase tracking-[0.26em] text-white/90 font-normal"
           style={{ textShadow: "0 1px 10px rgba(11,66,110,0.30)" }}
         >
           Architectural Forms for Timeless Living
         </p>
 
-        <p className="fhero-sub mt-3 text-[13px] sm:text-sm text-[#0B426E]/80 font-normal max-w-lg mx-auto leading-relaxed hidden sm:block">
-          Kurasi furnitur arsitektural dan pengerjaan bespoke berpresisi tinggi untuk ruang hunian serta komersial.
-        </p>
+        {!isCategoryView && (
+          <p className="fhero-sub mt-3 text-[13px] sm:text-sm text-[#0B426E]/80 font-normal max-w-lg mx-auto leading-relaxed hidden sm:block">
+            Kurasi furnitur arsitektural dan pengerjaan bespoke berpresisi tinggi untuk ruang hunian serta komersial.
+          </p>
+        )}
       </div>
 
       {/* Scroll Indicator melting into #F8F9FB */}
-      <div className="fhero-scroll relative z-10 pb-6 sm:pb-8 flex justify-center">
-        <button
-          type="button"
-          onClick={onScrollToCatalog}
-          className="group inline-flex flex-col items-center gap-2 text-[9px] uppercase tracking-[0.35em] text-[#0B426E]/70 hover:text-[#0B426E] transition-colors focus:outline-none"
-          aria-label="Gulir ke koleksi furnitur"
-        >
-          <span>Scroll</span>
-          <span className="relative w-px h-7 bg-[#0B426E]/20 overflow-hidden">
-            <span className="absolute inset-x-0 top-0 h-3 bg-[#1E88C7] scroll-dot" />
-          </span>
-        </button>
-      </div>
+      {isCategoryView ? (
+        <div className="h-4 sm:h-6 shrink-0" />
+      ) : (
+        <div className="fhero-scroll relative z-10 pb-6 sm:pb-8 flex justify-center">
+          <button
+            type="button"
+            onClick={onScrollToCatalog}
+            className="group inline-flex flex-col items-center gap-2 text-[9px] uppercase tracking-[0.35em] text-[#0B426E]/70 hover:text-[#0B426E] transition-colors focus:outline-none"
+            aria-label="Gulir ke koleksi furnitur"
+          >
+            <span>Scroll</span>
+            <span className="relative w-px h-7 bg-[#0B426E]/20 overflow-hidden">
+              <span className="absolute inset-x-0 top-0 h-3 bg-[#1E88C7] scroll-dot" />
+            </span>
+          </button>
+        </div>
+      )}
     </section>
   );
 };

@@ -8,8 +8,11 @@ class Collection extends Model {
     protected $fillable = [
         'name','slug','description','short_description',
         'hero_banner','card_banner','featured_image',
-        'display_order','status','seo_title','seo_description',
+        'display_order','status','is_featured','seo_title','seo_description',
         'cta_text','cta_link',
+    ];
+    protected $casts = [
+        'is_featured' => 'boolean',
     ];
     public function items(){ return $this->hasMany(Item::class); }
     public function story(){ return $this->hasOne(CollectionStory::class); }

@@ -6,6 +6,7 @@ use App\Models\FurnitureVariant;
 use App\Models\Item;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class ItemController extends Controller
@@ -18,9 +19,12 @@ class ItemController extends Controller
         if ($t = $r->query('category'))   $q->whereHas('categories', fn($x) => $x->where('slug',$t));
         if ($t = $r->query('collection')) $q->whereHas('collection', fn($x) => $x->where('slug',$t));
         
-        // Filter promo
+        // Filter promo & new arrival
         if ($r->boolean('promo')) {
             $q->where('is_on_promo', true);
+        }
+        if ($r->boolean('new_arrival') && Schema::hasColumn('items', 'is_new_arrival')) {
+            $q->where('is_new_arrival', true);
         }
 
         // Sorting
@@ -254,6 +258,23 @@ class ItemController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    /** Toggle cepat status New Arrival untuk landing page. */
+    public function toggleNewArrival(Item $item)
+    {
+        if (!Schema::hasColumn('items', 'is_new_arrival')) {
+            return response()->json([
+                'message' => 'Kolom is_new_arrival belum ada di database. Jalankan: php artisan migrate di folder backend.',
+            ], 422);
+        }
+        $item->is_new_arrival = !((bool) $item->is_new_arrival);
+        $item->save();
+        return response()->json([
+            'ok' => true,
+            'id' => $item->id,
+            'is_new_arrival' => (bool) $item->is_new_arrival,
+        ]);
+    }
+
     /**
      * Bulk-assign diskon ke beberapa item sekaligus.
      * Jika discount_value <= 0, promo pada item tersebut akan dihapus.
@@ -324,6 +345,7 @@ class ItemController extends Controller
             'discount_value' => 'nullable|numeric|min:0',
             'final_price' => 'nullable|numeric|min:0',
             'is_on_promo' => 'nullable|boolean',
+            'is_new_arrival' => 'nullable|boolean',
             'promo_badge_text' => 'nullable|string|max:100',
             'promo_start_date' => 'nullable|date',
             'promo_end_date' => 'nullable|date',

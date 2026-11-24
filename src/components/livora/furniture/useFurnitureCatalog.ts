@@ -34,17 +34,6 @@ const DEFAULT_FINISH_SETS: Record<string, FurnitureFinishOption[]> = {
   ],
 };
 
-function defaultFinishesForCategory(category: string): FurnitureFinishOption[] {
-  const c = category.toLowerCase();
-  if (/(sofa|chair|seat|lounge|bed|ottoman|bench|kursi|kamar)/.test(c)) {
-    return DEFAULT_FINISH_SETS.seating;
-  }
-  if (/(table|meja|console|coffee|marble|stone)/.test(c)) {
-    return DEFAULT_FINISH_SETS.stone;
-  }
-  return DEFAULT_FINISH_SETS.wood;
-}
-
 function cleanText(val?: string | null): string {
   const s = (val ?? "").trim();
   return s && s !== "—" && s !== "-" ? s : "";
@@ -94,19 +83,17 @@ function mapRawApiItem(it: any): FurnitureShowcaseItem {
     .filter((v) => v.is_active !== false)
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
-  const finishes: FurnitureFinishOption[] =
-    activeVariants.length > 0
-      ? activeVariants.map((v) => ({
-          id: v.id,
-          name: getVariantDisplayLabel(v) || "Signature Finish",
-          hex: resolveSwatchHex(v),
-          category: v.category || "fabric",
-          material: cleanText(v.material_name) || null,
-          previewImage: v.preview_image ? imgUrl(v.preview_image) : null,
-          furnitureImage: v.furniture_image ? imgUrl(v.furniture_image) : null,
-          isDefault: Boolean(v.is_default),
-        }))
-      : defaultFinishesForCategory(categoryName);
+  // Hanya tampilkan warna/varian yang benar-benar di-CRUD oleh Admin (tanpa warna palsu default)
+  const finishes: FurnitureFinishOption[] = activeVariants.map((v) => ({
+    id: v.id,
+    name: getVariantDisplayLabel(v) || "Signature Finish",
+    hex: resolveSwatchHex(v),
+    category: v.category || "fabric",
+    material: cleanText(v.material_name) || null,
+    previewImage: v.preview_image ? imgUrl(v.preview_image) : null,
+    furnitureImage: v.furniture_image ? imgUrl(v.furniture_image) : null,
+    isDefault: Boolean(v.is_default),
+  }));
 
   const primaryMaterial =
     cleanText(it.material_detail) ||
@@ -114,7 +101,7 @@ function mapRawApiItem(it: any): FurnitureShowcaseItem {
     cleanText(it.finish) ||
     finishes[0]?.material ||
     finishes[0]?.name ||
-    "Curated Natural Materials";
+    "";
 
   const { availability, leadTime } = formatAvailability(it.availability);
 
@@ -546,13 +533,22 @@ export function useFurnitureCatalog() {
         } else {
           setItems(FALLBACK_SHOWCASE_ITEMS);
           setUsingFallback(true);
-          setCategories([
-            { slug: "living", name: "Living" },
-            { slug: "dining", name: "Dining" },
-            { slug: "bedroom", name: "Bedroom" },
-            { slug: "storage-media", name: "Storage & Media" },
-            { slug: "lighting-accent", name: "Lighting & Accent" },
-          ]);
+          if (Array.isArray(rawTypes) && rawTypes.length > 0) {
+            setCategories(
+              rawTypes.map((t) => ({
+                slug: t.slug,
+                name: t.name,
+              })),
+            );
+          } else {
+            setCategories([
+              { slug: "sofa", name: "Sofa" },
+              { slug: "chair", name: "Chair" },
+              { slug: "table", name: "Table" },
+              { slug: "bed", name: "Bed" },
+              { slug: "accessories", name: "Accessories" },
+            ]);
+          }
         }
       })
       .finally(() => {

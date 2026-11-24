@@ -1,22 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { isPreloaderDone, PRELOADER_READY_EVENT } from "@/components/livora/HeroPreloader";
 import { Navbar } from "@/components/livora/Navbar";
 import { SkyScene } from "@/components/livora/SkyScene";
+import { Projects } from "@/components/livora/Projects";
+import { FeaturedCollections } from "@/components/livora/FeaturedCollections";
+import { Furniture } from "@/components/livora/Furniture";
 import { OurStyle } from "@/components/livora/OurStyle";
 import { Scope } from "@/components/livora/Scope";
-import { Projects } from "@/components/livora/Projects";
-import { Furniture } from "@/components/livora/Furniture";
 import { Contact } from "@/components/livora/Contact";
+import { AppointmentPortal } from "@/components/livora/AppointmentPortal";
 import { Footer } from "@/components/livora/Footer";
 import { PromoFloatingModal } from "@/components/livora/PromoFloatingModal";
-import { useReveal } from "@/hooks/useReveal";
-import wallpaper from "@/assets/add.webp";
 
 const Index = () => {
-  useReveal();
   const location = useLocation();
   const [ready, setReady] = useState(() => isPreloaderDone());
+  const progressTextRef = useRef<HTMLSpanElement | null>(null);
+  const progressFillRef = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
     if (ready) return;
@@ -37,6 +38,34 @@ const Index = () => {
     }
   }, [location.hash, location.key, ready]);
 
+  // Whisper-thin zero-rerender scroll progress counter (00 -> 100)
+  useEffect(() => {
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const doc = document.documentElement;
+      const maxScroll = Math.max(1, doc.scrollHeight - window.innerHeight);
+      const pct = Math.max(0, Math.min(100, Math.round((window.scrollY / maxScroll) * 100)));
+      if (progressTextRef.current) {
+        progressTextRef.current.textContent = String(pct).padStart(2, "0");
+      }
+      if (progressFillRef.current) {
+        progressFillRef.current.style.transform = `scaleY(${pct / 100})`;
+      }
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
   useEffect(() => {
     document.title = "LIVORA | Arsitek & Desain Interior Jakarta · Custom Furniture";
     const meta = document.querySelector('meta[name="description"]') ?? (() => {
@@ -52,26 +81,51 @@ const Index = () => {
     <>
       <Navbar />
       <PromoFloatingModal ready={ready} />
-      <main>
+
+      {/* Whisper-thin bright frosted scroll progress indicator (desktop wide only) */}
+      <aside
+        aria-hidden
+        className="hidden 2xl:flex fixed left-5 bottom-8 z-30 pointer-events-none flex-col items-center gap-2 rounded-full bg-white/88 backdrop-blur-md border border-[#232528]/12 px-2 py-3 text-[#232528] shadow-[0_10px_30px_rgba(35,37,40,0.1)]"
+      >
+        <span
+          ref={progressTextRef}
+          className="text-[10px] font-medium tracking-[0.18em] tabular-nums text-[#656B73]"
+        >
+          00
+        </span>
+        <span className="relative block w-px h-10 bg-[#232528]/15 overflow-hidden">
+          <span
+            ref={progressFillRef}
+            className="block w-full h-full bg-[#5E93B8] origin-top"
+            style={{ transform: "scaleY(0)" }}
+          />
+        </span>
+      </aside>
+
+      <main className="bg-[#FAF8F4]">
+        {/* 1. Hero Sky-to-House Scene (100% Untouched) */}
         <SkyScene ready={ready} />
 
-        {/* Wallpaper Container — background stays fixed while scrolling through this block */}
-        <div className="relative">
-          <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-            <div
-              className="sticky top-0 h-[100svh] md:h-screen w-full bg-cover bg-center bg-no-repeat will-change-transform"
-              style={{ backgroundImage: `url(${wallpaper})` }}
-            />
-          </div>
+        {/* 2. Projects — Rising Arch Bridge + Split-Image Converging Stitch + Editorial Spread */}
+        <Projects />
 
-          <div className="relative z-10">
-            <OurStyle />
-            <Scope />
-            <Projects />
-            <Furniture />
-            <Contact />
-          </div>
-        </div>
+        {/* 3. Featured Collections — Interactive Lookbook Aperture */}
+        <FeaturedCollections />
+
+        {/* 4. Furniture — New Arrival Museum Pedestal + 4 Selected Pieces */}
+        <Furniture />
+
+        {/* 5. Our Style — 5-Column Expanding Architectural Pillars (Daylight Gallery) */}
+        <OurStyle />
+
+        {/* 6. Scope of Work — Full-Scale 40/60 Sunlit Daylight Curtain Stack */}
+        <Scope />
+
+        {/* 7. Contact & Showroom */}
+        <Contact />
+
+        {/* 8. Split-Door Architectural Appointment Portal — Ready to Realize Your Dream Space */}
+        <AppointmentPortal />
       </main>
       <Footer />
     </>

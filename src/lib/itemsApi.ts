@@ -86,6 +86,7 @@ interface ApiItem {
   discount_value?: number | null;
   final_price?: number | null;
   is_on_promo?: boolean;
+  is_new_arrival?: boolean;
   promo_badge_text?: string | null;
   type?: { id: number; name: string; slug: string } | null;
   collection?: CollectionRef | null;
@@ -111,6 +112,7 @@ export interface RichItem extends Item {
   story?: FurnitureStory | null;
   related?: RichItem[];
   description?: string;
+  is_new_arrival?: boolean;
 }
 
 const mapVariants = (variants?: FurnitureVariant[]): FurnitureVariant[] =>
@@ -164,6 +166,7 @@ export const mapApiItem = (it: ApiItem): RichItem => {
     discount_value: it.discount_value != null ? Number(it.discount_value) : null,
     final_price: it.final_price != null ? Number(it.final_price) : (it.price != null ? Number(it.price) : null),
     is_on_promo: Boolean(it.is_on_promo),
+    is_new_arrival: Boolean(it.is_new_arrival),
     promo_badge_text: it.promo_badge_text ?? null,
     price: it.final_price != null ? Number(it.final_price) : (it.price != null ? Number(it.price) : null),
     collection: it.collection ?? null,

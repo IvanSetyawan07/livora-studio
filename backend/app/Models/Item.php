@@ -8,7 +8,7 @@ class Item extends Model {
     public array $translatable = ['title','description','texture','finish','material_detail'];
     protected $fillable = [
         'type_id','collection_id','title','slug','code','texture','finish','availability','image','description',
-        'stock','price','original_price','discount_type','discount_value','final_price','is_on_promo','promo_badge_text',
+        'stock','price','original_price','discount_type','discount_value','final_price','is_on_promo','is_new_arrival','promo_badge_text',
         'promo_start_date','promo_end_date',
         'weight_kg','volume_m3','width_cm','depth_cm','height_cm','material_detail','warehouse_note','meta_title','meta_description','price_confirmed_at'
     ];
@@ -20,6 +20,7 @@ class Item extends Model {
         'discount_value' => 'float',
         'final_price'    => 'float',
         'is_on_promo'    => 'boolean',
+        'is_new_arrival' => 'boolean',
         'promo_start_date' => 'datetime',
         'promo_end_date'   => 'datetime',
         'weight_kg'      => 'float',

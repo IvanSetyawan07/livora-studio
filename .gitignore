@@ -44,3 +44,6 @@ assets-backup/
 
 # arsip zip untuk upload manual, jangan masuk repo
 *.zip
+
+# Local-only landing page preview data (tidak ikut git commit / push SSH)
+src/data/*.local.ts

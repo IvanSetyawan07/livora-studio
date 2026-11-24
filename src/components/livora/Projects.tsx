@@ -1,19 +1,28 @@
 import { useTranslation } from "react-i18next";
 import { useMemo, useState, useEffect, useRef, useLayoutEffect } from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import {
   registerGsap,
   gsap,
   ScrollTrigger,
-  SplitText,
-  EASE,
-  DUR,
-  STAGGER,
-  SCRUB,
   prefersReducedMotion,
 } from "@/lib/motionTokens";
 import { useHighlightProjects, useAllProjects } from "@/lib/projectsApi";
+import { getLocalLandingPreview } from "@/lib/localLandingPreview";
+import type { Project } from "@/data/projects";
+
+const getProjectHref = (p: Project) =>
+  p.apiId != null && p.apiId < 0 ? "/projects" : `/projects/${p.slug}`;
+
+/**
+ * Hanna Stína-inspired 3-column bottom-aligned staggered heights (`items-end`):
+ * Tall Left → Calm Low Center → Extra-Tall Right, alternating rhythm per row.
+ */
+const STAGGER_ROW_ASPECTS = [
+  ["aspect-[3/4]", "aspect-[4/3]", "aspect-[3/4.55]"],
+  ["aspect-[4/3]", "aspect-[3/4.45]", "aspect-[3/3.75]"],
+];
 
 export const Projects = () => {
   const { t } = useTranslation();
@@ -22,609 +31,560 @@ export const Projects = () => {
   const [filter, setFilter] = useState("All");
 
   const sectionRef = useRef<HTMLElement | null>(null);
-  const trackRef = useRef<HTMLDivElement | null>(null);
-  const mobileTrackRef = useRef<HTMLDivElement | null>(null);
-  const introRef = useRef<HTMLDivElement | null>(null);
-  const headlineRef = useRef<HTMLHeadingElement | null>(null);
-  const [mobileIdx, setMobileIdx] = useState(0);
+  const archRef = useRef<HTMLElement | null>(null);
+  const stitchWrapRef = useRef<HTMLDivElement | null>(null);
 
-  // FIX #2: flag dibagi antara measure() loop dan crossfade tween supaya
-  // keduanya tidak rebutan menulis property `opacity` di saat yang sama.
-  const crossfadeActiveRef = useRef(false);
-  const didMountFilterRef = useRef(false);
+  // Desktop floating cursor pill ("View Project ↗")
+  const cursorRef = useRef<HTMLDivElement | null>(null);
+  const cursorX = useRef<gsap.QuickToFunc | null>(null);
+  const cursorY = useRef<gsap.QuickToFunc | null>(null);
+  const [cursorVisible, setCursorVisible] = useState(false);
+
+  const { sourceHighlights, sourceAll, isLocalPreview } = useMemo(() => {
+    const validImg = (p: Project) => Boolean(p.img && p.img !== "/placeholder.svg");
+    const liveHighlights = highlights.filter(validImg);
+    const liveAll = all.filter(validImg);
+
+    if (liveHighlights.length > 0) {
+      return {
+        sourceHighlights: liveHighlights,
+        sourceAll: liveAll.length > 0 ? liveAll : liveHighlights,
+        isLocalPreview: false,
+      };
+    }
+
+    const localPreview = getLocalLandingPreview();
+    if (liveAll.length < 3 && localPreview?.PREVIEW_PROJECTS?.length) {
+      return {
+        sourceHighlights: localPreview.PREVIEW_PROJECTS,
+        sourceAll: localPreview.PREVIEW_PROJECTS,
+        isLocalPreview: true,
+      };
+    }
+
+    if (liveAll.length > 0) {
+      return {
+        sourceHighlights: liveAll,
+        sourceAll: liveAll,
+        isLocalPreview: false,
+      };
+    }
+
+    return {
+      sourceHighlights: highlights.length > 0 ? highlights : all,
+      sourceAll: all,
+      isLocalPreview: false,
+    };
+  }, [highlights, all]);
 
   const categories = useMemo(
-    () => ["All", ...Array.from(new Set(all.map((p) => p.category).filter(Boolean)))],
-    [all],
+    () => [
+      "All",
+      ...Array.from(new Set(sourceAll.map((p) => p.category).filter(Boolean))),
+    ],
+    [sourceAll],
   );
 
   const filtered = useMemo(() => {
-    if (filter === "All") return highlights;
-    return all.filter((p) => p.category === filter);
-  }, [filter, highlights, all]);
+    const base =
+      filter === "All"
+        ? sourceHighlights
+        : sourceAll.filter((p) => p.category === filter);
+    return base.length > 0 ? base : sourceHighlights;
+  }, [filter, sourceHighlights, sourceAll]);
 
-  /* ---------- Intro reveal ---------- */
-  useLayoutEffect(() => {
-    if (prefersReducedMotion()) return;
-    registerGsap();
-    const scope = introRef.current;
-    const headline = headlineRef.current;
-    if (!scope || !headline) return;
+  const flagship = filtered[0];
+  const restProjects = useMemo(() => filtered.slice(1, 7), [filtered]);
 
-    const ctx = gsap.context(() => {
-      let split: SplitText | null = null;
-      try {
-        split = new SplitText(headline, { type: "lines", linesClass: "gsap-line" });
-        split.lines.forEach((line) => {
-          const wrap = document.createElement("span");
-          wrap.style.display = "block";
-          wrap.style.overflow = "hidden";
-          line.parentNode?.insertBefore(wrap, line);
-          wrap.appendChild(line);
-        });
-      } catch {
-        /* noop */
-      }
+  // Group remaining projects into 3-up Hanna Stína staggered baseline rows
+  const galleryRows = useMemo(() => {
+    const rows: Project[][] = [];
+    for (let i = 0; i < restProjects.length; i += 3) {
+      rows.push(restProjects.slice(i, i + 3));
+    }
+    return rows;
+  }, [restProjects]);
 
-      const tl = gsap.timeline({
-        scrollTrigger: { trigger: scope, start: "top 80%", once: true },
-      });
+  useEffect(() => {
+    if (typeof window === "undefined" || prefersReducedMotion()) return;
+    if (!window.matchMedia("(pointer: fine)").matches) return;
+    const el = cursorRef.current;
+    if (!el) return;
 
-      tl.from(scope.querySelectorAll<HTMLElement>("[data-intro-eyebrow]"), {
-        opacity: 0,
-        y: 16,
-        duration: DUR.textFast,
-        ease: EASE.text,
-      });
+    cursorX.current = gsap.quickTo(el, "x", { duration: 0.34, ease: "power3.out" });
+    cursorY.current = gsap.quickTo(el, "y", { duration: 0.34, ease: "power3.out" });
 
-      if (split?.lines?.length) {
-        tl.from(
-          split.lines,
-          { yPercent: 115, duration: DUR.text, ease: EASE.text, stagger: STAGGER.lines },
-          "-=0.5",
-        );
-      } else {
-        tl.from(headline, { opacity: 0, y: 24, duration: DUR.text, ease: EASE.text }, "-=0.5");
-      }
-
-      tl.from(
-        scope.querySelectorAll<HTMLElement>("[data-intro-item]"),
-        {
-          opacity: 0,
-          y: 18,
-          duration: DUR.textFast,
-          ease: EASE.text,
-          stagger: STAGGER.items,
-        },
-        "-=0.55",
-      );
-
-      return () => split?.revert();
-    }, scope);
-
-    return () => ctx.revert();
+    const onMove = (e: PointerEvent) => {
+      cursorX.current?.(e.clientX);
+      cursorY.current?.(e.clientY);
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => window.removeEventListener("pointermove", onMove);
   }, []);
 
-  /* ---------- Master Horizontal Scroll & Cinematic Focus System ---------- */
+  /* ── GSAP Choreography: Rising Arch + Split-Image Converging Stitch + Staggered Gallery Reveal ── */
   useLayoutEffect(() => {
     if (prefersReducedMotion() || typeof window === "undefined") return;
     registerGsap();
 
     const section = sectionRef.current;
-    const track = trackRef.current;
-    if (!section || !track) return;
+    if (!section) return;
 
     const ctx = gsap.context(() => {
+      if (archRef.current) {
+        gsap.fromTo(
+          archRef.current,
+          { borderTopLeftRadius: 84, borderTopRightRadius: 84 },
+          {
+            borderTopLeftRadius: 0,
+            borderTopRightRadius: 0,
+            ease: "none",
+            scrollTrigger: {
+              trigger: archRef.current,
+              start: "top 96%",
+              end: "top 18%",
+              scrub: 0.25,
+            },
+          },
+        );
+      }
+
+      const introItems = section.querySelectorAll<HTMLElement>("[data-proj-reveal]");
+      if (introItems.length) {
+        gsap.fromTo(
+          introItems,
+          { opacity: 0, y: 28 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.9,
+            stagger: 0.08,
+            ease: "expo.out",
+            scrollTrigger: { trigger: section, start: "top 78%", once: true },
+          },
+        );
+      }
+
       const mm = gsap.matchMedia();
 
+      // Split-Image Converging Stitch (Desktop flagship #1)
       mm.add("(min-width: 1024px)", () => {
-        const getDistance = () => Math.max(0, track.scrollWidth - window.innerWidth);
-        const cards = gsap.utils.toArray<HTMLElement>(".project-card", track);
+        const stitchWrap = stitchWrapRef.current;
+        if (!stitchWrap) return;
 
-        if (!cards.length) return;
+        const leftHalf = stitchWrap.querySelector<HTMLElement>("[data-stitch-left]");
+        const rightHalf = stitchWrap.querySelector<HTMLElement>("[data-stitch-right]");
+        const stitchImgs = stitchWrap.querySelectorAll<HTMLElement>("[data-stitch-img]");
+        const stitchTitle = stitchWrap.querySelector<HTMLElement>("[data-stitch-title]");
+        const seamGlow = stitchWrap.querySelector<HTMLElement>("[data-stitch-seam]");
 
-        const cardsData = cards.map((card) => {
-          const media = card.querySelector<HTMLElement>(".card-media");
-          gsap.set(card, {
-            transformPerspective: 1200,
-            transformOrigin: "50% 50%",
-            willChange: "transform, opacity",
-            force3D: true,
+        if (leftHalf && rightHalf) {
+          const tl = gsap.timeline({
+            scrollTrigger: {
+              trigger: stitchWrap,
+              start: "top 86%",
+              end: "center 46%",
+              scrub: 0.28,
+              invalidateOnRefresh: true,
+            },
           });
-          return {
-            el: card,
-            media,
-            setScaleX: gsap.quickSetter(card, "scaleX"),
-            setScaleY: gsap.quickSetter(card, "scaleY"),
-            setOpacity: gsap.quickSetter(card, "opacity"),
-            setRotation: gsap.quickSetter(card, "rotation", "deg"),
-            setY: gsap.quickSetter(card, "y", "px"),
-            setX: gsap.quickSetter(card, "x", "px"),
-            baseX: 0,
-            cur: { f: 0 },
-          };
-        });
 
-        let trackBaseLeft = 0;
-        let focalPoint = window.innerWidth * 0.55;
-        let maxFocusDistance = window.innerWidth * 0.7;
-        let isSettled = false;
+          tl.fromTo(leftHalf, { y: 48, x: -10 }, { y: 0, x: 0, ease: "none" }, 0)
+            .fromTo(rightHalf, { y: -48, x: 10 }, { y: 0, x: 0, ease: "none" }, 0)
+            .fromTo(stitchImgs, { scale: 1.12 }, { scale: 1.01, ease: "none" }, 0);
 
-        const updateMetrics = () => {
-          isSettled = false;
-          const currentX = (gsap.getProperty(track, "x") as number) || 0;
-          trackBaseLeft = track.getBoundingClientRect().left - currentX;
-          focalPoint = window.innerWidth * 0.55;
-          maxFocusDistance = window.innerWidth * 0.7;
-
-          cardsData.forEach((data) => {
-            data.baseX = data.el.offsetLeft + data.el.offsetWidth / 2;
-          });
-        };
-
-        ScrollTrigger.addEventListener("refreshInit", updateMetrics);
-        updateMetrics();
-
-        // 1) Master Tween Horizontal
-        const tween = gsap.to(track, {
-          x: () => -getDistance(),
-          ease: "none",
-        });
-
-        const st = ScrollTrigger.create({
-          trigger: section,
-          start: "top top",
-          end: () => "+=" + getDistance(),
-          pin: true,
-          scrub: SCRUB || 0.8,
-          animation: tween,
-          invalidateOnRefresh: true,
-          anticipatePin: 1,
-          refreshPriority: -10,
-        });
-
-        // 2) Ticker-driven Continuous Interpolation Loop
-        const FOCUS_RATIO = 0.55;
-        const clamp01 = gsap.utils.clamp(0, 1);
-        const easeFocus = gsap.parseEase("power2.out");
-
-        // FIX #1: sebelumnya `data.cur.f += (fTarget - data.cur.f) * 0.14`
-        // adalah smoothing per-FRAME, bukan per-WAKTU — jadi kecepatan
-        // "mengejar" target beda-beda tergantung refresh rate layar
-        // (60Hz vs 120Hz terasa beda kecepatan). Dinormalisasi ke basis
-        // 60fps pakai gsap.ticker.deltaRatio() supaya konsisten di semua
-        // device, berapa pun refresh rate-nya.
-        const LERP_BASE = 0.14;
-        let lastTrackX = NaN;
-
-        const measure = () => {
-          const currentTrackX = gsap.getProperty(track, "x") as number;
-          const active = st.isActive;
-          if (!active && isSettled && currentTrackX === lastTrackX) {
-            return;
-          }
-          lastTrackX = currentTrackX;
-
-          const vw = window.innerWidth;
-          const focal = vw * FOCUS_RATIO;
-          const span = (cards[0]?.offsetWidth || vw * 0.4) * 1.15;
-
-          const velocity = active ? Math.abs(st.getVelocity()) || 0 : 0;
-          const energy = clamp01(velocity / 2600);
-
-          const dr = gsap.ticker.deltaRatio(60);
-          const lerpAmount = 1 - Math.pow(1 - LERP_BASE, dr);
-
-          let allConverged = energy < 0.001;
-
-          for (let i = 0; i < cardsData.length; i++) {
-            const data = cardsData[i];
-            const cardScreenX = trackBaseLeft + currentTrackX + data.baseX;
-            const signed = (cardScreenX - focal) / span;
-            const dist = Math.abs(signed);
-            const fTarget = easeFocus(clamp01(1 - dist));
-
-            const diff = fTarget - data.cur.f;
-            if (Math.abs(diff) > 0.0005) {
-              allConverged = false;
-              data.cur.f += diff * lerpAmount;
-            } else {
-              data.cur.f = fTarget;
-            }
-            const f = data.cur.f;
-
-            const scale = gsap.utils.interpolate(0.84, 1.10, f) + energy * 0.01;
-            const liftY = gsap.utils.interpolate(16, -28, f);
-            const opacity = gsap.utils.interpolate(0.82, 1, f);
-            const subX = gsap.utils.clamp(-6, 6, signed * 6);
-
-            data.setScaleX(scale);
-            data.setScaleY(scale);
-            // FIX #2 diterapkan di sini — skip nulis opacity kalau crossfade
-            // tween (efek ganti filter) sedang berjalan, supaya tidak
-            // rebutan/flicker dengan tween autoAlpha di effect satunya.
-            if (!crossfadeActiveRef.current) {
-              data.setOpacity(opacity);
-            }
-            data.setY(liftY);
-            data.setRotation(0);
-            data.setX(subX);
-
-            const nextZ = String(50 + Math.round(f * 50));
-            if (data.el.style.zIndex !== nextZ) {
-              data.el.style.zIndex = nextZ;
-            }
+          if (seamGlow) {
+            tl.fromTo(seamGlow, { opacity: 0.85 }, { opacity: 0, ease: "none" }, 0.45);
           }
 
-          isSettled = !active && allConverged;
-        };
-
-        gsap.ticker.add(measure);
-        measure();
-
-        // 3) Cinematic Image Parallax
-        cards.forEach((card) => {
-          const img = card.querySelector<HTMLElement>(".card-photo");
-          if (img) {
-            gsap.fromTo(
-              img,
-              { xPercent: -5 },
-              {
-                xPercent: 5,
-                ease: "none",
-                scrollTrigger: {
-                  trigger: card,
-                  containerAnimation: tween,
-                  start: "left right",
-                  end: "right left",
-                  scrub: true,
-                },
-              }
+          if (stitchTitle) {
+            tl.fromTo(
+              stitchTitle,
+              { xPercent: -5, opacity: 0.72 },
+              { xPercent: 0, opacity: 1, ease: "none" },
+              0,
             );
           }
+        }
+      });
 
-          const desc = card.querySelector<HTMLElement>(".card-description");
-          if (desc) {
-            gsap.from(desc, {
-              opacity: 0,
-              y: 12,
-              duration: DUR.card,
-              ease: EASE.card,
-              scrollTrigger: {
-                trigger: card,
-                containerAnimation: tween,
-                start: "left 30%",
-                toggleActions: "play reverse play reverse",
-              },
-            });
-          }
-        });
+      // Architectural curtain reveal for each staggered gallery plate
+      section.querySelectorAll<HTMLElement>("[data-plate]").forEach((plate, idx) => {
+        const frame = plate.querySelector<HTMLElement>("[data-plate-frame]");
+        const img = plate.querySelector<HTMLElement>("[data-plate-img]");
+        const meta = plate.querySelector<HTMLElement>("[data-plate-meta]");
 
-        const onResize = () => {
-          ScrollTrigger.refresh();
-        };
-        window.addEventListener("resize", onResize);
-
-        return () => {
-          gsap.ticker.remove(measure);
-          window.removeEventListener("resize", onResize);
-          ScrollTrigger.removeEventListener("refreshInit", updateMetrics);
-          st.kill();
-          tween.kill();
-        };
+        if (frame) {
+          gsap.fromTo(
+            frame,
+            { clipPath: "inset(12% 0% 0% 0%)", opacity: 0.35 },
+            {
+              clipPath: "inset(0% 0% 0% 0%)",
+              opacity: 1,
+              duration: 1.0,
+              delay: (idx % 3) * 0.08,
+              ease: "expo.out",
+              scrollTrigger: { trigger: plate, start: "top 88%", once: true },
+            },
+          );
+        }
+        if (img) {
+          gsap.fromTo(
+            img,
+            { scale: 1.1 },
+            {
+              scale: 1,
+              duration: 1.25,
+              delay: (idx % 3) * 0.08,
+              ease: "expo.out",
+              scrollTrigger: { trigger: plate, start: "top 88%", once: true },
+            },
+          );
+        }
+        if (meta) {
+          gsap.fromTo(
+            meta,
+            { opacity: 0, y: 14 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.75,
+              delay: (idx % 3) * 0.08 + 0.14,
+              ease: "power3.out",
+              scrollTrigger: { trigger: plate, start: "top 88%", once: true },
+            },
+          );
+        }
       });
     }, section);
 
-    const timeout = setTimeout(() => {
-      ScrollTrigger.refresh();
-    }, 150);
-
+    const tId = setTimeout(() => ScrollTrigger.refresh(), 120);
     return () => {
-      clearTimeout(timeout);
+      clearTimeout(tId);
       ctx.revert();
     };
-  }, [filtered]);
+  }, [filter, filtered.length]);
 
-  /* ---------- Filter Change Crossfade ---------- */
-  useEffect(() => {
-    if (!didMountFilterRef.current) {
-      didMountFilterRef.current = true;
-      return;
-    }
-    if (prefersReducedMotion()) return;
-    const track = trackRef.current;
-    if (!track) return;
-
-    const cards = track.querySelectorAll<HTMLElement>(".project-card");
-    if (!cards.length) return;
-
-    // FIX #2: tandai crossfade sedang aktif supaya measure() loop
-    // berhenti sementara menulis opacity ke card yang sama.
-    crossfadeActiveRef.current = true;
-
-    gsap.fromTo(
-      cards,
-      { opacity: 0 },
-      {
-        opacity: 1,
-        duration: DUR.card,
-        ease: EASE.card,
-        stagger: STAGGER.items,
-        onComplete: () => {
-          crossfadeActiveRef.current = false;
-          ScrollTrigger.refresh();
-        },
-      },
-    );
-
-    const t = setTimeout(() => ScrollTrigger.refresh(), 120);
-    return () => {
-      clearTimeout(t);
-      crossfadeActiveRef.current = false;
-    };
-  }, [filter]);
-
-  const Card = ({ p, i }: { p: (typeof filtered)[number]; i: number }) => (
-    <article
-      className="project-card shrink-0 w-[82vw] sm:w-[62vw] lg:w-[38vw] xl:w-[34vw] mt-0 lg:mt-[var(--card-offset)] relative"
-      style={{ ["--card-offset" as string]: i % 2 === 1 ? "5rem" : i % 3 === 2 ? "2.5rem" : "0rem" }}
-    >
-      <Link to={`/projects/${p.slug}`} className="group block focus:outline-none">
-        <div
-          className="card-media relative overflow-hidden will-change-transform"
-          style={{ height: "min(72vh, 760px)" }}
-        >
-          <div className="h-full w-full transition-transform duration-700 group-hover:scale-[1.04]">
-            <img
-              src={p.img}
-              alt={`${p.name} — ${p.category}${p.location ? `, ${p.location}` : ""}`}
-              loading="eager"
-              decoding="async"
-              width={900}
-              height={1125}
-              className="card-photo w-[116%] h-full object-cover max-w-none"
-            />
-          </div>
-
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.28) 42%, transparent 68%)",
-            }}
-          />
-          <div
-            className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-700 group-hover:opacity-100"
-            style={{ background: "rgba(0,0,0,0.22)" }}
-          />
-
-          <div className="absolute inset-x-0 bottom-0 p-6 md:p-8">
-            <p className="text-[10px] uppercase tracking-[0.32em] text-white/75 mb-3 transition-all duration-500 lg:opacity-0 lg:-translate-y-2 lg:group-hover:opacity-100 lg:group-hover:translate-y-0">
-              {p.category}{p.location ? ` — ${p.location}` : ""}{p.year ? ` · ${p.year}` : ""}
-            </p>
-            <h3 className="serif text-3xl md:text-4xl font-light leading-tight text-white">
-              {p.name}
-            </h3>
-            {p.description && (
-              <p className="card-description mt-3 max-w-[42ch] text-sm font-light text-white/80 line-clamp-2 transition-all duration-700 delay-75 lg:translate-y-3 lg:text-white/0 lg:group-hover:translate-y-0 lg:group-hover:text-white/80">
-                {p.description}
-              </p>
-            )}
-            <span className="mt-5 inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-[#C9A97A] transition-all duration-700 delay-150 lg:opacity-0 lg:translate-y-2 lg:group-hover:opacity-100 lg:group-hover:translate-y-0">
-              {t("projects.view")}
-            </span>
-          </div>
-        </div>
-      </Link>
-    </article>
-  );
-
-  const ClosingPanel = () => (
-    <div className="shrink-0 w-[80vw] sm:w-[60vw] lg:w-[34vw] snap-center flex flex-col justify-center">
-      <p className="serif italic text-2xl md:text-3xl font-light text-foreground/55 max-w-[24ch]">
-        Every room here began as a quiet conversation.
-      </p>
-      <Link
-        to="/projects"
-        className="mt-8 inline-block text-[11px] uppercase tracking-[0.3em] text-foreground/80 hover:text-foreground underline-grow"
-      >
-        See all projects →
-      </Link>
-    </div>
-  );
-
-  const reduced = prefersReducedMotion();
-
-  const IntroCopy = () => (
-    <>
-      <p className="text-[10px] md:text-xs uppercase tracking-[0.45em] text-foreground/60 mb-5">
-        <span className="divider-line" />
-        {t("projects.eyebrow")}
-      </p>
-      <h2 className="serif text-4xl md:text-6xl lg:text-7xl font-light leading-[1.05] text-balance">
-        {t("projects.title")} <em className="italic text-[#C9A97A]">{t("projects.title_em")}</em>
-      </h2>
-      <p className="mt-5 text-sm text-foreground/60 max-w-[52ch]">
-        Scroll sideways to walk through the architecture's&rsquo;s most recent rooms.
-      </p>
-      <div className="flex gap-2 mt-8 flex-wrap">
-        {categories.map((c) => (
-          <button
-            key={c}
-            onClick={() => setFilter(c)}
-            aria-pressed={filter === c}
-            className={`text-[10px] uppercase tracking-[0.3em] px-5 py-2.5 border transition-all duration-500 ${
-              filter === c
-                ? "bg-foreground text-background border-foreground"
-                : "border-border text-foreground/70 hover:border-foreground hover:text-foreground"
-            }`}
-          >
-            {c}
-          </button>
-        ))}
-      </div>
-    </>
-  );
-
-  if (reduced) {
-    return (
-      <section id="projects" className="py-28 md:py-40">
-        <div className="container-livora mb-12">
-          <IntroCopy />
-        </div>
-        <div className="container-livora grid grid-cols-1 md:grid-cols-2 gap-10 animate-fade-in">
-          {filtered.map((p) => (
-            <div key={p.slug} className="w-full">
-              <Card p={p} i={0} />
-            </div>
-          ))}
-        </div>
-      </section>
-    );
-  }
-
-  useEffect(() => {
-    setMobileIdx(0);
-    mobileTrackRef.current?.scrollTo({ left: 0, behavior: "instant" as ScrollBehavior });
-  }, [filter]);
-
-  const scrollMobileCard = (nextIdx: number) => {
-    const el = mobileTrackRef.current;
-    if (!el) return;
-    const total = filtered.length + 1;
-    const clamped = Math.max(0, Math.min(total - 1, nextIdx));
-    const child = el.children[clamped] as HTMLElement | undefined;
-    if (child) {
-      el.scrollTo({ left: Math.max(0, child.offsetLeft - 20), behavior: "smooth" });
-    }
-    setMobileIdx(clamped);
-  };
-
-  const onMobileScroll = () => {
-    const el = mobileTrackRef.current;
-    if (!el) return;
-    const first = el.children[0] as HTMLElement | undefined;
-    const step = first ? first.offsetWidth + 20 : 1;
-    setMobileIdx(Math.max(0, Math.min(filtered.length, Math.round(el.scrollLeft / step))));
+  const cardHoverProps = {
+    onMouseEnter: () => setCursorVisible(true),
+    onMouseLeave: () => setCursorVisible(false),
   };
 
   return (
-    <div id="projects" className="relative">
-      {/* ── Mobile / Tablet interactive snap gallery (no pin scroll-trap) ── */}
-      <section className="lg:hidden py-16 sm:py-20">
-        <div className="container-livora mb-8">
-          <IntroCopy />
-        </div>
-
-        <div
-          ref={mobileTrackRef}
-          data-lenis-prevent
-          onScroll={onMobileScroll}
-          className="flex gap-5 overflow-x-auto snap-x snap-mandatory no-scrollbar px-5 pb-2"
-        >
-          {filtered.map((p, i) => (
-            <div key={p.slug} className="snap-center shrink-0">
-              <Card p={p} i={i} />
-            </div>
-          ))}
-          <div className="snap-center shrink-0 flex items-center">
-            <ClosingPanel />
-          </div>
-        </div>
-
-        <div className="container-livora mt-5 flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            {filtered.map((p, i) => (
-              <button
-                key={p.slug}
-                type="button"
-                aria-label={`View ${p.name}`}
-                onClick={() => scrollMobileCard(i)}
-                className="h-8 flex items-center px-1"
-              >
-                <span
-                  className={`block h-1.5 rounded-full transition-all duration-300 ${
-                    mobileIdx === i ? "w-6 bg-foreground" : "w-1.5 bg-foreground/25"
-                  }`}
-                />
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              aria-label="Previous project"
-              onClick={() => scrollMobileCard(mobileIdx - 1)}
-              disabled={mobileIdx === 0}
-              className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-foreground disabled:opacity-30 active:scale-95 transition"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <button
-              type="button"
-              aria-label="Next project"
-              onClick={() => scrollMobileCard(mobileIdx + 1)}
-              disabled={mobileIdx >= filtered.length}
-              className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-foreground disabled:opacity-30 active:scale-95 transition"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Desktop GSAP pinned horizontal track ── */}
-      <section
-        ref={sectionRef}
-        className="hidden lg:flex h-screen flex-col justify-center overflow-hidden py-32"
+    <section
+      id="projects"
+      ref={(node) => {
+        sectionRef.current = node;
+        archRef.current = node;
+      }}
+      className="relative z-20 -mt-12 sm:-mt-16 lg:-mt-24 bg-[#FAF8F4] text-[#232528] rounded-t-[36px] sm:rounded-t-[60px] lg:rounded-t-[84px] shadow-[0_-24px_70px_-24px_rgba(35,37,40,0.16)] overflow-x-clip"
+    >
+      {/* Floating custom cursor pill (desktop pointer-fine only) */}
+      <div
+        ref={cursorRef}
+        aria-hidden
+        className={`hidden lg:flex fixed top-0 left-0 z-50 pointer-events-none -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full bg-white/95 backdrop-blur-md border border-[#232528]/10 px-5 py-2.5 text-[11px] uppercase tracking-[0.22em] text-[#232528] shadow-[0_14px_34px_rgba(35,37,40,0.16)] transition-opacity duration-300 ${
+          cursorVisible ? "opacity-100 scale-100" : "opacity-0 scale-90"
+        }`}
       >
-        <div>
-          <div ref={trackRef} className="flex w-max items-start gap-10 xl:gap-14 pl-[max(1.5rem,calc((100vw-1680px)/2+2rem))] pr-[12vw] will-change-transform">
-              <div
-                ref={introRef}
-                className="flex shrink-0 w-[34vw] xl:w-[30vw] flex-col justify-center pr-10"
-                style={{ minHeight: "min(78vh, 760px)" }}
-              >
-                <div data-intro-eyebrow>
-                  <p className="text-[10px] md:text-xs uppercase tracking-[0.45em] text-foreground/60 mb-5">
-                    <span className="divider-line" />
-                    {t("projects.eyebrow")}
-                  </p>
-                </div>
-                <h2
-                  ref={headlineRef}
-                  className="serif text-4xl md:text-6xl lg:text-7xl font-light leading-[1.05] text-balance"
-                >
-                  {t("projects.title")} <em className="italic text-[#C9A97A]">{t("projects.title_em")}</em>
-                </h2>
-                <p data-intro-item className="mt-5 text-sm text-foreground/60 max-w-[52ch]">
-                  Scroll sideways to walk through the architecture&rsquo;s most recent rooms.
-                </p>
-                <div data-intro-item className="flex gap-2 mt-8 flex-wrap">
-                  {categories.map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => setFilter(c)}
-                      aria-pressed={filter === c}
-                      className={`text-[10px] uppercase tracking-[0.3em] px-5 py-2.5 border transition-all duration-500 ${
-                        filter === c
-                          ? "bg-foreground text-background border-foreground"
-                          : "border-border text-foreground/70 hover:border-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {c}
-                    </button>
-                  ))}
+        <span>{t("projects.view", "View Project")}</span>
+        <ArrowUpRight className="h-3.5 w-3.5 text-[#5E93B8]" />
+      </div>
+
+      {/* Top subtle architectural breathing indicator */}
+      <div className="flex justify-center pt-5 sm:pt-7">
+        <span className="h-1 w-14 rounded-full bg-[#232528]/12" aria-hidden />
+      </div>
+
+      <div className="container-livora pt-12 sm:pt-16 lg:pt-24 pb-20 sm:pb-24 lg:pb-32">
+        {/* ── Monumental Editorial Header (Hanna Stína Staggered Headline) ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-end pb-12 lg:pb-16 border-b border-[#232528]/12">
+          <div className="lg:col-span-8">
+            <p
+              data-proj-reveal
+              className="inline-flex items-center gap-3 text-[11px] uppercase tracking-[0.38em] text-[#5E93B8] font-medium mb-4"
+            >
+              <span className="h-px w-8 bg-[#5E93B8]/60" />
+              01 · {t("projects.eyebrow", "Selected Works")}
+              {isLocalPreview && (
+                <span className="rounded-full border border-[#5E93B8]/30 bg-white/85 px-2.5 py-0.5 text-[9px] tracking-[0.2em] text-[#5E93B8]">
+                  Local Preview
+                </span>
+              )}
+            </p>
+            <h2
+              data-proj-reveal
+              className="serif text-4xl sm:text-6xl lg:text-[72px] font-light leading-[0.94] tracking-[-0.02em] text-[#232528]"
+            >
+              {t("projects.title", "EXPLORE THE")}
+              <span className="block sm:pl-14 italic font-light text-[#5E93B8]">
+                {t("projects.title_em", "Selected Works")}
+              </span>
+            </h2>
+          </div>
+
+          <div className="lg:col-span-4 flex flex-col lg:items-end gap-5">
+            <p
+              data-proj-reveal
+              className="text-sm sm:text-[15px] leading-relaxed text-[#656B73] max-w-[40ch] lg:text-right font-light"
+            >
+              Architectural residences, private villas, and tailored interiors shaped from concept to tactile reality.
+            </p>
+
+            {/* Minimal Category Filter Tabs */}
+            <div
+              data-proj-reveal
+              className="flex flex-wrap lg:justify-end gap-2"
+              role="group"
+              aria-label="Filter projects by category"
+            >
+              {categories.map((c) => {
+                const active = filter === c;
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setFilter(c)}
+                    aria-pressed={active}
+                    className={`min-h-[36px] px-4 py-1.5 text-[10px] uppercase tracking-[0.24em] transition-all duration-300 border ${
+                      active
+                        ? "bg-[#232528] text-[#FAF8F4] border-[#232528]"
+                        : "bg-white/75 text-[#656B73] border-[#232528]/14 hover:border-[#232528] hover:text-[#232528]"
+                    }`}
+                  >
+                    {c}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Act 1: Flagship Project #1 — Split-Image Converging Stitch ── */}
+        {flagship && (
+          <div ref={stitchWrapRef} className="mt-14 lg:mt-20">
+            <Link
+              to={getProjectHref(flagship)}
+              {...cardHoverProps}
+              className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5E93B8]"
+            >
+              {/* Desktop Split-Image Converging Stitch Stage */}
+              <div className="hidden lg:block relative">
+                <div className="relative flex w-full h-[66vh] min-h-[480px] max-h-[660px]">
+                  {/* Left Half */}
+                  <div
+                    data-stitch-left
+                    className="relative w-1/2 h-full overflow-hidden bg-[#F1EFEA] will-change-transform"
+                  >
+                    <img
+                      data-stitch-img
+                      src={flagship.img}
+                      alt={`${flagship.name} — left architectural view`}
+                      loading="eager"
+                      decoding="async"
+                      className="absolute inset-y-0 left-0 w-[200%] max-w-none h-full object-cover transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.03]"
+                    />
+                    <div
+                      className="pointer-events-none absolute inset-0"
+                      style={{
+                        background:
+                          "linear-gradient(to top, rgba(28,30,33,0.66) 0%, rgba(28,30,33,0.12) 44%, transparent 72%)",
+                      }}
+                    />
+                  </div>
+
+                  {/* Right Half */}
+                  <div
+                    data-stitch-right
+                    className="relative w-1/2 h-full overflow-hidden bg-[#F1EFEA] will-change-transform"
+                  >
+                    <img
+                      data-stitch-img
+                      src={flagship.img}
+                      alt={`${flagship.name} — right architectural view`}
+                      loading="eager"
+                      decoding="async"
+                      className="absolute inset-y-0 right-0 w-[200%] max-w-none h-full object-cover transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.03]"
+                    />
+                    <div
+                      className="pointer-events-none absolute inset-0"
+                      style={{
+                        background:
+                          "linear-gradient(to top, rgba(28,30,33,0.66) 0%, rgba(28,30,33,0.12) 44%, transparent 72%)",
+                      }}
+                    />
+                  </div>
+
+                  <div
+                    data-stitch-seam
+                    aria-hidden
+                    className="pointer-events-none absolute inset-y-6 left-1/2 -translate-x-1/2 w-px bg-white/80"
+                  />
+
+                  <div className="pointer-events-none absolute top-6 left-6 inline-flex items-center gap-2 bg-white/92 backdrop-blur-md px-3.5 py-1.5 text-[10px] font-mono uppercase tracking-[0.24em] text-[#232528]">
+                    <span>[01]</span>
+                    <span>Featured Residence</span>
+                  </div>
+
+                  <div
+                    data-stitch-title
+                    className="pointer-events-none absolute inset-x-0 bottom-0 p-10 xl:p-12 flex items-end justify-between gap-8"
+                  >
+                    <div className="max-w-2xl">
+                      <p className="text-[11px] uppercase tracking-[0.32em] text-[#E6DFD3] mb-2">
+                        {flagship.category}
+                        {flagship.location ? ` · ${flagship.location}` : ""}
+                        {flagship.year ? ` · ${flagship.year}` : ""}
+                      </p>
+                      <h3 className="serif text-5xl xl:text-6xl font-light leading-[0.98] text-white">
+                        {flagship.name}
+                      </h3>
+                      {flagship.description && (
+                        <p className="mt-3 text-sm font-light text-white/85 line-clamp-2 max-w-[54ch]">
+                          {flagship.description}
+                        </p>
+                      )}
+                    </div>
+                    <span className="shrink-0 inline-flex items-center gap-2 bg-white/95 px-5 py-3 text-[10px] uppercase tracking-[0.26em] text-[#232528] font-medium shadow-lg transition-transform duration-500 group-hover:translate-x-1">
+                      Explore Case
+                      <ArrowUpRight className="h-3.5 w-3.5 text-[#5E93B8]" />
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {filtered.map((p, i) => (
-                <Card key={p.slug} p={p} i={i} />
-              ))}
-            <ClosingPanel />
+              {/* Mobile / Tablet Flagship Card */}
+              <div data-plate className="lg:hidden">
+                <div
+                  data-plate-frame
+                  className="relative overflow-hidden aspect-[4/5] sm:aspect-[16/10] bg-[#F1EFEA]"
+                >
+                  <img
+                    data-plate-img
+                    src={flagship.img}
+                    alt={`${flagship.name} — ${flagship.category}`}
+                    loading="eager"
+                    decoding="async"
+                    className="h-full w-full object-cover"
+                  />
+                  <div
+                    className="pointer-events-none absolute inset-0"
+                    style={{
+                      background:
+                        "linear-gradient(to top, rgba(28,30,33,0.75) 0%, rgba(28,30,33,0.16) 48%, transparent 74%)",
+                    }}
+                  />
+                  <div className="absolute inset-x-0 bottom-0 p-6">
+                    <p className="text-[10px] font-mono uppercase tracking-[0.26em] text-[#E6DFD3] mb-1.5">
+                      [01] · {flagship.category}
+                      {flagship.year ? ` · ${flagship.year}` : ""}
+                    </p>
+                    <h3 className="serif text-3xl sm:text-4xl font-light text-white leading-tight">
+                      {flagship.name}
+                    </h3>
+                  </div>
+                </div>
+              </div>
+            </Link>
           </div>
+        )}
+
+        {/* ── Act 2: Hanna Stína 3-Column Bottom-Aligned Staggered Gallery Wall (`items-end`) ── */}
+        {galleryRows.length > 0 && (
+          <div className="mt-16 sm:mt-20 lg:mt-24 space-y-16 lg:space-y-24">
+            {galleryRows.map((row, rowIdx) => {
+              const rowAspects =
+                STAGGER_ROW_ASPECTS[rowIdx % STAGGER_ROW_ASPECTS.length];
+              const colSpanClass =
+                row.length === 1
+                  ? "lg:col-span-8 lg:col-start-3"
+                  : row.length === 2
+                  ? "lg:col-span-6"
+                  : "lg:col-span-4";
+
+              return (
+                <div
+                  key={`proj-row-${rowIdx}`}
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-8 items-end"
+                >
+                  {row.map((p, colIdx) => {
+                    const num = String(rowIdx * 3 + colIdx + 2).padStart(2, "0");
+                    const aspectClass =
+                      row.length === 1
+                        ? "aspect-[16/10]"
+                        : row.length === 2
+                        ? colIdx === 0
+                          ? "aspect-[16/11]"
+                          : "aspect-[4/4.3]"
+                        : rowAspects[colIdx % 3];
+
+                    return (
+                      <article
+                        key={p.slug}
+                        data-plate
+                        className={colSpanClass}
+                      >
+                        <Link
+                          to={getProjectHref(p)}
+                          {...cardHoverProps}
+                          className="group block focus:outline-none"
+                        >
+                          <div
+                            data-plate-frame
+                            className={`relative overflow-hidden bg-[#F1EFEA] ${aspectClass}`}
+                          >
+                            <img
+                              data-plate-img
+                              src={p.img}
+                              alt={`${p.name} — ${p.category}`}
+                              loading="lazy"
+                              decoding="async"
+                              className="h-full w-full object-cover transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.045]"
+                            />
+                            <div className="pointer-events-none absolute inset-0 bg-[#232528]/0 group-hover:bg-[#232528]/10 transition-colors duration-500" />
+                          </div>
+
+                          {/* Exact Swiss-Gallery Baseline Caption: [02] PROJECT NAME   YEAR */}
+                          <div
+                            data-plate-meta
+                            className="mt-3.5 pt-3 border-t border-[#232528]/12 flex items-baseline justify-between gap-4"
+                          >
+                            <div className="flex items-baseline gap-2.5 min-w-0">
+                              <span className="text-[10px] font-mono text-[#5E93B8] shrink-0">
+                                [{num}]
+                              </span>
+                              <h3 className="text-xs sm:text-[13px] uppercase tracking-[0.18em] font-medium text-[#232528] group-hover:text-[#5E93B8] transition-colors truncate">
+                                {p.name}
+                              </h3>
+                            </div>
+                            <span className="text-[10px] font-mono tracking-[0.16em] text-[#656B73] shrink-0">
+                              {p.year || p.category}
+                            </span>
+                          </div>
+                        </Link>
+                      </article>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── Editorial Closing Bar ── */}
+        <div className="mt-16 lg:mt-24 pt-8 border-t border-[#232528]/12 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <p className="serif italic text-2xl sm:text-3xl font-light text-[#656B73]">
+            Every room here began as a quiet conversation.
+          </p>
+          <Link
+            to="/projects"
+            className="group inline-flex items-center gap-3 self-start sm:self-auto border border-[#232528]/20 bg-white px-6 py-3 text-[10px] uppercase tracking-[0.28em] font-medium text-[#232528] hover:bg-[#232528] hover:text-[#FAF8F4] hover:border-[#232528] transition-all duration-300"
+          >
+            <span>See All Projects</span>
+            <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+          </Link>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
   );
 };

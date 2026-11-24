@@ -14,7 +14,7 @@ interface FurnitureShowcaseCardProps {
   item: FurnitureShowcaseItem;
   columns: GridColumns;
   saved: boolean;
-  onToggleSave: (item: FurnitureShowcaseItem, activeFinish: FurnitureFinishOption) => void;
+  onToggleSave: (item: FurnitureShowcaseItem, activeFinish: FurnitureFinishOption | null) => void;
   onFinishChange?: (item: FurnitureShowcaseItem, activeFinish: FurnitureFinishOption) => void;
 }
 
@@ -116,7 +116,7 @@ export const FurnitureShowcaseCard: React.FC<FurnitureShowcaseCardProps> = ({
     }
     const finishText = activeFinish?.name || item.materialLabel;
     if (finishText) parts.push(finishText);
-    if (parts.length === 1 && item.dimensionsLabel === "Bespoke Dimensions") {
+    if (parts.length <= 1 && item.dimensionsLabel === "Bespoke Dimensions") {
       parts.push("Custom Dimensions");
     }
     return parts.join(" · ");
@@ -175,7 +175,7 @@ export const FurnitureShowcaseCard: React.FC<FurnitureShowcaseCardProps> = ({
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            onToggleSave(item, lockedFinish);
+            onToggleSave(item, lockedFinish ?? null);
           }}
           aria-label={saved ? `Hapus ${item.name} dari shortlist` : `Simpan ${item.name} ke shortlist`}
           aria-pressed={saved}
@@ -216,7 +216,7 @@ export const FurnitureShowcaseCard: React.FC<FurnitureShowcaseCardProps> = ({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                onToggleSave(item, lockedFinish);
+                onToggleSave(item, lockedFinish ?? null);
               }}
               className={`inline-flex items-center justify-center gap-1 rounded-full font-medium whitespace-nowrap transition-all duration-200 active:scale-95 ${
                 columns === 5
