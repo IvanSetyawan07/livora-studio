@@ -5,9 +5,11 @@ namespace App\Services\Shop;
 use App\Models\Item;
 use App\Models\ShopOrder;
 use App\Models\User;
+use App\Services\CustomerNeedProfile;
 use App\Services\WhatsApp\WhatsAppNotifier;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class LiviBot
 {
@@ -54,8 +56,10 @@ S;
     public const PERSONA_ADDENDUM = <<<'A'
 CATATAN TAMBAHAN (berlaku di atas aturan lain):
 - Scope of work Livora ada di DATA.profil_livora. Bila customer bertanya Livora itu apa / layanannya apa, jelaskan ramah dan ringkas dengan kata-katamu sendiri, sesuaikan dengan pertanyaannya.
-- Lewat WhatsApp kamu fokus Loose Furniture (kenalan produk, cek harga lewat tim, mencatat pesanan). Untuk Decorative Interior, Interior Contractor & Architecture, atau Material/Fitting: jelaskan singkat, lalu tawarkan konsultasi dengan tim (handoff true bila customer mau lanjut) atau booking lewat halaman Appointment di website. Jangan menjanjikan harga atau jadwal untuk layanan itu.
-- Ngobrol dulu: tanggapi sapaan, kabar, atau cerita customer dengan hangat sebelum membahas barang. Jangan menggiring ke pesanan bila customer belum menunjukkan niat memesan; boleh bertanya balik secara natural (mis. ruangan mana yang mau dilengkapi).
+- JANGAN langsung membicarakan acara Soft Opening / undangan acara saat customer menyapa atau bertanya soal furniture, interior, konsultasi, atau showroom. Fokus pahami dulu apa yang sebenarnya sedang dibutuhkan customer — hanya bahas acara/undangan bila customer sendiri yang menanyakannya.
+- PELAJARI KEBUTUHAN USER SECARA ALAMI: perhatikan DATA.profil_kebutuhan_customer dan tangkap sinyal baru dari setiap pesan customer (jenis properti, ruangan yang mau ditata, furnitur dicari, gaya/warna/material favorit, ukuran, lokasi, atau layanan yang diminati). Simpan pembaruannya ke field learned_profile dan gunakan pemahaman itu supaya saranmu makin relevan dan personal — tanpa menyebut kata "profil" atau "database".
+- KONSULTATIF & PROAKTIF: tanggapi cerita customer dengan hangat dulu, beri rekomendasi produk/solusi paling relevan dari DATA, lalu bila kebutuhannya masih luas, ajukan MAKSIMAL 1 pertanyaan santai yang paling membantu (mis. ruangan apa yang mau dilengkapi, gaya yang disuka, atau perkiraan ukuran) agar kamu benar-benar paham kebutuhan utamanya. Jangan menggiring ke pesanan bila customer belum menunjukkan niat memesan.
+- Lewat WhatsApp kamu fokus Loose Furniture (kenalan produk, kurasi kebutuhan, cek harga lewat tim, mencatat pesanan). Untuk Decorative Interior, Interior Contractor & Architecture, atau Material/Fitting: jelaskan singkat, lalu tawarkan konsultasi dengan tim (handoff true bila customer mau lanjut) atau booking lewat halaman Appointment di website. Jangan menjanjikan harga atau jadwal untuk layanan itu.
 - Bila DATA.kontak_pertama true, perkenalan sudah dikirim terpisah: langsung jawab, jangan menyapa ulang.
 - Bila DATA.cek_harga_sedang_berjalan true, harga sedang dicek tim: jangan menyebut angka harga apa pun, bilang masih ditunggu dari tim.
 - Harga dari tim (info_harga_dari_tim) adalah gambaran, bukan penawaran atau pesanan. Harga final termasuk ongkir & PPN dikirim tim lewat penawaran resmi.
@@ -246,6 +250,17 @@ A;
             ]);
 
             return [$this->t($hi), $this->t($this->scopeIntro())];
+        }
+
+        $profile = $this->readNeedProfile($conv);
+        $topics = array_slice(array_merge($profile['furniture_needs'] ?? [], $profile['rooms'] ?? []), 0, 2);
+        if (!empty($topics)) {
+            $topicText = implode(' & ', $topics);
+
+            return [$this->t($this->pick([
+                "Halo lagi {$kak}! 😊 Senang ketemu lagi. Masih lanjut lihat-lihat soal {$topicText}, atau ada kebutuhan baru hari ini?",
+                "Hai {$kak}, selamat {$w}! ✨ Masih lanjut cari untuk {$topicText}, atau ada ruangan lain yang mau dibahas hari ini?",
+            ]))];
         }
 
         return [$this->t($this->pick([
@@ -687,13 +702,21 @@ A;
         return $this->result([$this->t($body)], $conv, 'pesanan_dibuat', 'ok', $started);
     }
 
-    /** 2.4: tanya-jawab bebas, hanya dari data produk, lewat Guardrail. */
+    /** 2.4: tanya-jawab bebas + pembelajaran kebutuhan user, hanya dari data produk, lewat Guardrail. */
     protected function aiTurn(object $conv, string $phone, string $text, bool $simulate, float $started): array
     {
-        $context = $this->qaContext($conv, $phone, $text);
+        $existingProfile = $this->readNeedProfile($conv);
+        $context = $this->qaContext($conv, $phone, $text, $existingProfile);
         $ai = LiviLlm::answer($text, $this->history($phone), $this->persona(), $context);
 
         if ($ai !== null) {
+            $mergedProfile = CustomerNeedProfile::merge(
+                $existingProfile,
+                is_array($ai['learned_profile'] ?? null) ? $ai['learned_profile'] : [],
+                $text,
+            );
+            $this->saveNeedProfile($conv, $mergedProfile, $simulate);
+
             $reply = trim($ai['reply']);
             if ($ai['handoff']) return $this->doHandoff($conv, $phone, 'ai_eskalasi', $simulate, $started, $reply !== '' ? $reply : null);
             if (!empty($ai['price_check']) && ShopSettings::get('price_requires_admin', true) && $this->ctxProducts) {
@@ -714,6 +737,10 @@ A;
 
                 return $this->result($this->lead($conv, [$this->t($reply)]), $conv, 'ai', $flag, $started);
             }
+        } else {
+            // Tetap tangkap sinyal kebutuhan dasar walau LLM sedang tidak merespons
+            $mergedProfile = CustomerNeedProfile::merge($existingProfile, [], $text);
+            $this->saveNeedProfile($conv, $mergedProfile, $simulate);
         }
 
         $fails = (int) $conv->fail_count + 1;
@@ -738,7 +765,7 @@ A;
 
     // ───────────────────────────── Pembantu ─────────────────────────────
 
-    protected function qaContext(object $conv, string $phone, string $text): array
+    protected function qaContext(object $conv, string $phone, string $text, array $needProfile = []): array
     {
         $tools = new BotTools($phone, $conv);
         $products = [];
@@ -757,14 +784,47 @@ A;
             $info = $tools->call('get_product_info', ['item_id' => (int) ($row['item_id'] ?? 0), 'query' => $row['code'] ?? '']);
             if ($info['found'] ?? false) $push($info);
         }
-        $words = collect(preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower($text)))->filter(fn ($w) => mb_strlen($w) >= 4)->unique()->take(4);
-        foreach ($words as $w) {
-            foreach (Item::where('title', 'like', '%'.$w.'%')->limit(2)->get() as $it) {
-                $info = $tools->call('get_product_info', ['item_id' => $it->id, 'query' => '']);
-                if ($info['found'] ?? false) $push($info);
-                if (count($products) >= 5) break 2;
+
+        // Perluas pencarian produk dengan sinonim ID<->EN + profil kebutuhan yang dipelajari Livi
+        $synMap = [
+            'meja' => ['table', 'console'], 'kursi' => ['chair', 'armchair', 'stool'], 'sofa' => ['couch', 'sectional'],
+            'ranjang' => ['bed'], 'kasur' => ['bed'], 'tidur' => ['bed'], 'lemari' => ['cabinet', 'credenza', 'wardrobe'],
+            'lampu' => ['lamp', 'lighting'], 'marmer' => ['marble'], 'batu' => ['travertine', 'stone'],
+            'kayu' => ['oak', 'walnut', 'wood'], 'kulit' => ['leather'], 'kain' => ['linen', 'boucle', 'fabric'],
+            'tamu' => ['living'], 'makan' => ['dining'], 'kamar' => ['bedroom'],
+        ];
+        $stop = ['yang', 'untuk', 'dengan', 'apakah', 'boleh', 'tanya', 'dong', 'kakak', 'livi', 'livora', 'mau', 'cari', 'info', 'halo', 'selamat'];
+        $rawWords = collect(preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower($text)))
+            ->filter(fn ($w) => mb_strlen($w) >= 3 && !in_array($w, $stop, true))
+            ->unique()->values()->all();
+        if (count($rawWords) <= 2 && !empty($needProfile)) {
+            $rawWords = array_values(array_unique(array_merge($rawWords, CustomerNeedProfile::toSearchTerms($needProfile))));
+        }
+        $expanded = [];
+        foreach (array_slice($rawWords, 0, 6) as $w) {
+            $expanded[] = $w;
+            if (isset($synMap[$w])) {
+                foreach ($synMap[$w] as $s) $expanded[] = $s;
             }
         }
+        foreach (array_slice(array_values(array_unique($expanded)), 0, 8) as $w) {
+            $matches = Item::query()
+                ->where(function ($q) use ($w) {
+                    $q->where('title', 'like', '%'.$w.'%')
+                      ->orWhere('description', 'like', '%'.$w.'%')
+                      ->orWhere('material_detail', 'like', '%'.$w.'%')
+                      ->orWhere('texture', 'like', '%'.$w.'%')
+                      ->orWhereHas('type', fn ($tq) => $tq->where('name', 'like', '%'.$w.'%')->orWhere('slug', 'like', '%'.$w.'%'))
+                      ->orWhereHas('collection', fn ($cq) => $cq->where('name', 'like', '%'.$w.'%'));
+                })
+                ->limit(3)->get();
+            foreach ($matches as $it) {
+                $info = $tools->call('get_product_info', ['item_id' => $it->id, 'query' => '']);
+                if ($info['found'] ?? false) $push($info);
+                if (count($products) >= 6) break 2;
+            }
+        }
+
         $orders = ShopOrder::where('customer_phone', $phone)->whereNotIn('status', ['selesai', 'dibatalkan', 'kedaluwarsa'])->latest()->limit(3)->get(['code', 'status'])
             ->map(fn ($o) => ['kode' => $o->code, 'status' => ShopOrderService::LABELS[$o->status] ?? $o->status])->all();
 
@@ -789,17 +849,79 @@ A;
             }
         }
 
-        return ['state' => $conv->state, 'profil_livora' => self::SCOPE_TEXT, 'kontak_pertama' => $this->isFirstContact($conv),
-            'produk' => array_values($products), 'info_harga_dari_tim' => $infoHarga, 'cek_harga_sedang_berjalan' => $pending,
-            'pesanan_aktif_nomor_ini' => $orders, 'jam_kerja_aktif' => ShopSettings::withinBusinessHours()];
+        return [
+            'state' => $conv->state,
+            'profil_livora' => self::SCOPE_TEXT,
+            'profil_kebutuhan_customer' => $needProfile ?: null,
+            'kontak_pertama' => $this->isFirstContact($conv),
+            'produk' => array_values($products),
+            'info_harga_dari_tim' => $infoHarga,
+            'cek_harga_sedang_berjalan' => $pending,
+            'pesanan_aktif_nomor_ini' => $orders,
+            'jam_kerja_aktif' => ShopSettings::withinBusinessHours(),
+        ];
     }
 
     protected function handoffSummary(object $conv, string $phone): string
     {
         $c = $this->collected($conv);
         $last = DB::table('wa_messages')->where('phone', $phone)->where('direction', 'in')->latest('id')->value('body');
+        $need = CustomerNeedProfile::toHandoffNote($this->readNeedProfile($conv));
 
-        return trim('Nama: '.($c['name'] ?? $conv->wa_name ?? '-').'. Pesan terakhir: '.mb_substr((string) $last, 0, 160).'. State: '.$conv->state.'.');
+        return trim(
+            'Nama: '.($c['name'] ?? $conv->wa_name ?? '-').'.'
+            .($need !== '' ? ' Kebutuhan terdeteksi: '.$need.'.' : '')
+            .' Pesan terakhir: '.mb_substr((string) $last, 0, 160).'. State: '.$conv->state.'.'
+        );
+    }
+
+    protected function hasWaProfileColumn(): bool
+    {
+        static $has = null;
+        if ($has === null) {
+            $has = Schema::hasColumn('wa_conversations', 'customer_profile');
+        }
+        return $has;
+    }
+
+    protected function readNeedProfile(object $conv): array
+    {
+        if ($this->hasWaProfileColumn() && !empty($conv->customer_profile)) {
+            $decoded = is_array($conv->customer_profile)
+                ? $conv->customer_profile
+                : json_decode((string) $conv->customer_profile, true);
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+        }
+        $collected = $this->collected($conv);
+        return is_array($collected['_needs_profile'] ?? null) ? $collected['_needs_profile'] : [];
+    }
+
+    protected function saveNeedProfile(object $conv, array $profile, bool $simulate): void
+    {
+        if (empty($profile)) {
+            return;
+        }
+        $conv->customer_profile = json_encode($profile, JSON_UNESCAPED_UNICODE);
+        if ($simulate || empty($conv->id)) {
+            return;
+        }
+        if ($this->hasWaProfileColumn()) {
+            DB::table('wa_conversations')->where('id', $conv->id)->update([
+                'customer_profile' => $conv->customer_profile,
+                'updated_at' => now(),
+            ]);
+            return;
+        }
+        // Fallback aman sebelum migrasi berjalan: simpan di kolom JSON collected['_needs_profile']
+        $collected = $this->collected($conv);
+        $collected['_needs_profile'] = $profile;
+        $conv->collected = json_encode($collected, JSON_UNESCAPED_UNICODE);
+        DB::table('wa_conversations')->where('id', $conv->id)->update([
+            'collected' => $conv->collected,
+            'updated_at' => now(),
+        ]);
     }
 
     protected function textFromReply(string $id, string $text): string

@@ -56,19 +56,31 @@ class LivoraAssistant
      * kunci pencarian, bukan mengganti kata kunci asli user.
      */
     private const KEYWORD_SYNONYMS = [
-        'meja'    => ['table'],
-        'kursi'   => ['chair'],
-        'sofa'    => ['couch'],
-        'lemari'  => ['cabinet', 'wardrobe', 'closet'],
-        'rak'     => ['shelf', 'shelving', 'rack'],
-        'tidur'   => ['bed'],
-        'kasur'   => ['mattress', 'bed'],
-        'lampu'   => ['lamp', 'light', 'lighting'],
-        'karpet'  => ['rug', 'carpet'],
-        'cermin'  => ['mirror'],
-        'bantal'  => ['pillow', 'cushion'],
-        'gorden'  => ['curtain'],
-        'partisi' => ['partition', 'divider'],
+        'meja'        => ['table', 'desk', 'console'],
+        'kursi'       => ['chair', 'armchair', 'stool', 'bench'],
+        'sofa'        => ['couch', 'sectional'],
+        'lemari'      => ['cabinet', 'wardrobe', 'closet', 'credenza'],
+        'rak'         => ['shelf', 'shelving', 'rack'],
+        'tidur'       => ['bed', 'bedroom'],
+        'ranjang'     => ['bed', 'bedroom'],
+        'kasur'       => ['mattress', 'bed'],
+        'nakas'       => ['bedside', 'nightstand'],
+        'lampu'       => ['lamp', 'light', 'lighting', 'pendant'],
+        'karpet'      => ['rug', 'carpet'],
+        'cermin'      => ['mirror'],
+        'bantal'      => ['pillow', 'cushion'],
+        'gorden'      => ['curtain'],
+        'partisi'     => ['partition', 'divider'],
+        'marmer'      => ['marble'],
+        'batu'        => ['stone', 'travertine', 'limestone'],
+        'kayu'        => ['wood', 'oak', 'walnut', 'teak', 'ash'],
+        'kulit'       => ['leather'],
+        'kain'        => ['fabric', 'linen', 'boucle', 'velvet'],
+        'tamu'        => ['living', 'lounge'],
+        'makan'       => ['dining'],
+        'kamar'       => ['bedroom', 'bed'],
+        'kantor'      => ['office', 'workspace', 'executive'],
+        'aksesoris'   => ['accessories', 'accent', 'decor'],
     ];
 
     /**
@@ -220,6 +232,8 @@ TXT;
                 'reply' => 'Maaf, sistem kami sedang mengalami gangguan sementara 🙏 Saya hubungkan langsung ke customer service kami ya.',
                 'needs_escalation' => true,
                 'recommendations' => [],
+                'quick_replies' => [],
+                'learned_profile' => (array) ($options['customer_profile'] ?? []),
                 'show_consultation' => false,
             ];
         }
@@ -232,12 +246,15 @@ TXT;
                 'reply' => 'Sepertinya ada beberapa pesan yang sama terkirim berturut-turut dalam waktu singkat 🙏 Boleh tunggu sebentar ya sebelum lanjut chat lagi — kalau butuh bantuan segera, saya hubungkan langsung ke customer service kami sekarang.',
                 'needs_escalation' => true,
                 'recommendations' => [],
+                'quick_replies' => [],
+                'learned_profile' => (array) ($options['customer_profile'] ?? []),
                 'show_consultation' => false,
             ];
         }
 
+        $existingProfile = (array) ($options['customer_profile'] ?? []);
         $context = $this->buildContext($message, $options);
-        $systemPrompt = $this->systemPrompt($context);
+        $systemPrompt = $this->systemPrompt($context, $existingProfile, $options);
 
         $contents = [];
         foreach ($history as $h) {
@@ -256,6 +273,8 @@ TXT;
                 'reply' => 'Maaf, asisten AI kami sedang tidak aktif. Mau saya hubungkan ke customer service Livora?',
                 'needs_escalation' => true,
                 'recommendations' => [],
+                'quick_replies' => [],
+                'learned_profile' => CustomerNeedProfile::merge($existingProfile, [], $message),
                 'show_consultation' => false,
             ];
         }
@@ -267,6 +286,8 @@ TXT;
                 'reply' => 'Maaf, asisten AI kami sedang tidak aktif. Mau saya hubungkan ke customer service Livora?',
                 'needs_escalation' => true,
                 'recommendations' => [],
+                'quick_replies' => [],
+                'learned_profile' => CustomerNeedProfile::merge($existingProfile, [], $message),
                 'show_consultation' => false,
             ];
         }
@@ -280,7 +301,7 @@ TXT;
                 'contents'           => $contents,
                 'generationConfig'   => [
                     'responseMimeType' => 'application/json',
-                    'maxOutputTokens'  => 1536,
+                    'maxOutputTokens'  => 1800,
                     'thinkingConfig'   => ['thinkingLevel' => 'low'],
                 ],
             ]);
@@ -314,23 +335,34 @@ TXT;
                     'reply' => $rawText !== '' ? $rawText : 'Maaf, saya belum bisa menjawab itu. Mau saya hubungkan ke customer service kami?',
                     'needs_escalation' => $rawText === '',
                     'recommendations' => [],
+                    'quick_replies' => [],
+                    'learned_profile' => CustomerNeedProfile::merge($existingProfile, [], $message),
                     'show_consultation' => false,
                 ];
             }
 
             $recommendations = $this->resolveRecommendations($parsed['recommendations'] ?? []);
+            $quickReplies = $this->sanitizeQuickReplies($parsed['quick_replies'] ?? []);
+            $learnedProfile = CustomerNeedProfile::merge(
+                $existingProfile,
+                is_array($parsed['learned_profile'] ?? null) ? $parsed['learned_profile'] : [],
+                $message,
+            );
 
             Log::info('LivoraAssistant reply', [
                 'request_id' => $requestId,
                 'duration_ms' => round((microtime(true) - $startedAt) * 1000),
                 'needs_escalation' => (bool) ($parsed['needs_escalation'] ?? false),
                 'recommendation_count' => count($recommendations),
+                'profile_keys' => array_keys($learnedProfile),
             ]);
 
             return [
                 'reply' => (string) $parsed['reply'],
                 'needs_escalation' => (bool) ($parsed['needs_escalation'] ?? false),
                 'recommendations' => $recommendations,
+                'quick_replies' => $quickReplies,
+                'learned_profile' => $learnedProfile,
                 'show_consultation' => (bool) ($parsed['show_consultation'] ?? false),
             ];
         } catch (\Throwable $e) {
@@ -339,6 +371,8 @@ TXT;
                 'reply' => 'Maaf, saya sedang tidak bisa memproses pertanyaan itu. Mau saya hubungkan ke customer service kami?',
                 'needs_escalation' => true,
                 'recommendations' => [],
+                'quick_replies' => [],
+                'learned_profile' => CustomerNeedProfile::merge($existingProfile, [], $message),
                 'show_consultation' => false,
             ];
         }
@@ -429,80 +463,97 @@ TXT;
         return false;
     }
 
-    private function systemPrompt(string $context): string
+    private function systemPrompt(string $context, array $customerProfile = [], array $options = []): string
     {
         $brand = self::BRAND_PROFILE;
         $siteGuide = self::SITE_GUIDE;
+        $profileText = CustomerNeedProfile::toPromptText($customerProfile);
+
+        $browsingLines = [];
+        if (!empty($options['page_path'])) {
+            $browsingLines[] = 'Halaman yang sedang dibuka user: ' . $options['page_path'];
+        }
+        if (!empty($options['category_slug'])) {
+            $browsingLines[] = 'Kategori yang sedang dilihat: ' . $options['category_slug'];
+        }
+        if (!empty($options['wishlist_titles']) && is_array($options['wishlist_titles'])) {
+            $browsingLines[] = 'Produk yang sudah disimpan user di Wishlist: ' . implode(', ', array_slice($options['wishlist_titles'], 0, 6));
+        }
+        $browsingContext = empty($browsingLines) ? 'Tidak ada konteks halaman khusus.' : implode("\n", $browsingLines);
 
         return <<<PROMPT
-Kamu adalah Livora Concierge, asisten AI resmi showroom Livora (di bawah PT. Langgeng Cipta Ruang).
+Kamu adalah "Livi", Design & Furniture Concierge (asisten AI resmi) showroom Livora (di bawah PT. Langgeng Cipta Ruang).
 
-Peranmu: menjawab pertanyaan tentang profil perusahaan, layanan, alur kerja, dan product knowledge
-(furniture, material, finishing, koleksi, project) berdasarkan informasi di bawah; mengarahkan user
-— terutama yang baru pertama kali — dengan langkah yang jelas berdasarkan "Panduan Navigasi
-Website"; sekaligus merekomendasikan konten yang relevan (furniture / collection / catalog /
-project) supaya user bisa langsung melihat kartu visualnya di chat.
+Peranmu:
+1. Memahami kebutuhan ruang, gaya hidup, selera material, dan masalah desain yang sebenarnya sedang dialami user — layaknya interior advisor showroom kelas atas yang hangat, cerdas, dan peka.
+2. Menjawab pertanyaan tentang profil showroom, layanan, alur kerja, dan product knowledge (furniture, material, finishing, koleksi, project) secara akurat berdasarkan data di bawah.
+3. Aktif mempelajari kebutuhan user di setiap giliran percakapan (menyimpan ke field "learned_profile"), lalu memanfaatkan pemahaman itu agar rekomendasi dan jawaban makin presisi dari waktu ke waktu.
+4. Merekomendasikan produk/koleksi/katalog/project yang paling cocok lengkap dengan alasan singkat ("reason") kenapa pilihan itu pas dengan kebutuhan user.
+5. Menutup jawaban dengan langkah lanjutan yang natural: jika kebutuhan user masih terlalu umum, ajukan MAKSIMAL 1 pertanyaan klarifikasi singkat & relevan (mis. ruangan apa, kapasitas duduk, atau nuansa warna/material yang disuka) agar kamu makin paham — jangan pernah terdengar seperti formulir interogasi!
 
 Aturan jawaban:
-- Livora adalah SHOWROOM di bawah PT. Langgeng Cipta Ruang. WAJIB pakai istilah "showroom" saat
-  menjelaskan Livora — JANGAN PERNAH menyebutnya "design studio" berdiri sendiri atau "Livora
-  Studio". JANGAN PERNAH bilang Livora berasal dari atau berpusat di Bandung — showroom kami ada
-  di Jakarta Selatan tepatnya di Jl. Bangka Raya No. 45 Pela Mampang, Kec. Mampang Prapatan.
-- Untuk pertanyaan profil/layanan/alur kerja/lokasi showroom/kontak, jawab dari bagian "Profil
-  Livora".
-- Untuk pertanyaan "gimana cara pakai website ini", "mulai dari mana", minta tur singkat, atau
-  bingung mau mulai konsultasi dari mana, jawab pakai langkah-langkah di bagian "Panduan Navigasi
-  Website" di bawah — ringkas, jelas, dan urut. Sertakan "recommendations" kalau ada konten yang
-  cocok dijadikan contoh konkret (misalnya satu collection/catalog unggulan), dan set
-  "show_consultation" true kalau langkah berikutnya yang tepat adalah booking konsultasi.
-- Untuk pertanyaan produk, jawab dari bagian "Data produk relevan". Jangan mengarang spesifikasi,
-  dimensi, stok, atau harga yang tidak tercantum.
-- Harga tidak pernah disebut angka pastinya. Kalau user tanya harga/penawaran/diskon, jelaskan
-  bahwa harga ditentukan lewat konsultasi, lalu set needs_escalation true.
-- Kalau data produk yang relevan kosong, katakan jujur kamu belum punya detail spesifiknya dan
-  tawarkan bantuan customer service (needs_escalation true).
-- Set needs_escalation true bila user minta jadwal survey, komplain, negosiasi, pemesanan, atau
-  eksplisit minta bicara dengan manusia/CS.
-- BAHASA (aturan wajib): selalu balas dalam bahasa yang dipakai user pada pesan terakhirnya.
-  User menulis Bahasa Indonesia → jawab penuh Bahasa Indonesia. User menulis bahasa Inggris →
-  jawab penuh bahasa Inggris (natural, bukan hasil terjemahan kaku). Campur ID+EN → ikuti bahasa
-  yang paling dominan. Jangan pernah mencampur dua bahasa dalam satu jawaban, dan jangan
-  menerjemahkan nama produk, nama koleksi, atau nama merek. Nada tetap hangat, ringkas, profesional.
-
-- Jawaban maksimal ~120 kata, boleh pakai bullet pendek.
-- JANGAN PERNAH menulis URL atau menyebut nama file gambar di dalam teks "reply". Semua link dan
-  gambar HANYA lewat field "recommendations" di bawah — sistem yang akan mengisi gambar & link asli.
+- Livora adalah SHOWROOM di bawah PT. Langgeng Cipta Ruang. WAJIB pakai istilah "showroom" saat menjelaskan Livora — JANGAN PERNAH menyebutnya "design studio" berdiri sendiri atau "Livora Studio" atau "Livora Architechture". JANGAN PERNAH bilang Livora berasal dari atau berpusat di Bandung — showroom kami ada di Jakarta Selatan tepatnya di Jl. Bangka Raya No. 45 Pela Mampang, Kec. Mampang Prapatan.
+- Untuk pertanyaan profil/layanan/alur kerja/lokasi showroom/kontak, jawab dari bagian "Profil Livora".
+- Untuk pertanyaan "gimana cara pakai website ini", "mulai dari mana", atau bingung mulai konsultasi, jawab ringkas & urut pakai "Panduan Navigasi Website", sertakan "recommendations" bila relevan, dan set "show_consultation" true bila tepat.
+- Untuk pertanyaan produk, jawab dari bagian "Data produk relevan". Jangan mengarang spesifikasi, dimensi, stok, atau harga yang tidak tercantum.
+- Harga tidak pernah disebut angka pastinya. Kalau user tanya harga/penawaran/diskon, jelaskan hangat bahwa harga ditentukan lewat konsultasi karena bergantung material, dimensi, dan finishing — tetap tampilkan rekomendasi produknya bila ada di context, lalu set needs_escalation true.
+- Kalau data produk yang relevan kosong, katakan jujur kamu belum punya detail spesifiknya dan tawarkan bantuan tim/CS (needs_escalation true).
+- Set needs_escalation true bila user minta jadwal survey, komplain, negosiasi, pemesanan langsung, atau eksplisit minta bicara dengan manusia/CS.
+- Gunakan "Profil Kebutuhan User" dan "Konteks Halaman" di bawah secara natural (mis. bila user sudah pernah bilang suka ruang tamu modern atau menyimpan barang di wishlist, sesuaikan rekomendasimu tanpa membocorkan istilah teknis JSON/database).
+- BAHASA (aturan wajib): selalu balas dalam bahasa yang dipakai user pada pesan terakhirnya. User menulis Bahasa Indonesia → jawab penuh Bahasa Indonesia. User menulis bahasa Inggris → jawab penuh bahasa Inggris (natural). Campur ID+EN → ikuti bahasa paling dominan. Jangan mencampur dua bahasa atau menerjemahkan nama produk/koleksi/merek. Nada hangat, elegan, ringkas, profesional.
+- Jawaban maksimal ~130 kata, boleh pakai bullet pendek yang rapi.
+- JANGAN PERNAH menulis URL atau nama file gambar di dalam teks "reply". Semua link dan gambar HANYA lewat field "recommendations".
 
 Aturan rekomendasi (field "recommendations"):
-- Setiap entri WAJIB pakai "slug" yang benar-benar tercantum di bagian "Data produk relevan" di
-  bawah (lihat "Slug: ..." pada tiap baris [Item]/[Collection]/[Catalog]/[Project]). JANGAN mengarang
-  slug yang tidak ada di context.
-- Maksimal 6 rekomendasi. WAJIB: kalau user menyebut lebih dari satu jenis barang dalam satu
-  pesan (misal "sofa dan meja", "kursi, lampu, karpet"), kirim minimal satu rekomendasi UNTUK
-  SETIAP jenis yang diminta — jangan hanya menjawab jenis pertama. Perhatikan penanda
-  [Item · permintaan "..."] di context untuk tahu barang itu mewakili permintaan yang mana.
-  Sebutkan juga tiap jenis itu di teks "reply".
-
+- Setiap entri WAJIB pakai "slug" yang benar-benar tercantum di "Data produk relevan" (lihat "Slug: ..."). JANGAN mengarang slug.
+- Maksimal 6 rekomendasi. WAJIB: kalau user menyebut lebih dari satu jenis barang ("sofa dan meja"), kirim minimal satu rekomendasi UNTUK SETIAP jenis yang diminta.
+- Tambahkan field "reason" (maks 10 kata) yang menjelaskan singkat kenapa item/koleksi itu cocok dengan kebutuhan user.
 - "type" harus salah satu dari: "item", "collection", "catalog", "project".
-- Kalau user bertanya soal suasana/gaya ruangan ("cozy", "tenang", "scandinavian", "minimalis") →
-  rekomendasikan "collection" atau "catalog" yang relevan.
-- Kalau user bertanya soal barang spesifik ("sofa", "meja kopi", "kursi makan") → rekomendasikan
-  "item".
-- Kalau user minta lihat portofolio/project → rekomendasikan "project".
-- Kalau tidak ada yang benar-benar relevan di context, kirim array kosong — jangan memaksakan.
+- Suasana/gaya ruangan ("cozy", "japandi", "minimalis") → rekomendasikan "collection" atau "catalog".
+- Barang spesifik ("sofa", "meja kopi", "kursi") → rekomendasikan "item".
+- Portofolio/project → rekomendasikan "project".
+- Kalau tidak ada yang benar-benar relevan, kirim array kosong.
 
-Set "show_consultation" true kalau user tampak siap lanjut ke tahap konsultasi (misalnya sudah
-menentukan pilihan, atau minta booking/jadwal).
+Aturan "quick_replies":
+- Kirim 2–3 saran balasan lanjutan singkat (masing-masing maks 6 kata, dalam bahasa yang sama dengan user) yang paling membantu user melangkah lebih jauh (mis. mempersempit gaya/ruangan, membandingkan material, atau lanjut konsultasi). Jangan pakai kalimat generik yang sama terus.
+
+Aturan "learned_profile":
+- Isi HANYA field yang benar-benar terungkap dari percakapan ini (biarkan null atau [] bila belum disebut — jangan mengarang!).
+- "core_need_summary": rangkum dalam 1 kalimat singkat apa kebutuhan paling utama user saat ini (gabungkan info lama + info baru).
+
+Set "show_consultation" true kalau user tampak siap lanjut ke tahap konsultasi (sudah mengerucutkan pilihan, tanya layanan interior/kontraktor, atau minta booking/jadwal).
 
 Balas HANYA JSON valid, tanpa teks lain, dengan format persis ini:
 {
-  "reply": "isi jawaban natural, tanpa URL/nama file",
+  "reply": "isi jawaban natural, hangat, konsultatif, tanpa URL/nama file",
   "needs_escalation": true atau false,
   "show_consultation": true atau false,
   "recommendations": [
-    {"type": "item atau collection atau catalog atau project", "slug": "slug-yang-ada-di-context"}
-  ]
+    {"type": "item atau collection atau catalog atau project", "slug": "slug-yang-ada-di-context", "reason": "alasan singkat kenapa cocok"}
+  ],
+  "quick_replies": [
+    "pilihan lanjutan 1",
+    "pilihan lanjutan 2"
+  ],
+  "learned_profile": {
+    "project_type": null,
+    "rooms": [],
+    "furniture_needs": [],
+    "style_preferences": [],
+    "material_color_prefs": [],
+    "service_interest": null,
+    "space_or_dimension": null,
+    "timeline": null,
+    "location": null,
+    "core_need_summary": null
+  }
 }
+
+Profil Kebutuhan User yang Sudah Livi Pelajari:
+{$profileText}
+
+Konteks Halaman & Minat User Saat Ini:
+{$browsingContext}
 
 Profil Livora:
 {$brand}
@@ -516,8 +567,8 @@ PROMPT;
     }
 
     /**
-     * Ubah daftar {type, slug} dari model menjadi kartu lengkap (judul, gambar,
-     * url) dengan query ulang ke database. Slug yang tidak ditemukan di-skip
+     * Ubah daftar {type, slug, reason?} dari model menjadi kartu lengkap (judul, gambar,
+     * url, reason) dengan query ulang ke database. Slug yang tidak ditemukan di-skip
      * diam-diam (bukan error) supaya tidak ada card kosong/rusak yang tampil.
      */
     private function resolveRecommendations(array $items): array
@@ -527,6 +578,9 @@ PROMPT;
         foreach (array_slice($items, 0, 6) as $rec) {
             $type = is_array($rec) ? ($rec['type'] ?? null) : null;
             $slug = is_array($rec) ? ($rec['slug'] ?? null) : null;
+            $reason = is_array($rec) && is_scalar($rec['reason'] ?? null)
+                ? trim((string) $rec['reason'])
+                : null;
             if (!$type || !$slug || !isset(self::FRONTEND_PATHS[$type])) {
                 continue;
             }
@@ -540,11 +594,42 @@ PROMPT;
             };
 
             if ($card) {
+                if ($reason) {
+                    $card['reason'] = mb_substr($reason, 0, 90);
+                }
                 $cards[] = $card;
             }
         }
 
         return $cards;
+    }
+
+    private function sanitizeQuickReplies(mixed $raw): array
+    {
+        if (!is_array($raw)) {
+            return [];
+        }
+        $out = [];
+        $seen = [];
+        foreach ($raw as $entry) {
+            if (!is_scalar($entry)) {
+                continue;
+            }
+            $text = trim((string) $entry);
+            if ($text === '' || mb_strlen($text) > 70) {
+                continue;
+            }
+            $key = mb_strtolower($text);
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $out[] = $text;
+            if (count($out) >= 3) {
+                break;
+            }
+        }
+        return $out;
     }
 
     private function cardFromItem(string $slug): ?array
@@ -668,14 +753,14 @@ PROMPT;
         return str_starts_with($path, '/storage/') ? $path : '/storage' . $path;
     }
 
-    /** Retrieval dari database + item yang sedang dilihat user (kalau ada). */
+    /** Retrieval dari database + konteks halaman + profil kebutuhan user yang dipelajari. */
     public function buildContext(string $message, array $options = []): string
     {
         $chunks = [];
 
         $focusSlug = $options['item_slug'] ?? null;
         if ($focusSlug) {
-            $item = Item::query()->where('slug', $focusSlug)->first();
+            $item = Item::query()->with(['type', 'collection'])->where('slug', $focusSlug)->first();
             if ($item) {
                 $chunks[] = '[Item yang sedang dilihat user] ' . $this->describeItem($item);
             }
@@ -684,16 +769,29 @@ PROMPT;
         $keywords = $this->extractKeywords($message);
         $intent = (new \App\Services\IntentClassifier())->classify($message);
 
+        // Perkuat keyword dari kategori halaman aktif atau profil kebutuhan yang sudah dipelajari
+        // bila pesan user pendek/kontekstual (mis. "yang warna terang ada?", "bagus yang mana?")
+        $extraHints = [];
+        if (!empty($options['category_slug']) && is_string($options['category_slug'])) {
+            $extraHints[] = $options['category_slug'];
+        }
+        if (count($keywords) <= 2 && !empty($options['customer_profile']) && is_array($options['customer_profile'])) {
+            $extraHints = array_merge($extraHints, CustomerNeedProfile::toSearchTerms($options['customer_profile']));
+        }
+        if (!empty($extraHints)) {
+            $keywords = array_slice(
+                array_values(array_unique(array_merge($keywords, $this->extractKeywords(implode(' ', $extraHints))))),
+                0,
+                14,
+            );
+        }
+
         if (!empty($keywords)) {
-            // product_search / general → boleh query Item (style_mood skip,
-            // karena user tanya suasana/gaya, bukan barang spesifik)
+            // product_search / general → query Item termasuk type.name, collection.name, material_detail
             if (in_array($intent, [
                 \App\Services\IntentClassifier::PRODUCT_SEARCH,
                 \App\Services\IntentClassifier::GENERAL,
             ], true)) {
-                // Kalau user minta beberapa jenis barang sekaligus ("sofa dan meja"),
-                // jalankan query TERPISAH untuk tiap jenis supaya semua permintaan
-                // terwakili — bukan cuma jenis pertama yang kebetulan match duluan.
                 $groups = $this->keywordGroups($keywords);
                 $seen = [];
 
@@ -706,7 +804,10 @@ PROMPT;
                                 $q->orWhere('title', 'like', "%{$kw}%")
                                   ->orWhere('description', 'like', "%{$kw}%")
                                   ->orWhere('texture', 'like', "%{$kw}%")
-                                  ->orWhere('finish', 'like', "%{$kw}%");
+                                  ->orWhere('finish', 'like', "%{$kw}%")
+                                  ->orWhere('material_detail', 'like', "%{$kw}%")
+                                  ->orWhereHas('type', fn ($tq) => $tq->where('name', 'like', "%{$kw}%")->orWhere('slug', 'like', "%{$kw}%"))
+                                  ->orWhereHas('collection', fn ($cq) => $cq->where('name', 'like', "%{$kw}%"));
                             }
                         })
                         ->with(['type', 'collection'])
@@ -878,6 +979,10 @@ PROMPT;
         $parts[] = "Nama: {$item->title}";
         if ($typeName) $parts[] = "Kategori: {$typeName}";
         if ($collectionName) $parts[] = "Koleksi: {$collectionName}";
+        if ($item->width_cm && $item->depth_cm && $item->height_cm) {
+            $parts[] = 'Dimensi: ' . round((float) $item->width_cm) . 'x' . round((float) $item->depth_cm) . 'x' . round((float) $item->height_cm) . ' cm';
+        }
+        if ($item->material_detail) $parts[] = "Material: {$item->material_detail}";
         if ($item->description) $parts[] = "Deskripsi: {$item->description}";
         if ($item->texture) $parts[] = "Tekstur: {$item->texture}";
         if ($item->finish) $parts[] = "Finishing: {$item->finish}";

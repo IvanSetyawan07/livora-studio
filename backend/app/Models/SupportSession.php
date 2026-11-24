@@ -16,15 +16,16 @@ class SupportSession extends Model
 
     protected $fillable = [
         'visitor_id', 'user_id', 'name', 'email', 'ip_address', 'visitor_number', 'status', 'admin_id',
-        'request_reason', 'requested_at', 'accepted_at', 'closed_at',
+        'request_reason', 'customer_profile', 'requested_at', 'accepted_at', 'closed_at',
         'last_message_at', 'unread_admin', 'unread_user',
     ];
 
     protected $casts = [
-        'requested_at'    => 'datetime',
-        'accepted_at'     => 'datetime',
-        'closed_at'       => 'datetime',
-        'last_message_at' => 'datetime',
+        'customer_profile' => 'array',
+        'requested_at'     => 'datetime',
+        'accepted_at'      => 'datetime',
+        'closed_at'        => 'datetime',
+        'last_message_at'  => 'datetime',
     ];
 
     public function messages()

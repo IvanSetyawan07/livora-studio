@@ -42,16 +42,18 @@ class IntentClassifier
 
     /** Kata kunci barang furniture spesifik. */
     private const PRODUCT_PATTERNS = [
-        'sofa', 'meja', 'kursi', 'lemari', 'rak', 'tempat tidur', 'kasur',
-        'lampu', 'karpet', 'cermin', 'bantal', 'gorden', 'partisi',
-        'coffee table', 'dining', 'wardrobe', 'cabinet',
+        'sofa', 'couch', 'sectional', 'meja', 'table', 'kursi', 'chair', 'armchair', 'stool',
+        'lemari', 'cabinet', 'credenza', 'wardrobe', 'rak', 'shelf', 'tempat tidur', 'ranjang',
+        'kasur', 'bed', 'lampu', 'lamp', 'lighting', 'karpet', 'rug', 'cermin', 'mirror',
+        'bantal', 'cushion', 'gorden', 'partisi', 'coffee table', 'dining', 'side table',
+        'console', 'nakas', 'bedside', 'tv cabinet', 'bench',
     ];
 
     /**
      * Klasifikasi satu pesan menjadi salah satu konstanta intent di atas.
-     * Urutan pengecekan sengaja company_info dulu (paling spesifik/beresiko
-     * kalau salah kategori — misal soal harga/booking harus selalu kena ini
-     * duluan sebelum sempat dianggap product_search).
+     * Jika user menyebut info perusahaan/harga sekaligus menyebut barang atau gaya spesifik
+     * (mis. "harga sofa ruang tamu modern"), kembalikan GENERAL agar retrieval produk/koleksi
+     * tetap berjalan sambil tetap menjelaskan kebijakan konsultasi/harga.
      */
     public function classify(string $message): string
     {
@@ -61,18 +63,21 @@ class IntentClassifier
             return self::GENERAL;
         }
 
-        if ($this->matchesAny($text, self::COMPANY_INFO_PATTERNS)) {
+        $hasCompany   = $this->matchesAny($text, self::COMPANY_INFO_PATTERNS);
+        $hasPortfolio = $this->matchesAny($text, self::PORTFOLIO_PATTERNS);
+        $hasProduct   = $this->matchesAny($text, self::PRODUCT_PATTERNS);
+        $hasStyle     = $this->matchesAny($text, self::STYLE_MOOD_PATTERNS);
+
+        if ($hasCompany) {
+            if ($hasProduct || $hasStyle || $hasPortfolio) {
+                return self::GENERAL;
+            }
             return self::COMPANY_INFO;
         }
 
-        if ($this->matchesAny($text, self::PORTFOLIO_PATTERNS)) {
+        if ($hasPortfolio && !$hasProduct) {
             return self::PORTFOLIO;
         }
-
-        // Kalau pesan menyebut barang spesifik DAN gaya, tetap anggap
-        // product_search — user tetap ingin lihat barang, gaya cuma filter.
-        $hasProduct = $this->matchesAny($text, self::PRODUCT_PATTERNS);
-        $hasStyle = $this->matchesAny($text, self::STYLE_MOOD_PATTERNS);
 
         if ($hasProduct) {
             return self::PRODUCT_SEARCH;

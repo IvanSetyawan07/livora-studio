@@ -45,6 +45,11 @@ section[id] { scroll-margin-top: 96px; }
     --livora-charcoal: 30 8% 12%;
     --livora-ink: 30 10% 8%;
 
+    /* LIVORA Official Brand Typography */
+    --font-header: 'Tenor Sans', system-ui, sans-serif;
+    --font-accent: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+    --font-body: 'Questrial', system-ui, -apple-system, sans-serif;
+
     --shadow-soft: 0 30px 80px -40px hsl(30 10% 15% / 0.25);
     --shadow-elegant: 0 20px 60px -20px hsl(30 15% 20% / 0.18);
 
@@ -89,14 +94,39 @@ section[id] { scroll-margin-top: 96px; }
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
-    font-feature-settings: 'ss01', 'cv11';
+    font-family: var(--font-body);
     overflow-x: clip;
   }
-  h1, h2, h3, .serif {
-    font-family: 'Cormorant Garamond', 'Times New Roman', serif;
-    letter-spacing: -0.01em;
+
+  /* Header: Tenor Sans */
+  h1, h2, h3, h4, .font-header, .serif {
+    font-family: var(--font-header);
+    letter-spacing: -0.015em;
   }
+
+  /* Accent: Cormorant Garamond (editorial italic accents inside headers, quotes, and .font-accent) */
+  h1 em,
+  h1 .italic,
+  h2 em,
+  h2 .italic,
+  h3 em,
+  h3 .italic,
+  h4 em,
+  h4 .italic,
+  .serif em,
+  .serif .italic {
+    font-family: var(--font-accent);
+    font-size: 1.07em;
+    letter-spacing: -0.005em;
+  }
+
+  .serif.italic,
+  .font-accent,
+  blockquote {
+    font-family: var(--font-accent);
+    letter-spacing: 0;
+  }
+
   ::selection { background: hsl(var(--livora-bronze) / 0.3); }
 }
 

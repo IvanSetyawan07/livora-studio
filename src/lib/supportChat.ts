@@ -11,10 +11,24 @@ export interface SupportMessage {
   created_at?: string;
 }
 
+export interface CustomerNeedProfile {
+  project_type?: string;
+  rooms?: string[];
+  furniture_needs?: string[];
+  style_preferences?: string[];
+  material_color_prefs?: string[];
+  service_interest?: string;
+  space_or_dimension?: string;
+  timeline?: string;
+  location?: string;
+  core_need_summary?: string;
+}
+
 export interface SupportSessionInfo {
   id: number;
   status: SupportStatus;
   admin_name?: string | null;
+  customer_profile?: CustomerNeedProfile | null;
   requested_at?: string | null;
   accepted_at?: string | null;
 }
@@ -80,7 +94,12 @@ export async function fetchMessages(sessionId: number, since = 0) {
 export async function sendMessage(
   sessionId: number,
   text: string,
-  ctx?: { item_slug?: string; item_name?: string },
+  ctx?: {
+    item_slug?: string;
+    item_name?: string;
+    page_path?: string;
+    category_slug?: string;
+  },
 ) {
   const { data } = await api.post(`/support/sessions/${sessionId}/messages`, {
     visitor_id: getVisitorId(),

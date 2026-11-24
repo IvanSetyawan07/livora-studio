@@ -165,13 +165,19 @@ public function destroy(SupportSession $session)
 
     private function sessionData(SupportSession $session): array
     {
+        $profile = \Illuminate\Support\Facades\Schema::hasColumn('support_sessions', 'customer_profile')
+            ? ($session->customer_profile ?? [])
+            : [];
+
         return [
-            'id'           => $session->id,
-            'status'       => $session->status,
-            'name'         => $session->name,
-            'email'        => $session->email,
-            'display_name' => $this->displayName($session),
-            'admin_name'   => optional($session->admin)->name,
+            'id'               => $session->id,
+            'status'           => $session->status,
+            'name'             => $session->name,
+            'email'            => $session->email,
+            'display_name'     => $this->displayName($session),
+            'admin_name'       => optional($session->admin)->name,
+            'customer_profile' => $profile,
+            'needs_summary'    => \App\Services\CustomerNeedProfile::toHandoffNote(is_array($profile) ? $profile : []),
         ];
     }
 

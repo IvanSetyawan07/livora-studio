@@ -14,6 +14,14 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ["'Questrial'", "system-ui", "-apple-system", "sans-serif"],
+        body: ["'Questrial'", "system-ui", "-apple-system", "sans-serif"],
+        header: ["'Tenor Sans'", "system-ui", "sans-serif"],
+        display: ["'Tenor Sans'", "system-ui", "sans-serif"],
+        accent: ["'Cormorant Garamond'", "Georgia", "'Times New Roman'", "serif"],
+        serif: ["'Cormorant Garamond'", "Georgia", "'Times New Roman'", "serif"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

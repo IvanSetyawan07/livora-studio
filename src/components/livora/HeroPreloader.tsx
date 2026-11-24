@@ -152,8 +152,8 @@ export default function HeroPreloader() {
               </div>
               <div
                 style={{
-                  fontFamily: "'Cormorant Garamond', serif",
-                  fontWeight: 500,
+                  fontFamily: "var(--font-header)",
+                  fontWeight: 400,
                   fontSize: "28px",
                   letterSpacing: "0.18em",
                   marginTop: "4px",

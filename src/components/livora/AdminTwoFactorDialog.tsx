@@ -77,7 +77,7 @@ export default function AdminTwoFactorDialog({ challenge, onSuccess, onCancel }:
       role="dialog"
       aria-modal="true"
       aria-labelledby="admin-2fa-title"
-      style={{ fontFamily: "'Work Sans', system-ui, sans-serif" }}
+      style={{ fontFamily: "var(--font-body)" }}
     >
       <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#C9974A]/10 text-[#C9974A]">

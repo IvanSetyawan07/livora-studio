@@ -77,7 +77,7 @@ function ImageWording({ isLogin }: { isLogin: boolean }) {
         <h2
           className="leading-[1.1]"
           style={{
-            fontFamily: "'Cormorant Garamond', serif",
+            fontFamily: "var(--font-header)",
             fontWeight: 400,
             fontSize: "clamp(2.8rem, 5vw, 4.8rem)",
           }}
@@ -132,7 +132,7 @@ function MobileWording({ isLogin }: { isLogin: boolean }) {
         <h2
           className="leading-[1.05]"
           style={{
-            fontFamily: "'Cormorant Garamond', serif",
+            fontFamily: "var(--font-header)",
             fontWeight: 400,
             fontSize: "clamp(2.1rem, 8.5vw, 2.75rem)",
           }}
@@ -362,7 +362,7 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
             </div>
             <div
               className="text-[18px] tracking-[0.16em] leading-none mt-0.5"
-              style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
+              style={{ fontFamily: "var(--font-header)", fontWeight: 400 }}
             >
               LIVORA
             </div>
@@ -425,7 +425,7 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
                 >
                   <h1
                     className="text-[24px] leading-tight text-neutral-900"
-                    style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
+                    style={{ fontFamily: "var(--font-header)", fontWeight: 400 }}
                   >
                     Glad to see you again.
                   </h1>
@@ -552,7 +552,7 @@ function MobileAuthSheet(props: MobileAuthSheetProps) {
                 >
                   <h1
                     className="text-[24px] leading-tight text-neutral-900"
-                    style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
+                    style={{ fontFamily: "var(--font-header)", fontWeight: 400 }}
                   >
                     Create your account.
                   </h1>
@@ -1049,7 +1049,7 @@ export default function Auth() {
   return (
      <div
       className="min-h-screen w-full flex items-center justify-center lg:px-4 lg:pb-4 lg:pt-20"
-      style={{ backgroundColor: "#ffffff", fontFamily: "'Work Sans', system-ui, sans-serif" }}
+      style={{ backgroundColor: "#ffffff", fontFamily: "var(--font-body)" }}
     >
       <Navbar />
       <div className="w-full lg:max-w-100 relative bg-white lg:rounded-2xl overflow-hidden lg:shadow-sm min-h-[100dvh] lg:min-h-[calc(100vh-6rem)]">
@@ -1071,7 +1071,7 @@ export default function Auth() {
               </div>
               <div
                 className="text-[22px] tracking-[0.16em] leading-none mt-0.5"
-                style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
+                style={{ fontFamily: "var(--font-header)", fontWeight: 400 }}
               >
                 LIVORA
               </div>
@@ -1102,7 +1102,7 @@ export default function Auth() {
                   >
                     <h1
                       className="text-[32px] leading-tight text-neutral-900"
-                      style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
+                      style={{ fontFamily: "var(--font-header)", fontWeight: 400 }}
                     >
                       Glad to see you again.
                     </h1>
@@ -1208,7 +1208,7 @@ export default function Auth() {
                   >
                     <h1
                       className="text-[32px] leading-tight text-neutral-900"
-                      style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
+                      style={{ fontFamily: "var(--font-header)", fontWeight: 400 }}
                     >
                       Create your account.
                     </h1>
@@ -1397,7 +1397,7 @@ export default function Auth() {
                         className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
             role="dialog"
             aria-modal="true"
-            style={{ fontFamily: "'Work Sans', system-ui, sans-serif" }}
+            style={{ fontFamily: "var(--font-body)" }}
           >
             <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
               <h3 className="text-[17px] font-medium text-neutral-900">Buat akun baru dengan Google?</h3>
