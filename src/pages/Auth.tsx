@@ -1052,7 +1052,7 @@ export default function Auth() {
       style={{ backgroundColor: "#ffffff", fontFamily: "var(--font-body)" }}
     >
       <Navbar />
-      <div className="w-full lg:max-w-100 relative bg-white lg:rounded-2xl overflow-hidden lg:shadow-sm min-h-[100dvh] lg:min-h-[calc(100vh-6rem)]">
+      <div className="w-full lg:max-w-5xl relative bg-white lg:rounded-2xl overflow-hidden lg:shadow-sm min-h-[100dvh] lg:min-h-[calc(100vh-6rem)]">
         <motion.div
           animate={{ left: isLogin ? "0%" : "50%" }}
           transition={{ duration: 0.9, ease }}
@@ -1185,7 +1185,7 @@ export default function Auth() {
                         <div className="w-full border-t border-neutral-200" />
                       </div>
                       <div className="relative flex justify-center text-[12px]">
-                        <span className="bg-white px-3 text-neutral-400">or Sign in with Email</span>
+                        <span className="bg-white px-3 text-neutral-400">or continue with</span>
                       </div>
                     </div>
 

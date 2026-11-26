@@ -9,6 +9,7 @@ import {
   Globe,
   Trash2,
   X,
+  ShieldCheck,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -22,22 +23,22 @@ import type { AiChatContextKey, AiChatMessage } from "@/lib/ai/types";
 const CHAT_STORAGE_KEY = "livora_ai_chat_messages_v1";
 
 const contextLabel: Record<AiChatContextKey, string> = {
-  overview: "Overview",
-  seo: "SEO Agent",
-  content: "Content Agent",
-  ads: "Ads Agent",
-  leads: "Lead Intelligence",
-  cro: "CRO Agent",
-  campaigns: "Campaign Workspace",
-  impact: "Impact Tracking",
-  actions: "Actions",
-  approvals: "Approvals",
-  insights: "Insights",
-  activity: "Activity Log",
-  recommendations: "Recommendations",
-  usage: "AI Usage & Cost",
-  providers: "Providers & Routing",
-  settings: "Settings & Integrations",
+  overview: "Ringkasan",
+  seo: "SEO & Google Maps",
+  content: "Konten & Medsos",
+  ads: "Iklan & IG Boost",
+  leads: "Prospek (Leads)",
+  cro: "Konversi Website (CRO)",
+  campaigns: "Rencana Campaign",
+  impact: "Hasil & Dampak",
+  actions: "Antrean Aksi",
+  approvals: "Persetujuan & Audit",
+  insights: "Temuan & Insight",
+  activity: "Riwayat Aktivitas",
+  recommendations: "Rekomendasi AI",
+  usage: "Biaya & Pemakaian AI",
+  providers: "Mesin & Provider AI",
+  settings: "Sambungan Platform",
   general: "AI Marketing",
 };
 
@@ -46,7 +47,7 @@ const suggestedQuestions: Record<AiChatContextKey, string[]> = {
     "Apa prioritas marketing terpenting hari ini?",
     "Analisis tren pasar interior design & furniture di Indonesia saat ini beserta kompetitornya",
     "Bagaimana performa konsultasi & cek harga WA bulan ini?",
-    "Kampanye mana yang perlu perhatian?",
+    "Campaign mana yang perlu perhatian?",
   ],
   seo: [
     "Halaman produk & proyek mana yang belum punya meta SEO?",
@@ -59,58 +60,58 @@ const suggestedQuestions: Record<AiChatContextKey, string[]> = {
     "Konsep video Reels/TikTok apa yang paling potensial untuk audiens Livora?",
   ],
   ads: [
-    "Bagaimana CPL & leads per platform iklan saat ini?",
+    "Bagaimana biaya per prospek (CPL) & leads per platform iklan saat ini?",
     "Beri saran strategi iklan Meta/Google menghadapi kompetitor studio interior di Jabodetabek",
   ],
   leads: [
-    "Siapa lead dengan skor intent tertinggi saat ini?",
-    "Berapa cek harga WA LiviBot yang belum dijawab?",
+    "Siapa prospek (lead) dengan niat beli tertinggi saat ini?",
+    "Berapa permintaan cek harga WA LiviBot yang belum dijawab?",
     "Pola follow-up WhatsApp apa yang paling efektif meningkatkan closing?",
   ],
   cro: [
-    "Di tahap konsultasi mana paling banyak drop-off?",
+    "Di tahap konsultasi mana paling banyak calon klien berhenti?",
     "Bagaimana rasio keranjang ke WA LiviBot?",
     "Apa perbaikan cepat di halaman konsultasi untuk menaikkan konversi?",
   ],
   campaigns: [
-    "Kampanye mana yang butuh perhatian?",
-    "Buat rencana kampanye musiman baru berdasarkan tren desain hunian terbaru",
+    "Rencana campaign mana yang butuh perhatian?",
+    "Susun ide rencana campaign musiman baru berdasarkan tren desain hunian terbaru",
   ],
   impact: [
     "Apakah eksekusi terakhir berdampak positif?",
     "Bagaimana perkembangan metrik 7-14 hari terakhir?",
   ],
   actions: [
-    "Aksi apa yang siap saya Approve & Execute sekarang?",
-    "Mana aksi berisiko rendah yang bisa langsung jalan?",
+    "Aksi apa saja yang saat ini menunggu tinjauan saya?",
+    "Jelaskan dampak dari aksi berisiko rendah yang ada di antrean.",
   ],
   approvals: [
     "Ada berapa item di antrean persetujuan saat ini?",
-    "Mana item berisiko tinggi yang perlu ditinjau lebih teliti?",
+    "Mana item berisiko tinggi yang perlu saya tinjau paling teliti?",
   ],
   insights: [
-    "Insight mana yang paling mendesak untuk ditindaklanjuti?",
-    "Gabungkan insight internal dengan tren pasar interior eksternal hari ini",
+    "Temuan mana yang paling mendesak untuk ditindaklanjuti?",
+    "Gabungkan temuan internal dengan tren pasar interior eksternal hari ini",
   ],
   activity: [
-    "Ringkas aktivitas & hasil run AI agent terbaru",
-    "Apakah ada aksi yang gagal dieksekusi dan perlu di-retry?",
+    "Ringkas aktivitas & hasil analisis AI terbaru",
+    "Apakah ada aksi yang gagal dieksekusi dan perlu dicek ulang?",
   ],
   recommendations: [
-    "Rekomendasi mana yang paling berdampak ke leads Livora?",
-    "Mana yang tinggal dieksekusi?",
+    "Rekomendasi mana yang paling berdampak ke prospek Livora?",
+    "Jelaskan perbedaan rekomendasi berisiko rendah vs tinggi di antrean.",
   ],
   usage: [
     "Agent mana yang paling banyak memakai token?",
     "Bagaimana estimasi biaya AI bulan ini?",
   ],
   providers: [
-    "Provider AI mana yang sedang aktif?",
-    "Apakah fallback Gemini/Groq berjalan normal?",
+    "Mesin AI mana yang sedang aktif?",
+    "Apakah cadangan Gemini/Groq berjalan normal?",
   ],
   settings: [
-    "Integrasi mana yang masih belum terhubung?",
-    "Apa manfaat menghubungkan GA4 & Search Console sekaligus?",
+    "Platform mana saja yang masih belum terhubung?",
+    "Apa manfaat menghubungkan Google Analytics & Search Console sekaligus?",
   ],
   general: [
     "Apa yang harus saya prioritaskan hari ini?",
@@ -159,6 +160,7 @@ export function AskAIDrawer() {
   const [pending, setPending] = useState(false);
   const [lastError, setLastError] = useState<{ prompt: string; message: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     try {
@@ -203,13 +205,13 @@ export function AskAIDrawer() {
       if (reply.executedActions && reply.executedActions.length > 0) {
         const okCount = reply.executedActions.filter((op) => op.status === "ok").length;
         if (okCount > 0) {
-          toast.success(`${okCount} perintah sistem berhasil dieksekusi oleh AI.`);
+          toast.success(`${okCount} perintah sistem berhasil diproses oleh AI.`);
         }
       }
     } catch (error) {
       const msg = extractApiErrorMessage(
         error,
-        "AI provider tidak merespons. Periksa API key Gemini/Groq di backend atau coba sesaat lagi.",
+        "Mesin AI belum merespons. Coba beberapa saat lagi atau periksa sambungan AI di Pengaturan.",
       );
       setLastError({ prompt: trimmed, message: msg });
       toast.error(msg);
@@ -228,35 +230,58 @@ export function AskAIDrawer() {
     }
   }
 
+  /** Chip aman: pertanyaan baca-saja langsung dikirim, sedangkan perintah aksi hanya mengisi kolom input agar admin meninjau dulu sebelum menekan Enter. */
+  const quickChips: { label: string; prompt: string; prefillOnly?: boolean }[] = [
+    {
+      label: "Audit Omzet & Prospek",
+      prompt:
+        "Ringkas omzet pesanan, pipeline konsultasi interior, dan antrean cek harga WA LiviBot saat ini lalu beri saran prioritas.",
+    },
+    {
+      label: "Cek Antrean Persetujuan",
+      prompt: "Ada rekomendasi atau aksi apa saja yang sedang menunggu persetujuan saya saat ini? Jangan eksekusi dulu, cukup ringkas.",
+    },
+    {
+      label: "Ide Rencana Campaign",
+      prompt: "Usulkan ide rencana campaign marketing untuk produk dengan minat tertinggi di Livora.",
+      prefillOnly: true,
+    },
+    {
+      label: "Jalankan Analisis Agent",
+      prompt: "Jalankan analisis agent marketing sekarang dan ringkas temuan utamanya.",
+      prefillOnly: true,
+    },
+  ];
+
   return (
     <Sheet open={askOpen} onOpenChange={(open) => !open && closeAsk()}>
       <SheetContent
         side="right"
         className="flex w-full flex-col gap-0 border-l border-border bg-popover p-0 text-foreground sm:max-w-md [&>button.absolute]:hidden"
       >
-        <SheetTitle className="sr-only">Livora Marketing AI</SheetTitle>
+        <SheetTitle className="sr-only">Asisten AI Marketing Livora</SheetTitle>
         <SheetDescription className="sr-only">
-          Chief Marketing and Profit Intelligence Assistant
+          Asisten analisis penjualan, konsultasi, dan strategi marketing Livora
         </SheetDescription>
         <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3.5">
           <div className="flex min-w-0 items-center gap-2.5">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-ai/12">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-ai/12">
               <Sparkles className="size-3.5 text-ai" />
             </span>
             <div className="min-w-0">
-              <p className="text-display truncate text-sm leading-none">Livora Marketing AI</p>
-              <p className="label-eyebrow mt-1 truncate">Context: {contextLabel[context]}</p>
+              <p className="text-display truncate text-sm leading-none">Asisten AI Marketing</p>
+              <p className="label-eyebrow mt-1 truncate">Konteks: {contextLabel[context]}</p>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <button
               type="button"
               onClick={() => setWebSearch((v) => !v)}
-              title="Aktifkan pencarian Google / analisis pasar & tren eksternal"
+              title="Aktifkan pencarian web untuk riset pasar & tren eksternal"
               className={cn(
-                "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-medium transition-colors",
+                "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
                 webSearch
-                  ? "border-ai/40 bg-ai/15 text-ai"
+                  ? "border-ai/40 bg-ai/12 text-ai"
                   : "border-border text-muted-foreground hover:text-foreground",
               )}
             >
@@ -269,7 +294,7 @@ export function AskAIDrawer() {
                 onClick={clearChat}
                 title="Bersihkan riwayat chat"
                 className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                aria-label="Clear chat"
+                aria-label="Bersihkan riwayat chat"
               >
                 <Trash2 className="size-3.5" />
               </button>
@@ -278,32 +303,37 @@ export function AskAIDrawer() {
               type="button"
               onClick={closeAsk}
               className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              aria-label="Close"
+              aria-label="Tutup panel Tanya AI"
             >
               <X className="size-4" />
             </button>
           </div>
         </div>
 
-        <div className="border-b border-border bg-secondary/30 px-4 py-2">
+        {/* Shortcut aman — tidak ada 1-klik eksekusi live */}
+        <div className="border-b border-border bg-secondary/40 px-4 py-2.5">
           <div className="flex items-center justify-between gap-2 pb-1.5">
-            <span className="label-eyebrow text-[9px] text-ai">Kendali 100% Fitur · Perintah Cepat</span>
-            <span className="font-mono text-[9px] text-muted-foreground">Real DB + Self-Learning</span>
+            <span className="label-eyebrow text-[10px] text-ai">Pertanyaan Cepat</span>
+            <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+              <ShieldCheck className="size-3 text-success" /> Aman · Tidak mengubah data tanpa izin
+            </span>
           </div>
           <div className="scroll-rail flex gap-1.5 overflow-x-auto pb-1">
-            {[
-              { label: "💰 Audit Profit & Leads", prompt: "Audit lengkap omzet shop, pipeline konsultasi interior, dan kebocoran WA LiviBot saat ini lalu beri strategi menaikkan profit tertinggi." },
-              { label: "▶ Jalankan Semua Agent", prompt: "Jalankan semua agent sekarang dan ringkas temuan utamanya." },
-              { label: "✓ Approve Low-Risk", prompt: "Approve semua rekomendasi low-risk yang masih pending." },
-              { label: "⚡ Eksekusi Actions", prompt: "Eksekusi semua action yang sudah approved sekarang." },
-              { label: "🚀 Buat Campaign Profit", prompt: "Buatkan campaign marketing baru untuk mendorong produk demand tertinggi & konsultasi interior Livora." },
-            ].map((cmd) => (
+            {quickChips.map((cmd) => (
               <button
                 key={cmd.label}
                 type="button"
                 disabled={pending}
-                onClick={() => void send(cmd.prompt)}
-                className="shrink-0 rounded-sm border border-border bg-background/70 px-2 py-1 text-[10px] font-medium text-foreground/90 transition-colors hover:border-ai/50 hover:bg-ai/10 hover:text-ai disabled:opacity-50"
+                onClick={() => {
+                  if (cmd.prefillOnly) {
+                    setInput(cmd.prompt);
+                    inputRef.current?.focus();
+                    toast.info("Draf perintah disiapkan di kotak ketik — periksa lalu tekan Kirim.");
+                  } else {
+                    void send(cmd.prompt);
+                  }
+                }}
+                className="shrink-0 rounded-full border border-border bg-white px-2.5 py-1 text-[11px] font-medium text-foreground/90 transition-colors hover:border-ai/50 hover:bg-ai/10 hover:text-ai disabled:opacity-50"
               >
                 {cmd.label}
               </button>
@@ -311,17 +341,17 @@ export function AskAIDrawer() {
           </div>
         </div>
 
-        <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
+        <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto bg-background/60 px-5 py-5">
           {messages.length === 0 ? (
             <div className="space-y-5">
               <div className="space-y-1.5">
-                <p className="text-display text-lg">Chief Marketing & Profit AI</p>
-                <p className="text-sm text-muted-foreground">
-                  Terhubung langsung ke data order Rupiah, konsultasi, WA LiviBot, SEO, Ads, dan memori pembelajaran Livora. Anda juga bisa memerintahkan AI mengendalikan seluruh fitur di sini.
+                <p className="text-display text-lg">Halo, ada yang ingin dianalisis?</p>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Asisten ini membaca data penjualan, konsultasi interior, antrean WhatsApp LiviBot, SEO, dan iklan Livora. Perubahan berisiko tetap memerlukan persetujuan Anda di halaman Aksi.
                 </p>
               </div>
               <div className="space-y-2">
-                <span className="label-eyebrow">Pertanyaan & perintah disarankan</span>
+                <span className="label-eyebrow">Contoh pertanyaan untuk halaman ini</span>
                 <div className="flex flex-col gap-2 pt-1">
                   {suggestedQuestions[context].map((q) => (
                     <button
@@ -343,13 +373,16 @@ export function AskAIDrawer() {
                   <div
                     className={cn(
                       "max-w-[90%] whitespace-pre-wrap break-words rounded-xl px-3.5 py-2.5 text-sm leading-relaxed",
-                      m.role === "user" ? "bg-ai/15 text-foreground" : "panel text-foreground/90",
+                      m.role === "user" ? "bg-[#232528] text-white" : "panel text-foreground",
                     )}
                   >
                     {m.role === "assistant" && (m.provider || m.model) ? (
-                      <div className="mb-1.5 flex items-center gap-1.5 border-b border-border/60 pb-1 font-mono text-[9px] tracking-wider text-muted-foreground uppercase">
+                      <div className="mb-1.5 flex items-center gap-1.5 border-b border-border/60 pb-1 text-[10px] tracking-wider text-muted-foreground uppercase">
                         <Sparkles className="size-2.5 text-ai" />
-                        <span>{m.provider ?? "AI"}{m.model ? ` · ${m.model}` : ""}</span>
+                        <span>
+                          {m.provider ?? "AI"}
+                          {m.model ? ` · ${m.model}` : ""}
+                        </span>
                       </div>
                     ) : null}
                     {m.role === "assistant" ? renderFormattedText(m.text) : m.text}
@@ -361,7 +394,7 @@ export function AskAIDrawer() {
                           key={`${m.id}_op_${idx}`}
                           to={op.href}
                           onClick={closeAsk}
-                          className="panel panel-hover flex items-start gap-2 rounded-lg border-ai/30 bg-ai/[0.05] px-3.5 py-2.5 text-left"
+                          className="panel panel-hover flex items-start gap-2 rounded-lg border-ai/30 bg-ai/[0.04] px-3.5 py-2.5 text-left"
                         >
                           {op.status === "ok" ? (
                             <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
@@ -371,7 +404,7 @@ export function AskAIDrawer() {
                           <div className="min-w-0 flex-1 space-y-0.5">
                             <p className="text-xs font-medium text-foreground">{op.title}</p>
                             <p className="line-clamp-2 text-[11px] text-muted-foreground">{op.detail}</p>
-                            <p className="label-eyebrow pt-0.5 text-ai">Buka Fitur →</p>
+                            <p className="label-eyebrow pt-0.5 text-ai">Buka Halaman →</p>
                           </div>
                         </Link>
                       ))}
@@ -385,10 +418,10 @@ export function AskAIDrawer() {
                     >
                       <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
                       <div className="space-y-0.5">
-                        <p className="text-xs font-medium text-foreground/90">
+                        <p className="text-xs font-medium text-foreground">
                           Rekomendasi baru ditambahkan: {m.recommendation.title}
                         </p>
-                        <p className="label-eyebrow text-ai">Buka Recommendations →</p>
+                        <p className="label-eyebrow text-ai">Tinjau di Rekomendasi AI →</p>
                       </div>
                     </Link>
                   )}
@@ -402,7 +435,7 @@ export function AskAIDrawer() {
                       <span className="size-1.5 animate-pulse-dot rounded-full bg-ai [animation-delay:150ms]" />
                       <span className="size-1.5 animate-pulse-dot rounded-full bg-ai [animation-delay:300ms]" />
                     </span>
-                    <span>{webSearch ? "Menganalisis data & riset web..." : "Menyusun jawaban..."}</span>
+                    <span>{webSearch ? "Menganalisis data & mencari tren web..." : "Menyusun jawaban..."}</span>
                   </div>
                 </div>
               )}
@@ -417,7 +450,7 @@ export function AskAIDrawer() {
                     onClick={() => send(lastError.prompt, true)}
                     className="inline-flex shrink-0 items-center gap-1 rounded border border-destructive/40 px-2 py-1 text-[11px] font-medium hover:bg-destructive/15"
                   >
-                    <RotateCcw className="size-3" /> Retry
+                    <RotateCcw className="size-3" /> Ulangi
                   </button>
                 </div>
               )}
@@ -430,19 +463,24 @@ export function AskAIDrawer() {
             e.preventDefault();
             send(input);
           }}
-          className="flex items-center gap-2 border-t border-border px-4 py-3"
+          className="flex items-center gap-2 border-t border-border bg-white px-4 py-3"
         >
           <input
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={webSearch ? "Tanya strategi, tren pasar, atau data Livora..." : "Tanya seputar data marketing Livora..."}
-            className="h-10 flex-1 rounded-lg border border-border bg-secondary/60 px-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-ai/50 focus:outline-none"
+            placeholder={
+              webSearch
+                ? "Tanya strategi, tren pasar, atau data Livora..."
+                : "Tulis pertanyaan seputar marketing Livora..."
+            }
+            className="h-10 flex-1 rounded-lg border border-border bg-secondary/60 px-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-ai focus:bg-white focus:outline-none"
           />
           <button
             type="submit"
             disabled={pending || !input.trim()}
-            className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-ai text-background transition-opacity disabled:opacity-40"
-            aria-label="Send"
+            className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#232528] text-white transition-opacity disabled:opacity-40"
+            aria-label="Kirim pertanyaan"
           >
             <ArrowUp className="size-4" />
           </button>

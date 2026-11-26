@@ -23,20 +23,23 @@ class SupportChatController extends Controller
             ->get()
             ->map(function (SupportSession $s) {
                 $last = $s->latestMessage;
+                $profile = $this->resolveProfile($s);
                 return [
-                    'id'              => $s->id,
-                    'status'          => $s->status,
-                    'name'            => $s->name,
-                    'email'           => $s->email,
-                    'user_id'         => $s->user_id,
-                    'visitor_number'  => $s->visitor_number,
-                    'display_name'    => $this->displayName($s),
-                    'admin_name'      => optional($s->admin)->name,
-                    'request_reason'  => $s->request_reason,
-                    'requested_at'    => optional($s->requested_at)->toIso8601String(),
-                    'last_message'    => $last?->text,
-                    'last_message_at' => optional($s->last_message_at)->toIso8601String(),
-                    'unread_admin'    => $s->unread_admin,
+                    'id'               => $s->id,
+                    'status'           => $s->status,
+                    'name'             => $s->name,
+                    'email'            => $s->email,
+                    'user_id'          => $s->user_id,
+                    'visitor_number'   => $s->visitor_number,
+                    'display_name'     => $this->displayName($s),
+                    'admin_name'       => optional($s->admin)->name,
+                    'request_reason'   => $s->request_reason,
+                    'requested_at'     => optional($s->requested_at)->toIso8601String(),
+                    'last_message'     => $last?->text,
+                    'last_message_at'  => optional($s->last_message_at)->toIso8601String(),
+                    'unread_admin'     => $s->unread_admin,
+                    'customer_profile' => $profile,
+                    'needs_summary'    => \App\Services\CustomerNeedProfile::toHandoffNote($profile),
                 ];
             });
 
@@ -163,11 +166,29 @@ public function destroy(SupportSession $session)
     return response()->json(['deleted' => true]);
 }
 
-    private function sessionData(SupportSession $session): array
+    private function resolveProfile(SupportSession $session): array
     {
         $profile = \Illuminate\Support\Facades\Schema::hasColumn('support_sessions', 'customer_profile')
             ? ($session->customer_profile ?? [])
             : [];
+        if (is_array($profile) && !empty($profile)) {
+            return $profile;
+        }
+        $latestBot = $session->messages()
+            ->where('sender', 'bot')
+            ->whereNotNull('meta')
+            ->latest('id')
+            ->first(['meta']);
+        $meta = $latestBot?->meta;
+        if (is_array($meta) && is_array($meta['learned_profile'] ?? null)) {
+            return $meta['learned_profile'];
+        }
+        return [];
+    }
+
+    private function sessionData(SupportSession $session): array
+    {
+        $profile = $this->resolveProfile($session);
 
         return [
             'id'               => $session->id,
@@ -177,7 +198,7 @@ public function destroy(SupportSession $session)
             'display_name'     => $this->displayName($session),
             'admin_name'       => optional($session->admin)->name,
             'customer_profile' => $profile,
-            'needs_summary'    => \App\Services\CustomerNeedProfile::toHandoffNote(is_array($profile) ? $profile : []),
+            'needs_summary'    => \App\Services\CustomerNeedProfile::toHandoffNote($profile),
         ];
     }
 

@@ -204,13 +204,19 @@ export default function LeadsAgentPage() {
               </div>
               {highIntent && highIntent.total > leadsList.length ? (
                 <div className="border-t border-border px-5 py-3 text-center">
-                  <button
-                    type="button"
-                    onClick={() => setLimit((n) => Math.min(50, n + 25))}
-                    className="text-xs font-medium text-ai hover:underline"
-                  >
-                    Muat lebih banyak ({highIntent.total - leadsList.length} tersisa)
-                  </button>
+                  {limit < 50 ? (
+                    <button
+                      type="button"
+                      onClick={() => setLimit((n) => Math.min(50, n + 25))}
+                      className="text-xs font-medium text-ai hover:underline"
+                    >
+                      Muat lebih banyak ({highIntent.total - leadsList.length} tersisa)
+                    </button>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Menampilkan 50 prospek teratas berdasarkan skor. Gunakan pencarian atau filter untuk mempersempit daftar.
+                    </p>
+                  )}
                 </div>
               ) : null}
             </>
@@ -219,7 +225,7 @@ export default function LeadsAgentPage() {
       </section>
 
       <Dialog open={!!selectedLead} onOpenChange={(o) => !o && setSelectedLead(null)}>
-        <DialogContent className="border-border-strong bg-popover text-foreground sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-y-auto border-border-strong bg-popover text-foreground sm:max-w-lg">
           {selectedLead ? (
             <>
               <DialogHeader>
@@ -271,8 +277,8 @@ export default function LeadsAgentPage() {
 
       <section className="mt-10">
         <SectionHeading
-          title="Kredensial pengiriman lanjutan"
-          description="Isi di backend/.env untuk mengaktifkan automasi WhatsApp & SMTP produksi."
+          title="Pengiriman Follow-Up Otomatis"
+          description="Status sambungan WhatsApp & email untuk follow-up prospek. Pengaturan teknis ada di bagian Info Teknis."
         />
         <IntegrationRequired
           provider="WhatsApp (LiviBot) & Email Delivery"

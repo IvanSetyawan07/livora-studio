@@ -108,6 +108,18 @@ A;
             return $this->result([], $conv, 'dipegang_admin', 'ok', $started);
         }
 
+        // Hormati tombol darurat "Bot aktif" di Pengaturan Toko
+        if (!ShopSettings::get('bot_enabled', true)) {
+            return $this->doHandoff(
+                $conv,
+                $phone,
+                'bot_nonaktif',
+                $simulate,
+                $started,
+                'Pesan Kakak sudah masuk dan langsung kami teruskan ke tim Livora ya 🙏 Mohon ditunggu sebentar.',
+            );
+        }
+
         if (in_array($type, ['audio', 'voice', 'sticker'], true)) {
             return $this->result([$this->t('Maaf Kak, saya belum bisa mendengar voice note atau membaca stiker. Boleh diketik singkat saja? Atau ketik TIM untuk bicara dengan tim kami.')], $conv, 'media_tak_didukung', 'ok', $started);
         }
@@ -396,7 +408,9 @@ A;
                 "Oke Kak, Livi cek ke tim dulu untuk harga {$names} ✨ Sambil nunggu, kalau ada yang mau ditanyakan soal barangnya, boleh banget tanya Livi.",
             ]);
         } else {
-            $body = "Siap Kak 😊 Livi catat dulu ya soal harga {$names}. Tim lagi di luar jam kerja (Senin–Sabtu, 09.00–17.00 WIB), jadi begitu tim buka, Livi langsung kabari Kakak di sini 🙏";
+            $bh = ShopSettings::get('business_hours', ['start' => '09:00', 'end' => '17:00']) ?: ['start' => '09:00', 'end' => '17:00'];
+            $hoursText = sprintf('%s–%s WIB', str_replace(':', '.', $bh['start'] ?? '09:00'), str_replace(':', '.', $bh['end'] ?? '17:00'));
+            $body = "Siap Kak 😊 Livi catat dulu ya soal harga {$names}. Tim lagi di luar jam kerja ({$hoursText}), jadi begitu tim buka, Livi langsung kabari Kakak di sini 🙏";
         }
 
         return $this->result($this->lead($conv, [$this->t($prefix.$body)]), $conv, 'cek_harga', 'ok', $started);

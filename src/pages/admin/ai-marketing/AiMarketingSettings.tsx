@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/admin/PageHeader";
 import { Panel, Pill, SectionHeading, StatusDot } from "@/components/ai/primitives";
 import { QueryError } from "@/components/ai/query-error";
 import { usePageContext } from "@/context/AiMarketingContext";
+import { useAdminDialog } from "@/components/admin/kit";
 import {
   extractApiErrorMessage,
   useAiAgents,
@@ -96,6 +97,7 @@ function OAuthConnectionButtons({
  * SEO/Overview ikut segar tanpa refresh manual.
  */
 function GoogleConnectionAction() {
+  const dialog = useAdminDialog();
   const { data: status } = useGoogleIntegrationStatus();
   const disconnect = useGoogleDisconnect();
   const authorize = useGoogleAuthorize();
@@ -107,12 +109,20 @@ function GoogleConnectionAction() {
       disconnecting={disconnect.isPending}
       redirecting={authorize.isPending}
       disconnectedLabel="Connect"
-      onDisconnect={() =>
+      onDisconnect={async () => {
+        const ok = await dialog.confirm({
+          title: "Putuskan Google Search Console?",
+          description: "Data SEO & Google Analytics akan berhenti diperbarui sampai disambungkan kembali.",
+          confirmText: "Ya, Putuskan",
+          cancelText: "Batal",
+          tone: "danger",
+        });
+        if (!ok) return;
         disconnect.mutate(undefined, {
-          onSuccess: () => toast.success("Google Search Console disconnected."),
-          onError: (e: unknown) => toast.error(extractApiErrorMessage(e, "Gagal disconnect.")),
-        })
-      }
+          onSuccess: () => toast.success("Google Search Console diputus."),
+          onError: (e: unknown) => toast.error(extractApiErrorMessage(e, "Gagal memutus sambungan.")),
+        });
+      }}
       onConnect={() =>
         authorize.mutate(undefined, {
           onError: (e: unknown) =>
@@ -125,6 +135,7 @@ function GoogleConnectionAction() {
 
 /** Padanan GoogleConnectionAction, untuk kartu "Meta Ads API". */
 function MetaAdsConnectionAction() {
+  const dialog = useAdminDialog();
   const { data: status } = useMetaAdsIntegrationStatus();
   const disconnect = useMetaAdsDisconnect();
   const authorize = useMetaAdsAuthorize();
@@ -136,12 +147,20 @@ function MetaAdsConnectionAction() {
       disconnecting={disconnect.isPending}
       redirecting={authorize.isPending}
       disconnectedLabel="Connect"
-      onDisconnect={() =>
+      onDisconnect={async () => {
+        const ok = await dialog.confirm({
+          title: "Putuskan Meta Ads?",
+          description: "Data biaya & performa iklan Meta/Instagram akan berhenti ditarik sampai disambungkan kembali.",
+          confirmText: "Ya, Putuskan",
+          cancelText: "Batal",
+          tone: "danger",
+        });
+        if (!ok) return;
         disconnect.mutate(undefined, {
-          onSuccess: () => toast.success("Meta Ads disconnected."),
-          onError: (e: unknown) => toast.error(extractApiErrorMessage(e, "Gagal disconnect.")),
-        })
-      }
+          onSuccess: () => toast.success("Meta Ads diputus."),
+          onError: (e: unknown) => toast.error(extractApiErrorMessage(e, "Gagal memutus sambungan.")),
+        });
+      }}
       onConnect={() =>
         authorize.mutate(undefined, {
           onError: (e: unknown) =>

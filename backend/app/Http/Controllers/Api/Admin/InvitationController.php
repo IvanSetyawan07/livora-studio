@@ -68,7 +68,11 @@ class InvitationController extends Controller
     {
         $q = $event->guests()->with('event')->orderByDesc('id');
         if ($s = trim((string) $r->query('q'))) $q->where(fn ($w) => $w->where('name', 'like', "%{$s}%")->orWhere('phone', 'like', "%{$s}%"));
-        foreach (['category', 'status', 'rsvp'] as $f) if ($v = $r->query($f)) $q->where($f, $v);
+        foreach (['category', 'status'] as $f) if ($v = $r->query($f)) $q->where($f, $v);
+        if ($rsvp = $r->query('rsvp')) {
+            if ($rsvp === 'belum') $q->whereNull('rsvp');
+            else $q->where('rsvp', $rsvp);
+        }
 
         return $q->get();
     }

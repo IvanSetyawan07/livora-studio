@@ -20,37 +20,37 @@ export default function CroAgentPage() {
     <AgentPageShell agent={agent} loading={agentLoading}>
       <section className="mt-10">
         <SectionHeading
-          title="Conversion overview"
-          description={`Dihitung langsung dari tabel konsultasi & funnel (${periodDays} hari terakhir).`}
+          title="Ringkasan Konversi & Funnel"
+          description={`Dihitung langsung dari alur konsultasi & aktivitas pengunjung (${periodDays} hari terakhir).`}
         />
         {funnel.isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div
               className="h-6 w-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
               role="status"
-              aria-label="Loading funnel"
+              aria-label="Memuat funnel"
             />
           </div>
         ) : funnel.isError ? (
           <QueryError
-            message="Endpoint /ai/cro/funnel-summary gagal dimuat."
+            message="Ringkasan funnel belum bisa dimuat dari server."
             onRetry={() => void funnel.refetch()}
           />
         ) : !funnel.data?.hasData ? (
           <NotConnected
             title="Data funnel belum cukup"
-            description={funnel.data?.message ?? "Belum ada cukup konsultasi untuk dihitung."}
+            description={funnel.data?.message ?? "Belum ada cukup konsultasi untuk dihitung pada periode ini."}
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
               {
-                label: "Consultation starts",
+                label: "Konsultasi Masuk",
                 value: String(funnel.data.totals!.consultations),
                 note: "total konsultasi tercatat",
               },
               {
-                label: "Funnel completion",
+                label: "Tingkat Penyelesaian",
                 value:
                   funnel.data.totals!.completionRate === null
                     ? "—"
@@ -58,7 +58,7 @@ export default function CroAgentPage() {
                 note: `${funnel.data.totals!.completed} selesai`,
               },
               {
-                label: "Top drop-off stage",
+                label: "Tahap Paling Banyak Batal",
                 value: topDropStage ?? "—",
                 note:
                   funnel.data.totals!.topDropOffCount !== null
@@ -66,7 +66,7 @@ export default function CroAgentPage() {
                     : "belum ada pembatalan tercatat",
               },
               {
-                label: `Lost (${periodDays} hari)`,
+                label: `Batal (${periodDays} hari)`,
                 value: String(funnel.data.totals!.lostLast30d),
                 note: `periode sebelumnya ${funnel.data.totals!.lostPrev30d}`,
               },
@@ -89,11 +89,11 @@ export default function CroAgentPage() {
             <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-border/60 text-left">
-                  <th className="label-eyebrow px-5 py-3">Stage</th>
-                  <th className="label-eyebrow px-5 py-3">Reached</th>
-                  <th className="label-eyebrow px-5 py-3 w-48">Conversion Bar</th>
-                  <th className="label-eyebrow px-5 py-3">Avg. jam di stage</th>
-                  <th className="label-eyebrow px-5 py-3">Lost</th>
+                  <th className="label-eyebrow px-5 py-3">Tahapan</th>
+                  <th className="label-eyebrow px-5 py-3">Tercapai</th>
+                  <th className="label-eyebrow px-5 py-3 w-48">Rasio Lanjut</th>
+                  <th className="label-eyebrow px-5 py-3">Rata-rata Jam</th>
+                  <th className="label-eyebrow px-5 py-3">Batal</th>
                 </tr>
               </thead>
               <tbody>
@@ -111,7 +111,7 @@ export default function CroAgentPage() {
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-2">
                           <span>{st.label}</span>
-                          {isBottleneck ? <Pill tone="warning">Bottleneck</Pill> : null}
+                          {isBottleneck ? <Pill tone="warning">Hambatan Utama</Pill> : null}
                         </div>
                       </td>
                       <td className="px-5 py-3 font-mono">{st.reached}</td>
@@ -176,15 +176,15 @@ export default function CroAgentPage() {
 
       <section className="mt-10">
         <SectionHeading
-          title="AI insights"
-          description="Funnel drop-off, anomalies and UX friction detected across the site."
+          title="Temuan Konversi AI"
+          description="Titik hambatan pengunjung, anomali, dan peluang perbaikan pengalaman belanja di website."
         />
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div
               className="h-6 w-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
               role="status"
-              aria-label="Loading insights"
+              aria-label="Memuat temuan"
             />
           </div>
         ) : agentInsights.length > 0 ? (
@@ -197,15 +197,15 @@ export default function CroAgentPage() {
           </div>
         ) : (
           <NotConnected
-            title="No conversion insights yet"
-            description="The CRO Agent will surface funnel and UX friction findings here once it runs."
+            title="Belum ada temuan konversi baru"
+            description="Agen Konversi (CRO) akan menampilkan analisis hambatan pengunjung di sini setelah siklus pemindaian berjalan."
           />
         )}
       </section>
 
       <section className="mt-10 grid gap-4 lg:grid-cols-2">
         <Panel className="p-6">
-          <SectionHeading title={`Tracked Funnel Events (${periodDays}d)`} />
+          <SectionHeading title={`Aktivitas Pengunjung Tercatat (${periodDays} hari)`} />
           {funnel.data?.funnelEvents && funnel.data.funnelEvents.length > 0 ? (
             <div className="space-y-2">
               {funnel.data.funnelEvents.map((fe) => (
@@ -217,16 +217,24 @@ export default function CroAgentPage() {
             </div>
           ) : (
             <NotConnected
-              title="Belum ada event funnel tercatat"
-              description="Event otomatis terekam saat pengunjung melihat item/proyek, membuka promo, menambah ke keranjang, atau mengajukan konsultasi."
+              title="Belum ada aktivitas pengunjung tercatat"
+              description="Aktivitas otomatis terekam saat pengunjung melihat produk/proyek, membuka promo, menambah ke keranjang, atau mengajukan konsultasi."
             />
           )}
         </Panel>
         <Panel className="p-6">
-          <SectionHeading title="Behaviour & GA4 Capture" />
+          <SectionHeading title="Perekaman Perilaku & Analitik Eksternal" />
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Client-side tracker sudah terpasang (<code className="font-mono text-xs">src/lib/analytics.ts</code>) dan otomatis mengirim custom events ke database <code className="font-mono text-xs">funnel_events</code> serta Google Analytics 4 / Meta Pixel begitu <code className="font-mono text-xs">GA4_MEASUREMENT_ID</code> / <code className="font-mono text-xs">META_PIXEL_ID</code> diisi di <code className="font-mono text-xs">.env</code>.
+            Pencatat perilaku pengunjung sudah aktif secara otomatis di website Livora dan merekam setiap langkah penting pelanggan (lihat katalog, keranjang, hingga konsultasi) untuk bahan evaluasi konversi.
           </p>
+          <details className="mt-4 rounded-md border border-border bg-secondary/40 px-3.5 py-2.5 text-xs text-muted-foreground">
+            <summary className="cursor-pointer font-medium text-foreground/85 select-none">
+              Info Teknis untuk Tim IT
+            </summary>
+            <p className="mt-2 leading-relaxed">
+              Client-side tracker pada <code className="font-mono text-[11px]">src/lib/analytics.ts</code> mengirim custom events ke tabel <code className="font-mono text-[11px]">funnel_events</code> dan meneruskannya ke Google Analytics 4 / Meta Pixel apabila variabel server <code className="font-mono text-[11px]">GA4_MEASUREMENT_ID</code> dan <code className="font-mono text-[11px]">META_PIXEL_ID</code> sudah dikonfigurasi.
+            </p>
+          </details>
         </Panel>
       </section>
     </AgentPageShell>

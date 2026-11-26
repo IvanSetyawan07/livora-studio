@@ -33,8 +33,6 @@ export default function AiMarketingUsage() {
   const totals = totalsQuery.data ?? null;
   const byAgent = byAgentQuery.data ?? null;
   const byProvider = byProviderQuery.data ?? null;
-  const isError = totalsQuery.isError || byAgentQuery.isError || byProviderQuery.isError;
-
   function retryAll() {
     totalsQuery.refetch();
     byAgentQuery.refetch();
@@ -75,7 +73,7 @@ export default function AiMarketingUsage() {
       />
 
       {totalsQuery.isError ? (
-        <QueryError message="Ringkasan usage tidak bisa dimuat dari server." onRetry={() => void totalsQuery.refetch()} />
+        <QueryError message="Ringkasan pemakaian AI tidak bisa dimuat dari server." onRetry={retryAll} />
       ) : totalsQuery.isLoading || !stats ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
@@ -120,7 +118,13 @@ export default function AiMarketingUsage() {
         )}
       </div>
 
-      {byAgent ? (
+      {byAgent && byAgent.length === 0 ? (
+        <Panel className="mt-4 p-8 text-center text-sm text-muted-foreground">
+          Belum ada pemakaian AI tercatat pada periode ini.
+        </Panel>
+      ) : null}
+
+      {byAgent && byAgent.length > 0 ? (
         <Panel className="mt-4 p-5">
           <p className="label-eyebrow mb-3">Cost by Agent — detail</p>
           <div className="space-y-2">

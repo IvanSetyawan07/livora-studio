@@ -25,7 +25,7 @@ class AdminPermissions
         'wishlists'      => 'Wishlist',
         'support'        => 'Chat support',
         'analytics'      => 'Analitik',
-        'marketing'      => 'AI Marketing',
+        'marketing'      => 'Email & AI Marketing',
         'shop_orders'    => 'Pesanan toko',
         'shop_payments'  => 'Verifikasi bayar',
         'shop_aftercare' => 'Klaim & refund',
@@ -59,6 +59,8 @@ class AdminPermissions
     /** Path (setelah /api/) → fitur. Urutan penting: yang lebih spesifik di atas. */
     protected const PATH_MAP = [
         'admin/shop/orders' => 'shop_orders', 'admin/shop/documents' => 'shop_orders',
+        'admin/shop/summary' => 'shop_orders', 'admin/shop/items' => 'shop_orders',
+        'admin/shop/offline' => 'shop_orders', 'admin/shop/projects' => 'shop_orders',
         'admin/shop/proofs' => 'shop_payments',
         'admin/shop/claims' => 'shop_aftercare', 'admin/shop/refunds' => 'shop_aftercare',
         'admin/shop/inbox' => 'shop_inbox',
@@ -121,6 +123,17 @@ class AdminPermissions
     {
         $user = $request->user();
         if (self::role($user) === 'owner') return null;
+
+        // Izinkan lihat lampiran/foto toko bagi peran yang punya akses Pesanan, Inbox WA, atau Klaim/Aftercare
+        $cleanPath = trim($request->path(), '/');
+        if (str_starts_with($cleanPath, 'api/')) $cleanPath = substr($cleanPath, 4);
+        if (in_array($cleanPath, ['admin/shop/files', 'admin/shop/file'], true) && $request->isMethod('GET')) {
+            $perms = self::forUser($user);
+            foreach (['shop_orders', 'shop_inbox', 'shop_aftercare', 'shop_payments'] as $f) {
+                if (($perms[$f] ?? 'none') !== 'none') return null;
+            }
+        }
+
         $feature = self::featureForPath($request->path());
         if (!$feature) return null;
         $level = self::forUser($user)[$feature] ?? 'none';

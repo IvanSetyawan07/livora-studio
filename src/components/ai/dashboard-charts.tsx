@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import type { ReactNode } from "react";
 import {
   Bar,
@@ -21,11 +21,11 @@ import { cn } from "@/lib/utils";
 const axisTick = { fill: "hsl(var(--muted-foreground))", fontSize: 11 };
 
 const tooltipProps = {
-  cursor: { stroke: "hsl(var(--border-strong))", fill: "hsl(var(--muted) / 0.35)" },
+  cursor: { stroke: "hsl(var(--border-strong))", fill: "hsl(var(--muted) / 0.45)" },
   contentStyle: {
     background: "hsl(var(--popover))",
     border: "1px solid hsl(var(--border-strong))",
-    borderRadius: "4px",
+    borderRadius: "8px",
     fontSize: 12,
     color: "hsl(var(--foreground))",
   },
@@ -33,37 +33,44 @@ const tooltipProps = {
 } as const;
 
 /* ------------------------------------------------------------------ */
-/* Compact KPI card (mono eyebrow + big number + delta)                */
+/* Compact KPI card (eyebrow + big number + delta)                     */
 /* ------------------------------------------------------------------ */
 
 export type StatKpi = {
   label: string;
   value: string;
   delta?: string;
-  direction?: "up" | "down";
+  direction?: "up" | "down" | "flat";
+  hint?: string;
 };
 
 export function StatCard({ kpi, index = 0 }: { kpi: StatKpi; index?: number }) {
-  const Icon = kpi.direction === "down" ? ArrowDownRight : ArrowUpRight;
+  const Icon =
+    kpi.direction === "down" ? ArrowDownRight : kpi.direction === "flat" ? Minus : ArrowUpRight;
+  const deltaClass =
+    kpi.direction === "down"
+      ? "text-destructive"
+      : kpi.direction === "flat"
+        ? "text-muted-foreground"
+        : "text-success";
+
   return (
     <Panel
       hover
       className="p-5 animate-[rise_0.6s_cubic-bezier(0.16,1,0.3,1)_both]"
       style={{ animationDelay: `${index * 70}ms` }}
     >
-      <p className="label-eyebrow">{kpi.label}</p>
-      <p className="text-display num mt-3 text-3xl leading-none sm:text-4xl">{kpi.value}</p>
+      <p className="label-eyebrow" title={kpi.hint}>
+        {kpi.label}
+      </p>
+      <p className="text-display num mt-3 text-3xl leading-none text-foreground sm:text-4xl">{kpi.value}</p>
       {kpi.delta ? (
-        <p
-          className={cn(
-            "mt-3 flex items-center gap-1 text-xs",
-            kpi.direction === "down" ? "text-info" : "text-success",
-          )}
-        >
+        <p className={cn("mt-3 flex items-center gap-1 text-xs", deltaClass)}>
           <Icon className="size-3" />
           {kpi.delta}
         </p>
       ) : null}
+      {kpi.hint ? <p className="mt-1.5 text-[11px] text-muted-foreground">{kpi.hint}</p> : null}
     </Panel>
   );
 }
@@ -117,14 +124,6 @@ function ChartPanel({
 /* ChartSection — state-aware wrapper around the chart shell            */
 /* ------------------------------------------------------------------ */
 
-/**
- * Wraps `ChartPanel` with the loading / empty / error+retry / last-updated
- * states every chart needs (Phase 1 audit: MultiLineChart/CategoryBarChart/
- * FunnelBars were pure presentational — a failed fetch just left the
- * calling page's own skeleton spinning forever). The chart primitives
- * themselves are untouched; this only decides what goes *inside*
- * ChartPanel's body for a given `SectionState<T>`.
- */
 export function ChartSection<T>({
   title,
   state,
@@ -132,6 +131,7 @@ export function ChartSection<T>({
   isEmpty,
   provider,
   connectHref,
+  action,
   renderChart,
 }: {
   title: string;
@@ -141,31 +141,51 @@ export function ChartSection<T>({
   isEmpty?: (data: T) => boolean;
   provider?: string;
   connectHref?: string;
+  /** Optional custom controls (e.g. Leads / CPL metric switcher). */
+  action?: ReactNode;
   renderChart: (data: T) => ReactNode;
 }) {
-  const empty = state.status === "data" && (isEmpty ? isEmpty(state.data) : Array.isArray(state.data) && state.data.length === 0);
+  const empty =
+    state.status === "data" &&
+    (isEmpty ? isEmpty(state.data) : Array.isArray(state.data) && state.data.length === 0);
 
-  const action =
-    state.status === "data" ? <LastUpdated at={state.lastUpdatedAt} refreshing={state.isRefreshing} /> : null;
+  const lastUpdated =
+    state.status === "data" ? (
+      <LastUpdated at={state.lastUpdatedAt} refreshing={state.isRefreshing} />
+    ) : null;
 
   let body: ReactNode;
   if (state.status === "loading") {
     body = <div className="h-full w-full animate-pulse rounded-sm bg-muted/40" />;
   } else if (state.status === "data" && !empty) {
-    body = <ResponsiveContainer width="100%" height="100%">{renderChart(state.data) as never}</ResponsiveContainer>;
+    body = (
+      <ResponsiveContainer width="100%" height="100%">
+        {renderChart(state.data) as never}
+      </ResponsiveContainer>
+    );
   } else {
     const notice: NonDataSectionState =
       state.status === "data"
-        ? { status: "empty", lastUpdatedAt: state.lastUpdatedAt, isRefreshing: state.isRefreshing, retry: state.retry }
+        ? {
+            status: "empty",
+            lastUpdatedAt: state.lastUpdatedAt,
+            isRefreshing: state.isRefreshing,
+            retry: state.retry,
+          }
         : state;
-    body = <SectionNotice state={notice} height="h-full" provider={provider} connectHref={connectHref} />;
+    body = (
+      <SectionNotice state={notice} height="h-full" provider={provider} connectHref={connectHref} />
+    );
   }
 
   return (
     <Panel className="p-5 sm:p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-display rule-accent text-lg">{title}</h3>
-        {action}
+        <div className="flex items-center gap-3">
+          {action}
+          {lastUpdated}
+        </div>
       </div>
       <div style={{ height }} className="flex w-full flex-col">
         {body}
@@ -246,7 +266,7 @@ export function CategoryBarChart({
         <XAxis dataKey="label" tickLine={false} axisLine={false} tick={axisTick} />
         <YAxis tickLine={false} axisLine={false} width={48} tick={axisTick} />
         <Tooltip {...tooltipProps} />
-        <Bar dataKey="value" radius={[3, 3, 0, 0]} animationDuration={800}>
+        <Bar dataKey="value" radius={[4, 4, 0, 0]} animationDuration={800}>
           {data.map((d) => (
             <Cell key={d.label} fill={d.color} />
           ))}
@@ -282,7 +302,7 @@ export function FunnelBars({
         {rows.map((r) => (
           <div key={r.label} className="flex items-center gap-4">
             <span className="w-28 shrink-0 text-xs text-muted-foreground">{r.label}</span>
-            <div className="h-3 flex-1 overflow-hidden rounded-full bg-muted/50">
+            <div className="h-3 flex-1 overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full rounded-full transition-[width] duration-700 ease-out"
                 style={{
@@ -291,8 +311,8 @@ export function FunnelBars({
                 }}
               />
             </div>
-            <span className="num w-16 shrink-0 text-right text-sm">
-              {r.value.toLocaleString("en-US")}
+            <span className="num w-16 shrink-0 text-right text-sm font-medium text-foreground">
+              {r.value.toLocaleString("id-ID")}
             </span>
           </div>
         ))}
@@ -309,8 +329,8 @@ export function StatStrip({ items }: { items: { value: string; label: string }[]
   return (
     <div className="mt-4 grid grid-cols-3 gap-3">
       {items.map((s) => (
-        <div key={s.label} className="rounded-sm border border-border bg-muted/25 p-3 text-center">
-          <p className="text-display num text-xl">{s.value}</p>
+        <div key={s.label} className="rounded-lg border border-border bg-secondary/50 p-3 text-center">
+          <p className="text-display num text-xl text-foreground">{s.value}</p>
           <p className="label-eyebrow mt-1">{s.label}</p>
         </div>
       ))}

@@ -39,9 +39,13 @@ section[id] { scroll-margin-top: 96px; }
 
     /* Brand tokens */
     --livora-cream: 36 33% 97%;
+    --livora-limestone: 40 33% 97%;    /* #FAF8F4 Sunlit Limestone */
     --livora-stone: 32 18% 90%;
     --livora-taupe: 28 18% 70%;
     --livora-bronze: 28 25% 50%;
+    --livora-sky: 205 39% 55%;         /* #5E93B8 Morning Sky */
+    --livora-sky-soft: 202 44% 95%;    /* #EDF4F8 Morning Sky Tint */
+    --livora-slate: 214 7% 42%;        /* #656B73 Architectural Slate */
     --livora-charcoal: 30 8% 12%;
     --livora-ink: 30 10% 8%;
 
@@ -293,6 +297,33 @@ section[id] { scroll-margin-top: 96px; }
   .scroll-indicator-inner {
     animation: chevron-bounce 1.8s ease-in-out infinite;
     filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-dot,
+  .loader-pulse,
+  .ken-burns,
+  .kenburns-slide,
+  .scroll-indicator,
+  .scroll-indicator-inner {
+    animation: none !important;
+  }
+  .rise-word {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+    -webkit-animation: none !important;
+  }
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .hover-zoom img,
+  .mission-card,
+  .underline-grow::after {
+    transition: none !important;
   }
 }
 

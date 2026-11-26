@@ -3,9 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, ArrowUpRight, Store, Video, MapPin } from "lucide-react";
 import {
   gsap,
-  ScrollTrigger,
   registerGsap,
   prefersReducedMotion,
+  scheduleScrollTriggerRefresh,
 } from "@/lib/motionTokens";
 import splitDoorImg from "@/assets/appointment-split-door.jpg";
 
@@ -25,11 +25,10 @@ export const AppointmentPortal = () => {
   const [meet, setMeet] = useState<MeetMode>("showroom");
   const [name, setName] = useState("");
   const [note, setNote] = useState("");
-  const [doorsOpen, setDoorsOpen] = useState(false);
+  const [reducedMotion] = useState(() => prefersReducedMotion());
 
   useLayoutEffect(() => {
-    if (prefersReducedMotion() || typeof window === "undefined") {
-      setDoorsOpen(true);
+    if (reducedMotion || typeof window === "undefined") {
       return;
     }
     registerGsap();
@@ -47,20 +46,30 @@ export const AppointmentPortal = () => {
         const doorHint = root.querySelector<HTMLElement>("[data-door-hint]");
         const seamLight = root.querySelector<HTMLElement>("[data-door-seam]");
         const sanctuary = root.querySelector<HTMLElement>("[data-portal-sanctuary]");
-        const lines = root.querySelectorAll<HTMLElement>("[data-portal-line]");
 
         if (!leftDoor || !rightDoor || !sanctuary) return;
+        const lines = sanctuary.querySelectorAll<HTMLElement>("[data-portal-line]");
+
+        let lastOpen = false;
+        const setDoorsInteractive = (open: boolean) => {
+          if (open === lastOpen) return;
+          lastOpen = open;
+          const layer = doorsLayerRef.current;
+          if (!layer) return;
+          layer.style.pointerEvents = open ? "none" : "auto";
+          layer.setAttribute("aria-hidden", String(open));
+        };
 
         const tl = gsap.timeline({
           scrollTrigger: {
             trigger: root,
             start: "top top",
             end: "bottom bottom",
-            scrub: 0.28,
+            scrub: true,
             invalidateOnRefresh: true,
             onUpdate: (self) => {
-              // Unlock pointer interaction once doors part sufficiently
-              setDoorsOpen(self.progress >= 0.42);
+              // Unlock pointer interaction directly on DOM ref (zero React re-renders during scroll)
+              setDoorsInteractive(self.progress >= 0.42);
             },
           },
         });
@@ -114,7 +123,6 @@ export const AppointmentPortal = () => {
 
       // Mobile: Gentle door parting preview above the open sanctuary
       mm.add("(max-width: 767px)", () => {
-        setDoorsOpen(true);
         const mLeft = root.querySelector<HTMLElement>("[data-mobile-door-left]");
         const mRight = root.querySelector<HTMLElement>("[data-mobile-door-right]");
         const mStage = root.querySelector<HTMLElement>("[data-mobile-door-stage]");
@@ -126,7 +134,7 @@ export const AppointmentPortal = () => {
               trigger: mStage,
               start: "top 75%",
               end: "bottom 35%",
-              scrub: 0.28,
+              scrub: true,
             },
           });
           gsap.to(mRight, {
@@ -136,19 +144,18 @@ export const AppointmentPortal = () => {
               trigger: mStage,
               start: "top 75%",
               end: "bottom 35%",
-              scrub: 0.28,
+              scrub: true,
             },
           });
         }
       });
     }, root);
 
-    const tId = setTimeout(() => ScrollTrigger.refresh(), 140);
+    scheduleScrollTriggerRefresh();
     return () => {
-      clearTimeout(tId);
       ctx.revert();
     };
-  }, []);
+  }, [reducedMotion]);
 
   const handleContinue = (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,7 +214,7 @@ export const AppointmentPortal = () => {
                   type="button"
                   onClick={() => setMeet(value)}
                   aria-pressed={active}
-                  className={`inline-flex items-center gap-2.5 rounded-full px-4 sm:px-5 py-2.5 text-xs transition-all duration-300 border ${
+                  className={`inline-flex items-center gap-2.5 rounded-full px-4 sm:px-5 py-2.5 text-xs transition-colors duration-300 border ${
                     active
                       ? "bg-[#232528] text-[#FAF8F4] border-[#232528] shadow-[0_10px_24px_-10px_rgba(35,37,40,0.4)]"
                       : "bg-white/80 text-[#232528] border-[#232528]/14 hover:border-[#5E93B8]"
@@ -291,12 +298,18 @@ export const AppointmentPortal = () => {
     <section
       id="begin-appointment"
       ref={rootRef}
-      className="relative md:h-[235vh] bg-[#FAF8F4] text-[#232528]"
+      className={`relative bg-[#FAF8F4] text-[#232528] ${
+        reducedMotion ? "md:h-auto" : "md:h-[235vh]"
+      }`}
     >
       {/* ══════════════════════════════════════════════════════════════
           DESKTOP / TABLET: FULL-SCREEN SPLIT-DOOR ARCHITECTURAL PORTAL
          ══════════════════════════════════════════════════════════════ */}
-      <div className="hidden md:flex sticky top-0 h-[100svh] w-full overflow-hidden items-center justify-center">
+      <div
+        className={`hidden md:flex w-full overflow-hidden items-center justify-center ${
+          reducedMotion ? "relative min-h-[100svh]" : "sticky top-0 h-[100svh]"
+        }`}
+      >
         {/* Layer 1: Bright Calm Sunlit Morning Sanctuary (Revealed Underneath) */}
         <div
           data-portal-sanctuary
@@ -315,57 +328,57 @@ export const AppointmentPortal = () => {
         </div>
 
         {/* Layer 2: Symmetrical Bespoke Roman Travertine & Fluted Oak Double Doors */}
-        <div
-          ref={doorsLayerRef}
-          aria-hidden={doorsOpen}
-          className={`absolute inset-0 z-20 flex overflow-hidden ${
-            doorsOpen ? "pointer-events-none" : "pointer-events-auto"
-          }`}
-        >
-          {/* Left Architectural Door Wing */}
+        {!reducedMotion && (
           <div
-            data-door-left
-            className="relative w-1/2 h-full overflow-hidden bg-[#EFEAE1] shadow-[16px_0_48px_rgba(35,37,40,0.18)] will-change-transform"
+            ref={doorsLayerRef}
+            aria-hidden={false}
+            className="absolute inset-0 z-20 flex overflow-hidden pointer-events-auto"
           >
-            <img
-              src={splitDoorImg}
-              alt="LIVORA travertine and fluted oak architectural double doors — left wing"
-              loading="eager"
-              decoding="async"
-              className="absolute inset-y-0 left-0 w-[200%] max-w-none h-full object-cover object-center"
+            {/* Left Architectural Door Wing */}
+            <div
+              data-door-left
+              className="relative w-1/2 h-full overflow-hidden bg-[#EFEAE1] shadow-[16px_0_48px_rgba(35,37,40,0.18)] will-change-transform"
+            >
+              <img
+                src={splitDoorImg}
+                alt="LIVORA travertine and fluted oak architectural double doors — left wing"
+                loading="eager"
+                decoding="async"
+                className="absolute inset-y-0 left-0 w-[200%] max-w-none h-full object-cover object-center"
+              />
+            </div>
+
+            {/* Right Architectural Door Wing */}
+            <div
+              data-door-right
+              className="relative w-1/2 h-full overflow-hidden bg-[#EFEAE1] shadow-[-16px_0_48px_rgba(35,37,40,0.18)] will-change-transform"
+            >
+              <img
+                src={splitDoorImg}
+                alt="LIVORA travertine and fluted oak architectural double doors — right wing"
+                loading="eager"
+                decoding="async"
+                className="absolute inset-y-0 right-0 w-[200%] max-w-none h-full object-cover object-center"
+              />
+            </div>
+
+            {/* Soft shaft of morning light down exact center seam as doors begin to part */}
+            <div
+              data-door-seam
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 w-[3px] bg-white blur-[2px] opacity-0 will-change-transform"
             />
-          </div>
 
-          {/* Right Architectural Door Wing */}
-          <div
-            data-door-right
-            className="relative w-1/2 h-full overflow-hidden bg-[#EFEAE1] shadow-[-16px_0_48px_rgba(35,37,40,0.18)] will-change-transform"
-          >
-            <img
-              src={splitDoorImg}
-              alt="LIVORA travertine and fluted oak architectural double doors — right wing"
-              loading="eager"
-              decoding="async"
-              className="absolute inset-y-0 right-0 w-[200%] max-w-none h-full object-cover object-center"
-            />
+            {/* Quiet Frosted Invitation Badge on Closed Doors */}
+            <div
+              data-door-hint
+              className="pointer-events-none absolute bottom-10 left-1/2 -translate-x-1/2 inline-flex items-center gap-3 rounded-full bg-white/90 backdrop-blur-md border border-[#232528]/10 px-6 py-2.5 text-[10px] uppercase tracking-[0.34em] text-[#232528] shadow-[0_14px_34px_rgba(35,37,40,0.14)]"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-[#5E93B8]" />
+              <span>Scroll to Open · Begin Your Space</span>
+            </div>
           </div>
-
-          {/* Soft shaft of morning light down exact center seam as doors begin to part */}
-          <div
-            data-door-seam
-            aria-hidden
-            className="pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 w-[3px] bg-white blur-[2px] opacity-0"
-          />
-
-          {/* Quiet Frosted Invitation Badge on Closed Doors */}
-          <div
-            data-door-hint
-            className="pointer-events-none absolute bottom-10 left-1/2 -translate-x-1/2 inline-flex items-center gap-3 rounded-full bg-white/90 backdrop-blur-md border border-[#232528]/10 px-6 py-2.5 text-[10px] uppercase tracking-[0.34em] text-[#232528] shadow-[0_14px_34px_rgba(35,37,40,0.14)]"
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-[#5E93B8]" />
-            <span>Scroll to Open · Begin Your Space</span>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* ══════════════════════════════════════════════════════════════

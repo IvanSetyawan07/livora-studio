@@ -127,13 +127,13 @@ export function Panel({
 }) {
   return (
     <section
-      className={`relative overflow-hidden rounded-xl border border-border bg-card ${className}`}
+      className={`relative overflow-hidden rounded-xl border border-[#EAE4DA] bg-white ${className}`}
     >
       <header className="flex items-start justify-between gap-3 px-5 pb-3 pt-5">
         <div className="min-w-0">
-          <h2 className="serif text-lg leading-tight">{title}</h2>
+          <h2 className="font-header text-lg leading-tight text-[#232528]">{title}</h2>
           {subtitle ? (
-            <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{subtitle}</p>
+            <p className="mt-0.5 text-xs leading-snug text-[#656B73]">{subtitle}</p>
           ) : null}
         </div>
         {right}

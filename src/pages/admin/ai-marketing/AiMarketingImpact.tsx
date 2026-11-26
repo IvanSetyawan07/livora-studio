@@ -21,10 +21,10 @@ const resultTone: Record<ImpactResult, "success" | "danger" | "neutral" | "warni
 };
 
 const resultLabel: Record<ImpactResult, string> = {
-  positive: "Positive",
-  negative: "Negative",
-  neutral: "No change",
-  monitoring: "Monitoring",
+  positive: "Positif",
+  negative: "Menurun",
+  neutral: "Stabil",
+  monitoring: "Sedang Dipantau",
 };
 
 export default function AiMarketingImpact() {
@@ -78,9 +78,9 @@ export default function AiMarketingImpact() {
   return (
     <>
       <PageHeader
-        eyebrow="Workspace"
-        title="Impact"
-        description="Ukur dampak nyata sebelum & sesudah setiap rekomendasi dijalankan terhadap data Livora."
+        eyebrow="Evaluasi Hasil"
+        title="Evaluasi Dampak"
+        description="Ukur perbandingan performa nyata sebelum & sesudah setiap rekomendasi AI disetujui dan dijalankan."
         action={
           <button
             type="button"
@@ -89,7 +89,7 @@ export default function AiMarketingImpact() {
             className="inline-flex items-center gap-1.5 rounded-sm border border-border-strong px-3 py-2 text-xs font-medium transition-colors hover:bg-accent disabled:opacity-60"
           >
             <RefreshCcw className={cn("size-3.5", refreshImpact.isPending && "animate-spin")} />
-            {refreshImpact.isPending ? "Refreshing…" : "Refresh Metrics"}
+            {refreshImpact.isPending ? "Memperbarui…" : "Perbarui Metrik"}
           </button>
         }
       />
@@ -112,7 +112,7 @@ export default function AiMarketingImpact() {
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="label-eyebrow mr-1">Period</span>
+          <span className="label-eyebrow mr-1">Jendela Evaluasi</span>
           {periods.map((p) => (
             <button
               key={p}
@@ -122,7 +122,7 @@ export default function AiMarketingImpact() {
                 period === p ? "border-ai/40 bg-ai/12 text-ai" : "border-border text-muted-foreground hover:text-foreground",
               )}
             >
-              {p} days
+              {p} hari
             </button>
           ))}
         </div>
@@ -133,7 +133,7 @@ export default function AiMarketingImpact() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari impact..."
+              placeholder="Cari evaluasi dampak..."
               className="h-8 w-44 rounded-sm border border-border bg-secondary/60 pl-8 pr-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-ai focus:outline-none"
             />
           </div>
@@ -143,10 +143,10 @@ export default function AiMarketingImpact() {
             className="h-8 rounded-sm border border-border bg-secondary px-2 text-xs text-foreground focus:border-ai focus:outline-none"
           >
             <option value="all">Semua Hasil</option>
-            <option value="positive">Positive</option>
-            <option value="monitoring">Monitoring</option>
-            <option value="neutral">No change</option>
-            <option value="negative">Negative</option>
+            <option value="positive">Positif</option>
+            <option value="monitoring">Sedang Dipantau</option>
+            <option value="neutral">Stabil</option>
+            <option value="negative">Menurun</option>
           </select>
         </div>
       </div>
@@ -170,8 +170,8 @@ export default function AiMarketingImpact() {
       ) : visible.length === 0 ? (
         <Panel className="p-10 text-center text-sm text-muted-foreground">
           {records && records.length > 0
-            ? "Tidak ada record impact yang cocok dengan filter aktif."
-            : "No approved recommendations to measure yet — approve one in Actions to start tracking impact."}
+            ? "Tidak ada data dampak yang cocok dengan filter aktif."
+            : "Belum ada rekomendasi yang dijalankan untuk diukur — setujui tindakan terlebih dahulu di halaman Tindakan untuk mulai memantau dampaknya."}
         </Panel>
       ) : (
         <div className="space-y-3">
@@ -202,7 +202,7 @@ export default function AiMarketingImpact() {
                       to="/admin/ai-marketing/ai-center/recommendations"
                       className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-ai"
                     >
-                      Rec <ArrowUpRight className="size-3" />
+                      Rekomendasi <ArrowUpRight className="size-3" />
                     </Link>
                     <Pill tone={resultTone[effectiveResult]}>{resultLabel[effectiveResult]}</Pill>
                   </div>
@@ -210,18 +210,18 @@ export default function AiMarketingImpact() {
 
                 <div className="mt-4 grid grid-cols-2 gap-4 border-t border-border pt-4 sm:grid-cols-3">
                   <div>
-                    <p className="label-eyebrow">Before</p>
+                    <p className="label-eyebrow">Sebelum</p>
                     <p className="num mt-1 text-sm text-foreground/80">{r.before}</p>
                   </div>
                   <div>
-                    <p className="label-eyebrow">After {period} days</p>
+                    <p className="label-eyebrow">Sesudah {period} hari</p>
                     <p className={cn("num mt-1 text-sm", after ? "text-foreground" : "text-muted-foreground italic")}>
-                      {after ?? (approvedDaysAgo < period ? `Menunggu window ${period} hari (${period - approvedDaysAgo}h lagi)` : "Belum dihitung — klik Refresh Metrics")}
+                      {after ?? (approvedDaysAgo < period ? `Menunggu periode ${period} hari (${period - approvedDaysAgo} hari lagi)` : "Belum dihitung — klik Perbarui Metrik")}
                     </p>
                   </div>
                   {typeof changePct === "number" ? (
                     <div>
-                      <p className="label-eyebrow">Impact</p>
+                      <p className="label-eyebrow">Perubahan</p>
                       <p className={cn("num mt-1 text-sm font-semibold", changePct >= 0 ? "text-success" : "text-destructive")}>
                         {changePct >= 0 ? "+" : ""}
                         {changePct}%
@@ -231,8 +231,8 @@ export default function AiMarketingImpact() {
                 </div>
 
                 <p className="mt-4 border-t border-border pt-3 text-xs leading-relaxed text-foreground/70">
-                  <span className="text-ai">AI conclusion — </span>
-                  {after ? r.aiConclusion : "Belum cukup waktu/sampel untuk menyimpulkan dampak secara akurat."}
+                  <span className="text-ai">Kesimpulan AI — </span>
+                  {after ? r.aiConclusion : "Belum cukup waktu atau sampel untuk menyimpulkan dampak secara akurat."}
                 </p>
               </Panel>
             );

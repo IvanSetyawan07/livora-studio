@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
-import { motion, useScroll, useTransform, useMotionTemplate } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { scrollToTarget } from "@/components/SmoothScroll";
 import {
   Lightbulb,
   Armchair,
@@ -11,7 +12,6 @@ import {
   MapPin,
   ArrowRight,
   Play,
-  Pause,
   Sparkles,
   Compass,
   Award,
@@ -132,7 +132,6 @@ export default function Appointment() {
 
   const heroRef = useRef<HTMLElement>(null);
   const [heroMounted, setHeroMounted] = useState(false);
-  const [heroHeight, setHeroHeight] = useState(800);
   const { scrollY } = useScroll();
   const heroImgY = useTransform(scrollY, [0, 800], [0, 120]);
   const heroImgScale = useTransform(scrollY, [0, 800], [1, 1.08]);
@@ -142,25 +141,6 @@ export default function Appointment() {
     const t = setTimeout(() => setHeroMounted(true), 100);
     return () => clearTimeout(t);
   }, []);
-
-  useEffect(() => {
-    const measure = () => {
-      if (heroRef.current) setHeroHeight(heroRef.current.clientHeight);
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
-
-  const navbarBgOpacity = useTransform(
-    scrollY,
-    [0, heroHeight * 0.3, heroHeight * 0.7],
-    [0, 0.5, 1],
-    { clamp: true }
-  );
-  const navbarBlurAmount = useTransform(scrollY, [0, heroHeight * 0.7], [0, 12], { clamp: true });
-  const navbarBg = useMotionTemplate`rgba(0,0,0,${navbarBgOpacity})`;
-  const navbarBlur = useMotionTemplate`blur(${navbarBlurAmount}px)`;
 
   const [form, setForm] = useState({
     name: searchParams.get("name") || "",
@@ -194,7 +174,7 @@ export default function Appointment() {
     if (location.hash === "#appointment-form" || qMeet || qName || qNote) {
       const t = setTimeout(() => {
         const el = document.getElementById("appointment-form");
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (el) scrollToTarget(el, { offset: -80 });
       }, 220);
       return () => clearTimeout(t);
     }

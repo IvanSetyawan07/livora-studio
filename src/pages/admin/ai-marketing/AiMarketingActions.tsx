@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePageContext } from "@/context/AiMarketingContext";
+import { useAdminPermission } from "@/components/admin/AdminPermissionContext";
 import {
   extractApiErrorMessage,
   useActionDecision,
@@ -27,16 +28,18 @@ import type { AIAgentId, AIApproval, AIRisk } from "@/lib/ai/types";
 type TabKey = "needs_review" | "scheduled" | "running" | "completed" | "failed" | "rejected";
 
 const tabs: { key: TabKey; label: string }[] = [
-  { key: "needs_review", label: "Needs Review" },
-  { key: "scheduled", label: "Scheduled" },
-  { key: "running", label: "Running" },
-  { key: "completed", label: "Completed" },
-  { key: "failed", label: "Failed" },
-  { key: "rejected", label: "Rejected" },
+  { key: "needs_review", label: "Perlu Tinjauan" },
+  { key: "scheduled", label: "Siap Dijalankan" },
+  { key: "running", label: "Berjalan" },
+  { key: "completed", label: "Selesai" },
+  { key: "failed", label: "Gagal" },
+  { key: "rejected", label: "Ditolak" },
 ];
 
 export default function AiMarketingActions() {
   usePageContext("actions");
+  const { canEdit } = useAdminPermission();
+  const editable = canEdit("marketing");
   const qc = useQueryClient();
   const [runningIds, setRunningIds] = useState<Set<string>>(new Set());
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -44,7 +47,8 @@ export default function AiMarketingActions() {
   const [riskFilter, setRiskFilter] = useState<"all" | AIRisk>("all");
   const [search, setSearch] = useState("");
   const [detailAction, setDetailAction] = useState<AIApproval | null>(null);
-  const [confirmHighRisk, setConfirmHighRisk] = useState<AIApproval | null>(null);
+  const [confirmExecute, setConfirmExecute] = useState<AIApproval | null>(null);
+  const [highRiskAck, setHighRiskAck] = useState(false);
 
   const { data: items, isLoading, error, refetch } = useAiActions();
   const { data: agents } = useAiAgents();
@@ -72,7 +76,8 @@ export default function AiMarketingActions() {
         });
       }
       setDetailAction(null);
-      setConfirmHighRisk(null);
+      setConfirmExecute(null);
+      setHighRiskAck(false);
     } catch (err) {
       toast.error(extractApiErrorMessage(err, "Gagal menjalankan aksi."));
       qc.invalidateQueries({ queryKey: ["ai"] });
@@ -87,11 +92,12 @@ export default function AiMarketingActions() {
   }
 
   function handleApproveExecute(a: AIApproval) {
-    if (a.risk === "high" && !confirmHighRisk) {
-      setConfirmHighRisk(a);
+    if (!editable) {
+      toast.error("Anda berada dalam mode lihat saja.");
       return;
     }
-    void executeAction(a);
+    setHighRiskAck(false);
+    setConfirmExecute(a);
   }
 
   async function handleReject(a: AIApproval) {
@@ -343,39 +349,98 @@ export default function AiMarketingActions() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!confirmHighRisk} onOpenChange={(o) => !o && setConfirmHighRisk(null)}>
-        <DialogContent className="border-border-strong bg-popover text-foreground sm:max-w-md">
-          {confirmHighRisk ? (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 text-base text-warning">
-                  <ShieldAlert className="size-4 shrink-0" />
-                  Konfirmasi Aksi High Risk
-                </DialogTitle>
-                <DialogDescription>
-                  Aksi "{confirmHighRisk.title}" ditandai berisiko tinggi dan akan langsung dijalankan ke sistem/platform terkait.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setConfirmHighRisk(null)}
-                  className="rounded-sm border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  disabled={busyId === confirmHighRisk.id}
-                  onClick={() => void executeAction(confirmHighRisk)}
-                  className="inline-flex items-center gap-1.5 rounded-sm bg-destructive px-3 py-1.5 text-xs font-semibold text-destructive-foreground disabled:opacity-50"
-                >
-                  {busyId === confirmHighRisk.id ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                  Ya, Jalankan Sekarang
-                </button>
-              </div>
-            </>
-          ) : null}
+      <Dialog
+        open={!!confirmExecute}
+        onOpenChange={(o) => {
+          if (!o) {
+            setConfirmExecute(null);
+            setHighRiskAck(false);
+          }
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto border-border-strong bg-popover text-foreground sm:max-w-lg">
+          {confirmExecute ? (() => {
+            const rec = recommendations?.find((r) => r.id === confirmExecute.recommendationId);
+            const isHigh = confirmExecute.risk === "high";
+            const isDraftOnly =
+              confirmExecute.agent === "content" ||
+              (rec?.actionType && /draft|plan|checklist|brief/i.test(rec.actionType));
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-base text-foreground">
+                    <ShieldAlert className={`size-4 shrink-0 ${isHigh ? "text-destructive" : "text-ai"}`} />
+                    Pratinjau Sebelum Eksekusi
+                  </DialogTitle>
+                  <DialogDescription>
+                    Periksa dampak aksi ini sebelum dijalankan oleh sistem AI Marketing.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-3 text-xs">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <RiskPill risk={confirmExecute.risk} />
+                    <Pill tone={isDraftOnly ? "info" : "warning"}>
+                      {isDraftOnly ? "Membuat Draf / Checklist" : "Perubahan Langsung ke Platform / Sistem"}
+                    </Pill>
+                    <span className="text-muted-foreground">Agent: {agentName(confirmExecute.agent)}</span>
+                  </div>
+
+                  <div className="rounded-lg border border-border bg-secondary/40 p-3 space-y-1.5">
+                    <p className="text-sm font-medium text-foreground">{confirmExecute.title}</p>
+                    <p className="leading-relaxed text-muted-foreground">{confirmExecute.summary}</p>
+                    {rec?.change ? (
+                      <div className="flex flex-wrap items-center gap-2 pt-1 font-mono text-[11px]">
+                        <span className="rounded bg-white px-1.5 py-0.5 text-foreground">{rec.change.from}</span>
+                        <span className="text-muted-foreground">→</span>
+                        <span className="rounded bg-ai/12 px-1.5 py-0.5 text-ai">{rec.change.to}</span>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {isHigh ? (
+                    <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
+                      <input
+                        type="checkbox"
+                        checked={highRiskAck}
+                        onChange={(e) => setHighRiskAck(e.target.checked)}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        <b>Aksi Berisiko Tinggi:</b> Saya telah membaca target dan dampaknya, dan menyetujui sistem mengeksekusi aksi ini sekarang.
+                      </span>
+                    </label>
+                  ) : null}
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfirmExecute(null);
+                      setHighRiskAck(false);
+                    }}
+                    className="rounded-md border border-border px-3.5 py-2 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busyId === confirmExecute.id || (isHigh && !highRiskAck)}
+                    onClick={() => void executeAction(confirmExecute)}
+                    className={`inline-flex items-center gap-1.5 rounded-md px-4 py-2 text-xs font-semibold disabled:opacity-40 ${
+                      isHigh
+                        ? "bg-destructive text-destructive-foreground"
+                        : "bg-ai text-background"
+                    }`}
+                  >
+                    {busyId === confirmExecute.id ? <Loader2 className="size-3.5 animate-spin" /> : null}
+                    Ya, Jalankan Sekarang
+                  </button>
+                </div>
+              </>
+            );
+          })() : null}
         </DialogContent>
       </Dialog>
     </>

@@ -708,12 +708,12 @@ export function ChatWidget() {
 
   return (
     <>
-      {/* Minimalist Floating Chat Icon Button */}
+      {/* Minimalist Floating Chat Icon Button (Framer Motion owns all transform/opacity) */}
       <motion.button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Tutup chat" : "Buka chat Livora"}
-        className="fixed right-4 sm:right-6 z-[60] w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5E93B8] hover:border-[#232528]/25"
+        className="fixed right-4 sm:right-6 z-[60] w-14 h-14 rounded-full flex items-center justify-center transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5E93B8] hover:border-[#232528]/25 will-change-transform"
         style={{
           bottom: "max(1rem, env(safe-area-inset-bottom))",
           backgroundColor: open ? CHARCOAL : "#FFFFFF",
@@ -722,11 +722,14 @@ export function ChatWidget() {
           boxShadow: open
             ? "0 14px 32px -10px rgba(35,37,40,0.38)"
             : "0 12px 30px -10px rgba(35,37,40,0.22)",
-          opacity: visible ? 1 : 0,
-          transform: visible ? "translateY(0)" : "translateY(16px)",
           pointerEvents: visible ? "auto" : "none",
         }}
         initial={false}
+        animate={{
+          opacity: visible ? 1 : 0,
+          y: visible ? 0 : 16,
+        }}
+        transition={{ duration: 0.26, ease }}
         whileHover={{ scale: 1.06 }}
         whileTap={{ scale: 0.94 }}
       >
@@ -1000,7 +1003,7 @@ export function ChatWidget() {
                                   key={`${m.id}-rec-${i}`}
                                   type="button"
                                   onClick={() => goToRecommendation(rec.url)}
-                                  className={`group text-left bg-white hover:border-[#5E93B8]/55 flex flex-col overflow-hidden shrink-0 snap-start rounded-xl border border-[#232528]/10 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-18px_rgba(35,37,40,0.28)] ${
+                                  className={`group text-left bg-white hover:border-[#5E93B8]/55 flex flex-col overflow-hidden shrink-0 snap-start rounded-xl border border-[#232528]/10 transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-18px_rgba(35,37,40,0.28)] ${
                                     size === "lg" ? "w-[190px] sm:w-auto" : "w-[164px]"
                                   }`}
                                 >
@@ -1089,7 +1092,7 @@ export function ChatWidget() {
                                 key={`${m.id}-qr-${idx}`}
                                 type="button"
                                 onClick={() => void submit(qr)}
-                                className="rounded-full bg-white border border-[#232528]/12 hover:border-[#5E93B8] hover:bg-[#EDF4F8] hover:text-[#232528] px-3 py-1.5 text-[11.5px] text-[#232528]/85 transition-all duration-200 text-left"
+                                className="rounded-full bg-white border border-[#232528]/12 hover:border-[#5E93B8] hover:bg-[#EDF4F8] hover:text-[#232528] px-3 py-1.5 text-[11.5px] text-[#232528]/85 transition-colors duration-200 text-left"
                               >
                                 {qr}
                               </button>
@@ -1127,7 +1130,7 @@ export function ChatWidget() {
                     <button
                       type="button"
                       onClick={() => void submit(pageAwarePrompt.prompt)}
-                      className="w-full group flex items-center justify-between gap-3 rounded-2xl border border-[#5E93B8]/30 bg-[#EDF4F8]/80 hover:bg-[#EDF4F8] px-3.5 py-3 text-left transition-all"
+                      className="w-full group flex items-center justify-between gap-3 rounded-2xl border border-[#5E93B8]/30 bg-[#EDF4F8]/80 hover:bg-[#EDF4F8] px-3.5 py-3 text-left transition-colors duration-200"
                     >
                       <div className="min-w-0">
                         <span className="inline-flex items-center gap-1 text-[9.5px] uppercase tracking-[0.2em] font-medium text-[#5E93B8]">
@@ -1157,7 +1160,7 @@ export function ChatWidget() {
                             key={card.id}
                             type="button"
                             onClick={() => void submit(card.prompt)}
-                            className="group rounded-2xl bg-white border border-[#232528]/8 hover:border-[#5E93B8]/55 p-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_26px_-18px_rgba(35,37,40,0.28)]"
+                            className="group rounded-2xl bg-white border border-[#232528]/8 hover:border-[#5E93B8]/55 p-3 text-left transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_26px_-18px_rgba(35,37,40,0.28)]"
                           >
                             <span
                               className="inline-flex h-7 w-7 items-center justify-center rounded-xl mb-2 transition-colors"

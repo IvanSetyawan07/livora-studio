@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { isPreloaderDone, PRELOADER_READY_EVENT } from "@/components/livora/HeroPreloader";
+import { scrollToTarget } from "@/components/SmoothScroll";
+import { scheduleScrollTriggerRefresh } from "@/lib/motionTokens";
 import { Navbar } from "@/components/livora/Navbar";
 import { SkyScene } from "@/components/livora/SkyScene";
 import { Projects } from "@/components/livora/Projects";
@@ -32,19 +34,24 @@ const Index = () => {
       const id = location.hash.slice(1);
       const t = setTimeout(() => {
         const el = document.getElementById(id);
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (el) scrollToTarget(el, { offset: -80 });
       }, 80);
       return () => clearTimeout(t);
     }
   }, [location.hash, location.key, ready]);
 
-  // Whisper-thin zero-rerender scroll progress counter (00 -> 100)
+  // Whisper-thin zero-rerender scroll progress counter (cached maxScroll — zero scrollHeight thrash)
   useEffect(() => {
     let raf = 0;
+    let maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+
+    const measure = () => {
+      maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+
     const update = () => {
       raf = 0;
-      const doc = document.documentElement;
-      const maxScroll = Math.max(1, doc.scrollHeight - window.innerHeight);
       const pct = Math.max(0, Math.min(100, Math.round((window.scrollY / maxScroll) * 100)));
       if (progressTextRef.current) {
         progressTextRef.current.textContent = String(pct).padStart(2, "0");
@@ -53,15 +60,27 @@ const Index = () => {
         progressFillRef.current.style.transform = `scaleY(${pct / 100})`;
       }
     };
+
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(update);
     };
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(() => {
+        measure();
+        scheduleScrollTriggerRefresh(220);
+      });
+      ro.observe(document.documentElement);
+    }
+
     update();
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll, { passive: true });
+    window.addEventListener("resize", measure, { passive: true });
     return () => {
       window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
+      window.removeEventListener("resize", measure);
+      ro?.disconnect();
       if (raf) cancelAnimationFrame(raf);
     };
   }, []);

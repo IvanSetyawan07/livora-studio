@@ -2,6 +2,8 @@ export { AdminDialogProvider, useAdminDialog } from "./AdminDialog";
 export type { ConfirmOptions, PromptOptions } from "./AdminDialog";
 export {
   PageHeader,
+  AdminHelpBanner,
+  ImageUploadField,
   StatusBadge,
   AutoStatusBadge,
   toneOf,

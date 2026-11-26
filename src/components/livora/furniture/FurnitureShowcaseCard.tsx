@@ -149,7 +149,7 @@ export const FurnitureShowcaseCard: React.FC<FurnitureShowcaseCardProps> = ({
               decoding="async"
               onLoad={handleImageLoad}
               style={studioFilterStyle}
-              className={`w-full h-full transition-all duration-500 ease-out group-hover:scale-[1.03] ${
+              className={`w-full h-full transition-transform duration-500 ease-out group-hover:scale-[1.03] ${
                 imageFit === "cover"
                   ? "object-cover object-center"
                   : "object-contain p-5 sm:p-6 drop-shadow-[0_18px_24px_rgba(11,66,110,0.11)]"
@@ -179,14 +179,14 @@ export const FurnitureShowcaseCard: React.FC<FurnitureShowcaseCardProps> = ({
           }}
           aria-label={saved ? `Hapus ${item.name} dari shortlist` : `Simpan ${item.name} ke shortlist`}
           aria-pressed={saved}
-          className={`absolute top-3 right-3 z-20 w-9 h-9 rounded-full bg-white/92 hover:bg-white border border-[#0B426E]/10 flex items-center justify-center transition-all duration-300 active:scale-90 ${
+          className={`absolute top-3 right-3 z-20 w-9 h-9 rounded-full bg-white/92 hover:bg-white border border-[#0B426E]/10 flex items-center justify-center transition-[opacity,color,transform] duration-300 active:scale-90 ${
             saved
               ? "opacity-100 text-[#1E88C7]"
               : "opacity-85 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 text-[#4B5E71] hover:text-[#0B426E]"
           }`}
         >
           <Bookmark
-            className={`w-[15px] h-[15px] transition-all duration-200 ${
+            className={`w-[15px] h-[15px] transition-colors duration-200 ${
               saved ? "fill-[#1E88C7] text-[#1E88C7]" : "stroke-[1.75]"
             }`}
           />
@@ -195,7 +195,7 @@ export const FurnitureShowcaseCard: React.FC<FurnitureShowcaseCardProps> = ({
         {/* Bottom Floating Frosted Action Dock: "Lihat Detail" (langsung ke page detail) | "Save Piece" */}
         <div className="pointer-events-none absolute inset-x-2.5 bottom-3.5 z-20 flex justify-center">
           <div
-            className={`pointer-events-auto inline-flex items-center gap-1 rounded-full bg-white/92 backdrop-blur-md border border-[#0B426E]/10 transition-all duration-300 ease-out ${
+            className={`pointer-events-auto inline-flex items-center gap-1 rounded-full bg-white/92 backdrop-blur-md border border-[#0B426E]/10 transition-[opacity,transform] duration-300 ease-out ${
               columns === 5 ? "p-1 pl-2.5" : "p-1 pl-3 sm:p-1.5 sm:pl-3.5"
             } opacity-100 translate-y-0 md:opacity-0 md:translate-y-2.5 md:group-hover:opacity-100 md:group-hover:translate-y-0 md:group-focus-within:opacity-100 md:group-focus-within:translate-y-0`}
             style={{ boxShadow: "0 10px 24px -10px rgba(11, 66, 110, 0.22)" }}
@@ -218,7 +218,7 @@ export const FurnitureShowcaseCard: React.FC<FurnitureShowcaseCardProps> = ({
                 e.stopPropagation();
                 onToggleSave(item, lockedFinish ?? null);
               }}
-              className={`inline-flex items-center justify-center gap-1 rounded-full font-medium whitespace-nowrap transition-all duration-200 active:scale-95 ${
+              className={`inline-flex items-center justify-center gap-1 rounded-full font-medium whitespace-nowrap transition-colors duration-200 active:scale-95 ${
                 columns === 5
                   ? "px-2.5 py-1 text-[11px]"
                   : "px-3 py-1 sm:px-3.5 sm:py-1.5 text-[11px] sm:text-[12px]"
@@ -283,7 +283,7 @@ export const FurnitureShowcaseCard: React.FC<FurnitureShowcaseCardProps> = ({
                     setSelectedFinishId(finish.id);
                     onFinishChange?.(item, finish);
                   }}
-                  className={`w-[14px] h-[14px] rounded-full transition-all duration-200 focus:outline-none ${
+                  className={`w-[14px] h-[14px] rounded-full transition-transform duration-200 focus:outline-none ${
                     isSelected
                       ? "ring-[1.5px] ring-[#0B426E] ring-offset-2 ring-offset-[#F8F9FB] scale-105"
                       : "ring-1 ring-inset ring-[#0B426E]/20 hover:scale-115 hover:ring-[#1E88C7]"

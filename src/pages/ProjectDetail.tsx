@@ -69,32 +69,48 @@ const ProjectDetail = () => {
 
       // 1. Entrance — slide dari kanan, per kata (stagger)
       const mm = gsap.matchMedia();
-      const entranceTl = gsap.timeline({
-        defaults: { ease: "power3.out" },
-        onComplete: () => {
-          // 2. Desktop only: pin + scrub hero exit so mobile touch never traps scroll
-          mm.add("(min-width: 1024px)", () => {
-            gsap.timeline({
-              scrollTrigger: {
-                trigger: heroSectionRef.current,
-                start: "top top",
-                end: "+=90%",
-                pin: true,
-                pinSpacing: true,
-                scrub: 0.8,
-                invalidateOnRefresh: true,
-              },
-            })
-              .to(words, { y: -70, opacity: 0, stagger: 0.03, ease: "power2.inOut" }, 0)
-              .to(heroSubtitleRef.current, { y: -50, opacity: 0, ease: "power2.inOut" }, 0)
-              .to(heroImgRef.current, { scaleX: baseScale * 1.2, scaleY: baseScale * 1.2, ease: "power2.inOut" }, 0);
-          });
-        },
-      });
+      let disposed = false;
+      const reducedMotion =
+        typeof window !== "undefined" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-      entranceTl
-        .to(words, { x: 0, opacity: 1, duration: 1, stagger: 0.08 })
-        .to(heroSubtitleRef.current, { x: 0, opacity: 1, duration: 0.9 }, "-=0.5");
+      if (reducedMotion) {
+        gsap.set(words, { x: 0, opacity: 1 });
+        gsap.set(heroSubtitleRef.current, { x: 0, opacity: 1 });
+      } else {
+        const entranceTl = gsap.timeline({
+          defaults: { ease: "power3.out" },
+          onComplete: () => {
+            if (disposed || !heroSectionRef.current) return;
+            // 2. Desktop only: pin + scrub hero exit so mobile touch never traps scroll
+            mm.add("(min-width: 1024px)", () => {
+              gsap.timeline({
+                scrollTrigger: {
+                  trigger: heroSectionRef.current,
+                  start: "top top",
+                  end: "+=90%",
+                  pin: true,
+                  pinSpacing: true,
+                  scrub: true,
+                  invalidateOnRefresh: true,
+                },
+              })
+                .to(words, { y: -70, opacity: 0, stagger: 0.03, ease: "power2.inOut" }, 0)
+                .to(heroSubtitleRef.current, { y: -50, opacity: 0, ease: "power2.inOut" }, 0)
+                .to(heroImgRef.current, { scaleX: baseScale * 1.2, scaleY: baseScale * 1.2, ease: "power2.inOut" }, 0);
+            });
+          },
+        });
+
+        entranceTl
+          .to(words, { x: 0, opacity: 1, duration: 1, stagger: 0.08 })
+          .to(heroSubtitleRef.current, { x: 0, opacity: 1, duration: 0.9 }, "-=0.5");
+      }
+
+      return () => {
+        disposed = true;
+        mm.revert();
+      };
     }, heroSectionRef);
 
     return () => ctx.revert();
@@ -202,19 +218,33 @@ const ProjectDetail = () => {
   }, [project]);
 
   if (!project) {
-    // Still resolving from API — render blank instead of flashing "not found"
+    // Still resolving from API — render shell with Navbar/Footer instead of bare blank screen
     if (loading) {
-      return <main className="min-h-screen bg-background" />;
+      return (
+        <div className="min-h-screen flex flex-col bg-background">
+          <Navbar />
+          <main className="flex-1 flex items-center justify-center pt-28 pb-16">
+            <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground animate-pulse">
+              Loading project…
+            </p>
+          </main>
+          <Footer />
+        </div>
+      );
     }
     return (
-      <main className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <p className="serif text-4xl font-light mb-4">Project not found</p>
-          <Link to="/" className="text-xs uppercase tracking-[0.3em] underline-grow">
-            Back to home
-          </Link>
-        </div>
-      </main>
+      <div className="min-h-screen flex flex-col bg-background">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center pt-28 pb-16">
+          <div className="text-center px-6">
+            <p className="serif text-4xl font-light mb-4">Project not found</p>
+            <Link to="/projects" className="text-xs uppercase tracking-[0.3em] underline-grow">
+              Back to Projects
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </div>
     );
   }
 

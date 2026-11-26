@@ -182,11 +182,19 @@ class ShopAftercareController extends Controller
 
         return $rows->map(function ($c) {
             $collected = (array) json_decode((string) ($c->collected ?? '[]'), true);
+            $rawProfile = property_exists($c, 'customer_profile') && $c->customer_profile
+                ? (is_string($c->customer_profile) ? json_decode($c->customer_profile, true) : (array) $c->customer_profile)
+                : [];
+            if (!is_array($rawProfile) || empty($rawProfile)) {
+                $rawProfile = is_array($collected['_needs_profile'] ?? null) ? $collected['_needs_profile'] : [];
+            }
             $last = DB::table('wa_messages')->where('phone', $c->phone)->where('is_note', false)->latest('id')->first(['body', 'created_at']);
             // Identitas: nama di pesanan → nama dari chat → nama akun → nama profil WA → nomor
             $c->display_name = $c->order_customer ?: ($collected['name'] ?? null) ?: $c->user_name ?: $c->wa_name ?: '+'.$c->phone;
             $c->identified = $c->display_name !== '+'.$c->phone;
             $c->collected_data = $collected;
+            $c->customer_profile = $rawProfile;
+            $c->needs_summary = \App\Services\CustomerNeedProfile::toHandoffNote($rawProfile);
             $c->last_message = $last->body ?? null;
             $c->last_message_at = $last->created_at ?? null;
             $c->price_pending = DB::table('wa_price_inquiries')->where('conversation_id', $c->id)->where('status', 'pending')->exists();

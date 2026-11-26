@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import GridLayout, { Layout } from "react-grid-layout/legacy";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -28,13 +28,24 @@ interface Props {
 
 const COLS = 4;
 const ROW_HEIGHT = 90;
-const GRID_WIDTH = 800;
 
 export function ItemsGridEditor({ catalogId, hotspots }: Props) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [gridWidth, setGridWidth] = useState(800);
   const [layout, setLayout] = useState<Layout>([]);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [itemsBySlug, setItemsBySlug] = useState<Record<string, ApiItem>>({});
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const update = () => setGridWidth(Math.max(520, Math.floor(el.clientWidth - 16)));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const uniqueItems = useMemo(() => {
     const seen = new Set<string>();
@@ -45,20 +56,22 @@ export function ItemsGridEditor({ catalogId, hotspots }: Props) {
     });
   }, [hotspots]);
 
-  // ── Fetch daftar item (untuk ambil foto produk asli)
   useEffect(() => {
-    api.get<any>("/items").then(({ data }) => {
-      const list: ApiItem[] = Array.isArray(data) ? data : data.data ?? [];
-      const map: Record<string, ApiItem> = {};
-      list.forEach((it) => {
-        map[it.slug] = {
-          slug: it.slug,
-          title: it.title,
-          image: it.image ?? it.cover_image ?? null,
-        };
-      });
-      setItemsBySlug(map);
-    }).catch(() => {});
+    api
+      .get<any>("/items")
+      .then(({ data }) => {
+        const list: ApiItem[] = Array.isArray(data) ? data : data.data ?? [];
+        const map: Record<string, ApiItem> = {};
+        list.forEach((it) => {
+          map[it.slug] = {
+            slug: it.slug,
+            title: it.title,
+            image: it.image ?? it.cover_image ?? null,
+          };
+        });
+        setItemsBySlug(map);
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -95,14 +108,14 @@ export function ItemsGridEditor({ catalogId, hotspots }: Props) {
             y: Math.floor(i / COLS),
             w: 1,
             h: 1,
-          }))
+          })),
         );
       } finally {
         setLoaded(true);
       }
     };
 
-    load();
+    void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uniqueItems.map((i) => i.item_slug).join(","), catalogId]);
 
@@ -117,25 +130,22 @@ export function ItemsGridEditor({ catalogId, hotspots }: Props) {
           pos_y: l.y,
           width: l.w,
           height: l.h,
-        }))
+        })),
       );
-      toast.success("Layout tersimpan");
+      toast.success("Susunan grid produk tersimpan");
     } catch (err: any) {
-      const msg = err?.response?.data?.message || "Gagal menyimpan layout";
-      toast.error(msg);
+      toast.error(err?.response?.data?.message || "Gagal menyimpan susunan grid");
     } finally {
       setSaving(false);
     }
   };
 
-  if (!loaded) {
-    return <p className="text-sm text-muted-foreground">Memuat layout…</p>;
-  }
+  if (!loaded) return <p className="text-sm text-[#656B73]">Memuat susunan grid…</p>;
 
   if (uniqueItems.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
-        Belum ada item dengan produk terhubung di scene manapun.
+      <p className="text-sm text-[#656B73]">
+        Belum ada titik hotspot yang dihubungkan ke produk furnitur pada scene mana pun.
       </p>
     );
   }
@@ -144,32 +154,30 @@ export function ItemsGridEditor({ catalogId, hotspots }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
-            Susun Grid "Items in this Collection"
-          </h3>
-          <p className="text-xs text-muted-foreground mt-1">
-            Drag untuk pindah posisi, tarik sudut kanan-bawah untuk resize.
+          <h3 className="font-header text-lg text-[#232528]">Susunan Grid "Produk di Ruangan Ini"</h3>
+          <p className="mt-0.5 text-xs text-[#656B73]">
+            Geser kartu untuk mengatur posisi, tarik sudut kanan-bawah untuk mengubah ukuran kartu di halaman publik.
           </p>
         </div>
         <button
           type="button"
-          onClick={handleSave}
+          onClick={() => void handleSave()}
           disabled={saving}
-          className="text-xs uppercase tracking-[0.15em] bg-foreground text-background px-4 py-2 rounded disabled:opacity-50"
+          className="rounded-full bg-[#232528] px-5 py-2 text-xs font-medium text-white hover:bg-[#34383D] disabled:opacity-50"
         >
-          {saving ? "Menyimpan…" : "Simpan Layout"}
+          {saving ? "Menyimpan…" : "Simpan Susunan Grid"}
         </button>
       </div>
 
-      <div className="border border-border rounded-lg bg-secondary/20 p-2 overflow-x-auto">
+      <div ref={wrapRef} className="overflow-x-auto rounded-xl border border-[#EAE4DA] bg-[#FAF8F4] p-2">
         <GridLayout
           className="layout"
           layout={layout}
           cols={COLS}
           rowHeight={ROW_HEIGHT}
-          width={GRID_WIDTH}
+          width={gridWidth}
           onLayoutChange={(next) => setLayout(next)}
           compactType={null}
           preventCollision={true}
@@ -183,22 +191,16 @@ export function ItemsGridEditor({ catalogId, hotspots }: Props) {
             return (
               <div
                 key={l.i}
-                className="bg-background border border-border rounded overflow-hidden flex flex-col"
+                className="flex flex-col overflow-hidden rounded-lg border border-[#E2DACF] bg-white shadow-sm"
               >
-                <div className="flex-1 flex items-center justify-center bg-secondary p-2">
+                <div className="flex flex-1 items-center justify-center bg-[#FAF8F4] p-2">
                   {imageSrc ? (
-                    <img
-                      src={imgUrl(imageSrc)}
-                      alt={label}
-                      className="max-w-full max-h-full object-contain"
-                    />
+                    <img src={imgUrl(imageSrc)} alt={label} className="max-h-full max-w-full object-contain" />
                   ) : (
-                    <span className="text-[9px] text-muted-foreground uppercase tracking-wide">
-                      No image
-                    </span>
+                    <span className="text-[10px] text-[#656B73]">Tanpa foto</span>
                   )}
                 </div>
-                <p className="text-[10px] px-2 py-1 truncate border-t border-border">
+                <p className="truncate border-t border-[#F0EAE0] px-2.5 py-1.5 text-[11px] font-medium text-[#232528]">
                   {label}
                 </p>
               </div>

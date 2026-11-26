@@ -13,6 +13,7 @@ use App\Services\Shop\InvoiceCalculator;
 use App\Services\Shop\ShopOrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class ShopOrderController extends Controller
@@ -24,19 +25,30 @@ class ShopOrderController extends Controller
         return $r->user()->admin_role ?: 'owner';
     }
 
-    /** Ringkasan untuk halaman "Pekerjaan hari ini". */
+    /** Ringkasan untuk halaman "Pekerjaan hari ini" (1 query GROUP BY untuk shop_orders). */
     public function summary()
     {
-        $count = fn ($s) => ShopOrder::whereIn('status', (array) $s)->count();
+        $byStatus = ShopOrder::query()
+            ->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $sumStatuses = function (array|string $statuses) use ($byStatus): int {
+            $sum = 0;
+            foreach ((array) $statuses as $st) {
+                $sum += (int) ($byStatus[$st] ?? 0);
+            }
+            return $sum;
+        };
 
         return [
             'chat_menunggu' => DB::table('wa_conversations')->where('mode', 'menunggu_admin')->count(),
-            'perlu_harga' => $count(['menunggu_harga', 'data_lengkap', 'menunggu_review_admin', 'menunggu_wa', 'wa_terhubung', 'menunggu_data']),
-            'penawaran' => $count('penawaran'),
-            'menunggu_bayar' => $count('menunggu_bayar'),
+            'perlu_harga' => $sumStatuses(['menunggu_harga', 'data_lengkap', 'menunggu_review_admin', 'menunggu_wa', 'wa_terhubung', 'menunggu_data']),
+            'penawaran' => $sumStatuses('penawaran'),
+            'menunggu_bayar' => $sumStatuses('menunggu_bayar'),
             'verifikasi' => ShopPaymentProof::where('status', 'menunggu')->count(),
-            'bermasalah' => $count(['bermasalah', 'perlu_tindakan']),
-            'fulfillment' => $count(['dibayar', 'diproses', 'siap_kirim', 'dikirim']),
+            'bermasalah' => $sumStatuses(['bermasalah', 'perlu_tindakan']),
+            'fulfillment' => $sumStatuses(['dibayar', 'diproses', 'siap_kirim', 'dikirim']),
         ];
     }
 
@@ -48,7 +60,9 @@ class ShopOrderController extends Controller
             $q->where(fn ($w) => $w->where('code', 'like', "%$term%")->orWhere('customer_name', 'like', "%$term%")->orWhere('customer_phone', 'like', "%$term%"));
         }
 
-        return $q->paginate(30)->through(fn ($o) => $this->present($o, $request));
+        $perPage = min(200, max(10, (int) $request->query('per_page', 30)));
+
+        return $q->paginate($perPage)->through(fn ($o) => $this->present($o, $request));
     }
     public function confirmOfflinePayment(Request $request, string $code)
 {
@@ -67,6 +81,15 @@ class ShopOrderController extends Controller
         $order = ShopOrder::with(['items', 'payments.proofs.verifier', 'documents', 'holds', 'user:id,name,email,phone'])->where('code', $code)->firstOrFail();
         $data = $this->present($order, $request, true);
         $data['audit'] = AuditLog::with('user:id,name')->where('object_type', 'ShopOrder')->where('object_id', $order->id)->latest('created_at')->limit(50)->get();
+        $data['timeline'] = Schema::hasTable('shop_order_events')
+            ? DB::table('shop_order_events')
+                ->leftJoin('users', 'users.id', '=', 'shop_order_events.user_id')
+                ->where('shop_order_events.order_id', $order->id)
+                ->select('shop_order_events.id', 'shop_order_events.event', 'shop_order_events.label', 'shop_order_events.created_at', 'users.name as actor')
+                ->orderByDesc('shop_order_events.id')
+                ->limit(100)
+                ->get()
+            : [];
         $data['wa_messages'] = DB::table('wa_messages')->leftJoin('users', 'users.id', '=', 'wa_messages.sent_by')
             ->where('wa_messages.phone', $order->customer_phone)
             ->select('wa_messages.id', 'direction', 'type', 'body', 'is_note', 'wa_messages.status', 'wa_messages.created_at', 'users.name as sender')

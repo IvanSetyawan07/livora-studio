@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Check, CircleDashed, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, CircleDashed } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Panel, Pill, SectionHeading, Sparkline } from "@/components/ai/primitives";
@@ -204,7 +204,7 @@ export default function AiMarketingCampaignDetail() {
                     {step.state === "done" ? (
                       <Check className="size-3" />
                     ) : step.state === "active" ? (
-                      <Loader2 className="size-3 animate-spin" />
+                      <span className="size-1.5 rounded-full bg-ai" />
                     ) : (
                       <CircleDashed className="size-3" />
                     )}

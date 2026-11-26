@@ -1,18 +1,10 @@
-// components/admin/HotspotVisualEditor.tsx
-
 import { useEffect, useRef, useState } from "react";
-import { X, Plus, Edit2, Trash2, Search, Loader2 } from "lucide-react";
+import { X, Plus, Trash2, Search, Loader2, Check } from "lucide-react";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
-import {
-  createHotspot,
-  updateHotspot,
-  deleteHotspot,
-} from "@/lib/catalogApi";
-
-// ─────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────
+import { createHotspot, updateHotspot, deleteHotspot } from "@/lib/catalogApi";
+import { useAdminDialog } from "@/components/admin/kit";
 
 interface HotspotItem {
   id?: string | number;
@@ -37,17 +29,13 @@ interface ApiItem {
 
 interface Props {
   catalogId: string;
-  sceneNumber: string; // "scene-1" | "scene-2"
-  sceneImage: string; // URL gambar scene
+  sceneNumber: string;
+  sceneImage: string;
   hotspots: HotspotItem[];
   onHotspotAdd: (hotspot: HotspotItem) => void;
   onHotspotUpdate: (id: string | number, hotspot: HotspotItem) => void;
   onHotspotDelete: (id: string | number) => void;
 }
-
-// ─────────────────────────────────────────────
-// Main Component
-// ─────────────────────────────────────────────
 
 export function HotspotVisualEditor({
   catalogId,
@@ -58,26 +46,25 @@ export function HotspotVisualEditor({
   onHotspotUpdate,
   onHotspotDelete,
 }: Props) {
+  const dialog = useAdminDialog();
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // ── Available items (fetch from API)
   const [availableItems, setAvailableItems] = useState<ApiItem[]>([]);
   const [itemsLoading, setItemsLoading] = useState(true);
 
-  // ── API loading states per action
   const [savingId, setSavingId] = useState<string | number | null>(null);
   const [deletingId, setDeletingId] = useState<string | number | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // ── UI state
   const [isAdding, setIsAdding] = useState(false);
+  const [hasPickedPoint, setHasPickedPoint] = useState(false);
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [draggingId, setDraggingId] = useState<string | number | null>(null);
   const [itemSearch, setItemSearch] = useState("");
   const [showItemDropdown, setShowItemDropdown] = useState(false);
 
-  // ── Form state
   const [form, setForm] = useState<HotspotItem>({
     scene_number: sceneNumber,
     label: "",
@@ -87,31 +74,41 @@ export function HotspotVisualEditor({
     description: "",
   });
 
-  // ── Fetch items on mount
   useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        const { data } = await api.get<ApiItem[]>("/items");
-        setAvailableItems(data || []);
-      } catch (err) {
-        console.error("Failed to fetch items:", err);
-      } finally {
-        setItemsLoading(false);
-      }
-    };
-    fetchItems();
+    api
+      .get<ApiItem[]>("/items")
+      .then(({ data }) => setAvailableItems(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setItemsLoading(false));
   }, []);
 
-  // ── Filtered items based on search
+  // Tutup dropdown item saat klik di luar
+  useEffect(() => {
+    if (!showItemDropdown) return;
+    const onDown = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowItemDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [showItemDropdown]);
+
+  // Reset mode saat berpindah scene
+  useEffect(() => {
+    resetForm();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sceneNumber]);
+
   const filteredItems = availableItems.filter(
     (item) =>
       item.title.toLowerCase().includes(itemSearch.toLowerCase()) ||
-      item.slug.toLowerCase().includes(itemSearch.toLowerCase())
+      item.slug.toLowerCase().includes(itemSearch.toLowerCase()) ||
+      (item.code || "").toLowerCase().includes(itemSearch.toLowerCase()),
   );
 
   const selectedItem = availableItems.find((i) => i.slug === form.item_slug);
 
-  // ── Reset form
   const resetForm = () => {
     setForm({
       scene_number: sceneNumber,
@@ -122,30 +119,29 @@ export function HotspotVisualEditor({
       description: "",
     });
     setIsAdding(false);
+    setHasPickedPoint(false);
     setEditingId(null);
     setItemSearch("");
     setShowItemDropdown(false);
     setSaveError(null);
   };
 
-  // ── Click di image → set koordinat
   const handleImageClick = (e: React.MouseEvent<HTMLImageElement>) => {
-    if (!isAdding) return;
-
+    if (!isAdding && !editingId) return;
     const rect = imageRef.current?.getBoundingClientRect();
     if (!rect) return;
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
 
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-
-    setForm({
-      ...form,
+    setForm((prev) => ({
+      ...prev,
       x: Math.round(x * 10) / 10,
       y: Math.round(y * 10) / 10,
-    });
+    }));
+    setHasPickedPoint(true);
+    setSaveError(null);
   };
 
-  // ── Drag existing hotspot (FIX #1: save ke API HANYA di mouseUp, bukan setiap mousemove)
   const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
 
   const handleMouseDown = (e: React.MouseEvent, id: string | number) => {
@@ -157,18 +153,15 @@ export function HotspotVisualEditor({
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!draggingId || !containerRef.current) return;
-
     const rect = containerRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
     const hotspot = hotspots.find((h) => h.id === draggingId);
     if (hotspot) {
-      // Update LOCAL state saja — tidak kirim API
       onHotspotUpdate(draggingId, {
         ...hotspot,
-        x: Math.max(0, Math.min(100, x)),
-        y: Math.max(0, Math.min(100, y)),
+        x: Math.round(x * 10) / 10,
+        y: Math.round(y * 10) / 10,
       });
     }
   };
@@ -182,20 +175,17 @@ export function HotspotVisualEditor({
     setDraggingId(null);
     dragStartPosRef.current = null;
 
-    // Save ke API HANYA jika posisi benar-benar berubah (>0.5%)
     if (
       hotspot &&
       startPos &&
       (Math.abs(hotspot.x - startPos.x) > 0.5 || Math.abs(hotspot.y - startPos.y) > 0.5)
     ) {
-      updateHotspot(catalogId, id, { x: hotspot.x, y: hotspot.y }).catch((err) => {
-        console.error("Failed to save hotspot position:", err);
-        setSaveError("Gagal menyimpan posisi hotspot");
-      });
+      updateHotspot(catalogId, id, { x: hotspot.x, y: hotspot.y })
+        .then(() => toast.success("Posisi titik hotspot tersimpan"))
+        .catch(() => setSaveError("Gagal menyimpan posisi hotspot"));
     }
   };
 
-  // FIX #4: Global mouseup listener — handle release di luar container
   useEffect(() => {
     if (!draggingId) return;
     const onUp = () => handleMouseUp();
@@ -204,100 +194,91 @@ export function HotspotVisualEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draggingId, hotspots]);
 
-  // ── FIX #7: Validate koordinat sebelum submit
   const handleAddHotspot = async () => {
-    if (!form.label.trim()) {
-      setSaveError("Label tidak boleh kosong");
+    if (!hasPickedPoint) {
+      setSaveError("Klik pada foto ruangan terlebih dahulu untuk meletakkan titik hotspot.");
       return;
     }
-    // Default x=50,y=50 berarti user belum klik gambar
-    if (form.x === 50 && form.y === 50) {
-      setSaveError("Klik gambar dulu untuk menempatkan hotspot");
+    if (!form.label.trim()) {
+      setSaveError("Label hotspot wajib diisi (atau pilih produk untuk mengisi otomatis).");
       return;
     }
 
     setSavingId("new");
     setSaveError(null);
-
     try {
       const newHotspot = await createHotspot(catalogId, {
         scene_number: sceneNumber,
-        label: form.label,
+        label: form.label.trim(),
         x: form.x,
         y: form.y,
         item_slug: form.item_slug || undefined,
         description: form.description || undefined,
       });
-
       onHotspotAdd(newHotspot as unknown as HotspotItem);
+      toast.success("Titik hotspot ditambahkan");
       resetForm();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || "Gagal membuat hotspot";
-      setSaveError(msg);
-      console.error("Failed to create hotspot:", err);
+      setSaveError(err?.response?.data?.message || "Gagal menambahkan hotspot");
     } finally {
       setSavingId(null);
     }
   };
 
-  // ── FIX: Edit hotspot ke API
   const handleUpdateHotspot = async () => {
     if (!editingId) return;
     if (!form.label.trim()) {
-      setSaveError("Label tidak boleh kosong");
+      setSaveError("Label tidak boleh kosong.");
       return;
     }
 
     setSavingId(editingId);
     setSaveError(null);
-
     try {
-      // Save ke API
       const updated = await updateHotspot(catalogId, editingId, {
         scene_number: sceneNumber,
-        label: form.label,
+        label: form.label.trim(),
         x: form.x,
         y: form.y,
         item_slug: form.item_slug || undefined,
         description: form.description || undefined,
       });
-
-      // Update local state
       onHotspotUpdate(editingId, updated as unknown as HotspotItem);
+      toast.success("Hotspot diperbarui");
       resetForm();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || "Gagal update hotspot";
-      setSaveError(msg);
-      console.error("Failed to update hotspot:", err);
+      setSaveError(err?.response?.data?.message || "Gagal memperbarui hotspot");
     } finally {
       setSavingId(null);
     }
   };
 
-  // ── FIX: Delete hotspot dari API
-  const handleDeleteHotspot = async (id: string | number) => {
-    if (!confirm("Hapus hotspot ini?")) return;
+  const handleDeleteHotspot = async (spot: HotspotItem) => {
+    if (!spot.id) return;
+    const ok = await dialog.confirm({
+      title: `Hapus hotspot "${spot.label}"?`,
+      confirmLabel: "Ya, hapus",
+      danger: true,
+    });
+    if (!ok) return;
 
-    setDeletingId(id);
+    setDeletingId(spot.id);
     setSaveError(null);
-
     try {
-      // Delete dari API
-      await deleteHotspot(catalogId, id);
-
-      // Update local state
-      onHotspotDelete(id);
+      await deleteHotspot(catalogId, spot.id);
+      onHotspotDelete(spot.id);
+      if (editingId === spot.id) resetForm();
+      toast.success("Hotspot dihapus");
     } catch (err: any) {
-      const msg = err?.response?.data?.message || "Gagal hapus hotspot";
-      setSaveError(msg);
-      console.error("Failed to delete hotspot:", err);
+      setSaveError(err?.response?.data?.message || "Gagal menghapus hotspot");
     } finally {
       setDeletingId(null);
     }
   };
 
-  // ── Start edit (FIX #5: ensure defaults agar form tidak rusak kalau ada field undefined)
   const startEdit = (hotspot: HotspotItem) => {
+    setIsAdding(false);
+    setHasPickedPoint(true);
     setEditingId(hotspot.id || "");
     setForm({
       scene_number: hotspot.scene_number || sceneNumber,
@@ -313,319 +294,261 @@ export function HotspotVisualEditor({
   };
 
   return (
-    <div className="space-y-6 border border-border rounded-lg p-6 bg-card">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-foreground">
-          Hotspots — {sceneNumber.replace("scene-", "Scene ")}
-          <span className="text-xs text-muted-foreground ml-2">
-            ({hotspots.length} points)
-          </span>
-        </h3>
+    <div className="space-y-5 rounded-2xl border border-[#EAE4DA] bg-white p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="font-header text-lg text-[#232528]">
+            Editor Titik Hotspot — {sceneNumber.replace("scene-", "Scene ")}
+            <span className="ml-2 text-xs font-normal text-[#656B73]">({hotspots.length} titik)</span>
+          </h3>
+          <p className="text-xs text-[#656B73]">
+            Geser titik putih pada foto untuk memindahkan posisi, atau klik <strong>Tambah Hotspot</strong> lalu klik
+            bagian produk di foto.
+          </p>
+        </div>
         {!isAdding && !editingId && (
           <button
-            onClick={() => setIsAdding(true)}
-            className="flex items-center gap-2 text-xs bg-foreground text-background px-3 py-1.5 hover:bg-foreground/90 transition-colors"
+            type="button"
+            onClick={() => {
+              setIsAdding(true);
+              setHasPickedPoint(false);
+              setSaveError(null);
+            }}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#232528] px-4 py-2 text-xs font-medium text-white hover:bg-[#34383D]"
           >
-            <Plus size={14} /> Add Hotspot
+            <Plus size={14} /> Tambah Hotspot
           </button>
         )}
       </div>
 
-      {/* FIX: Error message */}
       {saveError && (
-        <div className="p-3 bg-red-500/20 border border-red-500/50 rounded text-red-700 text-xs">
-          ❌ {saveError}
-        </div>
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs text-red-700">{saveError}</div>
       )}
 
-      {/* ════════════════════════════════════════
-          VISUAL EDITOR — Interactive Image
-      ════════════════════════════════════════ */}
+      {/* Visual Interactive Canvas */}
       <div
         ref={containerRef}
-        className="relative aspect-video bg-secondary overflow-hidden border border-border cursor-crosshair rounded"
+        className={`relative aspect-video overflow-hidden rounded-xl border border-[#EAE4DA] bg-[#FAF8F4] ${
+          isAdding || editingId ? "cursor-crosshair" : ""
+        }`}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
-        {/* Scene Image */}
         <img
           ref={imageRef}
           src={sceneImage}
           alt={sceneNumber}
-          className="w-full h-full object-cover"
+          draggable={false}
+          className="h-full w-full select-none object-cover"
           onClick={handleImageClick}
         />
 
-        {/* Hint overlay saat add mode */}
+        {/* Banner instruksi ringan di atas (tidak menutupi seluruh gambar!) */}
         {isAdding && (
-          <div className="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none">
-            <div className="text-center text-white">
-              <p className="text-sm font-medium">Click di image untuk menempatkan hotspot</p>
-              <p className="text-xs text-white/60 mt-1">
-                Koordinat: {form.x.toFixed(1)}% × {form.y.toFixed(1)}%
-              </p>
-            </div>
+          <div className="pointer-events-none absolute left-1/2 top-3 z-30 -translate-x-1/2 rounded-full bg-[#232528]/90 px-4 py-1.5 text-xs font-medium text-white shadow-lg">
+            {hasPickedPoint
+              ? `Titik diletakkan di ${form.x.toFixed(1)}% × ${form.y.toFixed(1)}% — klik lagi untuk geser`
+              : "Klik bagian produk pada foto untuk meletakkan titik hotspot"}
           </div>
         )}
 
-        {/* ── Hotspot Dots (render semua hotspots) ── */}
-        {hotspots.map((spot) => (
+        {/* Live pulsing pin preview saat Add Mode */}
+        {isAdding && hasPickedPoint && (
           <div
-            key={spot.id}
-            className={`absolute w-8 h-8 -translate-x-1/2 -translate-y-1/2 group transition-all ${
-              draggingId === spot.id ? "z-50" : "z-20"
-            }`}
-            style={{
-              left: `${spot.x}%`,
-              top: `${spot.y}%`,
-              cursor: draggingId === spot.id ? "grabbing" : "grab",
-            }}
-            onMouseDown={(e) => handleMouseDown(e, spot.id || "")}
+            className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-1/2"
+            style={{ left: `${form.x}%`, top: `${form.y}%` }}
           >
-            <div className="relative w-full h-full">
-              {/* Circle dot */}
-              <div
-                className={`w-full h-full rounded-full border-2 transition-all duration-200 ${
-                  editingId === spot.id
-                    ? "bg-white border-white shadow-lg scale-125"
-                    : "bg-white/30 border-white backdrop-blur-sm group-hover:bg-white/60 group-hover:scale-110"
-                }`}
-              />
-
-              {/* Label above dot */}
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-background/95 text-foreground text-[9px] px-2 py-1 rounded pointer-events-none border border-border shadow-md">
-                {spot.label}
-              </div>
-
-              {/* Item thumbnail tooltip on hover */}
-              {spot.item_slug && selectedItem?.slug === spot.item_slug && (
-                <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-30">
-                  <div className="bg-background border border-border rounded shadow-lg p-2 w-32">
-                    {selectedItem?.image && (
-                      <img
-                        src={imgUrl(selectedItem.image)}
-                        alt={selectedItem.title}
-                        className="w-full aspect-square object-cover rounded mb-1"
-                      />
-                    )}
-                    <p className="text-[8px] font-medium text-foreground truncate">
-                      {selectedItem?.title}
-                    </p>
-                    <p className="text-[7px] text-muted-foreground">{selectedItem?.code}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-
-        {/* Hint saat empty */}
-        {hotspots.length === 0 && !isAdding && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="text-center text-white/50">
-              <p className="text-sm">No hotspots yet</p>
-              <p className="text-xs">Click "Add Hotspot" untuk mulai</p>
-            </div>
+            <span className="absolute -inset-2 animate-ping rounded-full bg-[#5E93B8]/60" />
+            <span className="relative block h-7 w-7 rounded-full border-2 border-white bg-[#5E93B8] shadow-lg" />
           </div>
         )}
+
+        {/* Existing Hotspot Dots */}
+        {hotspots.map((spot) => {
+          const spotItem = availableItems.find((i) => i.slug === spot.item_slug);
+          return (
+            <div
+              key={spot.id}
+              className={`group absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 transition-all ${
+                draggingId === spot.id ? "z-50" : "z-20"
+              }`}
+              style={{
+                left: `${spot.x}%`,
+                top: `${spot.y}%`,
+                cursor: draggingId === spot.id ? "grabbing" : "grab",
+              }}
+              onMouseDown={(e) => handleMouseDown(e, spot.id || "")}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isAdding) startEdit(spot);
+              }}
+            >
+              <div className="relative h-full w-full">
+                <div
+                  className={`h-full w-full rounded-full border-2 transition-all duration-200 ${
+                    editingId === spot.id
+                      ? "scale-125 border-white bg-[#5E93B8] shadow-lg"
+                      : "border-white bg-white/40 backdrop-blur-sm group-hover:scale-110 group-hover:bg-white/75"
+                  }`}
+                />
+                <div className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-[#EAE4DA] bg-white/95 px-2.5 py-1 text-[11px] font-medium text-[#232528] opacity-0 shadow-md transition-opacity group-hover:opacity-100">
+                  {spot.label}
+                </div>
+                {spotItem && (
+                  <div className="pointer-events-none absolute left-full top-1/2 z-30 ml-3 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100">
+                    <div className="w-36 rounded-xl border border-[#EAE4DA] bg-white p-2 shadow-lg">
+                      {spotItem.image && (
+                        <img
+                          src={imgUrl(spotItem.image)}
+                          alt={spotItem.title}
+                          className="mb-1.5 aspect-square w-full rounded-lg object-cover"
+                        />
+                      )}
+                      <p className="truncate text-[11px] font-medium text-[#232528]">{spotItem.title}</p>
+                      {spotItem.code && <p className="text-[10px] text-[#656B73]">{spotItem.code}</p>}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* ════════════════════════════════════════
-          FORM — Add/Edit Hotspot
-      ════════════════════════════════════════ */}
+      {/* Add / Edit Form Panel */}
       {(isAdding || editingId) && (
-        <div className="border-t border-border pt-6 space-y-4 bg-secondary/30 p-4 rounded-lg">
-          <h4 className="text-sm font-semibold text-foreground">
-            {editingId ? "✏️ Edit Hotspot" : "➕ New Hotspot"}
-          </h4>
-
-          {/* Position Info */}
-          <div className="bg-background/50 border border-border/50 rounded p-3">
-            <p className="text-xs text-muted-foreground">
-              <strong>Position:</strong> {form.x.toFixed(1)}% × {form.y.toFixed(1)}%
-              {isAdding && <span className="ml-2 text-[10px]">(click gambar untuk update)</span>}
-            </p>
+        <div className="space-y-4 rounded-xl border border-[#5E93B8]/35 bg-[#EDF4F8]/40 p-5">
+          <div className="flex items-center justify-between">
+            <h4 className="font-header text-base text-[#232528]">
+              {editingId ? "Ubah Titik Hotspot" : "Tambah Titik Hotspot Baru"}
+            </h4>
+            <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-[#4C5259]">
+              Posisi: {form.x.toFixed(1)}% × {form.y.toFixed(1)}%
+            </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {/* Label */}
-            <div>
-              <label className="text-xs font-medium text-foreground block mb-1.5">
-                Label *
-              </label>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-[#232528]">Label Hotspot *</span>
               <input
                 type="text"
                 value={form.label}
                 onChange={(e) => setForm({ ...form, label: e.target.value })}
-                placeholder="e.g., Lounge Chair"
-                className="w-full border border-border bg-background text-foreground p-2 text-sm rounded"
+                placeholder="mis. Sofa Bouclé"
+                className="h-10 w-full rounded-lg border border-[#E2DACF] bg-white px-3 text-sm text-[#232528] outline-none focus:border-[#5E93B8]"
               />
-            </div>
+            </label>
 
-            {/* Item Selector */}
-            <div>
-              <label className="text-xs font-medium text-foreground block mb-1.5">
-                Link to Item
-              </label>
-              <div className="relative">
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      value={
-                        itemSearch ||
-                        (form.item_slug && selectedItem
-                          ? selectedItem.title
-                          : "")
-                      }
-                      onChange={(e) => {
-                        setItemSearch(e.target.value);
-                        setShowItemDropdown(true);
-                      }}
-                      onFocus={() => setShowItemDropdown(true)}
-                      placeholder="Search items..."
-                      disabled={itemsLoading}
-                      className="w-full border border-border bg-background text-foreground p-2 text-sm rounded disabled:opacity-50"
-                    />
-                    <Search
-                      size={14}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-                    />
-                  </div>
-                  {form.item_slug && (
-                    <button
-                      onClick={() => {
-                        setForm({ ...form, item_slug: "" });
-                        setItemSearch("");
-                      }}
-                      className="text-xs text-muted-foreground hover:text-foreground"
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
+            <div ref={dropdownRef}>
+              <span className="mb-1 block text-xs font-medium text-[#232528]">Hubungkan ke Produk Furnitur</span>
+              <div className="relative flex items-center gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={itemSearch || (form.item_slug && selectedItem ? selectedItem.title : "")}
+                    onChange={(e) => {
+                      setItemSearch(e.target.value);
+                      setShowItemDropdown(true);
+                    }}
+                    onFocus={() => setShowItemDropdown(true)}
+                    placeholder="Cari nama atau kode produk…"
+                    disabled={itemsLoading}
+                    className="h-10 w-full rounded-lg border border-[#E2DACF] bg-white pl-3 pr-9 text-sm text-[#232528] outline-none focus:border-[#5E93B8] disabled:opacity-50"
+                  />
+                  <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#656B73]" />
                 </div>
+                {form.item_slug && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForm({ ...form, item_slug: "" });
+                      setItemSearch("");
+                    }}
+                    aria-label="Hapus tautan produk"
+                    className="rounded-lg border border-[#E2DACF] bg-white p-2 text-[#656B73] hover:text-[#232528]"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
 
-                {/* Dropdown List */}
-                {showItemDropdown && !itemsLoading && filteredItems.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded shadow-lg max-h-48 overflow-y-auto z-10">
-                    {filteredItems.map((item) => (
-                      <button
-                        key={item.slug}
-                        onClick={() => {
-                          setForm({ ...form, item_slug: item.slug });
-                          setItemSearch("");
-                          setShowItemDropdown(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 text-xs border-b border-border/50 last:border-0 transition-colors ${
-                          form.item_slug === item.slug
-                            ? "bg-foreground/10 text-foreground font-medium"
-                            : "text-muted-foreground hover:bg-secondary"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
+                {showItemDropdown && !itemsLoading && (
+                  <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-52 overflow-y-auto rounded-xl border border-[#E2DACF] bg-white shadow-xl">
+                    {filteredItems.length === 0 ? (
+                      <p className="p-3 text-center text-xs text-[#656B73]">Produk tidak ditemukan.</p>
+                    ) : (
+                      filteredItems.slice(0, 40).map((item) => (
+                        <button
+                          key={item.slug}
+                          type="button"
+                          onClick={() => {
+                            setForm((prev) => ({
+                              ...prev,
+                              item_slug: item.slug,
+                              label: prev.label.trim() ? prev.label : item.title,
+                            }));
+                            setItemSearch("");
+                            setShowItemDropdown(false);
+                          }}
+                          className={`flex w-full items-center gap-2.5 border-b border-[#F2EDE5] px-3 py-2 text-left text-xs last:border-0 ${
+                            form.item_slug === item.slug
+                              ? "bg-[#EDF4F8] font-medium text-[#232528]"
+                              : "text-[#4C5259] hover:bg-[#FAF8F4]"
+                          }`}
+                        >
                           {item.image && (
-                            <img
-                              src={imgUrl(item.image)}
-                              alt={item.title}
-                              className="w-6 h-6 object-cover rounded"
-                            />
+                            <img src={imgUrl(item.image)} alt={item.title} className="h-8 w-8 rounded object-cover" />
                           )}
-                          <div>
-                            <p className="font-medium">{item.title}</p>
-                            <p className="text-[10px] text-muted-foreground">
-                              {item.code || item.type?.name}
-                            </p>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-medium text-[#232528]">{item.title}</p>
+                            <p className="truncate text-[10px] text-[#656B73]">{item.code || item.type?.name}</p>
                           </div>
-                        </div>
-                      </button>
-                    ))}
+                        </button>
+                      ))
+                    )}
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Selected Item Preview */}
-          {form.item_slug && selectedItem && (
-            <div className="border border-border/50 rounded p-3 bg-background/50 flex gap-3">
-              {selectedItem.image && (
-                <img
-                  src={imgUrl(selectedItem.image)}
-                  alt={selectedItem.title}
-                  className="w-16 h-16 object-cover rounded"
-                />
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-foreground truncate">
-                  {selectedItem.title}
-                </p>
-                <p className="text-[10px] text-muted-foreground">{selectedItem.code}</p>
-                {selectedItem.themes && selectedItem.themes.length > 0 && (
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    {selectedItem.themes.map((t) => t.name).join(", ")}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Description */}
-          <div>
-            <label className="text-xs font-medium text-foreground block mb-1.5">
-              Description (optional)
-            </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-[#232528]">Keterangan Singkat (Opsional)</span>
             <textarea
               value={form.description || ""}
-              onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
-              }
-              placeholder="Brief description untuk hotspot ini..."
-              className="w-full border border-border bg-background text-foreground p-2 text-sm h-14 resize-none rounded"
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="Catatan singkat tentang produk di ruangan ini…"
+              rows={2}
+              className="w-full rounded-lg border border-[#E2DACF] bg-white p-2.5 text-sm text-[#232528] outline-none focus:border-[#5E93B8]"
             />
-          </div>
+          </label>
 
-          {/* FIX #10: Error juga ditampilkan dekat tombol action */}
-          {saveError && (
-            <div className="p-2.5 bg-red-500/15 border border-red-500/40 rounded text-red-700 text-xs">
-              ❌ {saveError}
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex gap-2 pt-2">
+          <div className="flex items-center gap-2">
             <button
-              onClick={editingId ? handleUpdateHotspot : handleAddHotspot}
+              type="button"
+              onClick={() => void (editingId ? handleUpdateHotspot() : handleAddHotspot())}
               disabled={savingId !== null}
-              className={`flex-1 py-2 text-sm font-medium rounded flex items-center justify-center gap-2 transition-colors ${
-                savingId !== null
-                  ? "bg-foreground/50 text-background cursor-not-allowed"
-                  : "bg-foreground text-background hover:bg-foreground/90"
-              }`}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[#232528] py-2.5 text-xs font-medium text-white hover:bg-[#34383D] disabled:opacity-50"
             >
-              {savingId !== null && <Loader2 size={14} className="animate-spin" />}
-              {editingId ? "💾 Update" : "➕ Add"}
+              {savingId !== null ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+              {editingId ? "Simpan Perubahan Hotspot" : "Simpan Titik Hotspot"}
             </button>
             <button
+              type="button"
               onClick={resetForm}
-              className="px-4 border border-border text-foreground hover:bg-secondary transition-colors rounded"
+              className="rounded-full border border-[#E2DACF] bg-white px-5 py-2.5 text-xs font-medium text-[#232528] hover:bg-[#FAF8F4]"
             >
-              <X size={16} />
+              Batal
             </button>
           </div>
         </div>
       )}
 
-      {/* ════════════════════════════════════════
-          LIST — Existing Hotspots
-      ════════════════════════════════════════ */}
+      {/* Existing Hotspots List */}
       {hotspots.length > 0 && (
-        <div className="space-y-2 border-t border-border pt-4">
-          <p className="text-xs font-medium text-muted-foreground">
-            {hotspots.length} hotspot{hotspots.length !== 1 ? "s" : ""} pada {sceneNumber}
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-64 overflow-y-auto">
+        <div className="space-y-2.5 border-t border-[#EAE4DA] pt-4">
+          <p className="text-xs font-medium text-[#656B73]">Daftar titik pada scene ini (klik kartu untuk edit):</p>
+          <div className="grid max-h-64 grid-cols-1 gap-2 overflow-y-auto md:grid-cols-2">
             {hotspots.map((spot) => {
               const itemData = availableItems.find((i) => i.slug === spot.item_slug);
               const isDeleting = deletingId === spot.id;
@@ -633,56 +556,38 @@ export function HotspotVisualEditor({
                 <div
                   key={spot.id}
                   onClick={() => startEdit(spot)}
-                  className={`p-3 rounded text-xs cursor-pointer transition-all border ${
+                  className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-xs transition-all ${
                     editingId === spot.id
-                      ? "bg-foreground/10 border-foreground/50 ring-2 ring-foreground/20"
-                      : "bg-secondary border-border hover:bg-secondary/80 hover:border-foreground/30"
+                      ? "border-[#5E93B8] bg-[#EDF4F8]/70"
+                      : "border-[#EAE4DA] bg-[#FAF8F4]/50 hover:border-[#5E93B8]/50"
                   } ${isDeleting ? "opacity-50" : ""}`}
                 >
-                  <div className="flex items-start gap-2">
-                    {/* Item thumbnail */}
-                    {itemData?.image && (
-                      <img
-                        src={imgUrl(itemData.image)}
-                        alt={itemData.title}
-                        className="w-10 h-10 object-cover rounded flex-shrink-0"
-                      />
-                    )}
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground">{spot.label}</p>
-                      {itemData && (
-                        <p className="text-[10px] text-muted-foreground truncate">
-                          → {itemData.title}
-                        </p>
-                      )}
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        {spot.x.toFixed(1)}% × {spot.y.toFixed(1)}%
-                      </p>
-                    </div>
-
-                    {/* Delete button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteHotspot(spot.id || "");
-                      }}
-                      disabled={isDeleting}
-                      className={`p-1 flex-shrink-0 transition-colors ${
-                        isDeleting
-                          ? "text-gray-400 cursor-not-allowed"
-                          : "text-red-500/60 hover:text-red-600"
-                      }`}
-                      title="Delete"
-                    >
-                      {isDeleting ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <Trash2 size={14} />
-                      )}
-                    </button>
+                  {itemData?.image && (
+                    <img
+                      src={imgUrl(itemData.image)}
+                      alt={itemData.title}
+                      className="h-10 w-10 shrink-0 rounded-lg border border-[#EAE4DA] object-cover"
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-[#232528]">{spot.label}</p>
+                    {itemData && <p className="truncate text-[11px] text-[#5E93B8]">→ {itemData.title}</p>}
+                    <p className="text-[10px] text-[#656B73]">
+                      {spot.x.toFixed(1)}% × {spot.y.toFixed(1)}%
+                    </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void handleDeleteHotspot(spot);
+                    }}
+                    disabled={isDeleting}
+                    aria-label={`Hapus ${spot.label}`}
+                    className="rounded-lg p-1.5 text-red-600 hover:bg-red-50 disabled:opacity-40"
+                  >
+                    {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                  </button>
                 </div>
               );
             })}

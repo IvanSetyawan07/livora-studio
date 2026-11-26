@@ -1,86 +1,77 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap');
-
 /*
- * Scoped theme for the standalone "AI Marketing" section.
- * Wrap the whole section in <div className="dark ai-marketing-scope">.
- * `dark` flips Livora's existing shadcn tokens (background, foreground,
- * card, border, muted, secondary, accent...) to the palette defined in
- * index.css `.dark { ... }`. This file OVERRIDES those on top with a
- * cooler, near-black "AI operations" palette plus the functional accent
- * system (purple = AI, pink = insight/impact, green = success, amber =
- * warning, red = critical only, blue = secondary) and the matching
- * utility classes, so the section renders identically without touching
- * tailwind.config or any other part of the app.
+ * Scoped theme for the LIVORA "AI Marketing" section.
+ * Aligned to LIVORA's quiet-luxury brand palette (Opsi A):
+ *   - Sunlit Limestone (#FAF8F4) background
+ *   - Pure White (#FFFFFF) cards with Warm Sand (#EAE4DA) borders
+ *   - Morning Sky (#45789B / #5E93B8 / #EDF4F8) primary accent
+ *   - Charcoal (#232528) primary text, Slate (#656B73) secondary text
+ *   - Official typography: Tenor Sans (Display/Headers) + Questrial (Body)
  */
 
-.ai-marketing-scope,
-.dark.ai-marketing-scope {
-  /* --- base surfaces: cool near-black, not warm-charcoal --------- */
-  --background: 240 16% 6%;
-  --foreground: 220 24% 95%;
-  --card: 240 14% 8%;
-  --card-foreground: 220 24% 95%;
-  --popover: 240 16% 7%;
-  --popover-foreground: 220 24% 95%;
-  --secondary: 240 12% 13%;
-  --secondary-foreground: 220 24% 95%;
-  --muted: 240 12% 12%;
-  --muted-foreground: 222 10% 62%;
-  --accent: 240 12% 15%;
-  --accent-foreground: 220 24% 95%;
-  --border: 240 10% 17%;
-  --input: 240 10% 17%;
-  --ring: 258 90% 66%;
+.ai-marketing-scope {
+  /* --- base surfaces: Sunlit Limestone & Pure White -------------- */
+  --background: 40 33% 97%;       /* #FAF8F4 */
+  --foreground: 216 7% 15%;       /* #232528 */
+  --card: 0 0% 100%;              /* #FFFFFF */
+  --card-foreground: 216 7% 15%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 216 7% 15%;
+  --secondary: 38 25% 94%;        /* #F4F0E8 */
+  --secondary-foreground: 216 7% 15%;
+  --muted: 38 22% 93%;            /* #F1EDE5 */
+  --muted-foreground: 214 7% 42%; /* #656B73 */
+  --accent: 202 45% 95%;          /* #EDF4F8 */
+  --accent-foreground: 205 45% 32%;
+  --border: 37 26% 89%;           /* #EAE4DA */
+  --input: 37 26% 89%;
+  --ring: 205 40% 45%;
 
-  --border-strong: 220 20% 100% / 0.14;
+  --border-strong: 37 20% 78%;
 
-  /* --- functional accent system ----------------------------------
-     Purple = AI / system chrome. Pink = insight / impact. Green =
-     success / healthy. Amber = warning / medium priority. Red
-     (destructive) = critical / high priority only. Blue = secondary,
-     never the dominant hue. */
-  --ai: 258 90% 67%;
-  --brass: var(--ai); /* legacy alias — every existing text-brass/bg-brass/
-                          border-brass utility across the section becomes
-                          the AI-purple accent automatically. */
-  --insight: 328 85% 62%;
-  --success: 152 62% 46%;
-  --warning: 38 95% 58%;
-  --info: 217 91% 62%;
-  --destructive: 356 78% 58%;
-  --destructive-foreground: 220 24% 97%;
+  /* --- functional accent system (quiet-luxury, accessible light) -- */
+  --ai: 205 42% 44%;              /* Morning Sky Deep (#41779F) */
+  --brass: var(--ai);
+  --insight: 212 36% 42%;         /* Slate Sky */
+  --success: 152 60% 34%;         /* Deep Emerald */
+  --warning: 32 88% 42%;          /* Warm Amber */
+  --info: 205 55% 48%;            /* Morning Sky */
+  --destructive: 354 70% 48%;     /* Crimson */
+  --danger: var(--destructive);   /* Safe alias */
+  --destructive-foreground: 0 0% 100%;
 
-  /* Surfaces used for illustrative/empty states */
-  --surface: 240 13% 10%;
-  --surface-raised: 240 12% 14%;
+  --surface: 40 28% 96%;
+  --surface-raised: 0 0% 100%;
 
-  /* Chart palette — purple / pink / green / amber / blue, always
-     distinguishable, never a single dominant hue. */
+  /* Chart palette */
   --chart-1: var(--ai);
-  --chart-2: var(--insight);
-  --chart-3: var(--success);
-  --chart-4: var(--warning);
-  --chart-5: var(--info);
+  --chart-2: var(--success);
+  --chart-3: var(--warning);
+  --chart-4: var(--info);
+  --chart-5: 216 7% 28%;
 
-  --radius: 0.7rem;
+  --radius: 0.75rem;
 
-  --sidebar-background: 240 18% 4.5%;
-  --sidebar-foreground: 222 14% 85%;
-  --sidebar-accent: 240 12% 11%;
-  --sidebar-accent-foreground: 220 24% 97%;
-  --sidebar-border: 220 20% 100% / 0.07;
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 216 7% 20%;
+  --sidebar-accent: 202 45% 95%;
+  --sidebar-accent-foreground: 205 45% 32%;
+  --sidebar-border: 37 26% 89%;
 
-  font-family: 'Inter', system-ui, sans-serif;
-  color-scheme: dark;
+  font-family: 'Questrial', system-ui, -apple-system, sans-serif;
+  color-scheme: light;
 }
 
 /* --- colour utilities (independent from tailwind.config) ---------- */
 .ai-marketing-scope .text-brass,
 .ai-marketing-scope .text-ai { color: hsl(var(--ai)); }
 .ai-marketing-scope .text-brass\/80,
-.ai-marketing-scope .text-ai\/80 { color: hsl(var(--ai) / 0.8); }
+.ai-marketing-scope .text-ai\/80 { color: hsl(var(--ai) / 0.85); }
 .ai-marketing-scope .bg-brass,
 .ai-marketing-scope .bg-ai { background-color: hsl(var(--ai)); }
+.ai-marketing-scope .bg-ai.text-background,
+.ai-marketing-scope .bg-brass.text-background,
+.ai-marketing-scope .bg-success.text-background,
+.ai-marketing-scope .bg-warning.text-background { color: #ffffff; }
 .ai-marketing-scope .bg-brass\/10,
 .ai-marketing-scope .bg-ai\/10 { background-color: hsl(var(--ai) / 0.1); }
 .ai-marketing-scope .bg-brass\/12,
@@ -126,7 +117,7 @@
 .ai-marketing-scope .bg-muted-foreground\/12 { background-color: hsl(var(--muted-foreground) / 0.12); }
 
 .ai-marketing-scope .bg-surface { background-color: hsl(var(--surface)); }
-.ai-marketing-scope .bg-surface\/40 { background-color: hsl(var(--surface) / 0.4); }
+.ai-marketing-scope .bg-surface\/40 { background-color: hsl(var(--surface) / 0.5); }
 .ai-marketing-scope .bg-surface-raised { background-color: hsl(var(--surface-raised)); }
 
 .ai-marketing-scope .text-chart-1 { color: hsl(var(--chart-1)); }
@@ -138,36 +129,36 @@
 .ai-marketing-scope .bg-chart-3 { background-color: hsl(var(--chart-3)); }
 .ai-marketing-scope .bg-chart-4 { background-color: hsl(var(--chart-4)); }
 
-/* --- typography: confident sans display, mono system labels ------- */
+/* --- typography: Tenor Sans headers, readable Questrial labels ---- */
 .ai-marketing-scope .text-display {
-  font-family: 'Inter', system-ui, sans-serif;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-family: 'Tenor Sans', Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
 }
 
 .ai-marketing-scope .label-eyebrow {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.625rem;
+  font-family: 'Questrial', system-ui, sans-serif;
+  font-size: 0.6875rem; /* 11px for comfortable studio readability */
   font-weight: 500;
-  letter-spacing: 0.13em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: hsl(var(--muted-foreground));
 }
 
 .ai-marketing-scope .panel {
-  background-image: linear-gradient(175deg, hsl(var(--card)) 0%, hsl(var(--background)) 130%);
+  background-color: #ffffff;
   border: 1px solid hsl(var(--border));
-  box-shadow: 0 1px 0 0 hsl(0 0% 100% / 4%) inset, 0 14px 32px -22px hsl(240 60% 2% / 70%);
+  box-shadow: 0 1px 2px 0 rgba(35, 37, 40, 0.03), 0 8px 24px -18px rgba(35, 37, 40, 0.12);
   border-radius: calc(var(--radius) + 2px);
 }
 
 .ai-marketing-scope .panel-hover {
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease, box-shadow 0.25s ease;
 }
 .ai-marketing-scope .panel-hover:hover {
-  transform: translateY(-2px);
-  border-color: hsl(var(--border-strong));
-  box-shadow: 0 20px 44px -26px hsl(240 60% 2% / 85%);
+  transform: translateY(-1px);
+  border-color: hsl(var(--ai) / 0.45);
+  box-shadow: 0 12px 28px -18px rgba(65, 119, 159, 0.2);
 }
 
 .ai-marketing-scope .rule-accent {
@@ -180,7 +171,7 @@
   left: 0;
   top: 0.15em;
   bottom: 0.15em;
-  width: 2px;
+  width: 2.5px;
   border-radius: 2px;
   background: hsl(var(--ai));
 }
@@ -211,12 +202,12 @@
   50% { opacity: 0.65; box-shadow: 0 0 0 4px transparent; }
 }
 @keyframes rise {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 @keyframes pop-in {
-  0% { opacity: 0; transform: scale(0.92); }
-  60% { opacity: 1; transform: scale(1.015); }
+  0% { opacity: 0; transform: scale(0.94); }
+  60% { opacity: 1; transform: scale(1.01); }
   100% { opacity: 1; transform: scale(1); }
 }
 @keyframes shimmer-sweep {
@@ -227,20 +218,20 @@
   animation: ai-pulse-dot 2.4s ease-in-out infinite;
 }
 .ai-marketing-scope .animate-pop-in {
-  animation: pop-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: pop-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .ai-marketing-scope .skeleton-shimmer {
   background-image: linear-gradient(
     100deg,
-    hsl(var(--muted) / 0.4) 30%,
-    hsl(var(--muted-foreground) / 0.16) 45%,
-    hsl(var(--muted-foreground) / 0.16) 55%,
-    hsl(var(--muted) / 0.4) 70%
+    hsl(var(--muted) / 0.6) 30%,
+    hsl(var(--border) / 0.65) 45%,
+    hsl(var(--border) / 0.65) 55%,
+    hsl(var(--muted) / 0.6) 70%
   );
   background-size: 200% 100%;
   animation: shimmer-sweep 1.6s ease-in-out infinite;
 }
 
-/* Recharts legend/axis text should follow the section palette */
+/* Recharts legend/axis text follows the quiet-luxury palette */
 .ai-marketing-scope .recharts-legend-item-text { color: hsl(var(--muted-foreground)) !important; }
 .ai-marketing-scope .recharts-surface { overflow: visible; }

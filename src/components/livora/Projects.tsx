@@ -5,8 +5,8 @@ import { ArrowUpRight } from "lucide-react";
 import {
   registerGsap,
   gsap,
-  ScrollTrigger,
   prefersReducedMotion,
+  scheduleScrollTriggerRefresh,
 } from "@/lib/motionTokens";
 import { useHighlightProjects, useAllProjects } from "@/lib/projectsApi";
 import { getLocalLandingPreview } from "@/lib/localLandingPreview";
@@ -109,7 +109,8 @@ export const Projects = () => {
     if (typeof window === "undefined" || prefersReducedMotion()) return;
     if (!window.matchMedia("(pointer: fine)").matches) return;
     const el = cursorRef.current;
-    if (!el) return;
+    const section = sectionRef.current;
+    if (!el || !section) return;
 
     cursorX.current = gsap.quickTo(el, "x", { duration: 0.34, ease: "power3.out" });
     cursorY.current = gsap.quickTo(el, "y", { duration: 0.34, ease: "power3.out" });
@@ -118,11 +119,16 @@ export const Projects = () => {
       cursorX.current?.(e.clientX);
       cursorY.current?.(e.clientY);
     };
-    window.addEventListener("pointermove", onMove, { passive: true });
-    return () => window.removeEventListener("pointermove", onMove);
+    const onLeave = () => setCursorVisible(false);
+    section.addEventListener("pointermove", onMove, { passive: true });
+    section.addEventListener("pointerleave", onLeave, { passive: true });
+    return () => {
+      section.removeEventListener("pointermove", onMove);
+      section.removeEventListener("pointerleave", onLeave);
+    };
   }, []);
 
-  /* ── GSAP Choreography: Rising Arch + Split-Image Converging Stitch + Staggered Gallery Reveal ── */
+  /* ── GSAP Effect 1: Rising Arch + Header Reveal (mount-once so tab filter never flashes header) ── */
   useLayoutEffect(() => {
     if (prefersReducedMotion() || typeof window === "undefined") return;
     registerGsap();
@@ -143,7 +149,7 @@ export const Projects = () => {
               trigger: archRef.current,
               start: "top 96%",
               end: "top 18%",
-              scrub: 0.25,
+              scrub: true,
             },
           },
         );
@@ -164,7 +170,21 @@ export const Projects = () => {
           },
         );
       }
+    }, section);
 
+    scheduleScrollTriggerRefresh();
+    return () => ctx.revert();
+  }, []);
+
+  /* ── GSAP Effect 2: Split-Image Converging Stitch + Exact Original Curtain Plate Reveal ── */
+  useLayoutEffect(() => {
+    if (prefersReducedMotion() || typeof window === "undefined") return;
+    registerGsap();
+
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const ctx = gsap.context(() => {
       const mm = gsap.matchMedia();
 
       // Split-Image Converging Stitch (Desktop flagship #1)
@@ -184,7 +204,7 @@ export const Projects = () => {
               trigger: stitchWrap,
               start: "top 86%",
               end: "center 46%",
-              scrub: 0.28,
+              scrub: true,
               invalidateOnRefresh: true,
             },
           });
@@ -209,9 +229,10 @@ export const Projects = () => {
       });
 
       // Architectural curtain reveal for each staggered gallery plate
+      // (animates wrapper [data-plate-img] so GSAP scale never fights CSS group-hover:scale on <img>)
       section.querySelectorAll<HTMLElement>("[data-plate]").forEach((plate, idx) => {
         const frame = plate.querySelector<HTMLElement>("[data-plate-frame]");
-        const img = plate.querySelector<HTMLElement>("[data-plate-img]");
+        const imgWrap = plate.querySelector<HTMLElement>("[data-plate-img]");
         const meta = plate.querySelector<HTMLElement>("[data-plate-meta]");
 
         if (frame) {
@@ -228,9 +249,9 @@ export const Projects = () => {
             },
           );
         }
-        if (img) {
+        if (imgWrap) {
           gsap.fromTo(
-            img,
+            imgWrap,
             { scale: 1.1 },
             {
               scale: 1,
@@ -258,9 +279,8 @@ export const Projects = () => {
       });
     }, section);
 
-    const tId = setTimeout(() => ScrollTrigger.refresh(), 120);
+    scheduleScrollTriggerRefresh();
     return () => {
-      clearTimeout(tId);
       ctx.revert();
     };
   }, [filter, filtered.length]);
@@ -376,14 +396,15 @@ export const Projects = () => {
                     data-stitch-left
                     className="relative w-1/2 h-full overflow-hidden bg-[#F1EFEA] will-change-transform"
                   >
-                    <img
-                      data-stitch-img
-                      src={flagship.img}
-                      alt={`${flagship.name} — left architectural view`}
-                      loading="eager"
-                      decoding="async"
-                      className="absolute inset-y-0 left-0 w-[200%] max-w-none h-full object-cover transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.03]"
-                    />
+                    <div data-stitch-img className="absolute inset-0 will-change-transform">
+                      <img
+                        src={flagship.img}
+                        alt={`${flagship.name} — left architectural view`}
+                        loading="eager"
+                        decoding="async"
+                        className="absolute inset-y-0 left-0 w-[200%] max-w-none h-full object-cover transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.03]"
+                      />
+                    </div>
                     <div
                       className="pointer-events-none absolute inset-0"
                       style={{
@@ -398,14 +419,15 @@ export const Projects = () => {
                     data-stitch-right
                     className="relative w-1/2 h-full overflow-hidden bg-[#F1EFEA] will-change-transform"
                   >
-                    <img
-                      data-stitch-img
-                      src={flagship.img}
-                      alt={`${flagship.name} — right architectural view`}
-                      loading="eager"
-                      decoding="async"
-                      className="absolute inset-y-0 right-0 w-[200%] max-w-none h-full object-cover transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.03]"
-                    />
+                    <div data-stitch-img className="absolute inset-0 will-change-transform">
+                      <img
+                        src={flagship.img}
+                        alt={`${flagship.name} — right architectural view`}
+                        loading="eager"
+                        decoding="async"
+                        className="absolute inset-y-0 right-0 w-[200%] max-w-none h-full object-cover transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.03]"
+                      />
+                    </div>
                     <div
                       className="pointer-events-none absolute inset-0"
                       style={{
@@ -533,14 +555,15 @@ export const Projects = () => {
                             data-plate-frame
                             className={`relative overflow-hidden bg-[#F1EFEA] ${aspectClass}`}
                           >
-                            <img
-                              data-plate-img
-                              src={p.img}
-                              alt={`${p.name} — ${p.category}`}
-                              loading="lazy"
-                              decoding="async"
-                              className="h-full w-full object-cover transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.045]"
-                            />
+                            <div data-plate-img className="h-full w-full will-change-transform">
+                              <img
+                                src={p.img}
+                                alt={`${p.name} — ${p.category}`}
+                                loading="lazy"
+                                decoding="async"
+                                className="h-full w-full object-cover transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.045]"
+                              />
+                            </div>
                             <div className="pointer-events-none absolute inset-0 bg-[#232528]/0 group-hover:bg-[#232528]/10 transition-colors duration-500" />
                           </div>
 

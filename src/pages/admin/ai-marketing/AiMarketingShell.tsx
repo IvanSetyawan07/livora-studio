@@ -1,12 +1,14 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { rememberIntendedPath } from "@/lib/authGuard";
 import { AI_DATE_RANGE_PRESETS, formatRangeLabel } from "@/lib/ai/date-range";
+import livoraMark from "@/assets/_opt/logo-livora-160.webp";
 import {
   Activity,
   AlertTriangle,
+  ArrowLeft,
   Bell,
   Bot,
   Boxes,
@@ -15,12 +17,15 @@ import {
   CheckCircle2,
   ChevronDown,
   Cog,
+  Eye,
+  FlaskConical,
   FolderKanban,
   Gauge,
   Home,
   LayoutDashboard,
   Lightbulb,
   LineChart,
+  Lock,
   Megaphone,
   Menu,
   MousePointerClick,
@@ -48,13 +53,23 @@ import { Pill, StatusDot } from "@/components/ai/primitives";
 import { AiMarketingProvider, useAiMarketingContext } from "@/context/AiMarketingContext";
 import {
   useAiActivity,
+  useAiAgents,
   useMarkActivityRead,
   useMarkAllActivityRead,
   useProviders,
 } from "@/hooks/useAiDashboard";
 import type { AIActivity } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
+import { AdminDialogProvider, ErrorState } from "@/components/admin/kit";
+import {
+  AdminPermissionProvider,
+  fetchAdminBootstrap,
+  getCachedAdminBootstrap,
+  type PermissionLevel,
+} from "@/components/admin/AdminPermissionContext";
 import "@/styles/ai-marketing.css";
+
+const IS_MOCK_BACKEND = import.meta.env.VITE_AI_BACKEND === "mock";
 
 type LinkItem = { to: string; label: string; icon: LucideIcon; end?: boolean };
 type AskItem = { action: "ask-ai"; label: string; icon: LucideIcon };
@@ -62,67 +77,52 @@ type NavItem = LinkItem | AskItem;
 
 interface NavGroup {
   key: string;
-  label: string | null;
-  collapsible: boolean;
+  label: string;
+  defaultOpen: boolean;
   items: NavItem[];
 }
 
+/**
+ * 3 grup terbuka dengan label Bahasa Indonesia yang ramah admin studio.
+ * Seluruh 17 rute di App.tsx tetap aktif dan dapat diakses.
+ */
 const navGroups: NavGroup[] = [
   {
-    key: "overview",
-    label: null,
-    collapsible: false,
-    items: [{ to: "/admin/ai-marketing", label: "Overview", icon: LayoutDashboard, end: true }],
-  },
-  {
-    key: "ai-center",
-    label: "AI Center",
-    collapsible: true,
+    key: "utama",
+    label: "Utama",
+    defaultOpen: true,
     items: [
-      { action: "ask-ai", label: "Ask AI", icon: Sparkles },
-      { to: "/admin/ai-marketing/ai-center/recommendations", label: "Recommendations", icon: Lightbulb },
-      { to: "/admin/ai-marketing/ai-center/actions", label: "Actions", icon: Zap },
-      { to: "/admin/ai-marketing/insights", label: "Insights", icon: Search },
+      { to: "/admin/ai-marketing", label: "Ringkasan", icon: LayoutDashboard, end: true },
+      { action: "ask-ai", label: "Tanya AI Marketing", icon: Sparkles },
+      { to: "/admin/ai-marketing/ai-center/recommendations", label: "Rekomendasi AI", icon: Lightbulb },
+      { to: "/admin/ai-marketing/ai-center/actions", label: "Antrean Aksi", icon: Zap },
     ],
   },
   {
-    key: "agents",
-    label: "Agents",
-    collapsible: true,
+    key: "channels",
+    label: "Channel Marketing",
+    defaultOpen: true,
     items: [
-      { to: "/admin/ai-marketing/seo", label: "SEO Agent", icon: LineChart },
-      { to: "/admin/ai-marketing/content", label: "Content Agent", icon: PenLine },
-      { to: "/admin/ai-marketing/ads", label: "Ads Agent", icon: Megaphone },
-      { to: "/admin/ai-marketing/leads", label: "Lead Intelligence", icon: Users },
-      { to: "/admin/ai-marketing/cro", label: "CRO Agent", icon: MousePointerClick },
+      { to: "/admin/ai-marketing/seo", label: "SEO & Google Maps", icon: LineChart },
+      { to: "/admin/ai-marketing/content", label: "Konten & Medsos", icon: PenLine },
+      { to: "/admin/ai-marketing/ads", label: "Iklan & IG Boost", icon: Megaphone },
+      { to: "/admin/ai-marketing/leads", label: "Prospek (Leads)", icon: Users },
+      { to: "/admin/ai-marketing/campaigns", label: "Rencana Campaign", icon: FolderKanban },
     ],
   },
   {
-    key: "workspace",
-    label: "Workspace",
-    collapsible: true,
+    key: "pengaturan",
+    label: "Pengaturan & Sistem",
+    defaultOpen: false,
     items: [
-      { to: "/admin/ai-marketing/campaigns", label: "Campaigns", icon: FolderKanban },
-      { to: "/admin/ai-marketing/impact", label: "Impact", icon: TrendingUp },
-    ],
-  },
-  {
-    key: "governance",
-    label: "Governance",
-    collapsible: true,
-    items: [
-      { to: "/admin/ai-marketing/approvals", label: "Approvals", icon: CheckCircle2 },
-      { to: "/admin/ai-marketing/activity", label: "Activity", icon: Activity },
-    ],
-  },
-  {
-    key: "system",
-    label: "AI System",
-    collapsible: true,
-    items: [
-      { to: "/admin/ai-marketing/usage", label: "Usage & Cost", icon: Gauge },
-      { to: "/admin/ai-marketing/providers", label: "Providers & Routing", icon: Boxes },
-      { to: "/admin/ai-marketing/settings", label: "Settings", icon: Cog },
+      { to: "/admin/ai-marketing/approvals", label: "Persetujuan & Audit", icon: CheckCircle2 },
+      { to: "/admin/ai-marketing/insights", label: "Temuan & Insight", icon: Search },
+      { to: "/admin/ai-marketing/cro", label: "Konversi Website (CRO)", icon: MousePointerClick },
+      { to: "/admin/ai-marketing/impact", label: "Hasil & Dampak", icon: TrendingUp },
+      { to: "/admin/ai-marketing/activity", label: "Riwayat Aktivitas", icon: Activity },
+      { to: "/admin/ai-marketing/settings", label: "Sambungan Platform", icon: Cog },
+      { to: "/admin/ai-marketing/usage", label: "Biaya & Pemakaian AI", icon: Gauge },
+      { to: "/admin/ai-marketing/providers", label: "Mesin & Provider AI", icon: Boxes },
     ],
   },
 ];
@@ -141,8 +141,10 @@ function NavGroupBlock({
   onNavigate: () => void;
 }) {
   const { openAsk } = useAiMarketingContext();
-  const groupActive = group.items.some((item) => isLink(item) && pathname.startsWith(item.to) && item.to !== "/admin/ai-marketing");
-  const [open, setOpen] = useState(groupActive || !group.collapsible);
+  const groupActive = group.items.some(
+    (item) => isLink(item) && pathname.startsWith(item.to) && item.to !== "/admin/ai-marketing",
+  );
+  const [open, setOpen] = useState(group.defaultOpen || groupActive);
 
   useEffect(() => {
     if (groupActive) setOpen(true);
@@ -159,28 +161,29 @@ function NavGroupBlock({
               onClick={onNavigate}
               className={({ isActive }) =>
                 cn(
-                  "group flex items-center gap-3 rounded-sm px-3 py-2 text-sm transition-colors duration-200",
+                  "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-200",
                   isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                    ? "bg-[#EDF4F8] font-medium text-[#2D5B7C]"
+                    : "text-[#4C5259] hover:bg-[#FAF8F4] hover:text-[#232528]",
                 )
               }
             >
-              <item.icon className="size-3.5 text-ai" />
-              {item.label}
+              <item.icon className="size-4 shrink-0 text-[#5E93B8]" />
+              <span className="truncate">{item.label}</span>
             </NavLink>
           </li>
         ) : (
           <li key={item.label}>
             <button
+              type="button"
               onClick={() => {
                 openAsk();
                 onNavigate();
               }}
-              className="group flex w-full items-center gap-3 rounded-sm px-3 py-2 text-left text-sm text-sidebar-foreground/70 transition-colors duration-200 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+              className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-[#4C5259] transition-colors duration-200 hover:bg-[#FAF8F4] hover:text-[#232528]"
             >
-              <item.icon className="size-3.5 text-ai" />
-              {item.label}
+              <item.icon className="size-4 shrink-0 text-[#5E93B8]" />
+              <span className="truncate">{item.label}</span>
             </button>
           </li>
         ),
@@ -188,24 +191,15 @@ function NavGroupBlock({
     </ul>
   );
 
-  if (!group.collapsible || !group.label) {
-    return (
-      <div>
-        {group.label ? <p className="label-eyebrow px-3 pb-2">{group.label}</p> : null}
-        {list}
-      </div>
-    );
-  }
-
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="flex w-full items-center justify-between px-3 pb-2 text-left">
-        <span className="label-eyebrow">{group.label}</span>
-        <ChevronDown className={cn("size-3 text-muted-foreground transition-transform duration-200", open && "rotate-180")} />
+      <CollapsibleTrigger className="flex w-full items-center justify-between px-3 pb-1.5 text-left">
+        <span className="label-eyebrow text-[10px]">{group.label}</span>
+        <ChevronDown
+          className={cn("size-3.5 text-[#656B73] transition-transform duration-200", open && "rotate-180")}
+        />
       </CollapsibleTrigger>
-      <CollapsibleContent className="data-[state=open]:animate-[rise_0.25s_ease-out] data-[state=closed]:hidden">
-        {list}
-      </CollapsibleContent>
+      <CollapsibleContent className="data-[state=closed]:hidden">{list}</CollapsibleContent>
     </Collapsible>
   );
 }
@@ -239,15 +233,15 @@ function activityKindMeta(kind: AIActivity["kind"]): {
 } {
   switch (kind) {
     case "approval":
-      return { icon: CheckCircle2, tone: "bg-success/15 text-success", label: "Approval" };
+      return { icon: CheckCircle2, tone: "bg-success/12 text-success", label: "Persetujuan" };
     case "action":
-      return { icon: Zap, tone: "bg-ai/15 text-ai", label: "Action" };
+      return { icon: Zap, tone: "bg-ai/12 text-ai", label: "Aksi" };
     case "insight":
-      return { icon: Lightbulb, tone: "bg-insight/15 text-insight", label: "Insight" };
+      return { icon: Lightbulb, tone: "bg-insight/12 text-insight", label: "Insight" };
     case "alert":
-      return { icon: AlertTriangle, tone: "bg-warning/15 text-warning", label: "Alert" };
+      return { icon: AlertTriangle, tone: "bg-warning/12 text-warning", label: "Peringatan" };
     default:
-      return { icon: Bot, tone: "bg-info/15 text-info", label: "Agent" };
+      return { icon: Bot, tone: "bg-info/12 text-info", label: "Agent" };
   }
 }
 
@@ -274,6 +268,7 @@ function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) 
   } = useAiMarketingContext();
   const { data: recentActivity = [] } = useAiActivity();
   const { data: providers = [] } = useProviders();
+  const { data: agents = [] } = useAiAgents();
   const markRead = useMarkActivityRead();
   const markAllRead = useMarkAllActivityRead();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -288,6 +283,21 @@ function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) 
 
   const activeProviders = providers.filter((p) => p.status === "connected" || p.status === "degraded");
   const isLive = activeProviders.length > 0;
+
+  // Hitung berapa channel integrasi eksternal yang terhubung (X/Y Channel Terhubung)
+  const channelStats = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const ag of agents) {
+      for (const dep of ag.dependencies ?? []) {
+        const cur = map.get(dep.name);
+        if (!cur || cur !== "connected") map.set(dep.name, dep.state);
+      }
+    }
+    const total = map.size;
+    const connected = [...map.values()].filter((s) => s === "connected").length;
+    return { connected, total };
+  }, [agents]);
+
   const unreadCount = recentActivity.filter((a) => !a.read).length;
   const visibleActivity = recentActivity.slice(0, 8);
 
@@ -317,24 +327,32 @@ function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) 
   };
 
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-background/85 px-4 py-3 backdrop-blur-md sm:gap-3 sm:px-6">
+    <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-[#EAE4DA] bg-white/90 px-4 py-3 backdrop-blur-md sm:gap-3 sm:px-6">
       <button
         type="button"
-        className="flex size-8 items-center justify-center rounded-sm border border-border text-muted-foreground hover:bg-accent hover:text-foreground lg:hidden"
+        className="flex size-8 items-center justify-center rounded-lg border border-[#EAE4DA] text-[#656B73] hover:bg-[#FAF8F4] hover:text-[#232528] lg:hidden"
         onClick={onOpenNav}
-        aria-label="Open navigation"
+        aria-label="Buka menu navigasi"
       >
         <Menu className="size-4" />
       </button>
 
-      <span className="hidden items-center gap-2 sm:flex">
-        <span className="flex size-6 items-center justify-center rounded-md bg-ai/12">
-          <Sparkles className="size-3 text-ai" />
-        </span>
-        <span className="label-eyebrow">AI System</span>
+      {/* Tombol Kembali ke Admin Livora yang selalu terlihat di desktop & mobile */}
+      <Link
+        to="/admin"
+        className="inline-flex items-center gap-1.5 rounded-full border border-[#EAE4DA] bg-[#FAF8F4] px-3 py-1.5 text-xs font-medium text-[#232528] transition-colors hover:border-[#5E93B8] hover:bg-[#EDF4F8]"
+      >
+        <ArrowLeft className="size-3.5 text-[#5E93B8]" />
+        <span className="hidden sm:inline">Kembali ke Admin Livora</span>
+        <span className="sm:hidden">Admin</span>
+      </Link>
+
+      {/* Pill Status Mesin AI & Channel */}
+      <span className="hidden items-center gap-2 md:flex">
         <Pill tone={isLive ? "success" : "warning"}>
           <StatusDot tone={isLive ? "success" : "warning"} pulse={isLive} />
-          {isLive ? "Live" : "Offline"}
+          Mesin AI: {isLive ? "Aktif" : "Belum Aktif"}
+          {channelStats.total > 0 ? ` · ${channelStats.connected}/${channelStats.total} Channel Terhubung` : ""}
         </Pill>
       </span>
 
@@ -343,26 +361,24 @@ function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) 
           type="button"
           onClick={() => void refreshAll()}
           disabled={isRefreshing}
-          title="Muat ulang semua data dashboard"
-          className="flex size-8 items-center justify-center rounded-sm border border-border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
-          aria-label="Refresh dashboard"
+          title="Muat ulang semua data marketing"
+          className="flex size-8 items-center justify-center rounded-lg border border-[#EAE4DA] text-[#656B73] transition-colors hover:bg-[#FAF8F4] hover:text-[#232528] disabled:opacity-50"
+          aria-label="Muat ulang data"
         >
           <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin text-ai")} />
         </button>
 
         <DropdownMenu modal={false} open={dateOpen} onOpenChange={setDateOpen}>
-          <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-sm border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:px-3 sm:py-2">
-            <CalendarDays className="size-3.5 shrink-0" />
+          <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-lg border border-[#EAE4DA] bg-white px-2.5 py-1.5 text-xs text-[#232528] transition-colors hover:border-[#5E93B8] sm:px-3">
+            <CalendarDays className="size-3.5 shrink-0 text-[#5E93B8]" />
             <span className="hidden sm:inline">
-              {dateRange.key === "custom" ? `${dateRange.from} → ${dateRange.to}` : `Last ${dateRange.days} days`}
+              {dateRange.key === "custom" ? `${dateRange.from} → ${dateRange.to}` : `${dateRange.days} hari terakhir`}
             </span>
-            <span className="sm:hidden">
-              {dateRange.key === "custom" ? `${dateRange.days}d` : `${dateRange.days}D`}
-            </span>
-            <ChevronDown className="size-3" />
+            <span className="sm:hidden">{dateRange.days} hr</span>
+            <ChevronDown className="size-3 text-[#656B73]" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
-            <DropdownMenuLabel>Rentang tanggal</DropdownMenuLabel>
+            <DropdownMenuLabel>Rentang Tanggal</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {AI_DATE_RANGE_PRESETS.map((p) => (
               <DropdownMenuItem
@@ -373,10 +389,8 @@ function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) 
                 }}
                 className="flex items-center justify-between"
               >
-                <span>Last {p.days} days</span>
-                {formatRangeLabel(dateRange) === p.label ? (
-                  <span className="text-ai">✓</span>
-                ) : null}
+                <span>{p.days} hari terakhir</span>
+                {formatRangeLabel(dateRange) === p.label ? <span className="text-ai">✓</span> : null}
               </DropdownMenuItem>
             ))}
             <DropdownMenuItem onClick={thisMonth}>Bulan ini (MTD)</DropdownMenuItem>
@@ -386,7 +400,7 @@ function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) 
               onClick={(e) => e.stopPropagation()}
               onKeyDown={(e) => e.stopPropagation()}
             >
-              <p className="label-eyebrow">Custom range</p>
+              <p className="label-eyebrow">Rentang Khusus</p>
               <div className="grid grid-cols-2 gap-1.5">
                 <input
                   type="date"
@@ -404,7 +418,7 @@ function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) 
               <button
                 type="button"
                 onClick={applyCustomRange}
-                className="w-full rounded bg-ai px-2.5 py-1.5 text-[11px] font-semibold text-background transition-opacity hover:opacity-90"
+                className="w-full rounded bg-[#232528] px-2.5 py-1.5 text-[11px] font-medium text-white transition-opacity hover:opacity-90"
               >
                 Terapkan Tanggal
               </button>
@@ -415,20 +429,21 @@ function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) 
         <button
           type="button"
           onClick={openAsk}
-          className="flex items-center gap-1.5 rounded-sm bg-ai px-2.5 py-1.5 text-xs font-semibold text-background transition-opacity hover:opacity-90 sm:px-3 sm:py-2"
+          aria-label="Tanya AI Marketing"
+          className="flex items-center gap-1.5 rounded-lg bg-[#232528] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#35383d]"
         >
-          <Sparkles className="size-3.5" />
-          <span className="hidden xs:inline sm:inline">Ask AI</span>
+          <Sparkles className="size-3.5 text-[#8BC0E4]" />
+          <span className="hidden sm:inline">Tanya AI</span>
         </button>
 
         <DropdownMenu modal={false} open={notifOpen} onOpenChange={setNotifOpen}>
           <DropdownMenuTrigger
-            className="relative flex size-8 items-center justify-center rounded-full border border-border-strong text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-foreground"
+            className="relative flex size-8 items-center justify-center rounded-full border border-[#EAE4DA] text-[#656B73] transition-colors hover:border-[#5E93B8] hover:text-[#232528]"
             aria-label={unreadCount > 0 ? `${unreadCount} notifikasi belum dibaca` : "Notifikasi"}
           >
             <Bell className="size-3.5" />
             {unreadCount > 0 ? (
-              <span className="absolute -right-1 -top-1 flex min-w-[16px] items-center justify-center rounded-full bg-ai px-1 py-[1px] font-mono text-[9px] font-bold leading-none text-background shadow-sm">
+              <span className="absolute -right-1 -top-1 flex min-w-[16px] items-center justify-center rounded-full bg-[#5E93B8] px-1 py-[1px] font-mono text-[9px] font-bold leading-none text-white shadow-sm">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             ) : null}
@@ -436,9 +451,9 @@ function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) 
           <DropdownMenuContent align="end" className="w-[340px] p-0 sm:w-[380px]">
             <div className="flex items-center justify-between border-b border-border px-3.5 py-2.5">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-foreground">Notifikasi</span>
+                <span className="text-xs font-semibold text-foreground">Notifikasi AI</span>
                 {unreadCount > 0 ? (
-                  <span className="rounded-full bg-ai/15 px-2 py-0.5 font-mono text-[10px] font-medium text-ai">
+                  <span className="rounded-full bg-ai/12 px-2 py-0.5 text-[10px] font-medium text-ai">
                     {unreadCount} baru
                   </span>
                 ) : (
@@ -481,7 +496,7 @@ function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) 
                       onClick={() => handleNotificationClick(a)}
                       className={cn(
                         "flex w-full items-start gap-2.5 px-3.5 py-2.5 text-left transition-colors hover:bg-accent/70",
-                        !a.read ? "bg-ai/[0.04]" : "opacity-80",
+                        !a.read ? "bg-ai/[0.05]" : "opacity-80",
                       )}
                     >
                       <span className={cn("mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md", meta.tone)}>
@@ -494,11 +509,9 @@ function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) 
                           </span>
                           {!a.read ? <span className="size-1.5 shrink-0 rounded-full bg-ai" /> : null}
                         </div>
-                        <p className="line-clamp-2 text-[11px] leading-snug text-muted-foreground">
-                          {a.message}
-                        </p>
-                        <div className="flex items-center justify-between pt-0.5 text-[10px] text-muted-foreground/80">
-                          <span className="font-mono uppercase">{a.agent}</span>
+                        <p className="line-clamp-2 text-[11px] leading-snug text-muted-foreground">{a.message}</p>
+                        <div className="flex items-center justify-between pt-0.5 text-[10px] text-muted-foreground">
+                          <span className="uppercase">{a.agent}</span>
                           <span>{formatActivityStamp(a.time)}</span>
                         </div>
                       </div>
@@ -524,7 +537,7 @@ function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) 
         </DropdownMenu>
 
         <DropdownMenu modal={false}>
-          <DropdownMenuTrigger className="flex size-8 items-center justify-center rounded-full border border-border-strong text-[11px] tracking-widest transition-colors hover:bg-accent">
+          <DropdownMenuTrigger className="flex size-8 items-center justify-center rounded-full border border-[#EAE4DA] bg-[#EDF4F8] text-xs font-semibold text-[#2D5B7C] transition-colors hover:border-[#5E93B8]">
             {(user?.name || "A").charAt(0).toUpperCase()}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -533,7 +546,7 @@ function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) 
             <DropdownMenuItem asChild>
               <Link to="/admin">
                 <Home className="mr-2 size-3.5" />
-                Back to Admin Panel
+                Kembali ke Admin Livora
               </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -543,7 +556,15 @@ function ShellHeader({ user, onOpenNav }: { user: any; onOpenNav: () => void }) 
   );
 }
 
-function ShellBody({ user, children }: { user: any; children: ReactNode }) {
+function ShellBody({
+  user,
+  readOnly,
+  children,
+}: {
+  user: any;
+  readOnly: boolean;
+  children: ReactNode;
+}) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
@@ -567,29 +588,40 @@ function ShellBody({ user, children }: { user: any; children: ReactNode }) {
   }, [open]);
 
   return (
-    <div className="dark ai-marketing-scope min-h-screen bg-background text-foreground">
+    <div className="ai-marketing-scope min-h-screen bg-background text-foreground">
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[252px] flex-col border-r border-sidebar-border bg-sidebar transition-transform duration-300 ease-out lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-[#EAE4DA] bg-white transition-transform duration-300 ease-out lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex items-center justify-between px-6 py-6">
-          <Link to="/admin/ai-marketing" className="block">
-            <span className="text-display block text-xl tracking-[0.1em]">LIVORA</span>
-            <span className="label-eyebrow mt-1 block">Marketing Intelligence</span>
+        <div className="flex items-center justify-between border-b border-[#EAE4DA] px-5 py-4">
+          <Link to="/admin/ai-marketing" className="flex items-center gap-2.5">
+            <img src={livoraMark} alt="Livora" className="h-8 w-8 rounded-lg object-contain" />
+            <div>
+              <span className="font-header block text-base tracking-[0.12em] text-[#232528]">LIVORA</span>
+              <span className="block text-[10px] font-medium uppercase tracking-[0.16em] text-[#5E93B8]">
+                AI Marketing
+              </span>
+            </div>
           </Link>
-          <button className="lg:hidden" onClick={() => setOpen(false)} aria-label="Close navigation">
+          <button
+            type="button"
+            className="rounded-lg p-1 text-[#656B73] hover:bg-[#FAF8F4] lg:hidden"
+            onClick={() => setOpen(false)}
+            aria-label="Tutup navigasi"
+          >
             <X className="size-4" />
           </button>
         </div>
 
-        <div className="px-3">
+        <div className="px-3 pt-3">
           <button
+            type="button"
             onClick={() => navigate("/admin")}
-            className="flex w-full items-center gap-2 rounded border border-sidebar-border px-3 py-2 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent"
+            className="flex w-full items-center gap-2 rounded-lg border border-[#EAE4DA] bg-[#FAF8F4] px-3 py-2 text-xs font-medium text-[#232528] transition-colors hover:border-[#5E93B8] hover:bg-[#EDF4F8]"
           >
-            <Home className="h-4 w-4" /> Back to Admin Panel
+            <ArrowLeft className="h-3.5 w-3.5 text-[#5E93B8]" /> Kembali ke Admin Livora
           </button>
         </div>
 
@@ -602,29 +634,49 @@ function ShellBody({ user, children }: { user: any; children: ReactNode }) {
         <Link
           to="/admin/ai-marketing/providers"
           onClick={() => setOpen(false)}
-          className="block border-t border-sidebar-border px-5 py-4 transition-colors hover:bg-sidebar-accent/40"
+          className="block border-t border-[#EAE4DA] bg-[#FAF8F4]/70 px-5 py-3.5 transition-colors hover:bg-[#EDF4F8]/50"
         >
-          <p className="flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
+          <p className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.14em] text-[#656B73]">
             <StatusDot tone={connectedNames.length > 0 ? "success" : "warning"} pulse={connectedNames.length > 0} />
-            Multi-LLM Orchestration
+            Mesin AI Terhubung
           </p>
-          <p className="mt-1 truncate text-xs text-muted-foreground">
-            {connectedNames.length > 0 ? connectedNames.join(" · ") : "Periksa API key provider di Settings"}
+          <p className="mt-1 truncate text-xs text-[#232528]">
+            {connectedNames.length > 0 ? connectedNames.join(" · ") : "Periksa sambungan AI di Pengaturan"}
           </p>
         </Link>
       </aside>
 
       {open ? (
         <button
-          className="fixed inset-0 z-40 bg-background/70 backdrop-blur-sm lg:hidden"
+          type="button"
+          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[1px] lg:hidden"
           onClick={() => setOpen(false)}
-          aria-label="Close navigation overlay"
+          aria-label="Tutup menu"
         />
       ) : null}
 
-      <div className="lg:pl-[252px]">
+      <div className="lg:pl-[260px]">
         <ShellHeader user={user} onOpenNav={() => setOpen(true)} />
-        <main className="mx-auto w-full max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">{children}</main>
+
+        {IS_MOCK_BACKEND && (
+          <div className="border-b border-amber-300 bg-amber-50 px-4 py-2 text-center text-xs font-medium text-amber-950 sm:px-6">
+            <span className="inline-flex items-center gap-1.5">
+              <FlaskConical className="size-3.5 text-amber-700" />
+              MODE SIMULASI / DEMO — Data pada AI Marketing sedang menggunakan contoh mock (bukan data produksi).
+            </span>
+          </div>
+        )}
+
+        {readOnly && (
+          <div className="border-b border-[#5E93B8]/30 bg-[#EDF4F8] px-4 py-2 text-center text-xs text-[#2D5B7C] sm:px-6">
+            <span className="inline-flex items-center gap-1.5">
+              <Eye className="size-3.5" />
+              <b>Mode Lihat Saja</b> — Anda dapat meninjau semua laporan marketing, namun perubahan/eksekusi hanya untuk akun dengan izin ubah.
+            </span>
+          </div>
+        )}
+
+        <main className="mx-auto w-full max-w-[1400px] px-4 py-7 sm:px-6 lg:px-8">{children}</main>
       </div>
 
       <AskAIDrawer />
@@ -634,54 +686,162 @@ function ShellBody({ user, children }: { user: any; children: ReactNode }) {
 
 export default function AiMarketingShell() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
+
+  const initialCache = getCachedAdminBootstrap();
+  const [user, setUser] = useState<any>(() => initialCache?.user ?? null);
+  const [permState, setPermState] = useState<{
+    role: string;
+    isOwner: boolean;
+    permissions: Record<string, string>;
+  } | null>(() =>
+    initialCache
+      ? {
+          role: initialCache.perm?.role ?? initialCache.user?.admin_role ?? "viewer",
+          isOwner: Boolean(initialCache.perm?.is_owner ?? initialCache.perm?.role === "owner"),
+          permissions: initialCache.perm?.permissions ?? {},
+        }
+      : null,
+  );
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    const hadDark = document.body.classList.contains("dark");
     const hadScope = document.body.classList.contains("ai-marketing-scope");
-    document.body.classList.add("dark", "ai-marketing-scope");
+    document.body.classList.add("ai-marketing-scope");
     return () => {
-      if (!hadDark) document.body.classList.remove("dark");
       if (!hadScope) document.body.classList.remove("ai-marketing-scope");
     };
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await api.get("/me");
-        if (data?.role !== "admin") {
-          toast.error("Akses ditolak. Khusus admin.");
-          navigate("/", { replace: true });
-          return;
-        }
-        setUser(data);
-      } catch {
-        rememberIntendedPath();
-        toast.error("Silakan masuk terlebih dahulu");
-        navigate("/login", { replace: true });
+  const bootstrap = useCallback(async (force = false) => {
+    setLoadError(null);
+    try {
+      const boot = await fetchAdminBootstrap(force);
+      const me = boot.user;
+      const perm = boot.perm;
+      setUser((prev: any) => (prev?.id === me?.id && prev?.admin_role === me?.admin_role ? prev : me));
+      setPermState({
+        role: perm?.role ?? me?.admin_role ?? "viewer",
+        isOwner: Boolean(perm?.is_owner ?? perm?.role === "owner"),
+        permissions: perm?.permissions ?? {},
+      });
+    } catch (err: any) {
+      if (err?.code === "NOT_ADMIN") {
+        toast.error("Akses ditolak. Khusus tim admin Livora.");
+        navigateRef.current("/", { replace: true });
+        return;
       }
-    })();
-  }, [navigate]);
+      const status = err?.status ?? err?.response?.status;
+      if (status === 401 || status === 403 || err?.kind === "unauthenticated") {
+        rememberIntendedPath();
+        toast.error("Sesi berakhir. Silakan masuk kembali.");
+        navigateRef.current("/login", { replace: true });
+        return;
+      }
+      setLoadError(err?.response?.data?.message || err?.message || "Gagal memuat panel AI Marketing. Silakan coba lagi.");
+    }
+  }, []);
 
-  if (!user) {
+  useEffect(() => {
+    void bootstrap(false);
+  }, [bootstrap]);
+
+  const permissionContextValue = useMemo(() => {
+    const role = permState?.role ?? "viewer";
+    const isOwner = Boolean(permState?.isOwner);
+    const permissions = permState?.permissions ?? {};
+    const levelOf = (feature?: string): PermissionLevel => {
+      if (isOwner) return "edit";
+      if (!feature) return "view";
+      const lv = permissions[feature];
+      if (lv === "edit" || lv === "view" || lv === "none") return lv;
+      return "none";
+    };
+    const marketingLevel = levelOf("marketing");
+    return {
+      user,
+      role,
+      isOwner,
+      permissions,
+      levelOf,
+      canView: (f?: string) => levelOf(f) !== "none",
+      canEdit: (f?: string) => levelOf(f) === "edit",
+      currentLevel: marketingLevel,
+    };
+  }, [user, permState]);
+
+  if (loadError) {
     return (
-      <div className="dark ai-marketing-scope flex min-h-screen flex-col items-center justify-center gap-3 bg-background text-foreground">
-        <span className="flex size-10 items-center justify-center rounded-xl bg-ai/15 text-ai">
-          <Sparkles className="size-5 animate-pulse" />
+      <div className="ai-marketing-scope flex min-h-screen items-center justify-center bg-[#FAF8F4] p-6">
+        <div className="w-full max-w-md space-y-4">
+          <ErrorState message={loadError} onRetry={() => void bootstrap(true)} />
+          <div className="text-center">
+            <Link to="/admin" className="text-xs font-medium text-[#35678B] hover:underline">
+              ← Kembali ke Admin Livora
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || !permState) {
+    return (
+      <div className="ai-marketing-scope flex min-h-screen flex-col items-center justify-center gap-3 bg-[#FAF8F4] text-[#232528]">
+        <span className="flex size-11 items-center justify-center rounded-2xl border border-[#EAE4DA] bg-white shadow-sm">
+          <Sparkles className="size-5 animate-pulse text-[#5E93B8]" />
         </span>
-        <p className="font-mono text-xs tracking-widest text-muted-foreground uppercase">
-          Memuat Livora Marketing Intelligence...
+        <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#656B73]">
+          Memuat Livora AI Marketing…
         </p>
       </div>
     );
   }
 
+  if (permissionContextValue.currentLevel === "none") {
+    return (
+      <div className="ai-marketing-scope flex min-h-screen items-center justify-center bg-[#FAF8F4] p-6">
+        <div className="w-full max-w-md rounded-2xl border border-[#EAE4DA] bg-white p-8 text-center shadow-sm">
+          <Lock className="mx-auto size-8 text-[#5E93B8]" />
+          <h1 className="font-header mt-4 text-xl text-[#232528]">Akses AI Marketing Dibatasi</h1>
+          <p className="mt-2 text-sm text-[#656B73]">
+            Peran Anda saat ini belum memiliki izin membuka menu Marketing & AI Marketing. Hubungi Owner jika Anda membutuhkan akses.
+          </p>
+          <Link
+            to="/admin"
+            className="mt-6 inline-flex h-10 items-center gap-2 rounded-lg bg-[#232528] px-5 text-xs font-medium text-white hover:bg-[#35383d]"
+          >
+            <ArrowLeft className="size-3.5" /> Kembali ke Admin Livora
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <AiMarketingProvider>
-      <ShellBody user={user}>
-        <Outlet />
-      </ShellBody>
-    </AiMarketingProvider>
+    <AdminDialogProvider>
+      <AdminPermissionProvider value={permissionContextValue}>
+        <AiMarketingProvider>
+          <ShellBody user={user} readOnly={permissionContextValue.currentLevel === "view"}>
+            <Suspense
+              fallback={
+                <div className="space-y-4 py-4" aria-busy="true" aria-label="Memuat halaman">
+                  <div className="h-8 w-56 animate-pulse rounded-lg bg-[#EAE4DA]/70" />
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {[0, 1, 2, 3].map((i) => (
+                      <div key={i} className="h-24 animate-pulse rounded-xl bg-white border border-[#EAE4DA]" />
+                    ))}
+                  </div>
+                  <div className="h-64 animate-pulse rounded-xl bg-white border border-[#EAE4DA]" />
+                </div>
+              }
+            >
+              <Outlet />
+            </Suspense>
+          </ShellBody>
+        </AiMarketingProvider>
+      </AdminPermissionProvider>
+    </AdminDialogProvider>
   );
 }

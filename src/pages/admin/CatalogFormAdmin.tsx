@@ -1,10 +1,18 @@
-// components/admin/CatalogFormAdmin.tsx
 import TranslationPanel from "@/components/admin/TranslationPanel";
-// UPDATED: Dynamic scenes (CRUD) replacing fixed scene-1/scene-2
-
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { X, Upload, Plus, Trash2, GripVertical } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowUp,
+  ExternalLink,
+  Image as ImageIcon,
+  Plus,
+  Save,
+  Target,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
 import { toast } from "sonner";
@@ -17,12 +25,20 @@ import {
   deleteCatalogScene,
   reorderCatalogScenes,
 } from "@/lib/catalogApi";
-import { CatalogScene } from "@/types/catalog";
 import {
   CATALOG_CATEGORIES,
   CATALOG_TAXONOMIES,
   CatalogCategory,
+  CatalogScene,
 } from "@/types/catalog";
+import { useAdminPermission } from "@/components/admin/AdminPermissionContext";
+import {
+  AdminHelpBanner,
+  ErrorState,
+  PageHeader,
+  TableSkeleton,
+  useAdminDialog,
+} from "@/components/admin/kit";
 
 interface HotspotItem {
   id?: string | number;
@@ -35,7 +51,7 @@ interface HotspotItem {
   image?: string;
 }
 
-interface FormData {
+interface FormDataState {
   title: string;
   slug: string;
   category: CatalogCategory;
@@ -48,15 +64,20 @@ interface FormData {
   coverImageUrl?: string;
 }
 
+const VALID_STYLES = CATALOG_TAXONOMIES.filter((t) => t !== "All");
+
 export default function CatalogFormAdmin() {
   const { id: catalogId } = useParams<{ id?: string }>();
   const navigate = useNavigate();
+  const dialog = useAdminDialog();
+  const { canEdit } = useAdminPermission();
+  const editable = canEdit("catalog");
 
-  const [form, setForm] = useState<FormData>({
+  const [form, setForm] = useState<FormDataState>({
     title: "",
     slug: "",
     category: "living-rooms",
-    taxonomy: "Modern",
+    taxonomy: VALID_STYLES[0] ?? "Modern",
     tagline: "",
     aboutTitle: "",
     description: "",
@@ -75,7 +96,6 @@ export default function CatalogFormAdmin() {
   const [loading, setLoading] = useState(!!catalogId);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<"basic" | "gallery" | "hotspots">("basic");
 
   const coverImageInputRef = useRef<HTMLInputElement>(null);
@@ -99,49 +119,40 @@ export default function CatalogFormAdmin() {
 
     const fetchCatalog = async () => {
       try {
+        setError(null);
         const { data: raw } = await api.get<any>(`/admin/catalogs/${catalogId}`);
-
-        const BASE = (
-          (import.meta.env.VITE_API_URL as string | undefined) ??
-          (import.meta.env.PROD
-            ? "https://api.livoralcr.com/api"
-            : "http://127.0.0.1:8000/api")
-        ).replace(/\/api\/?$/, "");
-
-        const coverImageUrl = raw.cover_image
-          ? `${BASE}/storage/${raw.cover_image}`
-          : (raw.coverImage ?? "");
+        const coverPath = raw.cover_image || raw.coverImage || "";
+        const coverImageUrl = coverPath ? imgUrl(coverPath) : "";
 
         setForm({
-          title: raw.title,
-          slug: raw.slug,
-          category: raw.category,
-          taxonomy: raw.taxonomy,
+          title: raw.title ?? "",
+          slug: raw.slug ?? "",
+          category: raw.category ?? "living-rooms",
+          taxonomy: VALID_STYLES.includes(raw.taxonomy) ? raw.taxonomy : VALID_STYLES[0] ?? "Modern",
           tagline: raw.tagline ?? "",
           aboutTitle: raw.about_title ?? "",
-          description: raw.description,
-          featured: raw.featured || false,
+          description: raw.description ?? "",
+          featured: Boolean(raw.featured),
           coverImage: null,
           coverImageUrl,
         });
 
         try {
           const { data: hotspotsData } = await api.get<HotspotItem[]>(
-            `/admin/catalogs/${catalogId}/hotspots`
+            `/admin/catalogs/${catalogId}/hotspots`,
           );
-          setHotspots(hotspotsData);
-        } catch (err) {
-          console.warn("Failed to fetch hotspots:", err);
+          setHotspots(Array.isArray(hotspotsData) ? hotspotsData : []);
+        } catch {
           setHotspots([]);
         }
-      } catch (err) {
-        setError(`Failed to load catalog: ${err}`);
+      } catch (err: any) {
+        setError(err?.response?.data?.message || "Gagal memuat data lookbook.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCatalog();
+    void fetchCatalog();
   }, [catalogId]);
 
   const loadScenes = async () => {
@@ -149,13 +160,12 @@ export default function CatalogFormAdmin() {
     setScenesLoading(true);
     try {
       const data = await getCatalogScenes(catalogId);
-      const sorted = data.sort((a, b) => a.order - b.order);
+      const sorted = [...data].sort((a, b) => a.order - b.order);
       setScenes(sorted);
       setCurrentScene((prev) =>
-        sorted.find((s) => s.scene_key === prev) ? prev : (sorted[0]?.scene_key ?? "")
+        sorted.find((s) => s.scene_key === prev) ? prev : sorted[0]?.scene_key ?? "",
       );
-    } catch (err) {
-      console.warn("Failed to fetch scenes:", err);
+    } catch {
       setScenes([]);
     } finally {
       setScenesLoading(false);
@@ -163,20 +173,21 @@ export default function CatalogFormAdmin() {
   };
 
   useEffect(() => {
-    if (catalogId) loadScenes();
+    if (catalogId) void loadScenes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catalogId]);
 
   const handleAddScene = async (file: File) => {
-    if (!catalogId) return;
+    if (!catalogId || !editable) return;
     setSceneUploading(true);
     try {
       const fd = new FormData();
       fd.append("image", file);
       await createCatalogScene(catalogId, fd);
-      toast.success("Scene added");
+      toast.success("Foto scene baru berhasil ditambahkan");
       await loadScenes();
-    } catch (err) {
-      toast.error("Failed to add scene");
+    } catch {
+      toast.error("Gagal menambahkan foto scene");
     } finally {
       setSceneUploading(false);
       if (sceneAddInputRef.current) sceneAddInputRef.current.value = "";
@@ -184,33 +195,39 @@ export default function CatalogFormAdmin() {
   };
 
   const handleReplaceSceneImage = async (scene: CatalogScene, file: File) => {
-    if (!catalogId) return;
+    if (!catalogId || !editable) return;
     const fd = new FormData();
     fd.append("image", file);
     try {
       await updateCatalogScene(catalogId, scene.id, fd);
-      toast.success("Scene image updated");
+      toast.success("Foto scene diperbarui");
       await loadScenes();
     } catch {
-      toast.error("Failed to update scene");
+      toast.error("Gagal mengganti foto scene");
     }
   };
 
   const handleDeleteScene = async (scene: CatalogScene) => {
-    if (!catalogId) return;
-    if (!confirm(`Delete this scene? Hotspots placed on it will also be removed.`)) return;
+    if (!catalogId || !editable) return;
+    const ok = await dialog.confirm({
+      title: "Hapus foto scene ini?",
+      text: "Seluruh titik hotspot yang berada di foto scene ini juga akan ikut dihapus.",
+      confirmLabel: "Ya, hapus scene",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await deleteCatalogScene(catalogId, scene.id);
-      toast.success("Scene deleted");
+      toast.success("Scene dihapus");
       setHotspots((prev) => prev.filter((h) => h.scene_number !== scene.scene_key));
       await loadScenes();
     } catch {
-      toast.error("Failed to delete scene");
+      toast.error("Gagal menghapus scene");
     }
   };
 
   const moveScene = async (index: number, dir: -1 | 1) => {
-    if (!catalogId) return;
+    if (!catalogId || !editable) return;
     const next = [...scenes];
     const target = index + dir;
     if (target < 0 || target >= next.length) return;
@@ -219,10 +236,11 @@ export default function CatalogFormAdmin() {
     try {
       await reorderCatalogScenes(
         catalogId,
-        next.map((s, i) => ({ id: s.id, order: i + 1 }))
+        next.map((s, i) => ({ id: s.id, order: i + 1 })),
       );
+      toast.success("Urutan scene diperbarui");
     } catch {
-      toast.error("Failed to reorder scenes");
+      toast.error("Gagal menyimpan urutan scene");
       await loadScenes();
     }
   };
@@ -234,41 +252,29 @@ export default function CatalogFormAdmin() {
       title,
       slug: catalogId
         ? prev.slug
-        : title.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]/g, ""),
+        : title
+            .toLowerCase()
+            .replace(/\s+/g, "-")
+            .replace(/[^\w-]/g, ""),
     }));
   };
 
-  const handleCoverImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.currentTarget.files?.[0];
-    if (file) setForm((prev) => ({ ...prev, coverImage: file }));
-  };
-
-  const handleHotspotAdd = (hotspot: HotspotItem) => {
-    setHotspots((prev) => [...prev, hotspot]);
-  };
-
-  const handleHotspotUpdate = (id: string | number, hotspot: HotspotItem) =>
-    setHotspots((prev) => prev.map((h) => (h.id === id ? { ...hotspot, id } : h)));
-
-  const handleHotspotDelete = (id: string | number) =>
-    setHotspots((prev) => prev.filter((h) => h.id !== id));
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmitBasic = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!editable) return;
     setSubmitting(true);
     setError(null);
 
     try {
       const fd = new FormData();
-      fd.append("title", form.title);
-      fd.append("slug", form.slug);
+      fd.append("title", form.title.trim());
+      fd.append("slug", form.slug.trim());
       fd.append("category", form.category);
       fd.append("taxonomy", form.taxonomy);
       fd.append("tagline", form.tagline);
       fd.append("about_title", form.aboutTitle);
       fd.append("description", form.description);
       fd.append("featured", form.featured ? "1" : "0");
-
       if (form.coverImage) fd.append("cover_image", form.coverImage);
 
       if (catalogId) {
@@ -276,18 +282,19 @@ export default function CatalogFormAdmin() {
         await api.post(`/admin/catalogs/${catalogId}`, fd, {
           headers: { "Content-Type": "multipart/form-data" },
         });
-        setSuccess(true);
-        setTimeout(() => navigate("/admin/catalogs"), 1500);
+        toast.success("Info dasar lookbook berhasil disimpan");
       } else {
         const { data } = await api.post("/admin/catalogs", fd, {
           headers: { "Content-Type": "multipart/form-data" },
         });
-        setSuccess(true);
-        setTimeout(() => navigate(`/admin/catalogs/${data.id}/edit`), 1500);
+        toast.success("Lookbook dibuat! Sekarang tambahkan foto scene & hotspot.");
+        navigate(`/admin/catalogs/${data.id}/edit`, { replace: true });
+        setActiveTab("gallery");
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? err?.response?.data?.error ?? `Error: ${err}`;
+      const msg = err?.response?.data?.message ?? err?.response?.data?.error ?? "Gagal menyimpan lookbook";
       setError(msg);
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
@@ -296,353 +303,429 @@ export default function CatalogFormAdmin() {
   const activeSceneImage = scenes.find((s) => s.scene_key === currentScene)?.image;
   const activeSceneImageUrl = activeSceneImage ? imgUrl(activeSceneImage) : "";
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
+  if (loading) return <TableSkeleton rows={6} cols={2} />;
+  if (error && !form.title && catalogId) {
+    return <ErrorState title="Lookbook tidak dapat dimuat" description={error} onRetry={() => navigate(0)} />;
   }
 
   return (
-    <form onSubmit={handleSubmit} className="min-h-screen bg-background p-6">
-      <div className="max-w-6xl mx-auto">
-
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="serif text-4xl">
-            {catalogId ? "Edit Catalog" : "Create Catalog"}
-          </h1>
-          <button type="button" onClick={() => navigate("/admin/catalogs")} className="p-2 hover:bg-secondary rounded">
-            <X size={20} />
-          </button>
-        </div>
-
-        {success && (
-          <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 text-green-700 rounded text-sm">
-            ✅ Berhasil! Redirecting...
-          </div>
-        )}
-        {error && (
-          <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 text-red-700 rounded text-sm">
-            ❌ {error}
-          </div>
-        )}
-
-        <div className="flex gap-2 mb-6 border-b border-border">
-          {(["basic", "gallery", "hotspots"] as const).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-3 text-sm font-medium capitalize transition-colors ${
-                activeTab === tab
-                  ? "text-foreground border-b-2 border-foreground -mb-px"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Lookbook Hotspot"
+        title={catalogId ? form.title || "Edit Lookbook" : "Buat Lookbook Baru"}
+        description="Ikuti 3 langkah: 1) Isi info dasar & cover, 2) Unggah foto ruangan (scene), 3) Pasang titik hotspot produk."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              to="/admin/catalogs"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#E2DACF] bg-white px-4 py-2 text-xs font-medium text-[#232528] hover:border-[#5E93B8]"
             >
-              {tab === "basic" && "📋 Basic Info"}
-              {tab === "gallery" && "🖼️ Gallery & Scenes"}
-              {tab === "hotspots" && "🎯 Hotspots"}
-            </button>
-          ))}
-        </div>
+              <ArrowLeft size={14} /> Kembali ke Daftar
+            </Link>
+            {catalogId && form.slug && (
+              <a
+                href={`/catalog/${form.category}/${form.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#5E93B8]/35 bg-[#EDF4F8] px-4 py-2 text-xs font-medium text-[#35678B] hover:bg-[#DFECF4]"
+              >
+                Lihat Halaman Publik <ExternalLink size={13} />
+              </a>
+            )}
+          </div>
+        }
+      />
 
-        {activeTab === "basic" && (
-          <div className="space-y-6">
-            {catalogId ? <TranslationPanel type="catalog" id={catalogId} /> : null}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Title *</label>
-                <input
-                  type="text"
-                  value={form.title}
-                  onChange={handleTitleChange}
-                  placeholder="e.g., Serenity"
-                  required
-                  className="w-full border border-border bg-card text-foreground p-3 rounded focus:ring-2 focus:ring-foreground/50 outline-none"
-                />
-              </div>
+      {/* Tabs */}
+      <div className="flex flex-wrap gap-2 border-b border-[#EAE4DA] pb-3">
+        {(
+          [
+            { key: "basic", label: "1. Info Dasar & Cover" },
+            { key: "gallery", label: `2. Foto Ruangan / Scene (${scenes.length})` },
+            { key: "hotspots", label: `3. Titik Hotspot & Susunan Produk (${hotspots.length})` },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setActiveTab(t.key)}
+            className={`rounded-full border px-4 py-2 text-xs font-medium transition-colors ${
+              activeTab === t.key
+                ? "border-[#232528] bg-[#232528] text-white"
+                : "border-[#E2DACF] bg-white text-[#656B73] hover:border-[#5E93B8] hover:text-[#232528]"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Slug (auto-generated)</label>
-                <input
-                  type="text"
-                  value={form.slug}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      slug: e.target.value.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]/g, ""),
-                    }))
-                  }
-                  placeholder="serenity"
-                  className="w-full border border-border bg-card text-foreground p-3 rounded focus:ring-2 focus:ring-foreground/50 outline-none"
-                />
-              </div>
+      {/* TAB 1: BASIC INFO (HANYA tab ini yang punya <form> agar hotspot tidak pernah memicu submit!) */}
+      {activeTab === "basic" && (
+        <form onSubmit={handleSubmitBasic} className="space-y-6 rounded-2xl border border-[#EAE4DA] bg-white p-6">
+          {error && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">{error}</div>
+          )}
 
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Category *</label>
-                <select
-                  value={form.category}
-                  onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value as CatalogCategory }))}
-                  className="w-full border border-border bg-card text-foreground p-3 rounded focus:ring-2 focus:ring-foreground/50 outline-none"
-                >
-                  {CATALOG_CATEGORIES.map((cat) => (
-                    <option key={cat.slug} value={cat.slug}>{cat.label}</option>
-                  ))}
-                </select>
-              </div>
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <label className="block">
+              <span className="text-xs font-medium text-[#232528]">Judul Lookbook *</span>
+              <input
+                type="text"
+                value={form.title}
+                onChange={handleTitleChange}
+                placeholder="mis. Serenity Living"
+                required
+                disabled={!editable}
+                className="mt-1.5 h-10 w-full rounded-lg border border-[#E2DACF] bg-[#FAF8F4] px-3 text-sm text-[#232528] outline-none focus:border-[#5E93B8] focus:bg-white"
+              />
+            </label>
 
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Taxonomy (Style) *</label>
-                <select
-                  value={form.taxonomy}
-                  onChange={(e) => setForm((prev) => ({ ...prev, taxonomy: e.target.value }))}
-                  className="w-full border border-border bg-card text-foreground p-3 rounded focus:ring-2 focus:ring-foreground/50 outline-none"
-                >
-                  {CATALOG_TAXONOMIES.map((tax) => (
-                    <option key={tax} value={tax}>{tax}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            <label className="block">
+              <span className="text-xs font-medium text-[#232528]">Slug URL (otomatis dari judul)</span>
+              <input
+                type="text"
+                value={form.slug}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    slug: e.target.value
+                      .toLowerCase()
+                      .replace(/\s+/g, "-")
+                      .replace(/[^\w-]/g, ""),
+                  }))
+                }
+                placeholder="serenity-living"
+                disabled={!editable}
+                className="mt-1.5 h-10 w-full rounded-lg border border-[#E2DACF] bg-[#FAF8F4] px-3 text-sm text-[#232528] outline-none focus:border-[#5E93B8] focus:bg-white"
+              />
+            </label>
 
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Tagline (Hero Subline)</label>
+            <label className="block">
+              <span className="text-xs font-medium text-[#232528]">Kategori Ruangan *</span>
+              <select
+                value={form.category}
+                disabled={!editable}
+                onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value as CatalogCategory }))}
+                className="mt-1.5 h-10 w-full rounded-lg border border-[#E2DACF] bg-[#FAF8F4] px-3 text-sm text-[#232528] outline-none focus:border-[#5E93B8] focus:bg-white"
+              >
+                {CATALOG_CATEGORIES.map((cat) => (
+                  <option key={cat.slug} value={cat.slug}>
+                    {cat.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="text-xs font-medium text-[#232528]">Gaya Desain (Style) *</span>
+              <select
+                value={form.taxonomy}
+                disabled={!editable}
+                onChange={(e) => setForm((prev) => ({ ...prev, taxonomy: e.target.value }))}
+                className="mt-1.5 h-10 w-full rounded-lg border border-[#E2DACF] bg-[#FAF8F4] px-3 text-sm text-[#232528] outline-none focus:border-[#5E93B8] focus:bg-white"
+              >
+                {VALID_STYLES.map((tax) => (
+                  <option key={tax} value={tax}>
+                    {tax}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <label className="block">
+              <span className="text-xs font-medium text-[#232528]">Tagline (Subjudul Hero)</span>
               <input
                 type="text"
                 value={form.tagline}
+                disabled={!editable}
                 onChange={(e) => setForm((prev) => ({ ...prev, tagline: e.target.value }))}
-                placeholder="e.g., The Quite of Silences"
-                className="w-full border border-border bg-card text-foreground p-3 rounded focus:ring-2 focus:ring-foreground/50 outline-none"
+                placeholder="mis. Ketenangan ruang modern"
+                className="mt-1.5 h-10 w-full rounded-lg border border-[#E2DACF] bg-[#FAF8F4] px-3 text-sm text-[#232528] outline-none focus:border-[#5E93B8] focus:bg-white"
               />
-              <p className="text-xs text-muted-foreground mt-1">Short line displayed below the title in hero section</p>
-            </div>
+            </label>
 
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">About Section Title</label>
+            <label className="block">
+              <span className="text-xs font-medium text-[#232528]">Judul Bagian Cerita (About)</span>
               <input
                 type="text"
                 value={form.aboutTitle}
+                disabled={!editable}
                 onChange={(e) => setForm((prev) => ({ ...prev, aboutTitle: e.target.value }))}
-                placeholder="e.g., A space of calm"
-                className="w-full border border-border bg-card text-foreground p-3 rounded focus:ring-2 focus:ring-foreground/50 outline-none"
+                placeholder="mis. Ruang tenang untuk berkumpul"
+                className="mt-1.5 h-10 w-full rounded-lg border border-[#E2DACF] bg-[#FAF8F4] px-3 text-sm text-[#232528] outline-none focus:border-[#5E93B8] focus:bg-white"
               />
-              <p className="text-xs text-muted-foreground mt-1">Short title displayed on the left in About section</p>
-            </div>
+            </label>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Description (Long Text) *</label>
-              <textarea
-                value={form.description}
-                onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-                placeholder="Detailed description of this catalog..."
-                required
-                className="w-full border border-border bg-card text-foreground p-3 rounded focus:ring-2 focus:ring-foreground/50 outline-none h-28 resize-none"
-              />
-              <p className="text-xs text-muted-foreground mt-1">Full text displayed on the right in About section</p>
-            </div>
+          <label className="block">
+            <span className="text-xs font-medium text-[#232528]">Deskripsi Lengkap *</span>
+            <textarea
+              value={form.description}
+              disabled={!editable}
+              onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+              placeholder="Ceritakan konsep ruangan, material, dan nuansa lookbook ini…"
+              required
+              rows={4}
+              className="mt-1.5 w-full rounded-lg border border-[#E2DACF] bg-[#FAF8F4] p-3 text-sm text-[#232528] outline-none focus:border-[#5E93B8] focus:bg-white"
+            />
+          </label>
 
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="featured"
-                checked={form.featured}
-                onChange={(e) => setForm((prev) => ({ ...prev, featured: e.target.checked }))}
-                className="w-4 h-4"
-              />
-              <label htmlFor="featured" className="text-sm text-muted-foreground cursor-pointer">
-                Featured in homepage
-              </label>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Cover Image</label>
-              <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-foreground/50 transition-colors">
-                {form.coverImageUrl && !form.coverImage && (
-                  <div className="mb-4">
-                    <img src={form.coverImageUrl} alt="Cover" className="max-h-32 mx-auto rounded" />
-                  </div>
-                )}
-                {coverPreviewUrl && (
-                  <div className="mb-4">
-                    <img
-                      src={coverPreviewUrl}
-                      alt="Cover preview"
-                      className="max-h-32 mx-auto rounded"
-                    />
-                  </div>
-                )}
+          {/* Cover Image */}
+          <div>
+            <span className="mb-1.5 block text-xs font-medium text-[#232528]">Foto Cover Lookbook</span>
+            <div className="rounded-xl border-2 border-dashed border-[#DCD5CA] bg-[#FAF8F4]/70 p-6 text-center transition-colors hover:border-[#5E93B8]">
+              {(coverPreviewUrl || form.coverImageUrl) && (
+                <img
+                  src={coverPreviewUrl || form.coverImageUrl}
+                  alt="Cover lookbook"
+                  className="mx-auto mb-4 max-h-44 rounded-lg border border-[#EAE4DA] object-cover"
+                />
+              )}
+              {editable && (
                 <button
                   type="button"
                   onClick={() => coverImageInputRef.current?.click()}
-                  className="flex items-center justify-center gap-2 mx-auto text-sm text-foreground hover:text-foreground/80"
+                  className="mx-auto inline-flex items-center gap-2 rounded-full border border-[#DCD5CA] bg-white px-4 py-2 text-xs font-medium text-[#232528] hover:border-[#5E93B8]"
                 >
-                  <Upload size={16} /> Select Image
+                  <Upload size={14} className="text-[#5E93B8]" />
+                  {coverPreviewUrl || form.coverImageUrl ? "Ganti Foto Cover" : "Pilih Foto Cover"}
                 </button>
-                <p className="text-xs text-muted-foreground mt-2">JPG, PNG • Max 5MB</p>
-                <input
-                  ref={coverImageInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleCoverImageSelect}
-                  className="hidden"
-                />
-              </div>
+              )}
+              <p className="mt-2 text-[11px] text-[#656B73]">Format JPG, PNG, atau WebP • Maks. 5 MB</p>
+              <input
+                ref={coverImageInputRef}
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const f = e.currentTarget.files?.[0];
+                  if (f) setForm((prev) => ({ ...prev, coverImage: f }));
+                }}
+                className="hidden"
+              />
             </div>
           </div>
-        )}
 
-        {activeTab === "gallery" && (
-          <div className="space-y-6">
-            {!catalogId ? (
-              <div className="border border-dashed border-border rounded-lg p-8 text-center text-sm text-muted-foreground">
-                Simpan info dasar catalog terlebih dahulu (tab "Basic Info") sebelum
-                menambahkan scene. Scene tersimpan langsung ke server per gambar,
-                jadi butuh catalog yang sudah punya ID.
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                      Scenes ({scenes.length})
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Scene dipakai untuk hotspot positioning di halaman publik & PDF.
-                      Tambah, ganti, hapus, atau urutkan bebas — jumlahnya tidak dibatasi.
-                    </p>
-                  </div>
-                  <label className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.15em] border border-border px-3 py-2 cursor-pointer hover:bg-secondary transition-colors shrink-0">
-                    {sceneUploading ? "Uploading…" : (<><Plus size={14} /> Add Scene</>)}
+          <label className="flex cursor-pointer items-center gap-2.5">
+            <input
+              type="checkbox"
+              checked={form.featured}
+              disabled={!editable}
+              onChange={(e) => setForm((prev) => ({ ...prev, featured: e.target.checked }))}
+              className="h-4 w-4 accent-[#5E93B8]"
+            />
+            <span className="text-sm text-[#4C5259]">Tandai sebagai Lookbook Unggulan di halaman Katalog</span>
+          </label>
+
+          {catalogId ? (
+            <div className="border-t border-[#F0EAE0] pt-4">
+              <TranslationPanel type="catalog" id={catalogId} />
+            </div>
+          ) : null}
+
+          {editable && (
+            <div className="flex flex-wrap items-center gap-3 border-t border-[#EAE4DA] pt-5">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex items-center gap-2 rounded-full bg-[#232528] px-6 py-2.5 text-xs font-medium text-white hover:bg-[#34383D] disabled:opacity-50"
+              >
+                <Save size={14} />
+                {submitting ? "Menyimpan…" : catalogId ? "Simpan Info Dasar" : "Buat Lookbook & Lanjut"}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/admin/catalogs")}
+                className="rounded-full border border-[#E2DACF] px-5 py-2.5 text-xs font-medium text-[#232528] hover:bg-[#FAF8F4]"
+              >
+                Kembali
+              </button>
+            </div>
+          )}
+        </form>
+      )}
+
+      {/* TAB 2: GALLERY & SCENES (Auto-save per aksi) */}
+      {activeTab === "gallery" && (
+        <div className="space-y-5 rounded-2xl border border-[#EAE4DA] bg-white p-6">
+          {!catalogId ? (
+            <AdminHelpBanner tone="amber" title="Simpan Info Dasar Terlebih Dahulu">
+              Silakan lengkapi dan simpan tab <strong>1. Info Dasar &amp; Cover</strong> dulu sebelum mengunggah foto
+              ruangan (scene).
+            </AdminHelpBanner>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="font-header text-xl text-[#232528]">Foto Ruangan / Scene ({scenes.length})</h2>
+                  <p className="mt-0.5 text-xs text-[#656B73]">
+                    Setiap foto scene langsung tersimpan ke server dan dapat dipasangi titik hotspot produk serta tampil
+                    di PDF lookbook.
+                  </p>
+                </div>
+                {editable && (
+                  <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-full bg-[#232528] px-4 py-2 text-xs font-medium text-white hover:bg-[#34383D]">
+                    <Plus size={14} />
+                    {sceneUploading ? "Mengunggah…" : "Tambah Foto Scene"}
                     <input
                       ref={sceneAddInputRef}
                       type="file"
                       accept="image/*"
                       className="hidden"
                       disabled={sceneUploading}
-                      onChange={(e) => e.target.files?.[0] && handleAddScene(e.target.files[0])}
+                      onChange={(e) => e.target.files?.[0] && void handleAddScene(e.target.files[0])}
                     />
                   </label>
-                </div>
+                )}
+              </div>
 
-                {scenesLoading ? (
-                  <p className="text-sm text-muted-foreground">Loading scenes…</p>
-                ) : scenes.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Belum ada scene — tambahkan lewat tombol "Add Scene" di atas.
+              {scenesLoading ? (
+                <TableSkeleton rows={3} cols={3} />
+              ) : scenes.length === 0 ? (
+                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[#D8D1C6] py-12 text-center">
+                  <ImageIcon className="h-7 w-7 text-[#5E93B8]/60" />
+                  <p className="mt-2 text-sm font-medium text-[#232528]">Belum ada foto ruangan</p>
+                  <p className="mt-1 text-xs text-[#656B73]">
+                    Klik <strong>Tambah Foto Scene</strong> di atas untuk mulai mengunggah.
                   </p>
-                ) : (
-                  <div className="space-y-3">
-                    {scenes.map((scene, i) => (
-                      <div key={scene.id} className="flex items-center gap-4 border border-border rounded-lg p-3">
-                        <div className="flex flex-col gap-1 text-muted-foreground">
-                          <button type="button" onClick={() => moveScene(i, -1)} disabled={i === 0} className="disabled:opacity-30" title="Move up">
-                            <GripVertical size={14} />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {scenes.map((scene, i) => (
+                    <div
+                      key={scene.id}
+                      className="flex flex-wrap items-center gap-4 rounded-xl border border-[#EAE4DA] bg-[#FAF8F4]/50 p-3"
+                    >
+                      {editable && (
+                        <div className="flex flex-col gap-1">
+                          <button
+                            type="button"
+                            onClick={() => void moveScene(i, -1)}
+                            disabled={i === 0}
+                            aria-label="Naikkan urutan"
+                            className="rounded border border-[#E2DACF] bg-white p-1 text-[#232528] hover:border-[#5E93B8] disabled:opacity-30"
+                          >
+                            <ArrowUp size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void moveScene(i, 1)}
+                            disabled={i === scenes.length - 1}
+                            aria-label="Turunkan urutan"
+                            className="rounded border border-[#E2DACF] bg-white p-1 text-[#232528] hover:border-[#5E93B8] disabled:opacity-30"
+                          >
+                            <ArrowDown size={13} />
                           </button>
                         </div>
-                        <div className="w-28 h-20 bg-secondary overflow-hidden rounded shrink-0">
-                          {scene.image && (
-                            <img src={imgUrl(scene.image)} alt={scene.scene_key} className="w-full h-full object-cover" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">Scene {i + 1}</p>
-                          <p className="text-xs text-muted-foreground">{scene.scene_key}</p>
-                        </div>
-                        <label className="text-xs uppercase tracking-[0.15em] border border-border px-3 py-2 cursor-pointer hover:bg-secondary transition-colors inline-flex items-center gap-1.5 shrink-0">
-                          <Upload size={12} /> Replace
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => e.target.files?.[0] && handleReplaceSceneImage(scene, e.target.files[0])}
-                          />
-                        </label>
+                      )}
+
+                      <div className="h-20 w-32 shrink-0 overflow-hidden rounded-lg border border-[#E6DFD4] bg-white">
+                        {scene.image && (
+                          <img src={imgUrl(scene.image)} alt={scene.scene_key} className="h-full w-full object-cover" />
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-[#232528]">Scene {i + 1}</p>
+                        <p className="text-xs text-[#656B73]">
+                          {hotspots.filter((h) => h.scene_number === scene.scene_key).length} titik hotspot terpasang
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => handleDeleteScene(scene)}
-                          className="text-destructive hover:text-destructive/70 p-2 shrink-0"
-                          title="Delete scene"
+                          onClick={() => {
+                            setCurrentScene(scene.scene_key);
+                            setActiveTab("hotspots");
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#5E93B8]/35 bg-[#EDF4F8] px-3 py-1.5 text-xs font-medium text-[#35678B] hover:bg-[#DFECF4]"
                         >
-                          <Trash2 size={16} />
+                          <Target size={13} /> Atur Hotspot
                         </button>
+                        {editable && (
+                          <>
+                            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#E2DACF] bg-white px-3 py-1.5 text-xs font-medium text-[#232528] hover:border-[#5E93B8]">
+                              <Upload size={12} /> Ganti Foto
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => e.target.files?.[0] && void handleReplaceSceneImage(scene, e.target.files[0])}
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => void handleDeleteScene(scene)}
+                              className="rounded-lg p-2 text-red-600 hover:bg-red-50"
+                              title="Hapus scene"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
-        {activeTab === "hotspots" && (
-          <div className="space-y-6">
-            {!catalogId ? (
-              <div className="border border-dashed border-border rounded-lg p-8 text-center text-sm text-muted-foreground">
-                Simpan info dasar catalog dan tambahkan minimal satu scene
-                terlebih dahulu sebelum menempatkan hotspot.
-              </div>
-            ) : scenes.length === 0 ? (
-              <div className="border border-dashed border-border rounded-lg p-8 text-center text-sm text-muted-foreground">
-                Belum ada scene. Tambahkan scene di tab "Gallery & Scenes" dulu
-                sebelum menempatkan hotspot.
-              </div>
-            ) : (
-              <>
-                <div className="flex gap-2 border-b border-border pb-4 flex-wrap">
-                  {scenes.map((scene, i) => (
+      {/* TAB 3: HOTSPOTS & ITEMS GRID (Auto-save per aksi, di luar <form>!) */}
+      {activeTab === "hotspots" && (
+        <div className="space-y-6">
+          {!catalogId ? (
+            <AdminHelpBanner tone="amber" title="Simpan Info Dasar Terlebih Dahulu">
+              Simpan info dasar lookbook dan unggah minimal satu foto scene sebelum memasang titik hotspot.
+            </AdminHelpBanner>
+          ) : scenes.length === 0 ? (
+            <AdminHelpBanner tone="amber" title="Belum Ada Foto Scene">
+              Unggah minimal satu foto ruangan di tab <strong>2. Foto Ruangan / Scene</strong> sebelum memasang hotspot.
+            </AdminHelpBanner>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                {scenes.map((scene, i) => {
+                  const count = hotspots.filter((h) => h.scene_number === scene.scene_key).length;
+                  return (
                     <button
                       key={scene.scene_key}
                       type="button"
                       onClick={() => setCurrentScene(scene.scene_key)}
-                      className={`px-4 py-2 text-sm transition-all ${
+                      className={`rounded-full border px-4 py-1.5 text-xs font-medium transition-colors ${
                         currentScene === scene.scene_key
-                          ? "bg-foreground text-background rounded"
-                          : "border border-border text-muted-foreground hover:border-foreground"
+                          ? "border-[#232528] bg-[#232528] text-white"
+                          : "border-[#E2DACF] bg-white text-[#656B73] hover:border-[#5E93B8]"
                       }`}
                     >
-                      Scene {i + 1}
+                      Scene {i + 1} ({count})
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
+              </div>
 
-                <HotspotVisualEditor
-                  catalogId={catalogId}
-                  sceneNumber={currentScene}
-                  sceneImage={activeSceneImageUrl}
-                  hotspots={hotspots.filter((h) => h.scene_number === currentScene)}
-                  onHotspotAdd={handleHotspotAdd}
-                  onHotspotUpdate={handleHotspotUpdate}
-                  onHotspotDelete={handleHotspotDelete}
-                />
-                <div className="mt-10 pt-8 border-t border-border">
-  <ItemsGridEditor catalogId={catalogId!} hotspots={hotspots} />
-</div>
-              </>
-            )}
-          </div>
-        )}
+              <HotspotVisualEditor
+                catalogId={catalogId}
+                sceneNumber={currentScene}
+                sceneImage={activeSceneImageUrl}
+                hotspots={hotspots.filter((h) => h.scene_number === currentScene)}
+                onHotspotAdd={(h) => setHotspots((prev) => [...prev, h])}
+                onHotspotUpdate={(id, h) => setHotspots((prev) => prev.map((x) => (x.id === id ? { ...h, id } : x)))}
+                onHotspotDelete={(id) => setHotspots((prev) => prev.filter((x) => x.id !== id))}
+              />
 
-        <div className="flex gap-3 mt-12 pt-6 border-t border-border">
-          <button
-            type="submit"
-            disabled={submitting}
-            className={`px-8 py-3 text-sm font-medium rounded text-background ${
-              submitting ? "bg-foreground/50 cursor-not-allowed" : "bg-foreground hover:bg-foreground/90"
-            } transition-colors`}
-          >
-            {submitting ? "Saving..." : catalogId ? "💾 Update Catalog" : "✨ Create Catalog"}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/admin/catalogs")}
-            className="px-8 py-3 text-sm border border-border rounded hover:bg-secondary transition-colors"
-          >
-            Cancel
-          </button>
+              <div className="rounded-2xl border border-[#EAE4DA] bg-white p-6">
+                <ItemsGridEditor catalogId={catalogId} hotspots={hotspots} />
+              </div>
+            </>
+          )}
         </div>
-
-      </div>
-    </form>
+      )}
+    </div>
   );
 }

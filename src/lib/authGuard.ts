@@ -1,5 +1,6 @@
 // Helper terpusat untuk auth: simpan tujuan awal + bersihkan sesi konsisten.
 import { authStorage } from "@/lib/api";
+import { clearAdminBootstrapCache } from "@/components/admin/AdminPermissionContext";
 
 const REDIRECT_KEY = "redirectAfterLogin";
 
@@ -17,6 +18,7 @@ export const takeIntendedPath = (): string | null => {
 };
 
 export const clearSession = () => {
+  clearAdminBootstrapCache();
   authStorage.clear();
   localStorage.removeItem("user");
   sessionStorage.removeItem(REDIRECT_KEY);

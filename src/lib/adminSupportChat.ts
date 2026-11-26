@@ -1,6 +1,21 @@
 import { api } from "@/lib/api";
 import type { SupportMessage, SupportStatus } from "@/lib/supportChat";
 
+export interface CustomerNeedProfile {
+  summary?: string | null;
+  project_type?: string | null;
+  rooms?: string[];
+  furniture?: string[];
+  style?: string | null;
+  materials?: string[];
+  colors?: string[];
+  budget?: string | null;
+  timeline?: string | null;
+  location?: string | null;
+  email?: string | null;
+  notes?: string | null;
+}
+
 export interface AdminSupportSession {
   id: number;
   status: SupportStatus;
@@ -15,16 +30,20 @@ export interface AdminSupportSession {
   last_message: string | null;
   last_message_at: string | null;
   unread_admin: number;
+  customer_profile?: CustomerNeedProfile | null;
+  needs_summary?: string | null;
 }
+
 export async function rejectSupportSession(sessionId: number) {
-  const {data} = await api.post(`/admin/support/sessions/${sessionId}/reject`);
+  const { data } = await api.post(`/admin/support/sessions/${sessionId}/reject`);
   return data;
 }
 
 export async function deleteSupportSession(sessionId: number) {
-  const {data} = await api.delete(`/admin/support/sessions/${sessionId}`);
+  const { data } = await api.delete(`/admin/support/sessions/${sessionId}`);
   return data;
 }
+
 export async function getSupportSessions(status = "all") {
   const { data } = await api.get("/admin/support/sessions", { params: { status } });
   return data as { sessions: AdminSupportSession[]; pending: number };
@@ -32,7 +51,7 @@ export async function getSupportSessions(status = "all") {
 
 export async function getSupportMessages(sessionId: number, since = 0) {
   const { data } = await api.get(`/admin/support/sessions/${sessionId}/messages`, { params: { since } });
-  return data as { session: any; messages: SupportMessage[] };
+  return data as { session: AdminSupportSession; messages: SupportMessage[] };
 }
 
 export async function acceptSupportSession(sessionId: number) {

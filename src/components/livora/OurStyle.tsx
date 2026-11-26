@@ -4,9 +4,9 @@ import { useTranslation } from "react-i18next";
 import { ArrowUpRight, Plus } from "lucide-react";
 import {
   gsap,
-  ScrollTrigger,
   registerGsap,
   prefersReducedMotion,
+  scheduleScrollTriggerRefresh,
 } from "@/lib/motionTokens";
 
 import european from "@/assets/style-european.webp";
@@ -102,30 +102,32 @@ export function OurStyle() {
         },
       );
 
-      const pillars = section.querySelectorAll<HTMLElement>("[data-style-pillar]");
-      if (pillars.length) {
-        gsap.fromTo(
-          pillars,
-          { opacity: 0, y: 48 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 1.0,
-            stagger: 0.08,
-            ease: "expo.out",
-            scrollTrigger: {
-              trigger: pillars[0],
-              start: "top 85%",
-              once: true,
+      const mm = gsap.matchMedia();
+      mm.add("(min-width: 1024px)", () => {
+        const pillars = section.querySelectorAll<HTMLElement>("[data-style-pillar]");
+        if (pillars.length) {
+          gsap.fromTo(
+            pillars,
+            { opacity: 0, y: 40 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.9,
+              stagger: 0.08,
+              ease: "expo.out",
+              scrollTrigger: {
+                trigger: pillars[0],
+                start: "top 85%",
+                once: true,
+              },
             },
-          },
-        );
-      }
+          );
+        }
+      });
     }, section);
 
-    const tId = setTimeout(() => ScrollTrigger.refresh(), 100);
+    scheduleScrollTriggerRefresh();
     return () => {
-      clearTimeout(tId);
       ctx.revert();
     };
   }, []);
@@ -213,9 +215,10 @@ export function OurStyle() {
                 style={{
                   flexGrow: isActive ? 3.7 : 0.85,
                   flexBasis: 0,
+                  contain: "layout paint",
                   transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
                 }}
-                className="relative min-w-0 overflow-hidden rounded-[24px] cursor-pointer transition-[flex-grow,box-shadow] duration-700 border border-[#232528]/8 bg-[#E8E4DC] shadow-[0_24px_60px_-34px_rgba(35,37,40,0.22)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5E93B8]"
+                className="relative min-w-0 overflow-hidden rounded-[24px] cursor-pointer transition-[flex-grow] duration-700 border border-[#232528]/8 bg-[#E8E4DC] shadow-[0_24px_60px_-34px_rgba(35,37,40,0.22)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5E93B8]"
               >
                 {/* Background Photograph */}
                 <img
@@ -274,26 +277,26 @@ export function OurStyle() {
                   </span>
                 </div>
 
-                {/* Expanded Editorial Content (Visible when active) */}
+                {/* Expanded Editorial Content (Fixed inner text width prevents text rewrap during flex-grow) */}
                 <div
-                  className={`relative z-10 flex h-full flex-col justify-between p-8 xl:p-10 transition-all duration-500 ${
+                  className={`relative z-10 flex h-full flex-col justify-between p-8 xl:p-10 transition-[opacity,transform] duration-500 ${
                     isActive
                       ? "opacity-100 translate-y-0 delay-200"
                       : "opacity-0 translate-y-5 pointer-events-none"
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-2.5 rounded-full bg-white/90 backdrop-blur-md px-4 py-1.5 text-[10px] uppercase tracking-[0.28em] text-[#232528] shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="inline-flex items-center gap-2.5 rounded-full bg-white/90 backdrop-blur-md px-4 py-1.5 text-[10px] uppercase tracking-[0.28em] text-[#232528] shadow-sm whitespace-nowrap">
                       <span>{num}</span>
                       <span className="h-1 w-1 rounded-full bg-[#5E93B8]" />
                       <span>{s.name}</span>
                     </span>
-                    <span className="rounded-full bg-[#232528]/35 backdrop-blur-md px-3 py-1 text-[11px] tracking-[0.24em] text-white/90 tabular-nums">
+                    <span className="rounded-full bg-[#232528]/35 backdrop-blur-md px-3 py-1 text-[11px] tracking-[0.24em] text-white/90 tabular-nums whitespace-nowrap">
                       {num} / {String(STYLES.length).padStart(2, "0")}
                     </span>
                   </div>
 
-                  <div className="max-w-xl">
+                  <div className="w-[340px] xl:w-[440px] max-w-none">
                     <div className="mb-4">
                       {words.map((w) => (
                         <span
@@ -340,7 +343,7 @@ export function OurStyle() {
                 style={{
                   transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
                 }}
-                className={`relative overflow-hidden rounded-[20px] border border-[#232528]/10 transition-[height] duration-600 cursor-pointer shadow-sm ${
+                className={`relative overflow-hidden rounded-[20px] border border-[#232528]/10 transition-[height] duration-500 cursor-pointer shadow-sm ${
                   isActive ? "h-[430px] sm:h-[480px]" : "h-[82px]"
                 }`}
               >

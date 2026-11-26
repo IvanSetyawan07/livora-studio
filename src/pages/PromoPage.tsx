@@ -13,6 +13,7 @@ import { getPromoItems } from "@/lib/promoApi";
 import { api } from "@/lib/api";
 import { trackLivoraEvent } from "@/lib/analytics";
 import type { RichItem } from "@/lib/itemsApi";
+import promoHeroBg from "@/assets/_opt/hero-update-800.webp";
 
 type SortOption = "discount_desc" | "name_asc" | "newest";
 
@@ -100,7 +101,7 @@ export default function PromoPage() {
         <section className="relative pt-32 pb-16 md:pt-40 md:pb-24 bg-[#141414] text-white overflow-hidden">
           <div
             className="absolute inset-0 opacity-20 pointer-events-none bg-cover bg-center"
-            style={{ backgroundImage: `url('/assets/hero-update-800-Da07bWV0.webp')` }}
+            style={{ backgroundImage: `url(${promoHeroBg})` }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-[#141414]/90 pointer-events-none" />
 
@@ -122,7 +123,7 @@ export default function PromoPage() {
         </section>
 
         {/* Toolbar: Category Pills, Search, Sort & Column Switcher */}
-        <section className="border-b border-[#EAE4DB] bg-[#FAF8F5]/92 sticky top-16 md:top-[72px] z-30 backdrop-blur-md">
+        <section className="border-b border-[#EAE4DB] bg-[#FAF8F5]/92 sticky top-20 z-30 backdrop-blur-md">
           <div className="container-livora py-3.5 md:py-4">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
               {/* Category pills */}

@@ -233,7 +233,7 @@ export const adminShop = {
   },
   /** Ambil berkas privat (gambar chat) dengan token login, lalu kembalikan blob-nya. */
   fileBlob: async (path: string): Promise<Blob> => {
-    const res = await fetch(`${API_BASE_URL}/admin/shop/file?path=${encodeURIComponent(path)}`, { headers: { Authorization: `Bearer ${authStorage.getToken()}` } });
+    const res = await fetch(`${API_BASE_URL}/admin/shop/files?path=${encodeURIComponent(path)}`, { headers: { Authorization: `Bearer ${authStorage.getToken()}` } });
     if (!res.ok) throw new Error("Gambar tidak dapat dibuka");
     return res.blob();
   },

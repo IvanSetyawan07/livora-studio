@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { IntegrationRequired } from "@/components/ai/integration-required";
 import { Panel, Pill, SectionHeading, StatusDot } from "@/components/ai/primitives";
 import { ChartSection } from "@/components/ai/dashboard-charts";
+import { useAdminDialog } from "@/components/admin/kit";
 import {
   Dialog,
   DialogContent,
@@ -74,6 +75,7 @@ function LocalKpi({
 
 /** Local SEO block (reviews, rankings, map presence) reused by the SEO agent page. */
 export function LocalSeoSection() {
+  const dialog = useAdminDialog();
   const { data, section } = useLocalSeoSummary();
   const [replyTarget, setReplyTarget] = useState<LocalSeoReview | null>(null);
   const [replyDraft, setReplyDraft] = useState("");
@@ -98,9 +100,16 @@ export function LocalSeoSection() {
 
   async function handleSendReply() {
     if (!replyTarget || !replyDraft.trim()) return;
+    const ok = await dialog.confirm({
+      title: `Publikasikan Balasan Ulasan ke Google Maps?`,
+      description: `Balasan Anda untuk ulasan ${replyTarget.reviewer ?? "pelanggan"} akan langsung tampil secara publik di profil Google Maps Livora.`,
+      confirmText: "Ya, Publikasikan ke Google Maps",
+      cancelText: "Periksa Lagi",
+    });
+    if (!ok) return;
     try {
       await sendReply.mutateAsync({ reviewId: replyTarget.id, comment: replyDraft.trim() });
-      toast.success("Balasan review berhasil dikirim ke Google Maps.");
+      toast.success("Balasan ulasan berhasil dipublikasikan ke Google Maps.");
       setReplyTarget(null);
     } catch (err) {
       toast.error(extractApiErrorMessage(err, "Gagal mengirim balasan ke Google Business Profile."));

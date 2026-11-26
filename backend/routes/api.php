@@ -299,8 +299,10 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::post('/marketing/send', [\App\Http\Controllers\Api\MarketingController::class, 'send']);
         Route::post('/marketing/send-test', [MarketingController::class, 'sendTest']);
         Route::post('/marketing/preview', [MarketingController::class, 'preview']);
+        Route::get('/marketing/campaigns', [MarketingController::class, 'campaigns']);
         Route::post('/marketing/campaigns/draft', [MarketingController::class, 'saveDraft']);
         Route::get('/marketing/campaigns/{campaign}', [MarketingController::class, 'showCampaign']);
+        Route::delete('/marketing/campaigns/{campaign}', [MarketingController::class, 'destroyCampaign']);
         Route::get('/brand-settings', [MarketingController::class, 'brandSettings']);
         Route::get('/catalog/images', [MarketingController::class, 'catalogImages']);
         Route::post('/marketing/upload-image', [MarketingController::class, 'uploadImage']);
@@ -345,6 +347,7 @@ Route::post('/catalogs/{catalog}/item-layouts', [CatalogItemLayoutController::cl
         Route::get('/users', [\App\Http\Controllers\Api\AdminUserController::class, 'index']);
         Route::get('/users/{user}', [\App\Http\Controllers\Api\AdminUserController::class, 'show']);
         Route::get('/users/{user}/activities', [\App\Http\Controllers\Api\AdminUserController::class, 'activities']);
+        Route::patch('/users/{user}/role', [\App\Http\Controllers\Api\AdminUserController::class, 'updateRole']);
     });
 
     // ================= AI MARKETING DASHBOARD (Fase 3) =================
@@ -564,6 +567,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/orders/{code}/refunds', [$a, 'createRefund'])->middleware('admin_role:finance');
         Route::get('/projects', [$a, 'projects']);
         Route::get('/files', [$a, 'file']);
+        Route::get('/file', [$a, 'file']);
         Route::get('/claims', [$a, 'claims']);
         Route::post('/claims/{claim}', [$a, 'updateClaim'])->middleware('admin_role:production');
         Route::get('/refunds', [$a, 'refunds'])->middleware('admin_role:finance,cs');

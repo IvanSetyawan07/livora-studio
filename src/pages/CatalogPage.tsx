@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Navbar } from "@/components/livora/Navbar";
-import { motion, useScroll, useTransform, easeOut } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { scrollToTarget } from "@/components/SmoothScroll";
 import { CatalogCard } from "@/components/livora/CatalogCard";
 import livingCatalog from "@/assets/catalog/living-room.webp";
 import diningCatalog from "@/assets/catalog/dining-room.webp";
@@ -74,7 +75,6 @@ export default function CatalogPage() {
   const { scrollY } = useScroll();
 
   const heroRef = useRef<HTMLElement>(null);
-  const [heroHeight, setHeroHeight] = useState(800);
 
   const activeCat =
     CATALOG_CATEGORIES.find((c) => c.slug === categorySlug) ??
@@ -121,37 +121,6 @@ export default function CatalogPage() {
     return items;
   }, [catalogItems, activeCat.slug, activeTax]);
 
-  // ─── NAVBAR SCROLL TRANSFORMS (sama persis dengan CatalogDetail) ───
-  const navbarBgOpacity = useTransform(
-    scrollY,
-    [0, heroHeight * 0.3, heroHeight * 0.7],
-    [0, 0.5, 1],
-    { clamp: true }
-  );
-
-  const navbarBlur = useTransform(
-    scrollY,
-    [0, heroHeight * 0.7],
-    [0, 12],
-    { clamp: true }
-  );
-
-  // ─── MEASURE HERO HEIGHT ───
-  useEffect(() => {
-    if (heroRef.current) {
-      setHeroHeight(heroRef.current.clientHeight);
-    }
-
-    const handleResize = () => {
-      if (heroRef.current) {
-        setHeroHeight(heroRef.current.clientHeight);
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
   const visibleItems = filteredItems.slice(0, visibleCount);
   const hasMore = visibleCount < filteredItems.length;
 
@@ -192,7 +161,8 @@ export default function CatalogPage() {
         total={CATALOG_CATEGORIES.length}
         bgImage={CATEGORY_IMAGES[activeCat.slug]}
         onExplore={() => {
-          document.getElementById("catalog-grid")?.scrollIntoView({ behavior: "smooth" });
+          const el = document.getElementById("catalog-grid");
+          if (el) scrollToTarget(el, { offset: -80 });
         }}
         onProjects={() => navigate("/projects")}
       />
@@ -207,7 +177,7 @@ export default function CatalogPage() {
             <button
               key={tax}
               onClick={() => { setActiveTax(tax); setVisibleCount(ITEMS_PER_PAGE); }}
-              className={`shrink-0 min-h-[44px] text-[10px] uppercase tracking-[0.12em] px-4 py-2.5 border transition-all duration-300 font-light ${
+              className={`shrink-0 min-h-[44px] text-[10px] uppercase tracking-[0.12em] px-4 py-2.5 border transition-colors duration-300 font-light ${
                 activeTax === tax
                   ? "bg-foreground text-background border-foreground"
                   : "border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground"
@@ -639,7 +609,7 @@ function CatalogHero({
               variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } }}
               transition={{ duration: 0.8, ease }}
               onClick={onProjects}
-              className="inline-flex items-center gap-3 border border-white/60 text-white px-7 py-3.5 text-[10px] uppercase tracking-[0.3em] font-light hover:border-white hover:bg-white/10 transition-all duration-300"
+              className="inline-flex items-center gap-3 border border-white/60 text-white px-7 py-3.5 text-[10px] uppercase tracking-[0.3em] font-light hover:border-white hover:bg-white/10 transition-colors duration-300"
             >
               View Projects
             </motion.button>

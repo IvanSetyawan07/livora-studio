@@ -193,19 +193,23 @@ const ItemDetail = () => {
 
   if (!item) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[#F8F9FB]">
-        <div className="text-center px-6">
-          <p className="serif text-4xl font-light text-[#0B426E] mb-4">
-            {loading ? "Memuat spesifikasi…" : "Furnitur tidak ditemukan"}
-          </p>
-          <Link
-            to="/furniture"
-            className="inline-flex items-center gap-2 rounded-full bg-[#0B426E] text-white px-6 py-2.5 text-xs uppercase tracking-[0.2em] hover:bg-[#083559] transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" /> Kembali ke Koleksi
-          </Link>
-        </div>
-      </main>
+      <div className="min-h-screen flex flex-col bg-[#F8F9FB]">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center pt-28 pb-16">
+          <div className="text-center px-6">
+            <p className="serif text-4xl font-light text-[#0B426E] mb-4">
+              {loading ? "Memuat spesifikasi…" : "Furnitur tidak ditemukan"}
+            </p>
+            <Link
+              to="/furniture"
+              className="inline-flex items-center gap-2 rounded-full bg-[#0B426E] text-white px-6 py-2.5 text-xs uppercase tracking-[0.2em] hover:bg-[#083559] transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Kembali ke Koleksi
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </div>
     );
   }
 

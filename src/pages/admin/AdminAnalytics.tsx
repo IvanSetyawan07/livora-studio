@@ -1,60 +1,119 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-  AreaChart, Area, Legend, PieChart, Pie, Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  AreaChart,
+  Area,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
 import { pdf } from "@react-pdf/renderer";
-import { Download, CalendarRange, Filter } from "lucide-react";
+import { Download, CalendarRange, Filter, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import AnalyticsPDF from "@/components/livora/AnalyticsPDF";
+import {
+  AdminHelpBanner,
+  CardGridSkeleton,
+  ErrorState,
+  MetricCard,
+  PageHeader,
+  StatusBadge,
+} from "@/components/admin/kit";
 
 type Scope = "all" | "catalog" | "marketing" | "audience";
 
 const SCOPES: { value: Scope; label: string; hint: string }[] = [
-  { value: "all", label: "All Reports", hint: "Semua ringkasan performa" },
-  { value: "catalog", label: "Catalog & Collection", hint: "Item, Collection, Catalog, Project" },
-  { value: "marketing", label: "Marketing & Ads", hint: "Email campaign, leads, wishlist" },
-  { value: "audience", label: "Audience", hint: "User & aktivitas login" },
+  { value: "all", label: "Semua Laporan", hint: "Ringkasan menyeluruh katalog, marketing, dan audiens" },
+  { value: "catalog", label: "Katalog & Portofolio", hint: "Produk furnitur, koleksi, lookbook, dan proyek" },
+  { value: "marketing", label: "Marketing & Prospek", hint: "Broadcast email, konsultasi masuk, dan wishlist" },
+  { value: "audience", label: "Pengguna & Aktivitas", hint: "Pengguna terdaftar, sesi chat, dan status online" },
 ];
 
 const PRESETS = [
-  { label: "7D", days: 7 },
-  { label: "30D", days: 30 },
-  { label: "90D", days: 90 },
-  { label: "365D", days: 365 },
+  { label: "7 Hari", days: 7 },
+  { label: "30 Hari", days: 30 },
+  { label: "90 Hari", days: 90 },
+  { label: "1 Tahun", days: 365 },
 ];
+
+const CONSULTATION_STAGE_LABEL: Record<string, string> = {
+  new_inquiry: "Permintaan Baru",
+  contacted: "Sudah Dihubungi",
+  scheduled: "Jadwal Terkonfirmasi",
+  in_progress: "Dalam Diskusi / Penawaran",
+  agreement_sent: "Perjanjian Dikirim",
+  dp_pending: "Menunggu DP",
+  dp_paid: "DP Diterima",
+  project_running: "Proyek Berjalan",
+  final_payment_pending: "Menunggu Pelunasan",
+  completed: "Selesai",
+  cancelled: "Dibatalkan",
+  rejected: "Ditolak",
+};
+
+const CONTENT_TYPE_LABEL: Record<string, string> = {
+  item: "Produk",
+  project: "Proyek",
+  collection: "Koleksi",
+  catalog: "Lookbook",
+};
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const daysAgo = (n: number) => iso(new Date(Date.now() - n * 86400000));
 
-const PIE_COLORS = ["hsl(var(--foreground))", "hsl(var(--accent))", "#b08d57", "#8a8072", "#c9bda9"];
+const PIE_COLORS = ["#232528", "#5E93B8", "#8AB4D0", "#656B73", "#C5BFB5"];
 
 export default function AdminAnalytics() {
   const [data, setData] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [exporting, setExporting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [from, setFrom] = useState(daysAgo(29));
   const [to, setTo] = useState(iso(new Date()));
   const [scope, setScope] = useState<Scope>("all");
 
+  const activePreset = useMemo(() => {
+    const today = iso(new Date());
+    if (to !== today) return null;
+    const hit = PRESETS.find((p) => daysAgo(p.days - 1) === from);
+    return hit?.days ?? null;
+  }, [from, to]);
+
   const load = useCallback(() => {
     setLoading(true);
+    setError(null);
     Promise.all([
-      api.get("/admin/analytics/overview", { params: { from, to, scope } }).then((r) => setData(r.data)),
-      api.get("/admin/analytics/users").then((r) => setUsers(r.data)),
+      api.get("/admin/analytics/overview", { params: { from, to, scope } }),
+      api.get("/admin/analytics/users").catch(() => ({ data: [] })),
     ])
-      .catch(() => {})
+      .then(([ovRes, usrRes]) => {
+        setData(ovRes.data);
+        setUsers(Array.isArray(usrRes.data) ? usrRes.data : []);
+      })
+      .catch((err: any) => {
+        setError(err?.message || "Gagal mengambil data analitik dari server.");
+      })
       .finally(() => setLoading(false));
   }, [from, to, scope]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const fmtSec = (s: number) => {
-    if (!s) return "0s";
+    if (!s) return "0 dtk";
     const m = Math.floor(s / 60);
-    return m > 0 ? `${m}m ${Math.round(s % 60)}s` : `${Math.round(s)}s`;
+    return m > 0 ? `${m} mnt ${Math.round(s % 60)} dtk` : `${Math.round(s)} dtk`;
   };
 
   const showCatalog = scope === "all" || scope === "catalog";
@@ -65,313 +124,463 @@ export default function AdminAnalytics() {
     if (!data) return [];
     const t = data.totals ?? {};
     const base = [
-      { label: "Total Clicks", value: t.clicks ?? 0 },
-      { label: "Total Views", value: t.views ?? 0 },
-      { label: "Avg. Duration", value: fmtSec(t.avgDuration ?? 0) },
+      { label: "Total Klik Konten", value: Number(t.clicks ?? 0).toLocaleString("id-ID") },
+      { label: "Total Tayangan", value: Number(t.views ?? 0).toLocaleString("id-ID") },
+      { label: "Rata-rata Durasi Baca", value: fmtSec(t.avgDuration ?? 0) },
     ];
     const mkt = [
-      { label: "Campaigns", value: data.marketing?.campaignsTotal ?? 0 },
-      { label: "Emails Sent", value: data.marketing?.emailsSent ?? 0 },
-      { label: "New Leads", value: t.leads ?? 0 },
-      { label: "Saved (Wishlist)", value: t.wishlist ?? 0 },
+      { label: "Campaign Email", value: Number(data.marketing?.campaignsTotal ?? 0).toLocaleString("id-ID") },
+      { label: "Email Terkirim", value: Number(data.marketing?.emailsSent ?? 0).toLocaleString("id-ID") },
+      { label: "Konsultasi Baru", value: Number(t.leads ?? 0).toLocaleString("id-ID") },
+      { label: "Disimpan ke Wishlist", value: Number(t.wishlist ?? 0).toLocaleString("id-ID") },
     ];
     const aud = [
-      { label: "Total Users", value: data.usersTotal ?? 0 },
-      { label: "New Users", value: data.usersNew ?? 0 },
-      { label: "Active (5 min)", value: data.usersActive ?? 0 },
-      { label: "Chat Sessions", value: t.chatSessions ?? 0 },
+      { label: "Total Pengguna", value: Number(data.usersTotal ?? 0).toLocaleString("id-ID") },
+      { label: "Pengguna Baru", value: Number(data.usersNew ?? 0).toLocaleString("id-ID") },
+      { label: "Sedang Aktif (5 mnt)", value: Number(data.usersActive ?? 0).toLocaleString("id-ID") },
+      { label: "Sesi Chat Web", value: Number(t.chatSessions ?? 0).toLocaleString("id-ID") },
     ];
     if (scope === "catalog") return base;
     if (scope === "marketing") return mkt;
     if (scope === "audience") return aud;
-    return [...base, mkt[1], aud[1]];
+    return [...base, mkt[2], aud[1]];
   }, [data, scope]);
 
+  const clicksByTypeData = useMemo(
+    () =>
+      (data?.clicksByType ?? []).map((row: any) => ({
+        ...row,
+        label: CONTENT_TYPE_LABEL[row.type] ?? row.type,
+      })),
+    [data],
+  );
+
+  const leadsByStageData = useMemo(
+    () =>
+      (data?.leads?.byStatus ?? []).map((row: any) => ({
+        ...row,
+        stageLabel: CONSULTATION_STAGE_LABEL[row.status] ?? String(row.status ?? "").replace(/_/g, " "),
+      })),
+    [data],
+  );
+
   const exportPDF = async () => {
+    if (!data) return;
     setExporting(true);
     try {
-      const blob = await pdf(
-        <AnalyticsPDF overview={data} users={users} scope={scope} />
-      ).toBlob();
+      const blob = await pdf(<AnalyticsPDF overview={data} users={users} scope={scope} />).toBlob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `livora-analytics-${scope}-${from}_${to}.pdf`;
+      a.download = `livora-laporan-${scope}-${from}_${to}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
+      toast.success("Laporan PDF berhasil diunduh");
+    } catch (err: any) {
+      toast.error(err?.message || "Gagal membuat file PDF. Coba lagi.");
     } finally {
       setExporting(false);
     }
   };
 
+  const viewStats = Array.isArray(data?.viewStats) ? data.viewStats : [];
+  const timeline = Array.isArray(data?.timeline) ? data.timeline : [];
+
   return (
     <div>
-      <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2">Reporting</p>
-          <h1 className="serif text-4xl">Analytics</h1>
-          {data?.period && (
-            <p className="text-xs text-muted-foreground mt-2">
-              Masa laporan: {data.period.from} → {data.period.to} ({data.period.days} hari)
-            </p>
-          )}
-        </div>
-        <button
-          onClick={exportPDF}
-          disabled={exporting || !data}
-          className="inline-flex items-center gap-2 px-4 py-2 border border-foreground text-xs uppercase tracking-[0.3em] hover:bg-foreground hover:text-background transition disabled:opacity-50"
-        >
-          <Download size={14} />
-          {exporting ? "Preparing..." : "Export PDF"}
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Laporan & Statistik"
+        title="Laporan Performa Website"
+        description={
+          data?.period
+            ? `Periode laporan: ${data.period.from} s/d ${data.period.to} (${data.period.days} hari)`
+            : "Pantau trafik pengunjung, produk paling diminati, konsultasi, dan unduh laporan PDF."
+        }
+        actions={
+          <button
+            type="button"
+            onClick={exportPDF}
+            disabled={exporting || !data}
+            className="inline-flex items-center gap-2 rounded-full bg-[#232528] px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-[#34383D] disabled:opacity-50"
+          >
+            {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 text-[#9DC2DC]" />}
+            {exporting ? "Menyiapkan PDF…" : "Unduh Laporan PDF"}
+          </button>
+        }
+      />
 
-      {/* Period + scope controls */}
-      <div className="bg-card border border-border rounded-lg p-5 mb-8 flex flex-wrap items-end gap-5">
+      <AdminHelpBanner storageKey="analytics-intro">
+        Gunakan filter tanggal dan jenis laporan di bawah untuk meninjau performa website Livora. Tombol{" "}
+        <strong>Unduh Laporan PDF</strong> otomatis mengikuti rentang tanggal dan jenis laporan yang sedang dipilih.
+      </AdminHelpBanner>
+
+      {/* Filter Periode & Jenis Laporan */}
+      <div className="mb-7 flex flex-wrap items-end gap-4 rounded-2xl border border-[#EAE4DA] bg-white p-5">
         <div>
-          <label className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">
-            <CalendarRange size={13} /> Masa Pembukaan
+          <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-[#656B73]">
+            <CalendarRange size={13} className="text-[#5E93B8]" /> Dari Tanggal
           </label>
-          <input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)}
-            className="bg-background border border-border rounded px-3 py-2 text-sm" />
+          <input
+            type="date"
+            value={from}
+            max={to}
+            onChange={(e) => setFrom(e.target.value)}
+            className="h-10 rounded-lg border border-[#E2DACF] bg-[#FAF8F4] px-3 text-sm text-[#232528] outline-none focus:border-[#5E93B8] focus:bg-white"
+          />
         </div>
+
         <div>
-          <label className="block text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">Masa Penutupan</label>
-          <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)}
-            className="bg-background border border-border rounded px-3 py-2 text-sm" />
+          <label className="mb-1.5 block text-xs font-medium text-[#656B73]">Sampai Tanggal</label>
+          <input
+            type="date"
+            value={to}
+            min={from}
+            onChange={(e) => setTo(e.target.value)}
+            className="h-10 rounded-lg border border-[#E2DACF] bg-[#FAF8F4] px-3 text-sm text-[#232528] outline-none focus:border-[#5E93B8] focus:bg-white"
+          />
         </div>
-        <div className="flex gap-1.5">
-          {PRESETS.map((p) => (
-            <button key={p.label}
-              onClick={() => { setFrom(daysAgo(p.days - 1)); setTo(iso(new Date())); }}
-              className="px-3 py-2 text-xs border border-border rounded hover:border-foreground/50 transition">
-              {p.label}
-            </button>
-          ))}
+
+        <div className="flex flex-wrap gap-1.5">
+          {PRESETS.map((p) => {
+            const isActive = activePreset === p.days;
+            return (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => {
+                  setFrom(daysAgo(p.days - 1));
+                  setTo(iso(new Date()));
+                }}
+                className={`h-10 rounded-lg border px-3 text-xs font-medium transition-colors ${
+                  isActive
+                    ? "border-[#232528] bg-[#232528] text-white"
+                    : "border-[#E2DACF] bg-white text-[#4C5259] hover:border-[#5E93B8] hover:text-[#232528]"
+                }`}
+              >
+                {p.label}
+              </button>
+            );
+          })}
         </div>
-        <div className="min-w-[220px]">
-          <label className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">
-            <Filter size={13} /> Report Type
+
+        <div className="min-w-[230px] flex-1">
+          <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-[#656B73]">
+            <Filter size={13} className="text-[#5E93B8]" /> Jenis Laporan
           </label>
-          <select value={scope} onChange={(e) => setScope(e.target.value as Scope)}
-            className="w-full bg-background border border-border rounded px-3 py-2 text-sm">
-            {SCOPES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+          <select
+            value={scope}
+            onChange={(e) => setScope(e.target.value as Scope)}
+            className="h-10 w-full rounded-lg border border-[#E2DACF] bg-[#FAF8F4] px-3 text-sm text-[#232528] outline-none focus:border-[#5E93B8] focus:bg-white"
+          >
+            {SCOPES.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
           </select>
-          <p className="text-[11px] text-muted-foreground mt-1">
-            {SCOPES.find((s) => s.value === scope)?.hint}
-          </p>
+          <p className="mt-1 text-[11px] text-[#656B73]">{SCOPES.find((s) => s.value === scope)?.hint}</p>
         </div>
+
+        {loading && data && (
+          <div className="flex items-center gap-1.5 pb-2 text-xs text-[#5E93B8]">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Memperbarui…
+          </div>
+        )}
       </div>
 
-      {loading && !data && <p className="text-sm text-muted-foreground">Loading...</p>}
+      {error && !data && (
+        <ErrorState title="Gagal memuat laporan" description={error} onRetry={load} />
+      )}
+
+      {loading && !data && <CardGridSkeleton count={4} />}
 
       {data && (
-        <>
+        <div className={`space-y-6 transition-opacity ${loading ? "opacity-65" : "opacity-100"}`}>
           {/* KPIs */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-            {kpis.map((k) => (
-              <div key={k.label} className="bg-card border border-border rounded-lg p-5">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-2">{k.label}</p>
-                <p className="serif text-3xl">{k.value}</p>
-              </div>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+            {kpis.map((k, idx) => (
+              <MetricCard key={k.label} label={k.label} value={k.value} index={idx} />
             ))}
           </div>
 
           {/* Traffic timeline */}
           {(showCatalog || showAudience) && (
-            <Card title="Traffic Over Time (Clicks & Views)">
-              <div style={{ width: "100%", height: 300 }}>
-                <ResponsiveContainer>
-                  <AreaChart data={data.timeline}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                    <XAxis dataKey="date" tick={{ fontSize: 10 }} minTickGap={24} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
-                    <Tooltip />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Area type="monotone" dataKey="clicks" name="Clicks" stroke="hsl(var(--foreground))" fill="hsl(var(--foreground))" fillOpacity={0.12} />
-                    <Area type="monotone" dataKey="views" name="Views" stroke="hsl(var(--accent))" fill="hsl(var(--accent))" fillOpacity={0.12} />
-                  </AreaChart>
-                </ResponsiveContainer>
+            <Card title="Tren Kunjungan & Klik Harian">
+              <div style={{ width: "100%", height: 290 }}>
+                {timeline.length ? (
+                  <ResponsiveContainer>
+                    <AreaChart data={timeline}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#EAE4DA" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#656B73" }} minTickGap={24} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#656B73" }} />
+                      <Tooltip />
+                      <Legend wrapperStyle={{ fontSize: 12 }} />
+                      <Area
+                        type="monotone"
+                        dataKey="views"
+                        name="Tayangan"
+                        stroke="#5E93B8"
+                        fill="#5E93B8"
+                        fillOpacity={0.16}
+                        strokeWidth={2}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="clicks"
+                        name="Klik Konten"
+                        stroke="#232528"
+                        fill="#232528"
+                        fillOpacity={0.08}
+                        strokeWidth={2}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <Empty />
+                )}
               </div>
             </Card>
           )}
 
           {showCatalog && (
             <>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+              <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
                 <div className="lg:col-span-2">
-                  <Card title="Clicks by Feature (Item / Collection / Catalog / Project)">
+                  <Card title="Klik per Kategori Konten">
                     <div style={{ width: "100%", height: 260 }}>
-                      <ResponsiveContainer>
-                        <BarChart data={data.timeline}>
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                          <XAxis dataKey="date" tick={{ fontSize: 10 }} minTickGap={24} />
-                          <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
-                          <Tooltip />
-                          <Legend wrapperStyle={{ fontSize: 11 }} />
-                          <Bar dataKey="item" name="Items" stackId="a" fill="hsl(var(--foreground))" />
-                          <Bar dataKey="collection" name="Collections" stackId="a" fill="#b08d57" />
-                          <Bar dataKey="catalog" name="Catalogs" stackId="a" fill="#8a8072" />
-                          <Bar dataKey="project" name="Projects" stackId="a" fill="#c9bda9" />
-                        </BarChart>
-                      </ResponsiveContainer>
+                      {timeline.length ? (
+                        <ResponsiveContainer>
+                          <BarChart data={timeline}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#EAE4DA" />
+                            <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#656B73" }} minTickGap={24} />
+                            <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#656B73" }} />
+                            <Tooltip />
+                            <Legend wrapperStyle={{ fontSize: 12 }} />
+                            <Bar dataKey="item" name="Produk" stackId="a" fill="#232528" />
+                            <Bar dataKey="collection" name="Koleksi" stackId="a" fill="#5E93B8" />
+                            <Bar dataKey="catalog" name="Lookbook" stackId="a" fill="#8AB4D0" />
+                            <Bar dataKey="project" name="Proyek" stackId="a" fill="#C5BFB5" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <Empty />
+                      )}
                     </div>
                   </Card>
                 </div>
-                <Card title="Traffic Share">
+
+                <Card title="Proporsi Klik Pengunjung">
                   <div style={{ width: "100%", height: 260 }}>
-                    {data.clicksByType?.length ? (
+                    {clicksByTypeData.length ? (
                       <ResponsiveContainer>
                         <PieChart>
-                          <Pie data={data.clicksByType} dataKey="clicks" nameKey="type" innerRadius={55} outerRadius={95} paddingAngle={2}>
-                            {data.clicksByType.map((_: any, i: number) => (
+                          <Pie
+                            data={clicksByTypeData}
+                            dataKey="clicks"
+                            nameKey="label"
+                            innerRadius={52}
+                            outerRadius={90}
+                            paddingAngle={2}
+                          >
+                            {clicksByTypeData.map((_: any, i: number) => (
                               <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                             ))}
                           </Pie>
                           <Tooltip />
-                          <Legend wrapperStyle={{ fontSize: 11 }} />
+                          <Legend wrapperStyle={{ fontSize: 12 }} />
                         </PieChart>
                       </ResponsiveContainer>
-                    ) : <Empty />}
+                    ) : (
+                      <Empty />
+                    )}
                   </div>
                 </Card>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
-                <ChartCard title="Top Items by Clicks" data={data.topItems} color="hsl(var(--foreground))" />
-                <ChartCard title="Top Collections by Clicks" data={data.topCollections} color="#b08d57" />
-                <ChartCard title="Top Catalogs by Clicks" data={data.topCatalogs} color="#8a8072" />
-                <ChartCard title="Top Projects by Clicks" data={data.topProjects} color="hsl(var(--accent))" />
+              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                <HorizontalRankCard title="Produk Furnitur Paling Banyak Diklik" data={data.topItems} color="#232528" />
+                <HorizontalRankCard title="Koleksi Paling Banyak Diklik" data={data.topCollections} color="#5E93B8" />
+                <HorizontalRankCard title="Lookbook Paling Banyak Diklik" data={data.topCatalogs} color="#8AB4D0" />
+                <HorizontalRankCard title="Proyek Paling Banyak Diklik" data={data.topProjects} color="#656B73" />
               </div>
 
-              <Card title="Engagement (Views & Duration)">
-                <div className="w-full overflow-x-auto"><table className="w-full text-sm">
-                  <thead className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
-                    <tr>
-                      <th className="text-left p-2">Content</th>
-                      <th className="text-left p-2">Type</th>
-                      <th className="text-right p-2">Views</th>
-                      <th className="text-right p-2">Avg. Time</th>
-                      <th className="text-right p-2">Total Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.viewStats.map((v: any, i: number) => (
-                      <tr key={i} className="border-t border-border">
-                        <td className="p-2">{v.title ?? `#${v.target_id}`}</td>
-                        <td className="p-2 capitalize text-muted-foreground">{v.target_type}</td>
-                        <td className="p-2 text-right">{v.views}</td>
-                        <td className="p-2 text-right">{fmtSec(v.avg_seconds)}</td>
-                        <td className="p-2 text-right">{fmtSec(v.total_seconds)}</td>
+              <Card title="Keterlibatan Pengunjung (Tayangan & Lama Baca)">
+                <div className="w-full overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="border-b border-[#EAE4DA] text-xs uppercase tracking-[0.14em] text-[#656B73]">
+                      <tr>
+                        <th className="p-2.5 text-left">Nama Konten</th>
+                        <th className="p-2.5 text-left">Jenis</th>
+                        <th className="p-2.5 text-right">Tayangan</th>
+                        <th className="p-2.5 text-right">Rata-rata Baca</th>
+                        <th className="p-2.5 text-right">Total Waktu</th>
                       </tr>
-                    ))}
-                    {data.viewStats.length === 0 && <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Belum ada data view pada masa ini.</td></tr>}
-                  </tbody>
-                </table></div>
+                    </thead>
+                    <tbody>
+                      {viewStats.map((v: any, i: number) => (
+                        <tr key={i} className="border-b border-[#F2EDE5] last:border-0">
+                          <td className="p-2.5 font-medium text-[#232528]">{v.title ?? `#${v.target_id}`}</td>
+                          <td className="p-2.5 text-[#656B73]">
+                            {CONTENT_TYPE_LABEL[v.target_type] ?? v.target_type}
+                          </td>
+                          <td className="p-2.5 text-right tabular-nums">{Number(v.views ?? 0).toLocaleString("id-ID")}</td>
+                          <td className="p-2.5 text-right tabular-nums">{fmtSec(v.avg_seconds)}</td>
+                          <td className="p-2.5 text-right tabular-nums">{fmtSec(v.total_seconds)}</td>
+                        </tr>
+                      ))}
+                      {viewStats.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="p-6 text-center text-[#656B73]">
+                            Belum ada data tayangan pada periode ini.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </Card>
             </>
           )}
 
           {showMarketing && (
             <>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
-                <Card title="Email Sent Over Time">
+              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                <Card title="Pengiriman Broadcast Email">
                   <div style={{ width: "100%", height: 260 }}>
                     {data.marketing?.timeline?.length ? (
                       <ResponsiveContainer>
                         <AreaChart data={data.marketing.timeline}>
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                          <XAxis dataKey="date" tick={{ fontSize: 10 }} minTickGap={24} />
-                          <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                          <CartesianGrid strokeDasharray="3 3" stroke="#EAE4DA" />
+                          <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#656B73" }} minTickGap={24} />
+                          <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#656B73" }} />
                           <Tooltip />
-                          <Area type="monotone" dataKey="sent" name="Emails" stroke="#b08d57" fill="#b08d57" fillOpacity={0.15} />
+                          <Area
+                            type="monotone"
+                            dataKey="sent"
+                            name="Email Terkirim"
+                            stroke="#5E93B8"
+                            fill="#5E93B8"
+                            fillOpacity={0.18}
+                            strokeWidth={2}
+                          />
                         </AreaChart>
                       </ResponsiveContainer>
-                    ) : <Empty text="Belum ada campaign pada masa ini." />}
+                    ) : (
+                      <Empty text="Belum ada pengiriman email pada periode ini." />
+                    )}
                   </div>
                 </Card>
-                <Card title="Leads by Consultation Stage">
+
+                <Card title="Konsultasi per Tahap Proyek">
                   <div style={{ width: "100%", height: 260 }}>
-                    {data.leads?.byStatus?.length ? (
+                    {leadsByStageData.length ? (
                       <ResponsiveContainer>
-                        <BarChart data={data.leads.byStatus} layout="vertical">
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10 }} />
-                          <YAxis type="category" dataKey="status" width={140} tick={{ fontSize: 10 }} />
+                        <BarChart data={leadsByStageData} layout="vertical" margin={{ left: 10, right: 16 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#EAE4DA" />
+                          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: "#656B73" }} />
+                          <YAxis
+                            type="category"
+                            dataKey="stageLabel"
+                            width={150}
+                            tick={{ fontSize: 11, fill: "#232528" }}
+                          />
                           <Tooltip />
-                          <Bar dataKey="total" name="Leads" fill="hsl(var(--foreground))" />
+                          <Bar dataKey="total" name="Jumlah Konsultasi" fill="#232528" radius={[0, 4, 4, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
-                    ) : <Empty text="Belum ada lead pada masa ini." />}
+                    ) : (
+                      <Empty text="Belum ada data konsultasi pada periode ini." />
+                    )}
                   </div>
                 </Card>
               </div>
 
-              <Card title="Campaign Log">
-                <div className="w-full overflow-x-auto"><table className="w-full text-sm">
-                  <thead className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
-                    <tr>
-                      <th className="text-left p-2">Campaign</th>
-                      <th className="text-left p-2">Subject</th>
-                      <th className="text-left p-2">Status</th>
-                      <th className="text-right p-2">Sent</th>
-                      <th className="text-right p-2">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(data.marketing?.campaigns ?? []).map((c: any) => (
-                      <tr key={c.id} className="border-t border-border">
-                        <td className="p-2 font-medium">{c.name ?? "—"}</td>
-                        <td className="p-2 text-muted-foreground">{c.subject ?? "—"}</td>
-                        <td className="p-2 capitalize">{c.status}</td>
-                        <td className="p-2 text-right">{c.sent_count}</td>
-                        <td className="p-2 text-right text-xs text-muted-foreground">
-                          {(c.sent_at ?? c.created_at ?? "").toString().slice(0, 10)}
-                        </td>
+              <Card title="Riwayat Broadcast Email">
+                <div className="w-full overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="border-b border-[#EAE4DA] text-xs uppercase tracking-[0.14em] text-[#656B73]">
+                      <tr>
+                        <th className="p-2.5 text-left">Nama Campaign</th>
+                        <th className="p-2.5 text-left">Subjek Email</th>
+                        <th className="p-2.5 text-left">Status</th>
+                        <th className="p-2.5 text-right">Terkirim</th>
+                        <th className="p-2.5 text-right">Tanggal</th>
                       </tr>
-                    ))}
-                    {!(data.marketing?.campaigns ?? []).length && (
-                      <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Belum ada campaign pada masa ini.</td></tr>
-                    )}
-                  </tbody>
-                </table></div>
+                    </thead>
+                    <tbody>
+                      {(data.marketing?.campaigns ?? []).map((c: any) => (
+                        <tr key={c.id} className="border-b border-[#F2EDE5] last:border-0">
+                          <td className="p-2.5 font-medium text-[#232528]">{c.name ?? "—"}</td>
+                          <td className="p-2.5 text-[#656B73]">{c.subject ?? "—"}</td>
+                          <td className="p-2.5">
+                            <StatusBadge tone={c.status === "sent" ? "success" : "warning"}>
+                              {c.status === "sent" ? "Terkirim" : c.status === "draft" ? "Draf" : c.status}
+                            </StatusBadge>
+                          </td>
+                          <td className="p-2.5 text-right tabular-nums">{Number(c.sent_count ?? 0).toLocaleString("id-ID")}</td>
+                          <td className="p-2.5 text-right text-xs text-[#656B73]">
+                            {(c.sent_at ?? c.created_at ?? "").toString().slice(0, 10)}
+                          </td>
+                        </tr>
+                      ))}
+                      {!(data.marketing?.campaigns ?? []).length && (
+                        <tr>
+                          <td colSpan={5} className="p-6 text-center text-[#656B73]">
+                            Belum ada broadcast email pada periode ini.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </Card>
             </>
           )}
 
           {showAudience && (
-            <Card title="User Activity">
-              <div className="w-full overflow-x-auto"><table className="w-full text-sm">
-                <thead className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
-                  <tr>
-                    <th className="text-left p-2">User</th>
-                    <th className="text-left p-2">Email</th>
-                    <th className="text-left p-2">Role</th>
-                    <th className="text-left p-2">Status</th>
-                    <th className="text-left p-2">Last Seen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((u) => (
-                    <tr key={u.id} className="border-t border-border">
-                      <td className="p-2 font-medium">{u.name}</td>
-                      <td className="p-2 text-muted-foreground">{u.email}</td>
-                      <td className="p-2 capitalize">{u.role}</td>
-                      <td className="p-2">
-                        <span className={`inline-flex items-center gap-1.5 text-xs ${u.is_online ? "text-emerald-600" : "text-muted-foreground"}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${u.is_online ? "bg-emerald-500" : "bg-muted-foreground"}`} />
-                          {u.is_online ? "Online" : "Offline"}
-                        </span>
-                      </td>
-                      <td className="p-2 text-xs text-muted-foreground">{u.last_seen_at ? new Date(u.last_seen_at).toLocaleString() : "—"}</td>
+            <Card title="Aktivitas Pengguna Terkini">
+              <div className="w-full overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-[#EAE4DA] text-xs uppercase tracking-[0.14em] text-[#656B73]">
+                    <tr>
+                      <th className="p-2.5 text-left">Nama</th>
+                      <th className="p-2.5 text-left">Email</th>
+                      <th className="p-2.5 text-left">Peran</th>
+                      <th className="p-2.5 text-left">Status</th>
+                      <th className="p-2.5 text-left">Terakhir Aktif</th>
                     </tr>
-                  ))}
-                  {users.length === 0 && <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Belum ada user aktif.</td></tr>}
-                </tbody>
-              </table></div>
+                  </thead>
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u.id} className="border-b border-[#F2EDE5] last:border-0">
+                        <td className="p-2.5 font-medium text-[#232528]">{u.name}</td>
+                        <td className="p-2.5 text-[#656B73]">{u.email}</td>
+                        <td className="p-2.5 capitalize text-[#4C5259]">
+                          {u.role === "admin" ? "Tim Admin" : "Pelanggan"}
+                        </td>
+                        <td className="p-2.5">
+                          <StatusBadge tone={u.is_online ? "success" : "neutral"}>
+                            {u.is_online ? "Online" : "Offline"}
+                          </StatusBadge>
+                        </td>
+                        <td className="p-2.5 text-xs text-[#656B73]">
+                          {u.last_seen_at ? new Date(u.last_seen_at).toLocaleString("id-ID") : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                    {users.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="p-6 text-center text-[#656B73]">
+                          Belum ada aktivitas pengguna tercatat.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </Card>
           )}
-        </>
+        </div>
       )}
     </div>
   );
@@ -379,34 +588,46 @@ export default function AdminAnalytics() {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-card border border-border rounded-lg p-6 mb-6">
-      <h2 className="serif text-xl mb-4">{title}</h2>
+    <div className="rounded-2xl border border-[#EAE4DA] bg-white p-5 sm:p-6">
+      <h2 className="font-header mb-4 text-lg text-[#232528]">{title}</h2>
       {children}
     </div>
   );
 }
 
-function Empty({ text = "Belum ada data pada masa ini." }: { text?: string }) {
-  return <div className="h-full flex items-center justify-center text-sm text-muted-foreground text-center px-4">{text}</div>;
+function Empty({ text = "Belum ada data pada periode ini." }: { text?: string }) {
+  return (
+    <div className="flex h-full items-center justify-center px-4 text-center text-sm text-[#656B73]">
+      {text}
+    </div>
+  );
 }
 
-function ChartCard({ title, data, color }: any) {
-  const hasData = Array.isArray(data) && data.length > 0;
+function HorizontalRankCard({ title, data, color }: { title: string; data?: any[]; color: string }) {
+  const rows = Array.isArray(data) ? data.slice(0, 7) : [];
   return (
-    <div className="bg-card border border-border rounded-lg p-6">
-      <h2 className="serif text-xl mb-4">{title}</h2>
+    <div className="rounded-2xl border border-[#EAE4DA] bg-white p-5 sm:p-6">
+      <h2 className="font-header mb-4 text-lg text-[#232528]">{title}</h2>
       <div style={{ width: "100%", height: 260 }}>
-        {hasData ? (
+        {rows.length > 0 ? (
           <ResponsiveContainer>
-            <BarChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-              <XAxis dataKey="title" tick={{ fontSize: 9 }} interval={0} height={50} angle={-20} textAnchor="end" />
-              <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+            <BarChart data={rows} layout="vertical" margin={{ left: 6, right: 16 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#EAE4DA" />
+              <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: "#656B73" }} />
+              <YAxis
+                type="category"
+                dataKey="title"
+                width={145}
+                tick={{ fontSize: 11, fill: "#232528" }}
+                tickFormatter={(v: string) => (v.length > 22 ? `${v.slice(0, 21)}…` : v)}
+              />
               <Tooltip />
-              <Bar dataKey="clicks" fill={color} />
+              <Bar dataKey="clicks" name="Jumlah Klik" fill={color} radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        ) : <Empty />}
+        ) : (
+          <Empty />
+        )}
       </div>
     </div>
   );

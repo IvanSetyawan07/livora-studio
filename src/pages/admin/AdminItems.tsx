@@ -46,28 +46,43 @@ import {
   resolveSwatchHex,
   type VariantCategory,
 } from "@/lib/furnitureColors";
+import { useAdminPermission } from "@/components/admin/AdminPermissionContext";
+import {
+  AdminHelpBanner,
+  CardGridSkeleton,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  useAdminDialog,
+} from "@/components/admin/kit";
 
 type SortKey = "name-asc" | "name-desc" | "date-desc" | "date-asc";
 type ViewMode = "grid" | "table";
 
 export default function AdminItems() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const dialog = useAdminDialog();
+  const { canEdit } = useAdminPermission();
+  const editable = canEdit("catalog");
   const initialPromoMode = searchParams.get("mode") === "promo";
   const bannerTitleParam = searchParams.get("banner_title");
 
   const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [types, setTypes] = useState<any[]>([]);
   const [themes, setThemes] = useState<any[]>([]);
   const [cats, setCats] = useState<any[]>([]);
   const [collections, setCollections] = useState<any[]>([]);
   const [editing, setEditing] = useState<any | null>(null);
+  const [prefillCutout, setPrefillCutout] = useState<{ file: File; url: string } | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [qrItem, setQrItem] = useState<any | null>(null);
 
   // Tampilan (View Mode): Grid Galeri Visual vs Tabel Detail
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
-  // Mode Seleksi Promo (Hanya aktif jika admin mengaktifkannya, TIDAK mengotori tampilan normal)
+  // Mode Seleksi Massal (Promo / Hapus BG Massal)
   const [isPromoSelectMode, setIsPromoSelectMode] = useState<boolean>(initialPromoMode);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -83,11 +98,21 @@ export default function AdminItems() {
   const [sortBy, setSortBy] = useState<SortKey>("date-desc");
   const [showFilter, setShowFilter] = useState(false);
 
-  const load = () =>
-    api.get("/items").then((r) => {
-      setItems(r.data);
-      setSelectedIds((prev) => prev.filter((id) => (r.data || []).some((it: any) => it.id === id)));
-    });
+  const load = () => {
+    setLoading(true);
+    setLoadError(null);
+    return api
+      .get("/items")
+      .then((r) => {
+        const list = Array.isArray(r.data) ? r.data : [];
+        setItems(list);
+        setSelectedIds((prev) => prev.filter((id) => list.some((it: any) => it.id === id)));
+      })
+      .catch((err: any) => {
+        setLoadError(err?.message || "Gagal memuat daftar produk furnitur.");
+      })
+      .finally(() => setLoading(false));
+  };
 
   const loadTypes = () => api.get("/taxonomies/furniture-types").then((r) => setTypes(r.data));
 
@@ -118,13 +143,26 @@ export default function AdminItems() {
   };
 
   const del = async (i: any) => {
-    if (!confirm(`Hapus item "${i.title}"?`)) return;
-    await api.delete(`/admin/items/${i.id}`);
-    invalidateAllItemsCache();
-    load();
+    if (!editable) return;
+    const ok = await dialog.confirm({
+      title: `Hapus produk "${i.title}"?`,
+      text: "Data produk, varian warna, dan galeri terkait akan dihapus permanen dari katalog.",
+      confirmLabel: "Ya, hapus produk",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api.delete(`/admin/items/${i.id}`);
+      invalidateAllItemsCache();
+      toast.success(`"${i.title}" berhasil dihapus`);
+      void load();
+    } catch {
+      toast.error("Gagal menghapus produk");
+    }
   };
 
   const handleToggleNewArrival = async (i: any) => {
+    if (!editable) return;
     try {
       const r = await api.patch<{ ok: boolean; is_new_arrival: boolean }>(
         `/admin/items/${i.id}/toggle-new-arrival`,
@@ -146,7 +184,7 @@ export default function AdminItems() {
 
   const downloadImage = async (i: any) => {
     if (!i.image) {
-      alert("Item ini belum punya gambar.");
+      toast.info("Produk ini belum memiliki foto.");
       return;
     }
     try {
@@ -162,14 +200,13 @@ export default function AdminItems() {
       a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     } catch {
-      alert("Gagal mengunduh gambar.");
+      toast.error("Gagal mengunduh foto produk.");
     }
   };
 
-  // Toggle selection pada mode promo (klik langsung pada item)
   const toggleSelect = (id: number) => {
     setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
   };
 
@@ -183,9 +220,15 @@ export default function AdminItems() {
     setSelectedIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
   };
 
-  // Hapus promo dari item-item yang dipilih
   const handleBulkClearPromo = async () => {
-    if (!confirm(`Hapus status promo dari ${selectedIds.length} item terpilih?`)) return;
+    if (!editable) return;
+    const ok = await dialog.confirm({
+      title: `Nonaktifkan promo pada ${selectedIds.length} produk?`,
+      text: "Label promo dan diskon akan dicabut dari produk-produk terpilih.",
+      confirmLabel: "Ya, nonaktifkan promo",
+      danger: true,
+    });
+    if (!ok) return;
     setClearingPromo(true);
     try {
       await bulkDiscountItems({
@@ -193,9 +236,9 @@ export default function AdminItems() {
         discount_value: 0,
         promo_badge_text: undefined,
       });
-      toast.success("Status promo berhasil dihapus dari item terpilih");
+      toast.success("Status promo berhasil dihapus dari produk terpilih");
       setSelectedIds([]);
-      load();
+      void load();
     } catch {
       toast.error("Gagal menghapus status promo");
     } finally {
@@ -255,82 +298,90 @@ export default function AdminItems() {
   };
 
   return (
-    <div className="pb-32 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-1.5">Katalog Furnitur</p>
-          <h1 className="serif text-3xl sm:text-4xl font-light">Items / Furniture</h1>
-          <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
-            Kelola katalog furnitur eksklusif LIVORA. Pilih furnitur untuk program promo, atau ubah spesifikasi produk.
-          </p>
-        </div>
-        <div className="flex items-center gap-2.5">
-          {/* Tombol Batch Gemini AI Cutout (Pilih 5 atau berapapun foto) */}
-          <button
-            type="button"
-            onClick={() => {
-              setBatchInitialItems([]);
-              setShowBatchModal(true);
-            }}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded text-xs uppercase tracking-[0.16em] font-medium transition-all shadow-sm bg-card hover:bg-muted text-foreground border border-border"
-            title="Pilih 5 atau berapapun foto sekaligus untuk dihapus backgroundnya oleh Gemini AI"
-          >
-            <Scissors className="w-3.5 h-3.5 text-[#D7B483]" />
-            <span>Batch Hapus BG (Gemini AI)</span>
-          </button>
+    <div className="space-y-6 pb-32">
+      <PageHeader
+        eyebrow="Katalog & Portofolio"
+        title="Produk Furnitur"
+        description="Kelola katalog furnitur, pilihan warna/material, promo produk, galeri foto, serta detail harga & stok internal."
+        actions={
+          editable ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setBatchInitialItems([]);
+                  setShowBatchModal(true);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#E2DACF] bg-white px-4 py-2 text-xs font-medium text-[#232528] hover:border-[#5E93B8]"
+                title="Hapus background beberapa foto sekaligus dengan AI"
+              >
+                <Scissors className="h-3.5 w-3.5 text-[#5E93B8]" />
+                <span>Hapus BG Massal</span>
+              </button>
 
-          {/* Tombol Toggle Mode Seleksi Promo */}
-          <button
-            type="button"
-            onClick={handleTogglePromoMode}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded text-xs uppercase tracking-[0.16em] font-medium transition-all shadow-sm ${
-              isPromoSelectMode
-                ? "bg-[#D7B483] text-black ring-2 ring-[#D7B483]/50 font-semibold"
-                : "bg-muted/70 hover:bg-muted text-foreground border border-border"
-            }`}
-          >
-            <Tag className="w-3.5 h-3.5" />
-            {isPromoSelectMode ? "✕ Keluar Mode Promo" : "Pilih Item Promo"}
-          </button>
+              <button
+                type="button"
+                onClick={handleTogglePromoMode}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-medium transition-colors ${
+                  isPromoSelectMode
+                    ? "border-[#5E93B8] bg-[#5E93B8] text-white"
+                    : "border-[#E2DACF] bg-white text-[#232528] hover:border-[#5E93B8]"
+                }`}
+              >
+                <Tag className="h-3.5 w-3.5" />
+                {isPromoSelectMode ? "Selesai Pilih Massal" : "Pilih Banyak Item"}
+              </button>
 
-          <button
-            onClick={() => { setEditing(null); setShowForm(true); }}
-            className="flex items-center gap-2 bg-foreground text-background px-4 py-2 rounded text-xs uppercase tracking-[0.2em] font-medium hover:opacity-90 transition-opacity shadow-sm"
-          >
-            <Plus className="w-4 h-4" /> New Item
-          </button>
-        </div>
-      </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(null);
+                  setPrefillCutout(null);
+                  setShowForm(true);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#232528] px-5 py-2 text-xs font-medium text-white hover:bg-[#34383D]"
+              >
+                <Plus className="h-4 w-4" /> Tambah Produk
+              </button>
+            </div>
+          ) : null
+        }
+      />
 
-      {/* Banner Panduan Mode Promo Aktif */}
+      <AdminHelpBanner storageKey="items-help">
+        Gunakan tombol <strong>Edit</strong> untuk mengubah info &amp; warna utama, <strong>Galeri</strong> untuk foto
+        ruangan/cerita produk, dan <strong>Harga/Stok</strong> untuk data internal yang tidak tampil di website publik.
+      </AdminHelpBanner>
+
+      {/* Banner Panduan Mode Pilih Massal Aktif */}
       {isPromoSelectMode && (
-        <div className="p-4 rounded-xl bg-[#D7B483]/15 border border-[#D7B483]/35 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in slide-from-top-2 duration-200">
-          <div className="flex items-start sm:items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-[#D7B483] text-black flex items-center justify-center shrink-0 shadow-sm">
-              <Sparkles className="w-4 h-4" />
+        <div className="flex flex-col justify-between gap-3 rounded-xl border border-[#5E93B8]/35 bg-[#EDF4F8] p-4 sm:flex-row sm:items-center">
+          <div className="flex items-start gap-3 sm:items-center">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#5E93B8] text-white shadow-sm">
+              <Sparkles className="h-4 w-4" />
             </div>
             <div>
-              <div className="text-xs uppercase tracking-wider font-semibold text-[#8B682E]">
-                Mode Seleksi Promo Aktif
+              <div className="text-xs font-semibold uppercase tracking-wider text-[#35678B]">
+                Mode Pilih Banyak Item Aktif
                 {bannerTitleParam && (
-                  <span className="font-normal text-muted-foreground ml-1.5">
-                    (untuk banner: <strong>"{bannerTitleParam}"</strong>)
+                  <span className="ml-1.5 font-normal text-[#4C5259]">
+                    (untuk promo: <strong>"{bannerTitleParam}"</strong>)
                   </span>
                 )}
               </div>
-              <p className="text-xs text-foreground/85 mt-0.5">
-                Klik langsung pada kartu atau baris produk yang ingin diikutsertakan dalam promo. Item terpilih ditandai dengan bingkai emas.
+              <p className="mt-0.5 text-xs text-[#4C5259]">
+                Klik kartu atau baris produk untuk memilih. Anda dapat mengatur promo massal atau menghapus background
+                foto sekaligus pada bilah bawah.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+          <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
             {allVisibleSelected ? (
               <button
                 type="button"
                 onClick={() => deselectAllVisible(filtered)}
-                className="px-3 py-1.5 rounded text-xs bg-background border border-border hover:bg-muted font-medium"
+                className="rounded-full border border-[#D4DFEA] bg-white px-3 py-1.5 text-xs font-medium text-[#232528] hover:bg-[#FAF8F4]"
               >
                 Batal Pilih Semua
               </button>
@@ -338,7 +389,7 @@ export default function AdminItems() {
               <button
                 type="button"
                 onClick={() => selectAllVisible(filtered)}
-                className="px-3 py-1.5 rounded text-xs bg-background border border-border hover:bg-muted font-medium"
+                className="rounded-full border border-[#D4DFEA] bg-white px-3 py-1.5 text-xs font-medium text-[#232528] hover:bg-[#FAF8F4]"
               >
                 Pilih Semua ({filtered.length})
               </button>
@@ -346,10 +397,10 @@ export default function AdminItems() {
             <button
               type="button"
               onClick={handleTogglePromoMode}
-              className="p-1.5 rounded hover:bg-black/10 text-muted-foreground"
-              title="Tutup Mode Promo"
+              className="rounded-full p-1.5 text-[#4C5259] hover:bg-black/5"
+              title="Keluar Mode Pilih Massal"
             >
-              <X className="w-4 h-4" />
+              <X className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -494,210 +545,220 @@ export default function AdminItems() {
         </span>
       </div>
 
-      {/* ── TAMPILAN 1: MODE GALERI KARTU VISUAL (Nyaman & Elegan) ── */}
-      {viewMode === "grid" && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      {loadError ? (
+        <ErrorState title="Produk furnitur gagal dimuat" description={loadError} onRetry={() => void load()} />
+      ) : loading ? (
+        <CardGridSkeleton count={8} />
+      ) : null}
+
+      {/* ── TAMPILAN 1: MODE GALERI KARTU VISUAL ── */}
+      {!loading && !loadError && viewMode === "grid" && filtered.length > 0 && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {filtered.map((i) => {
             const isSelected = selectedIds.includes(i.id);
             return (
               <div
                 key={i.id}
                 onClick={() => {
-                  if (isPromoSelectMode) {
-                    toggleSelect(i.id);
-                  }
+                  if (isPromoSelectMode) toggleSelect(i.id);
                 }}
-                className={`group relative bg-card rounded-xl border overflow-hidden flex flex-col transition-all duration-200 select-none ${
+                className={`group relative flex select-none flex-col overflow-hidden rounded-2xl border bg-white transition-all duration-200 ${
                   isPromoSelectMode ? "cursor-pointer" : ""
                 } ${
                   isSelected
-                    ? "border-[#D7B483] ring-2 ring-[#D7B483] shadow-md bg-[#D7B483]/5"
+                    ? "border-[#5E93B8] bg-[#EDF4F8]/30 shadow-md ring-2 ring-[#5E93B8]"
                     : isPromoSelectMode
-                    ? "border-border hover:border-[#D7B483]/60 hover:shadow-sm"
-                    : "border-border hover:shadow-md"
+                      ? "border-[#EAE4DA] hover:border-[#5E93B8]/60 hover:shadow-sm"
+                      : "border-[#EAE4DA] hover:shadow-md"
                 }`}
               >
                 {/* Visual Image Container */}
-                <div className="relative aspect-[4/5] w-full bg-[#F3EFE8] overflow-hidden">
+                <div className="relative aspect-[4/5] w-full overflow-hidden bg-[#FAF8F4]">
                   {i.image ? (
                     <img
                       src={imgUrl(i.image)}
                       alt={i.title}
-                      className="w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105"
+                      className="h-full w-full object-contain p-3 transition-transform duration-500 group-hover:scale-105"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-                      No Image
+                    <div className="flex h-full w-full items-center justify-center text-xs text-[#656B73]">
+                      Belum ada foto
                     </div>
                   )}
 
-                  {/* Badge New Arrival & Promo di pojok kiri atas */}
-                  <div className="absolute top-2.5 left-2.5 z-10 flex flex-col items-start gap-1">
+                  {/* Badge New Arrival & Promo */}
+                  <div className="absolute left-2.5 top-2.5 z-10 flex flex-col items-start gap-1">
                     {i.is_new_arrival && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold tracking-wider text-white bg-[#0B426E] px-2.5 py-0.5 rounded-full shadow-md uppercase">
-                        <Star className="w-2.5 h-2.5 fill-current" />
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#232528] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white shadow-sm">
+                        <Star className="h-2.5 w-2.5 fill-[#9DC2DC] text-[#9DC2DC]" />
                         New Arrival
                       </span>
                     )}
                     {i.is_on_promo && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold tracking-wider text-black bg-[#D7B483] px-2.5 py-0.5 rounded-full shadow-md uppercase">
-                        <Sparkles className="w-2.5 h-2.5" />
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#5E93B8] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white shadow-sm">
+                        <Sparkles className="h-2.5 w-2.5" />
                         {i.promo_badge_text || `${i.discount_value}% OFF`}
                       </span>
                     )}
                   </div>
 
-                  {/* Quick Toggle New Arrival (pojok kanan atas saat normal mode) */}
-                  {!isPromoSelectMode && (
+                  {/* Quick Toggle New Arrival */}
+                  {!isPromoSelectMode && editable && (
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleToggleNewArrival(i);
+                        void handleToggleNewArrival(i);
                       }}
                       title={i.is_new_arrival ? "Hapus dari New Arrival" : "Tandai sebagai New Arrival"}
-                      className={`absolute top-2.5 right-2.5 z-20 w-7 h-7 rounded-full flex items-center justify-center transition-all shadow-sm ${
+                      className={`absolute right-2.5 top-2.5 z-20 flex h-7 w-7 items-center justify-center rounded-full shadow-sm transition-all ${
                         i.is_new_arrival
-                          ? "bg-[#0B426E] text-white"
-                          : "bg-white/85 text-muted-foreground hover:text-[#0B426E] hover:bg-white"
+                          ? "bg-[#5E93B8] text-white"
+                          : "bg-white/90 text-[#656B73] hover:bg-white hover:text-[#5E93B8]"
                       }`}
                     >
-                      <Star className={`w-3.5 h-3.5 ${i.is_new_arrival ? "fill-current" : ""}`} />
+                      <Star className={`h-3.5 w-3.5 ${i.is_new_arrival ? "fill-current" : ""}`} />
                     </button>
                   )}
 
-                  {/* Indikator Terpilih (Khusus Mode Seleksi Promo) */}
+                  {/* Indikator Terpilih */}
                   {isPromoSelectMode && (
                     <div
-                      className={`absolute top-2.5 right-2.5 z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                      className={`absolute right-2.5 top-2.5 z-10 flex h-6 w-6 items-center justify-center rounded-full transition-all ${
                         isSelected
-                          ? "bg-[#D7B483] text-black shadow-md scale-100"
-                          : "bg-black/50 text-white/70 border border-white/30 backdrop-blur-sm group-hover:bg-black/70"
+                          ? "scale-100 bg-[#5E93B8] text-white shadow-md"
+                          : "border border-white/40 bg-black/45 text-white backdrop-blur-sm"
                       }`}
                     >
-                      {isSelected ? (
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      ) : (
-                        <span className="text-[10px] font-mono">+</span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Hover Quick Overlay saat Normal Mode */}
-                  {!isPromoSelectMode && (
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-2">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSinglePromoItem(i);
-                        }}
-                        className="px-2.5 py-1.5 rounded bg-[#D7B483] text-black text-[11px] font-medium tracking-wide flex items-center gap-1 shadow-md hover:bg-[#c6a270]"
-                        title="Atur Promo Khusus Item Ini"
-                      >
-                        <Tag className="w-3 h-3" />
-                        Promo
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditing(i);
-                          setShowForm(true);
-                        }}
-                        className="p-1.5 rounded bg-white text-black hover:bg-stone-200 shadow-md"
-                        title="Edit Item"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
+                      {isSelected ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <span className="font-mono text-[10px]">+</span>}
                     </div>
                   )}
                 </div>
 
                 {/* Card Content */}
-                <div className="p-3 flex-1 flex flex-col justify-between">
+                <div className="flex flex-1 flex-col justify-between p-3">
                   <div>
-                    <h3 className="font-medium text-xs sm:text-sm line-clamp-1 group-hover:text-[#A88247] transition-colors">
-                      {i.title}
-                    </h3>
-                    <div className="flex items-center justify-between text-[11px] text-muted-foreground mt-1">
+                    <h3 className="line-clamp-1 text-xs font-medium text-[#232528] sm:text-sm">{i.title}</h3>
+                    <div className="mt-1 flex items-center justify-between text-[11px] text-[#656B73]">
                       <span className="font-mono">{i.code || "—"}</span>
-                      <span>{i.type?.name || "—"}</span>
+                      <span className="truncate">{i.type?.name || "—"}</span>
                     </div>
 
                     {/* Swatch Warna Produk */}
-                    <div className="mt-2.5 flex items-center gap-1.5 min-h-[18px]">
+                    <div className="mt-2 flex min-h-[18px] items-center gap-1.5">
                       {(i.variants ?? []).length > 0 ? (
                         <>
                           {(i.variants ?? []).slice(0, 6).map((v: any) => (
                             <span
                               key={v.id}
                               title={v.color_name || v.variant_name}
-                              className={`w-4 h-4 rounded-full border border-black/15 shrink-0 ${
-                                v.is_default ? "ring-1 ring-foreground ring-offset-1 ring-offset-card" : ""
+                              className={`h-4 w-4 shrink-0 rounded-full border border-black/15 ${
+                                v.is_default ? "ring-1 ring-[#232528] ring-offset-1" : ""
                               }`}
                               style={{ backgroundColor: resolveSwatchHex(v) }}
                             />
                           ))}
                           {(i.variants ?? []).length > 6 && (
-                            <span className="text-[10px] text-muted-foreground font-medium">
-                              +{i.variants.length - 6}
-                            </span>
+                            <span className="text-[10px] font-medium text-[#656B73]">+{i.variants.length - 6}</span>
                           )}
                         </>
-                      ) : (
+                      ) : editable ? (
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditing(i);
+                            setPrefillCutout(null);
                             setShowForm(true);
                           }}
-                          className="text-[10px] text-muted-foreground/75 hover:text-[#A88247] inline-flex items-center gap-1"
+                          className="inline-flex items-center gap-1 text-[10px] text-[#5E93B8] hover:underline"
                         >
-                          <Palette className="w-3 h-3" /> + Tambah warna
+                          <Palette className="h-3 w-3" /> + Tambah warna
                         </button>
-                      )}
+                      ) : null}
                     </div>
                   </div>
 
-                  {/* Card Actions (di bawah) */}
-                  <div className="pt-2.5 mt-2 border-t border-border flex items-center justify-between">
-                    <span className="text-[10px] text-muted-foreground capitalize">
-                      {i.availability || "available"}
-                    </span>
+                  {/* Aksi langsung terlihat (ramah tablet & non-hover!) */}
+                  {!isPromoSelectMode && (
+                    <div className="mt-3 space-y-1.5 border-t border-[#F0EAE0] pt-2.5">
+                      <div className="flex items-center gap-1">
+                        {editable && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditing(i);
+                              setPrefillCutout(null);
+                              setShowForm(true);
+                            }}
+                            className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-[#E2DACF] bg-white py-1 text-[11px] font-medium text-[#232528] hover:border-[#5E93B8]"
+                          >
+                            <Pencil className="h-3 w-3 text-[#5E93B8]" /> Edit
+                          </button>
+                        )}
+                        <Link
+                          to={`/admin/items/${i.id}/experience`}
+                          onClick={(e) => e.stopPropagation()}
+                          title="Galeri, Varian & Cerita Produk"
+                          className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-[#E2DACF] bg-white py-1 text-[11px] font-medium text-[#232528] hover:border-[#5E93B8]"
+                        >
+                          <Settings2 className="h-3 w-3 text-[#5E93B8]" /> Galeri
+                        </Link>
+                      </div>
 
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setQrItem(i);
-                        }}
-                        title="QR Code"
-                        className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
-                      >
-                        <QrCode className="w-3 h-3" />
-                      </button>
-                      <Link
-                        to={`/admin/items/${i.slug}/detail`}
-                        title="Rincian Teknis"
-                        onClick={(e) => e.stopPropagation()}
-                        className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground inline-flex"
-                      >
-                        <ClipboardList className="w-3 h-3" />
-                      </Link>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          del(i);
-                        }}
-                        title="Hapus"
-                        className="p-1 hover:bg-destructive/15 text-destructive rounded"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
+                      <div className="flex items-center justify-between gap-1 text-[11px]">
+                        <Link
+                          to={`/admin/items/${i.slug}/detail`}
+                          onClick={(e) => e.stopPropagation()}
+                          title="Detail Internal (Harga, Stok & Dimensi)"
+                          className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[#467A9E] hover:bg-[#EDF4F8]"
+                        >
+                          <ClipboardList className="h-3 w-3" /> Harga/Stok
+                        </Link>
+
+                        <div className="flex items-center gap-0.5">
+                          {editable && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSinglePromoItem(i);
+                              }}
+                              title="Atur Promo Produk"
+                              className="rounded p-1 text-[#5E93B8] hover:bg-[#EDF4F8]"
+                            >
+                              <Tag className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setQrItem(i);
+                            }}
+                            title="QR Code Produk"
+                            className="rounded p-1 text-[#656B73] hover:bg-[#FAF8F4] hover:text-[#232528]"
+                          >
+                            <QrCode className="h-3.5 w-3.5" />
+                          </button>
+                          {editable && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void del(i);
+                              }}
+                              title="Hapus Produk"
+                              className="rounded p-1 text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             );
@@ -929,63 +990,66 @@ export default function AdminItems() {
       )}
 
       {/* Empty State */}
-      {filtered.length === 0 && (
-        <div className="p-12 text-center text-muted-foreground bg-card border border-border rounded-xl">
-          {items.length === 0 ? "Belum ada item furnitur." : "Tidak ada furnitur yang cocok dengan pencarian / filter."}
-        </div>
+      {!loading && !loadError && filtered.length === 0 && (
+        <EmptyState
+          title={items.length === 0 ? "Belum ada produk furnitur" : "Produk tidak ditemukan"}
+          description={
+            items.length === 0
+              ? "Tambahkan produk furnitur pertama Anda ke katalog LIVORA."
+              : "Coba ubah kata kunci pencarian atau reset filter."
+          }
+        />
       )}
 
-      {/* Sticky Bottom Action Bar for Bulk Selection (Muncul saat ada item yang dipilih) */}
-      {selectedIds.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-foreground text-background px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-4 animate-in fade-in slide-from-bottom-4 duration-200 border border-white/20">
-          <span className="text-xs uppercase tracking-wider font-semibold">
-            <strong className="text-[#D7B483]">{selectedIds.length}</strong> item terpilih
+      {/* Sticky Bottom Action Bar for Bulk Selection */}
+      {selectedIds.length > 0 && editable && (
+        <div className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 flex-wrap items-center gap-3 rounded-full border border-white/15 bg-[#232528] px-5 py-3 text-white shadow-2xl">
+          <span className="text-xs font-semibold">
+            <strong className="text-[#9DC2DC]">{selectedIds.length}</strong> produk terpilih
           </span>
 
-          <div className="h-4 w-px bg-background/30" />
+          <div className="h-4 w-px bg-white/25" />
 
           <button
             type="button"
             onClick={() => setShowBulkModal(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#D7B483] text-black text-xs uppercase tracking-wider font-semibold hover:bg-[#c49e6b] transition-colors shadow-md"
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#5E93B8] px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#4A7FA5]"
           >
-            <Percent className="w-3.5 h-3.5" /> Terapkan Diskon Massal
+            <Percent className="h-3.5 w-3.5" /> Atur Promo Massal
           </button>
 
-          {/* Tombol Hapus Background Massal untuk Item Terpilih */}
           <button
             type="button"
             onClick={() => {
               setBatchInitialItems(selectedItemsData);
               setShowBatchModal(true);
             }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-background/30 hover:bg-background/10 text-xs uppercase tracking-wider transition-colors"
-            title="Hapus background foto untuk semua item terpilih sekaligus dengan Gemini AI"
+            className="inline-flex items-center gap-1.5 rounded-full border border-white/25 px-3.5 py-1.5 text-xs transition-colors hover:bg-white/10"
           >
-            <Scissors className="w-3.5 h-3.5 text-[#D7B483]" />
-            <span>Hapus BG ({selectedIds.length} Item)</span>
+            <Scissors className="h-3.5 w-3.5 text-[#9DC2DC]" />
+            <span>Hapus BG ({selectedIds.length})</span>
           </button>
 
           <button
             type="button"
             disabled={clearingPromo}
-            onClick={handleBulkClearPromo}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-background/30 hover:bg-background/10 text-xs uppercase tracking-wider transition-colors disabled:opacity-50"
+            onClick={() => void handleBulkClearPromo()}
+            className="inline-flex items-center gap-1 rounded-full border border-white/25 px-3 py-1.5 text-xs transition-colors hover:bg-white/10 disabled:opacity-50"
           >
-            {clearingPromo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Hapus Promo"}
+            {clearingPromo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Hapus Promo"}
           </button>
 
           <button
             type="button"
             onClick={() => setSelectedIds([])}
-            className="text-xs text-background/70 hover:text-background underline ml-1"
+            className="ml-1 text-xs text-white/70 underline hover:text-white"
           >
             Batal
           </button>
         </div>
       )}
 
-      {/* Bulk Discount Modal (Untuk Banyak Item) */}
+      {/* Bulk Discount Modal */}
       <BulkDiscountModal
         isOpen={showBulkModal}
         selectedIds={selectedIds}
@@ -994,12 +1058,12 @@ export default function AdminItems() {
         onSuccess={() => {
           setShowBulkModal(false);
           setSelectedIds([]);
-          setIsPromoSelectMode(false); // Otomatis keluar mode promo setelah tersimpan
-          load();
+          setIsPromoSelectMode(false);
+          void load();
         }}
       />
 
-      {/* Batch Gemini AI Cutout Modal (Multi-Image / Multi-Item) */}
+      {/* Batch Gemini AI Cutout Modal */}
       <BatchGeminiCutoutModal
         isOpen={showBatchModal}
         initialItems={batchInitialItems}
@@ -1008,16 +1072,17 @@ export default function AdminItems() {
           setBatchInitialItems([]);
         }}
         onItemsUpdated={() => {
-          load();
+          void load();
           setSelectedIds([]);
         }}
         onApplyToNewItem={(cleanFile, cleanUrl) => {
           setEditing(null);
+          setPrefillCutout({ file: cleanFile, url: cleanUrl });
           setShowForm(true);
         }}
       />
 
-      {/* Single Item Quick Promo Modal (Untuk 1 Item Spesifik) */}
+      {/* Single Item Quick Promo Modal */}
       {singlePromoItem && (
         <BulkDiscountModal
           isOpen={true}
@@ -1026,24 +1091,30 @@ export default function AdminItems() {
           onClose={() => setSinglePromoItem(null)}
           onSuccess={() => {
             setSinglePromoItem(null);
-            load();
+            void load();
           }}
         />
       )}
 
-      {/* Form Tambah/Edit Item dengan Flexible Image Uploader & Live Preview */}
+      {/* Form Tambah/Edit Item */}
       {showForm && (
         <ItemForm
           item={editing}
+          initialCutoutFile={prefillCutout?.file ?? null}
+          initialCutoutUrl={prefillCutout?.url ?? ""}
           types={types}
           themes={themes}
           cats={cats}
           collections={collections}
-          onClose={() => setShowForm(false)}
+          onClose={() => {
+            setShowForm(false);
+            setPrefillCutout(null);
+          }}
           onSaved={(saved: any, isNew: boolean) => {
             setShowForm(false);
+            setPrefillCutout(null);
             invalidateAllItemsCache();
-            load();
+            void load();
             if (isNew && saved?.slug) setQrItem(saved);
           }}
         />
@@ -1077,8 +1148,22 @@ type ColorDraftRow = {
 };
 
 // ── Form Tambah / Edit Item Furnitur dengan Live Image Preview & Color Swatch CRUD ──
-function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: any) {
-  const [title, setTitle] = useState(item?.title || "");
+function ItemForm({
+  item,
+  initialCutoutFile = null,
+  initialCutoutUrl = "",
+  types,
+  themes,
+  cats,
+  collections,
+  onClose,
+  onSaved,
+}: any) {
+  const dialog = useAdminDialog();
+  const [title, setTitle] = useState(
+    item?.title ||
+      (initialCutoutFile ? initialCutoutFile.name.replace(/-clean\.png$/i, "").replace(/\.[^/.]+$/, "") : ""),
+  );
   const [code, setCode] = useState(item?.code || "");
   const [texture, setTexture] = useState(item?.texture || "");
   const [finish, setFinish] = useState(item?.finish || "");
@@ -1108,15 +1193,14 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
   const [previewColorIdx, setPreviewColorIdx] = useState<number>(0);
 
   // Image Upload & 2 AI Action Buttons (Hapus Background & Upscale)
-  const [file, setFile] = useState<File | null>(null);
+  const [file, setFile] = useState<File | null>(initialCutoutFile);
   const [previewImgUrl, setPreviewImgUrl] = useState<string>(
-    item?.image ? imgUrl(item.image) : ""
+    initialCutoutUrl || (item?.image ? imgUrl(item.image) : ""),
   );
   const [originalBackupUrl, setOriginalBackupUrl] = useState<string>(
-    item?.image ? imgUrl(item.image) : ""
+    initialCutoutUrl || (item?.image ? imgUrl(item.image) : ""),
   );
-  const [originalBackupFile, setOriginalBackupFile] = useState<File | null>(null);
-  const [imageFit, setImageFit] = useState<"contain" | "cover">("contain");
+  const [originalBackupFile, setOriginalBackupFile] = useState<File | null>(initialCutoutFile);
   const [isRemovingBg, setIsRemovingBg] = useState(false);
   const [isUpscaling, setIsUpscaling] = useState(false);
   const [isModifiedByAi, setIsModifiedByAi] = useState(false);
@@ -1375,8 +1459,8 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
       fd.append("finish", finish);
       fd.append("availability", availability);
       fd.append("description", description);
-      if (typeId) fd.append("type_id", typeId);
-      if (collectionId) fd.append("collection_id", collectionId);
+      fd.append("type_id", typeId);
+      fd.append("collection_id", collectionId);
       themeIds.forEach((id) => fd.append("theme_ids[]", id.toString()));
       catIds.forEach((id) => fd.append("category_ids[]", id.toString()));
       if (file) fd.append("image", file);
@@ -1423,17 +1507,46 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
     }
   };
 
+  const requestClose = async () => {
+    if (saving || isRemovingBg || isUpscaling) return;
+    const isDirty =
+      title !== (item?.title || "") ||
+      code !== (item?.code || "") ||
+      description !== (item?.description || "") ||
+      !!file ||
+      isModifiedByAi;
+    if (isDirty) {
+      const ok = await dialog.confirm({
+        title: "Tutup tanpa menyimpan perubahan?",
+        text: "Perubahan pada formulir produk ini belum tersimpan.",
+        confirmLabel: "Ya, tutup",
+        cancelLabel: "Lanjut edit",
+      });
+      if (!ok) return;
+    }
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm grid place-items-center p-4 sm:p-6 z-50 overflow-y-auto" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:p-6"
+      onClick={() => void requestClose()}
+    >
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
-        className="bg-card border border-border rounded-xl w-full max-w-3xl p-6 sm:p-8 space-y-5 max-h-[90vh] overflow-y-auto shadow-2xl my-auto animate-in fade-in zoom-in-95 duration-200"
+        className="my-auto max-h-[90vh] w-full max-w-3xl space-y-5 overflow-y-auto rounded-2xl border border-[#EAE4DA] bg-white p-6 shadow-2xl sm:p-8"
       >
-        <div className="flex items-center justify-between pb-3 border-b border-border">
-          <h2 className="serif text-2xl font-light">{item ? "Edit Item Furnitur" : "Tambah Item Furnitur Baru"}</h2>
-          <button type="button" onClick={onClose} className="p-1 hover:bg-muted rounded-full">
-            <X className="w-5 h-5 text-muted-foreground" />
+        <div className="flex items-center justify-between border-b border-[#EAE4DA] pb-3">
+          <h2 className="font-header text-2xl text-[#232528]">
+            {item ? "Edit Produk Furnitur" : "Tambah Produk Furnitur Baru"}
+          </h2>
+          <button
+            type="button"
+            onClick={() => void requestClose()}
+            className="rounded-full p-1 text-[#656B73] hover:bg-[#FAF8F4]"
+          >
+            <X className="h-5 w-5" />
           </button>
         </div>
 
@@ -1472,98 +1585,73 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
           </Field>
         </div>
 
-        {/* Flexible Image Upload & Live Preview Section */}
-        <div className="p-4 rounded-lg bg-muted/30 border border-border space-y-3">
+        {/* Image Upload & AI Tools */}
+        <div className="space-y-3 rounded-xl border border-[#EAE4DA] bg-[#FAF8F4]/70 p-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground font-medium">
+            <span className="text-xs font-medium uppercase tracking-[0.14em] text-[#656B73]">
               Foto Produk Furnitur
             </span>
-            {previewImgUrl && (
-              <div className="flex items-center gap-1 text-[11px] bg-muted px-2 py-0.5 rounded border border-border">
-                <span className="text-muted-foreground">Mode Tampilan:</span>
-                <button
-                  type="button"
-                  onClick={() => setImageFit("contain")}
-                  className={`px-1.5 py-0.5 rounded ${imageFit === "contain" ? "bg-card font-medium text-foreground" : "text-muted-foreground"}`}
-                >
-                  Fit Penuh
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setImageFit("cover")}
-                  className={`px-1.5 py-0.5 rounded ${imageFit === "cover" ? "bg-card font-medium text-foreground" : "text-muted-foreground"}`}
-                >
-                  Isi Frame
-                </button>
-              </div>
-            )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+          <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-12">
             <div className="sm:col-span-8">
               <input
                 type="file"
                 accept="image/*"
                 onChange={handleImageChange}
-                className="w-full text-xs text-muted-foreground file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-foreground file:text-background hover:file:opacity-90 cursor-pointer"
+                className="w-full cursor-pointer text-xs text-[#656B73] file:mr-3 file:rounded-full file:border-0 file:bg-[#232528] file:px-4 file:py-2 file:text-xs file:font-medium file:text-white hover:file:bg-[#34383D]"
               />
-              <p className="text-[11px] text-muted-foreground mt-1">
-                Format: WebP, JPG, PNG (Resolusi tinggi disarankan)
+              <p className="mt-1 text-[11px] text-[#656B73]">
+                Format: WebP, JPG, atau PNG (resolusi tajam, latar belakang bersih disarankan)
               </p>
 
               {previewImgUrl && (
-                <div className="pt-2 flex flex-wrap items-center gap-2">
-                  {/* Tombol 1: Hapus Background */}
+                <div className="flex flex-wrap items-center gap-2 pt-2">
                   <button
                     type="button"
                     onClick={handleRemoveBg}
                     disabled={isRemovingBg || isUpscaling}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#D7B483] text-black text-xs font-semibold hover:bg-[#c6a270] transition-all shadow-sm disabled:opacity-50"
-                    title="Hapus background objek dengan Google Gemini AI"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[#5E93B8] px-3.5 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-[#4A7FA5] disabled:opacity-50"
                   >
                     {isRemovingBg ? (
                       <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Gemini AI Memproses...</span>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>Memproses…</span>
                       </>
                     ) : (
                       <>
-                        <Scissors className="w-3.5 h-3.5" />
-                        <span>Hapus Background (Gemini AI)</span>
+                        <Scissors className="h-3.5 w-3.5" />
+                        <span>Hapus Background (AI)</span>
                       </>
                     )}
                   </button>
 
-                  {/* Tombol 2: Upscale Gambar */}
                   <button
                     type="button"
                     onClick={handleUpscale}
                     disabled={isRemovingBg || isUpscaling}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-foreground text-background text-xs font-semibold hover:opacity-90 transition-all shadow-sm disabled:opacity-50"
-                    title="Tingkatkan resolusi & tekstur gambar dengan Google Gemini AI"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[#232528] px-3.5 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-[#34383D] disabled:opacity-50"
                   >
                     {isUpscaling ? (
                       <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Gemini AI Meng-upscale...</span>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>Meng-upscale…</span>
                       </>
                     ) : (
                       <>
-                        <Sparkles className="w-3.5 h-3.5 text-[#D7B483]" />
-                        <span>Upscale Gambar (Gemini AI)</span>
+                        <Sparkles className="h-3.5 w-3.5 text-[#9DC2DC]" />
+                        <span>Pertajam Resolusi (AI)</span>
                       </>
                     )}
                   </button>
 
-                  {/* Reset ke Asli jika sudah diedit */}
                   {isModifiedByAi && (
                     <button
                       type="button"
                       onClick={handleResetOriginal}
-                      className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors"
-                      title="Kembalikan ke foto awal"
+                      className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] text-[#656B73] hover:bg-black/5 hover:text-[#232528]"
                     >
-                      <RotateCcw className="w-3 h-3" />
+                      <RotateCcw className="h-3 w-3" />
                       <span>Reset Asli</span>
                     </button>
                   )}
@@ -1572,10 +1660,10 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
             </div>
 
             {previewImgUrl && (
-              <div className="sm:col-span-4 flex justify-center">
-                <div className="w-28 h-28 rounded-lg overflow-hidden bg-muted/40 border border-border shadow-sm flex items-center justify-center relative">
+              <div className="flex justify-center sm:col-span-4">
+                <div className="relative flex h-28 w-28 items-center justify-center overflow-hidden rounded-xl border border-[#EAE4DA] bg-white shadow-sm">
                   <div
-                    className="absolute inset-0 opacity-35 pointer-events-none"
+                    className="pointer-events-none absolute inset-0 opacity-35"
                     style={{
                       backgroundImage:
                         "linear-gradient(45deg, #c8c4bc 25%, transparent 25%), linear-gradient(-45deg, #c8c4bc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #c8c4bc 75%), linear-gradient(-45deg, transparent 75%, #c8c4bc 75%)",
@@ -1583,11 +1671,7 @@ function ItemForm({ item, types, themes, cats, collections, onClose, onSaved }: 
                       backgroundPosition: "0 0, 0 6px, 6px -6px, -6px 0px",
                     }}
                   />
-                  <img
-                    src={previewImgUrl}
-                    alt="Preview"
-                    className={`relative z-[1] w-full h-full p-1 ${imageFit === "contain" ? "object-contain" : "object-cover"}`}
-                  />
+                  <img src={previewImgUrl} alt="Pratinjau" className="relative z-[1] h-full w-full object-contain p-1.5" />
                 </div>
               </div>
             )}

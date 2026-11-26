@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -9,8 +9,6 @@ import {
   CheckCircle2,
   XCircle,
   Eye,
-  Loader2,
-  Sparkles,
   Upload,
   X,
   Tag,
@@ -31,11 +29,33 @@ import {
   type PromoBanner,
 } from "@/lib/promoApi";
 import { imgUrl } from "@/lib/adminApi";
+import { useAdminPermission } from "@/components/admin/AdminPermissionContext";
+import {
+  AdminHelpBanner,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  TableSkeleton,
+  useAdminDialog,
+} from "@/components/admin/kit";
+
+const LINK_PRESETS = [
+  { label: "Halaman Promo (/promo)", value: "/promo" },
+  { label: "Katalog Furnitur (/furniture)", value: "/furniture" },
+  { label: "Koleksi Furnitur (/collection)", value: "/collection" },
+  { label: "Buat Janji Temu (/appointment)", value: "/appointment" },
+  { label: "Portofolio Proyek (/projects)", value: "/projects" },
+];
 
 export default function AdminPromoBanners() {
   const navigate = useNavigate();
+  const dialog = useAdminDialog();
+  const { canEdit } = useAdminPermission();
+  const editable = canEdit("landing");
+
   const [banners, setBanners] = useState<PromoBanner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<PromoBanner | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [previewBanner, setPreviewBanner] = useState<PromoBanner | null>(null);
@@ -43,28 +63,30 @@ export default function AdminPromoBanners() {
 
   const load = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await getAdminPromoBanners();
       setBanners(data);
-    } catch {
-      toast.error("Gagal memuat data banner promo");
+    } catch (err: any) {
+      setError(err?.message || "Gagal memuat data banner promo.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    load();
+    void load();
   }, []);
 
   const handleToggle = async (b: PromoBanner) => {
+    if (!editable) return;
     try {
       const res = await togglePromoBanner(b.id);
       setBanners((prev) =>
-        prev.map((item) => (item.id === b.id ? { ...item, is_active: res.is_active } : item))
+        prev.map((item) => (item.id === b.id ? { ...item, is_active: res.is_active } : item)),
       );
       toast.success(
-        res.is_active ? `Banner "${b.title}" diaktifkan` : `Banner "${b.title}" dinonaktifkan`
+        res.is_active ? `Banner "${b.title}" sekarang aktif tayang` : `Banner "${b.title}" dinonaktifkan`,
       );
     } catch {
       toast.error("Gagal mengubah status aktif banner");
@@ -72,7 +94,14 @@ export default function AdminPromoBanners() {
   };
 
   const handleDelete = async (b: PromoBanner) => {
-    if (!confirm(`Hapus banner "${b.title}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+    if (!editable) return;
+    const ok = await dialog.confirm({
+      title: `Hapus banner "${b.title}"?`,
+      text: "Banner akan dihapus permanen dan tidak lagi muncul di halaman depan.",
+      confirmLabel: "Ya, hapus banner",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await deletePromoBanner(b.id);
       setBanners((prev) => prev.filter((item) => item.id !== b.id));
@@ -96,210 +125,234 @@ export default function AdminPromoBanners() {
   };
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.2em] text-muted-foreground mb-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#D7B483]" />
-            Manajemen Promosi
-          </div>
-          <h1 className="serif text-3xl sm:text-4xl font-light">Pop-up Promo Homepage</h1>
-          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            Upload banner promosi visual untuk pop-up homepage. Pop-up menampilkan <strong>pure image banner</strong> beresolusi tinggi tanpa tulisan HTML yang menutupi gambar.
-          </p>
-        </div>
+    <div className="space-y-6 pb-12">
+      <PageHeader
+        eyebrow="Tampilan Website"
+        title="Pop-up Promo Halaman Depan"
+        description="Unggah poster promo visual yang muncul otomatis saat pengunjung membuka website LIVORA."
+        actions={
+          editable ? (
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(null);
+                setShowForm(true);
+              }}
+              className="inline-flex items-center gap-2 rounded-full bg-[#232528] px-5 py-2.5 text-xs font-medium text-white transition-colors hover:bg-[#34383D]"
+            >
+              <Plus className="h-4 w-4" />
+              Tambah Pop-up Promo
+            </button>
+          ) : null
+        }
+      />
 
-        <button
-          onClick={() => {
-            setEditing(null);
-            setShowForm(true);
-          }}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded bg-foreground text-background text-xs uppercase tracking-[0.2em] font-medium hover:opacity-90 transition-opacity self-start sm:self-auto shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          Tambah Banner
-        </button>
-      </div>
+      <AdminHelpBanner storageKey="promo-banners-help">
+        Pop-up menampilkan <strong>gambar poster utuh</strong> tanpa teks tambahan di atasnya. Setelah menyimpan banner,
+        Anda bisa langsung memilih produk furnitur mana saja yang mendapat diskon lewat tombol{" "}
+        <strong>Pilih Item Promo</strong>.
+      </AdminHelpBanner>
 
-      {/* Table */}
-      <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-xs uppercase tracking-[0.14em] text-muted-foreground border-b border-border">
-              <tr>
-                <th className="text-left p-3.5">Gambar Banner</th>
-                <th className="text-left p-3.5">Nama Banner Promo</th>
-                <th className="text-left p-3.5">Urutan Slide</th>
-                <th className="text-left p-3.5">Status Tayang</th>
-                <th className="text-left p-3.5">Jadwal Tayang</th>
-                <th className="text-right p-3.5">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {loading ? (
+      {error ? (
+        <ErrorState title="Gagal memuat banner promo" description={error} onRetry={load} />
+      ) : loading ? (
+        <TableSkeleton rows={4} cols={6} />
+      ) : banners.length === 0 ? (
+        <EmptyState
+          icon={ImageIcon}
+          title="Belum ada banner promo"
+          description="Unggah poster promo pertama untuk ditampilkan sebagai pop-up di halaman depan website."
+          action={
+            editable ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(null);
+                  setShowForm(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-full bg-[#232528] px-5 py-2 text-xs font-medium text-white"
+              >
+                <Plus className="h-4 w-4" /> Tambah Pop-up Promo
+              </button>
+            ) : undefined
+          }
+        />
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-[#EAE4DA] bg-white">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b border-[#EAE4DA] bg-[#FAF8F4] text-xs uppercase tracking-[0.14em] text-[#656B73]">
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-muted-foreground">
-                    <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
-                    Memuat data banner promo…
-                  </td>
+                  <th className="p-3.5 text-left">Poster</th>
+                  <th className="p-3.5 text-left">Nama Promo &amp; Tujuan Klik</th>
+                  <th className="p-3.5 text-left">Urutan</th>
+                  <th className="p-3.5 text-left">Status Tayang</th>
+                  <th className="p-3.5 text-left">Jadwal Tayang</th>
+                  <th className="p-3.5 text-right">Aksi</th>
                 </tr>
-              ) : banners.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-muted-foreground">
-                    Belum ada banner promo. Klik <strong>Tambah Banner</strong> untuk mengunggah banner visual baru.
-                  </td>
-                </tr>
-              ) : (
-                banners.map((b) => (
-                  <tr key={b.id} className="hover:bg-muted/30 transition-colors">
-                    {/* Thumbnail */}
-                    <td className="p-3.5 w-40">
-                      <div
+              </thead>
+              <tbody className="divide-y divide-[#F1ECE4]">
+                {banners.map((b) => (
+                  <tr key={b.id} className="transition-colors hover:bg-[#FAF8F4]/60">
+                    <td className="w-40 p-3.5">
+                      <button
+                        type="button"
                         onClick={() => setPreviewBanner(b)}
-                        className="relative h-20 w-36 rounded-md overflow-hidden bg-black border border-border cursor-pointer group shadow-sm flex items-center justify-center"
+                        className="group relative flex h-20 w-36 items-center justify-center overflow-hidden rounded-lg border border-[#E6DFD4] bg-[#232528] shadow-sm"
                         title="Klik untuk pratinjau penuh"
                       >
                         <img
                           src={imgUrl(b.image_url)}
                           alt={b.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          className="h-full w-full object-cover transition-transform group-hover:scale-105"
                         />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                          <Eye className="w-4 h-4" />
-                        </div>
-                      </div>
+                        <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 transition-opacity group-hover:opacity-100">
+                          <Eye className="h-4 w-4" />
+                        </span>
+                      </button>
                     </td>
 
-                    {/* Judul & Link */}
                     <td className="p-3.5">
-                      <div className="font-medium text-foreground">{b.title}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1 font-mono">
-                        <ExternalLink className="w-3 h-3 text-[#A88247]" />
-                        <span>Link: {b.cta_link || "/promo"}</span>
+                      <div className="font-medium text-[#232528]">{b.title}</div>
+                      <div className="mt-1 flex items-center gap-1 text-xs text-[#656B73]">
+                        <ExternalLink className="h-3 w-3 text-[#5E93B8]" />
+                        <span>Tujuan: {b.cta_link || "/promo"}</span>
                       </div>
                     </td>
 
-                    {/* Urutan */}
-                    <td className="p-3.5 font-mono text-xs">
-                      Slide ke-{b.order_index ?? 0}
+                    <td className="p-3.5 text-xs font-medium text-[#4C5259]">
+                      Slide ke-{(b.order_index ?? 0) + 1}
                     </td>
 
-                    {/* Status */}
                     <td className="p-3.5">
                       <button
-                        onClick={() => handleToggle(b)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                        type="button"
+                        disabled={!editable}
+                        onClick={() => void handleToggle(b)}
+                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:cursor-default ${
                           b.is_active
-                            ? "bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/25"
-                            : "bg-muted text-muted-foreground hover:bg-muted/80"
+                            ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                            : "bg-[#F3F0EA] text-[#656B73] hover:bg-[#EAE4DA]"
                         }`}
-                        title="Klik untuk mengubah status aktif"
+                        title={editable ? "Klik untuk mengubah status tayang" : undefined}
                       >
                         {b.is_active ? (
                           <>
-                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <CheckCircle2 className="h-3.5 w-3.5" />
                             <span>Aktif di Homepage</span>
                           </>
                         ) : (
                           <>
-                            <XCircle className="w-3.5 h-3.5" />
-                            <span>Nonaktif</span>
+                            <XCircle className="h-3.5 w-3.5" />
+                            <span>Nonaktif (Draf)</span>
                           </>
                         )}
                       </button>
                     </td>
 
-                    {/* Jadwal Tayang */}
-                    <td className="p-3.5 text-xs text-muted-foreground">
+                    <td className="p-3.5 text-xs text-[#656B73]">
                       {b.start_date || b.end_date ? (
                         <div className="space-y-0.5">
                           <div>Mulai: {formatDate(b.start_date)}</div>
                           <div>Selesai: {formatDate(b.end_date)}</div>
                         </div>
                       ) : (
-                        <span>Tayang terus menerus</span>
+                        <span>Tayang terus-menerus</span>
                       )}
                     </td>
 
-                    {/* Aksi */}
-                    <td className="p-3.5 text-right whitespace-nowrap">
+                    <td className="whitespace-nowrap p-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        {/* Tombol Pilih Item Promo */}
                         <Link
                           to={`/admin/items?mode=promo&banner_title=${encodeURIComponent(b.title)}`}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded bg-[#D7B483]/15 hover:bg-[#D7B483]/25 text-[#A88247] text-xs font-medium transition-colors border border-[#D7B483]/30"
-                          title="Pilih item furnitur yang masuk ke promo ini"
+                          className="inline-flex items-center gap-1 rounded-lg border border-[#5E93B8]/30 bg-[#EDF4F8] px-2.5 py-1.5 text-xs font-medium text-[#35678B] transition-colors hover:bg-[#DFECF4]"
+                          title="Pilih produk furnitur yang masuk promo ini"
                         >
-                          <Tag className="w-3 h-3" />
+                          <Tag className="h-3 w-3" />
                           <span>Pilih Item Promo</span>
                         </Link>
-
                         <button
+                          type="button"
                           onClick={() => setPreviewBanner(b)}
-                          className="p-1.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors"
+                          className="rounded-lg p-1.5 text-[#656B73] transition-colors hover:bg-[#FAF8F4] hover:text-[#232528]"
                           title="Pratinjau Pop-up"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="h-4 w-4" />
                         </button>
-                        <button
-                          onClick={() => {
-                            setEditing(b);
-                            setShowForm(true);
-                          }}
-                          className="p-1.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors"
-                          title="Edit Banner"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(b)}
-                          className="p-1.5 hover:bg-destructive/15 text-destructive rounded transition-colors"
-                          title="Hapus Banner"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {editable && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditing(b);
+                                setShowForm(true);
+                              }}
+                              className="rounded-lg p-1.5 text-[#656B73] transition-colors hover:bg-[#FAF8F4] hover:text-[#232528]"
+                              title="Ubah Banner"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleDelete(b)}
+                              className="rounded-lg p-1.5 text-red-600 transition-colors hover:bg-red-50"
+                              title="Hapus Banner"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Form Tambah/Edit Modal dengan Image Cropper & Proportional Preview */}
       {showForm && (
         <PromoBannerFormModal
           banner={editing}
           onClose={() => setShowForm(false)}
           onSaved={(savedBanner) => {
             setShowForm(false);
-            load();
+            void load();
             setJustSavedBanner(savedBanner);
           }}
         />
       )}
 
-      {/* Post-save action prompt: Tanya apakah mau pilih item promo sekarang */}
+      {/* Post-save prompt dengan status tayang yang akurat */}
       {justSavedBanner && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm grid place-items-center p-4">
-          <div className="bg-card border border-border rounded-xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-12 h-12 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/55 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md space-y-4 rounded-2xl border border-[#EAE4DA] bg-white p-6 shadow-2xl">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+              <CheckCircle2 className="h-6 w-6" />
             </div>
             <div className="text-center">
-              <h3 className="serif text-2xl font-light">Banner Promo Tersimpan!</h3>
-              <p className="text-xs text-muted-foreground mt-2">
-                Banner promo <strong>"{justSavedBanner.title}"</strong> sudah aktif. Apakah Anda ingin langsung memilih item furnitur yang masuk ke promo ini?
+              <h3 className="font-header text-2xl text-[#232528]">Banner Promo Tersimpan</h3>
+              <p className="mt-2 text-sm leading-relaxed text-[#656B73]">
+                {justSavedBanner.is_active ? (
+                  <>
+                    Banner <strong>"{justSavedBanner.title}"</strong> sudah aktif tayang di halaman depan. Ingin
+                    langsung memilih produk furnitur yang masuk ke promo ini?
+                  </>
+                ) : (
+                  <>
+                    Banner <strong>"{justSavedBanner.title}"</strong> disimpan sebagai{" "}
+                    <strong>Nonaktif (Draf)</strong> dan belum tampil di website. Anda tetap bisa memilih produk promo
+                    sekarang atau nanti.
+                  </>
+                )}
               </p>
             </div>
             <div className="flex items-center gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setJustSavedBanner(null)}
-                className="flex-1 py-2 rounded border border-border text-xs uppercase tracking-wider hover:bg-muted"
+                className="flex-1 rounded-full border border-[#E2DACF] py-2.5 text-xs font-medium text-[#232528] hover:bg-[#FAF8F4]"
               >
                 Nanti Saja
               </button>
@@ -310,27 +363,22 @@ export default function AdminPromoBanners() {
                   setJustSavedBanner(null);
                   navigate(`/admin/items?mode=promo&banner_title=${encodeURIComponent(title)}`);
                 }}
-                className="flex-1 py-2 rounded bg-foreground text-background text-xs uppercase tracking-wider font-medium hover:opacity-90 inline-flex items-center justify-center gap-1.5"
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full bg-[#232528] py-2.5 text-xs font-medium text-white hover:bg-[#34383D]"
               >
-                Pilih Item Sekarang <ArrowRight className="w-3.5 h-3.5" />
+                Pilih Item Promo <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Full Live Preview Modal */}
       {previewBanner && (
-        <PromoBannerPreviewModal
-          banner={previewBanner}
-          onClose={() => setPreviewBanner(null)}
-        />
+        <PromoBannerPreviewModal banner={previewBanner} onClose={() => setPreviewBanner(null)} />
       )}
     </div>
   );
 }
 
-// ── Form Tambah / Edit Banner dengan Interactive Image Sizing & Pure Image Live Preview ──
 interface FormModalProps {
   banner: PromoBanner | null;
   onClose: () => void;
@@ -338,129 +386,174 @@ interface FormModalProps {
 }
 
 function PromoBannerFormModal({ banner, onClose, onSaved }: FormModalProps) {
-  // Hanya nama banner untuk internal admin (tidak dirender di atas banner homepage)
+  const dialog = useAdminDialog();
   const [title, setTitle] = useState(banner?.title || "Promo Diskon LIVORA");
-  const [ctaLink, setCtaLink] = useState(banner?.cta_link || "/promo");
-  const [orderIndex, setOrderIndex] = useState(banner?.order_index?.toString() || "0");
+  const initialLink = banner?.cta_link || "/promo";
+  const isPreset = LINK_PRESETS.some((p) => p.value === initialLink);
+  const [linkMode, setLinkMode] = useState<string>(isPreset ? initialLink : "__custom__");
+  const [ctaLink, setCtaLink] = useState(initialLink);
+  const [orderDisplay, setOrderDisplay] = useState(String((banner?.order_index ?? 0) + 1));
   const [isActive, setIsActive] = useState(banner ? banner.is_active : true);
-  const [startDate, setStartDate] = useState(
-    banner?.start_date ? banner.start_date.slice(0, 16) : ""
-  );
-  const [endDate, setEndDate] = useState(
-    banner?.end_date ? banner.end_date.slice(0, 16) : ""
-  );
+  const [startDate, setStartDate] = useState(banner?.start_date ? banner.start_date.slice(0, 16) : "");
+  const [endDate, setEndDate] = useState(banner?.end_date ? banner.end_date.slice(0, 16) : "");
 
   const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string>(
-    banner?.image_url ? imgUrl(banner.image_url) : ""
-  );
+  const [previewUrl, setPreviewUrl] = useState<string>(banner?.image_url ? imgUrl(banner.image_url) : "");
 
-  // Image Adjustment States
   const [zoom, setZoom] = useState<number>(1);
-  const [posX, setPosX] = useState<number>(50); // 0% - 100% horizontal center
-  const [posY, setPosY] = useState<number>(50); // 0% - 100% vertical center
+  const [posX, setPosX] = useState<number>(50);
+  const [posY, setPosY] = useState<number>(50);
   const [aspectRatio, setAspectRatio] = useState<"original" | "4/5" | "1/1" | "4/3" | "16/10" | "16/9">("original");
   const [devicePreview, setDevicePreview] = useState<"desktop" | "mobile">("desktop");
   const [showAdjuster, setShowAdjuster] = useState<boolean>(false);
-
   const [saving, setSaving] = useState(false);
+
+  const isAdjusted = zoom !== 1 || posX !== 50 || posY !== 50 || aspectRatio !== "original";
+  const isDirty = useMemo(() => {
+    if (file || isAdjusted) return true;
+    if (!banner) return title !== "Promo Diskon LIVORA" || ctaLink !== "/promo" || !!startDate || !!endDate;
+    return (
+      title !== banner.title ||
+      ctaLink !== (banner.cta_link || "/promo") ||
+      orderDisplay !== String((banner.order_index ?? 0) + 1) ||
+      isActive !== banner.is_active ||
+      startDate !== (banner.start_date ? banner.start_date.slice(0, 16) : "") ||
+      endDate !== (banner.end_date ? banner.end_date.slice(0, 16) : "")
+    );
+  }, [banner, title, ctaLink, orderDisplay, isActive, startDate, endDate, file, isAdjusted]);
+
+  // Revoke blob URL saat diganti / unmount agar bebas memory leak
+  useEffect(() => {
+    return () => {
+      if (previewUrl.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const requestClose = async () => {
+    if (saving) return;
+    if (isDirty) {
+      const ok = await dialog.confirm({
+        title: "Buang perubahan yang belum disimpan?",
+        text: "Perubahan pada banner promo ini belum disimpan.",
+        confirmLabel: "Ya, tutup",
+        cancelLabel: "Lanjut edit",
+      });
+      if (!ok) return;
+    }
+    onClose();
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") void requestClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDirty, saving]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
-    if (f) {
-      setFile(f);
-      setPreviewUrl(URL.createObjectURL(f));
-      setShowAdjuster(true);
-      setZoom(1);
-      setPosX(50);
-      setPosY(50);
+    if (!f) return;
+    if (f.size > 5 * 1024 * 1024) {
+      toast.error("Ukuran gambar maksimal 5 MB.");
+      return;
     }
+    setFile(f);
+    setPreviewUrl(URL.createObjectURL(f));
+    setShowAdjuster(true);
+    setZoom(1);
+    setPosX(50);
+    setPosY(50);
   };
 
-  // Canvas helper to apply crop/zoom into a new file before upload if adjusted
+  // Mendukung crop baik untuk file baru maupun gambar existing (dengan fallback aman bila CORS)
   const generateCroppedFile = async (sourceUrl: string, originalFile: File | null): Promise<File | null> => {
-    if (!originalFile) return null;
-    if (aspectRatio === "original" && zoom === 1 && posX === 50 && posY === 50) {
-      return originalFile; // No adjustments, keep original file
-    }
-    return new Promise((resolve) => {
+    if (!isAdjusted) return originalFile;
+    let drawableSrc = sourceUrl;
+    let tempBlobUrl: string | null = null;
+
+    if (!sourceUrl.startsWith("blob:") && !sourceUrl.startsWith("data:")) {
       try {
-        const img = new Image();
-        if (!sourceUrl.startsWith("blob:") && !sourceUrl.startsWith("data:")) {
-          img.crossOrigin = "anonymous";
+        const res = await fetch(sourceUrl, { mode: "cors" });
+        if (res.ok) {
+          const blob = await res.blob();
+          tempBlobUrl = URL.createObjectURL(blob);
+          drawableSrc = tempBlobUrl;
         }
-        img.onload = () => {
-          try {
-            let targetW = 1920;
-            let targetH = 1200; // default 16/10
-
-            if (aspectRatio === "original") {
-              targetW = img.width || 1920;
-              targetH = img.height || 1200;
-            } else if (aspectRatio === "4/5") {
-              targetW = 1440;
-              targetH = 1800;
-            } else if (aspectRatio === "16/9") {
-              targetH = 1080;
-            } else if (aspectRatio === "16/10") {
-              targetH = 1200;
-            } else if (aspectRatio === "4/3") {
-              targetH = 1440;
-            } else if (aspectRatio === "1/1") {
-              targetH = 1920;
-            }
-
-            const canvas = document.createElement("canvas");
-            canvas.width = targetW;
-            canvas.height = targetH;
-            const ctx = canvas.getContext("2d");
-            if (!ctx) {
-              resolve(originalFile);
-              return;
-            }
-
-            const imgRatio = (img.width || 1) / (img.height || 1);
-            const targetRatio = targetW / targetH;
-            let drawW: number;
-            let drawH: number;
-
-            if (imgRatio > targetRatio) {
-              drawH = targetH * zoom;
-              drawW = drawH * imgRatio;
-            } else {
-              drawW = targetW * zoom;
-              drawH = drawW / imgRatio;
-            }
-
-            const offsetX = (targetW - drawW) * (posX / 100);
-            const offsetY = (targetH - drawH) * (posY / 100);
-
-            ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
-            canvas.toBlob(
-              (blob) => {
-                if (!blob) {
-                  resolve(originalFile);
-                  return;
-                }
-                const processed = new File([blob], originalFile.name || "promo-adjusted.webp", {
-                  type: "image/webp",
-                });
-                resolve(processed);
-              },
-              "image/webp",
-              0.92
-            );
-          } catch (canvasErr) {
-            console.warn("Canvas crop error, fallback to original file:", canvasErr);
-            resolve(originalFile);
-          }
-        };
-        img.onerror = () => resolve(originalFile);
-        img.src = sourceUrl;
-      } catch (err) {
-        console.warn("Image load error, fallback to original file:", err);
-        resolve(originalFile);
+      } catch {
+        // lanjut coba via crossOrigin image
       }
+    }
+
+    return new Promise((resolve) => {
+      const cleanup = () => {
+        if (tempBlobUrl) URL.revokeObjectURL(tempBlobUrl);
+      };
+      const img = new Image();
+      if (!drawableSrc.startsWith("blob:") && !drawableSrc.startsWith("data:")) {
+        img.crossOrigin = "anonymous";
+      }
+      img.onload = () => {
+        try {
+          let targetW = 1920;
+          let targetH = 1200;
+          if (aspectRatio === "original") {
+            targetW = img.width || 1920;
+            targetH = img.height || 1200;
+          } else if (aspectRatio === "4/5") {
+            targetW = 1440;
+            targetH = 1800;
+          } else if (aspectRatio === "16/9") {
+            targetH = 1080;
+          } else if (aspectRatio === "16/10") {
+            targetH = 1200;
+          } else if (aspectRatio === "4/3") {
+            targetH = 1440;
+          } else if (aspectRatio === "1/1") {
+            targetH = 1920;
+          }
+
+          const canvas = document.createElement("canvas");
+          canvas.width = targetW;
+          canvas.height = targetH;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            cleanup();
+            resolve(originalFile);
+            return;
+          }
+
+          const imgRatio = (img.width || 1) / (img.height || 1);
+          const targetRatio = targetW / targetH;
+          const drawH = imgRatio > targetRatio ? targetH * zoom : (targetW * zoom) / imgRatio;
+          const drawW = imgRatio > targetRatio ? drawH * imgRatio : targetW * zoom;
+          const offsetX = (targetW - drawW) * (posX / 100);
+          const offsetY = (targetH - drawH) * (posY / 100);
+
+          ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+          canvas.toBlob(
+            (blob) => {
+              cleanup();
+              if (!blob) {
+                resolve(originalFile);
+                return;
+              }
+              resolve(new File([blob], originalFile?.name || "promo-adjusted.webp", { type: "image/webp" }));
+            },
+            "image/webp",
+            0.92,
+          );
+        } catch {
+          cleanup();
+          resolve(originalFile);
+        }
+      };
+      img.onerror = () => {
+        cleanup();
+        resolve(originalFile);
+      };
+      img.src = drawableSrc;
     });
   };
 
@@ -474,49 +567,46 @@ function PromoBannerFormModal({ banner, onClose, onSaved }: FormModalProps) {
       toast.error("Silakan unggah gambar banner promo");
       return;
     }
+    if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
+      toast.error("Tanggal selesai tayang tidak boleh lebih awal dari tanggal mulai tayang.");
+      return;
+    }
 
     setSaving(true);
     try {
       const fd = new FormData();
-      fd.append("title", title);
-      fd.append("subtitle", ""); // Pure image, no subtitle wording
-      fd.append("label", "");    // Pure image, no label wording
-      fd.append("description", ""); // Pure image, no description wording
-      fd.append("cta_link", ctaLink || "/promo");
-      fd.append("order_index", orderIndex || "0");
+      fd.append("title", title.trim());
+      fd.append("subtitle", "");
+      fd.append("label", "");
+      fd.append("description", "");
+      fd.append("cta_link", ctaLink.trim() || "/promo");
+      const zeroBasedOrder = Math.max(0, (parseInt(orderDisplay, 10) || 1) - 1);
+      fd.append("order_index", String(zeroBasedOrder));
       fd.append("is_active", isActive ? "1" : "0");
       if (startDate) fd.append("start_date", startDate);
       if (endDate) fd.append("end_date", endDate);
 
-      // Handle image file:
       if (file) {
-        let imageToUpload: File = file;
-        // Hanya lakukan crop canvas jika admin secara aktif mengatur zoom / posisi
-        if (zoom !== 1 || posX !== 50 || posY !== 50 || aspectRatio !== "original") {
-          try {
-            const cropped = await generateCroppedFile(previewUrl, file);
-            if (cropped) {
-              imageToUpload = cropped;
-            }
-          } catch (e) {
-            console.warn("Crop failed, fallback to original file:", e);
-            imageToUpload = file;
-          }
-        }
-        fd.append("image", imageToUpload);
+        const cropped = isAdjusted ? await generateCroppedFile(previewUrl, file) : file;
+        fd.append("image", cropped || file);
       } else if (banner?.image_url) {
-        // Jika sedang edit dan tidak ganti gambar, kirim URL gambar lama
-        fd.append("image_url", banner.image_url);
+        if (isAdjusted) {
+          const croppedExisting = await generateCroppedFile(previewUrl, null);
+          if (croppedExisting) {
+            fd.append("image", croppedExisting);
+          } else {
+            toast.warning("Zoom/crop gambar lama tidak bisa diproses langsung. Unggah ulang file jika ingin memotong gambar.");
+            fd.append("image_url", banner.image_url);
+          }
+        } else {
+          fd.append("image_url", banner.image_url);
+        }
       }
 
-      let resData: PromoBanner;
-      if (banner) {
-        resData = await updatePromoBanner(banner.id, fd);
-        toast.success("Banner promo berhasil diperbarui");
-      } else {
-        resData = await createPromoBanner(fd);
-        toast.success("Banner promo baru berhasil dibuat");
-      }
+      const resData = banner
+        ? await updatePromoBanner(banner.id, fd)
+        : await createPromoBanner(fd);
+      toast.success(banner ? "Banner promo berhasil diperbarui" : "Banner promo baru berhasil dibuat");
       onSaved(resData);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Gagal menyimpan banner");
@@ -527,116 +617,120 @@ function PromoBannerFormModal({ banner, onClose, onSaved }: FormModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm grid place-items-center p-3 sm:p-6 overflow-y-auto"
-      onClick={onClose}
+      className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/65 p-3 backdrop-blur-sm sm:p-6"
+      onClick={() => void requestClose()}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-card border border-border rounded-xl w-full max-w-6xl overflow-hidden shadow-2xl my-auto flex flex-col max-h-[94vh]"
+        className="my-auto flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-[#EAE4DA] bg-white shadow-2xl"
       >
-        {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/40">
+        <div className="flex items-center justify-between border-b border-[#EAE4DA] bg-[#FAF8F4] px-6 py-4">
           <div>
-            <h2 className="serif text-2xl font-light">
-              {banner ? "Edit Banner Promo" : "Upload Banner Promo Baru"}
+            <h2 className="font-header text-2xl text-[#232528]">
+              {banner ? "Ubah Banner Promo" : "Unggah Banner Promo Baru"}
             </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Unggah file gambar promosi Anda (pure visual), atur ukuran/posisi, dan lihat pratinjau asli di sisi kanan.
+            <p className="mt-0.5 text-xs text-[#656B73]">
+              Unggah gambar poster promosi, sesuaikan posisi/rasio jika perlu, lalu periksa pratinjau di sebelah kanan.
             </p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-muted rounded-full text-muted-foreground">
-            <X className="w-5 h-5" />
+          <button
+            type="button"
+            onClick={() => void requestClose()}
+            className="rounded-full p-2 text-[#656B73] hover:bg-black/5 hover:text-[#232528]"
+          >
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Modal Body: 2 Columns (Form Left, Live Preview Right) */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Column 1: Input Fields (6 cols) */}
-          <div className="lg:col-span-6 space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block col-span-2">
-                <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground font-medium">
-                  Nama Banner Promo (Label Admin) *
-                </span>
-                <input
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="misal: Promo Akhir Tahun 40% OFF"
-                  className="mt-1 w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-foreground"
-                />
-                <span className="text-[11px] text-muted-foreground mt-1 block">
-                  *Nama ini hanya sebagai tanda pengenal di dashboard admin, tidak akan menutupi gambar di homepage.
-                </span>
+        <form onSubmit={handleSubmit} className="grid flex-1 grid-cols-1 gap-8 overflow-y-auto p-6 lg:grid-cols-12">
+          {/* Kolom Kiri: Form */}
+          <div className="space-y-4 lg:col-span-6">
+            <label className="block">
+              <span className="text-xs font-medium text-[#232528]">Nama Banner Promo (Label Internal Admin) *</span>
+              <input
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="mis. Promo Akhir Tahun 40% OFF"
+                className="mt-1.5 h-10 w-full rounded-lg border border-[#E2DACF] bg-[#FAF8F4] px-3 text-sm text-[#232528] outline-none focus:border-[#5E93B8] focus:bg-white"
+              />
+              <span className="mt-1 block text-[11px] text-[#656B73]">
+                Hanya tampil di daftar admin sebagai pengenal, tidak ditulis di atas gambar pop-up.
+              </span>
+            </label>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="text-xs font-medium text-[#232528]">Halaman Tujuan Saat Diklik</span>
+                <select
+                  value={linkMode}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setLinkMode(v);
+                    if (v !== "__custom__") setCtaLink(v);
+                  }}
+                  className="mt-1.5 h-10 w-full rounded-lg border border-[#E2DACF] bg-[#FAF8F4] px-3 text-sm text-[#232528] outline-none focus:border-[#5E93B8] focus:bg-white"
+                >
+                  {LINK_PRESETS.map((p) => (
+                    <option key={p.value} value={p.value}>
+                      {p.label}
+                    </option>
+                  ))}
+                  <option value="__custom__">Link Kustom…</option>
+                </select>
+                {linkMode === "__custom__" && (
+                  <input
+                    value={ctaLink}
+                    onChange={(e) => setCtaLink(e.target.value)}
+                    placeholder="mis. /promo atau https://..."
+                    className="mt-2 h-9 w-full rounded-lg border border-[#E2DACF] bg-white px-3 text-xs text-[#232528] outline-none focus:border-[#5E93B8]"
+                  />
+                )}
               </label>
 
-              <label className="block col-span-2 sm:col-span-1">
-                <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground font-medium">
-                  Link Tujuan Saat Banner Diklik
-                </span>
-                <input
-                  value={ctaLink}
-                  onChange={(e) => setCtaLink(e.target.value)}
-                  placeholder="default: /promo"
-                  className="mt-1 w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-foreground"
-                />
-              </label>
-
-              <label className="block col-span-2 sm:col-span-1">
-                <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground font-medium">
-                  Urutan Slide
-                </span>
+              <label className="block">
+                <span className="text-xs font-medium text-[#232528]">Urutan Slide</span>
                 <input
                   type="number"
-                  min="0"
-                  value={orderIndex}
-                  onChange={(e) => setOrderIndex(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-foreground"
+                  min={1}
+                  value={orderDisplay}
+                  onChange={(e) => setOrderDisplay(e.target.value)}
+                  className="mt-1.5 h-10 w-full rounded-lg border border-[#E2DACF] bg-[#FAF8F4] px-3 text-sm text-[#232528] outline-none focus:border-[#5E93B8] focus:bg-white"
                 />
+                <span className="mt-1 block text-[11px] text-[#656B73]">Slide 1 tampil paling awal.</span>
               </label>
             </div>
 
             {/* Upload Gambar & Adjuster */}
-            <div className="space-y-3 pt-2">
+            <div className="space-y-3 pt-1">
               <div className="flex items-center justify-between">
-                <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground font-medium">
-                  Upload Gambar Banner Visual *
-                </span>
+                <span className="text-xs font-medium text-[#232528]">Poster Gambar Promo *</span>
                 {previewUrl && (
                   <button
                     type="button"
                     onClick={() => setShowAdjuster(!showAdjuster)}
-                    className="text-xs inline-flex items-center gap-1 text-[#A88247] hover:underline"
+                    className="inline-flex items-center gap-1 text-xs font-medium text-[#467A9E] hover:underline"
                   >
-                    <Sliders className="w-3 h-3" />
-                    {showAdjuster ? "Sembunyikan Pengatur Ukuran" : "Atur Ukuran / Zoom / Posisi"}
+                    <Sliders className="h-3 w-3" />
+                    {showAdjuster ? "Sembunyikan Pengatur" : "Atur Zoom / Posisi / Rasio"}
                   </button>
                 )}
               </div>
 
-              <label className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg p-4 hover:bg-muted/30 cursor-pointer transition-colors bg-muted/10">
-                <Upload className="w-6 h-6 text-muted-foreground mb-1.5" />
-                <span className="text-xs text-foreground font-medium text-center">
-                  {file ? file.name : "Pilih gambar desain promo (WebP, JPG, PNG)"}
+              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#DCD5CA] bg-[#FAF8F4]/70 p-4 transition-colors hover:border-[#5E93B8] hover:bg-[#EDF4F8]/40">
+                <Upload className="mb-1.5 h-5 w-5 text-[#5E93B8]" />
+                <span className="text-center text-xs font-medium text-[#232528]">
+                  {file ? file.name : banner ? "Klik untuk ganti poster (WebP, JPG, PNG maks. 5 MB)" : "Pilih poster desain promo (WebP, JPG, PNG maks. 5 MB)"}
                 </span>
-                <span className="text-[11px] text-muted-foreground text-center mt-0.5">
-                  Gunakan gambar beresolusi tajam. Semua teks dan desain langsung menyatu dalam gambar.
-                </span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
+                <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
               </label>
 
-              {/* Adjuster Tools (Zoom, Pos X, Pos Y, Ratio) */}
               {(showAdjuster || (previewUrl && !banner)) && (
-                <div className="p-3.5 rounded-lg bg-muted/50 border border-border space-y-3 animate-in fade-in duration-200">
-                  <div className="flex items-center justify-between text-xs font-medium">
-                    <span className="flex items-center gap-1">
-                      <Move className="w-3.5 h-3.5 text-[#A88247]" />
-                      Pengatur Zoom & Posisi Fokus Gambar
+                <div className="space-y-3 rounded-xl border border-[#EAE4DA] bg-[#FAF8F4] p-4">
+                  <div className="flex items-center justify-between text-xs font-medium text-[#232528]">
+                    <span className="flex items-center gap-1.5">
+                      <Move className="h-3.5 w-3.5 text-[#5E93B8]" />
+                      Zoom, Fokus &amp; Rasio Pop-up
                     </span>
                     <button
                       type="button"
@@ -646,16 +740,15 @@ function PromoBannerFormModal({ banner, onClose, onSaved }: FormModalProps) {
                         setPosY(50);
                         setAspectRatio("original");
                       }}
-                      className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1"
+                      className="flex items-center gap-1 text-[11px] text-[#656B73] hover:text-[#232528]"
                     >
-                      <RefreshCw className="w-3 h-3" /> Reset
+                      <RefreshCw className="h-3 w-3" /> Reset
                     </button>
                   </div>
 
-                  {/* Zoom Slider */}
                   <div>
-                    <div className="flex justify-between text-[11px] text-muted-foreground mb-1">
-                      <span>Perbesar / Zoom:</span>
+                    <div className="mb-1 flex justify-between text-[11px] text-[#656B73]">
+                      <span>Perbesar / Zoom</span>
                       <span className="font-mono">{Math.round(zoom * 100)}%</span>
                     </div>
                     <input
@@ -665,60 +758,56 @@ function PromoBannerFormModal({ banner, onClose, onSaved }: FormModalProps) {
                       step="0.05"
                       value={zoom}
                       onChange={(e) => setZoom(parseFloat(e.target.value))}
-                      className="w-full accent-foreground cursor-pointer"
+                      className="w-full cursor-pointer accent-[#5E93B8]"
                     />
                   </div>
 
-                  {/* Pos Y (Vertikal Focus) Slider */}
-                  <div>
-                    <div className="flex justify-between text-[11px] text-muted-foreground mb-1">
-                      <span>Posisi Vertikal (Atas ↔ Bawah):</span>
-                      <span className="font-mono">{posY}%</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="mb-1 flex justify-between text-[11px] text-[#656B73]">
+                        <span>Geser Atas ↔ Bawah</span>
+                        <span className="font-mono">{posY}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={posY}
+                        onChange={(e) => setPosY(parseInt(e.target.value, 10))}
+                        className="w-full cursor-pointer accent-[#5E93B8]"
+                      />
                     </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={posY}
-                      onChange={(e) => setPosY(parseInt(e.target.value))}
-                      className="w-full accent-foreground cursor-pointer"
-                    />
-                  </div>
-
-                  {/* Pos X (Horizontal Focus) Slider */}
-                  <div>
-                    <div className="flex justify-between text-[11px] text-muted-foreground mb-1">
-                      <span>Posisi Horizontal (Kiri ↔ Kanan):</span>
-                      <span className="font-mono">{posX}%</span>
+                    <div>
+                      <div className="mb-1 flex justify-between text-[11px] text-[#656B73]">
+                        <span>Geser Kiri ↔ Kanan</span>
+                        <span className="font-mono">{posX}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={posX}
+                        onChange={(e) => setPosX(parseInt(e.target.value, 10))}
+                        className="w-full cursor-pointer accent-[#5E93B8]"
+                      />
                     </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={posX}
-                      onChange={(e) => setPosX(parseInt(e.target.value))}
-                      className="w-full accent-foreground cursor-pointer"
-                    />
                   </div>
 
-                  {/* Ratio Selector */}
                   <div>
-                    <span className="text-[11px] text-muted-foreground block mb-1.5">
-                      Rasio Pemotongan / Ukuran Pop-up:
-                    </span>
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 text-xs">
+                    <span className="mb-1.5 block text-[11px] text-[#656B73]">Rasio Bingkai Pop-up:</span>
+                    <div className="grid grid-cols-3 gap-1.5 text-xs sm:grid-cols-6">
                       {(["original", "4/5", "1/1", "4/3", "16/10", "16/9"] as const).map((r) => (
                         <button
                           key={r}
                           type="button"
                           onClick={() => setAspectRatio(r)}
-                          className={`py-1 rounded border text-[10px] transition-colors ${
+                          className={`rounded-lg border py-1.5 text-[11px] font-medium transition-colors ${
                             aspectRatio === r
-                              ? "bg-foreground text-background border-foreground font-medium"
-                              : "border-border hover:bg-muted text-muted-foreground"
+                              ? "border-[#232528] bg-[#232528] text-white"
+                              : "border-[#E2DACF] bg-white text-[#656B73] hover:border-[#5E93B8]"
                           }`}
                         >
-                          {r === "original" ? "Sesuai Gambar" : r}
+                          {r === "original" ? "Asli" : r}
                         </button>
                       ))}
                     </div>
@@ -727,85 +816,72 @@ function PromoBannerFormModal({ banner, onClose, onSaved }: FormModalProps) {
               )}
             </div>
 
-            {/* Jadwal & Status */}
-            <div className="grid grid-cols-2 gap-3 pt-1">
+            {/* Jadwal Tayang */}
+            <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
               <label className="block">
-                <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground font-medium">
-                  Mulai Tayang (Opsional)
-                </span>
+                <span className="text-xs font-medium text-[#232528]">Mulai Tayang (Opsional)</span>
                 <input
                   type="datetime-local"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 rounded-md border border-border bg-background text-xs sm:text-sm focus:outline-none"
+                  className="mt-1.5 h-10 w-full rounded-lg border border-[#E2DACF] bg-[#FAF8F4] px-3 text-xs text-[#232528] outline-none focus:border-[#5E93B8] focus:bg-white"
                 />
               </label>
-
               <label className="block">
-                <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground font-medium">
-                  Selesai Tayang (Opsional)
-                </span>
+                <span className="text-xs font-medium text-[#232528]">Selesai Tayang (Opsional)</span>
                 <input
                   type="datetime-local"
                   value={endDate}
+                  min={startDate || undefined}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 rounded-md border border-border bg-background text-xs sm:text-sm focus:outline-none"
+                  className="mt-1.5 h-10 w-full rounded-lg border border-[#E2DACF] bg-[#FAF8F4] px-3 text-xs text-[#232528] outline-none focus:border-[#5E93B8] focus:bg-white"
                 />
               </label>
             </div>
 
-            <label className="flex items-center gap-2 pt-2 cursor-pointer">
+            <label className="flex cursor-pointer items-center gap-2.5 pt-1">
               <input
                 type="checkbox"
                 checked={isActive}
                 onChange={(e) => setIsActive(e.target.checked)}
-                className="w-4 h-4 rounded border-border cursor-pointer"
+                className="h-4 w-4 cursor-pointer rounded border-[#CFC7BB] accent-[#5E93B8]"
               />
-              <span className="text-sm font-medium">Tayangkan langsung di homepage</span>
+              <span className="text-sm font-medium text-[#232528]">Tayangkan langsung di halaman depan</span>
             </label>
           </div>
 
-          {/* Column 2: Live Preview Proporsional (Pure Gambar Sesuai Tampilan Asli) */}
-          <div className="lg:col-span-6 flex flex-col justify-start">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground font-medium flex items-center gap-1.5">
-                <Eye className="w-3.5 h-3.5 text-[#D7B483]" /> Pratinjau Asli Pop-up
+          {/* Kolom Kanan: Pratinjau */}
+          <div className="flex flex-col justify-start lg:col-span-6">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-xs font-medium text-[#232528]">
+                <Eye className="h-3.5 w-3.5 text-[#5E93B8]" /> Pratinjau Pop-up di Website
               </span>
-
-              {/* Device Toggle (Desktop vs Mobile) */}
-              <div className="flex items-center gap-1 bg-muted p-0.5 rounded-md border border-border text-xs">
+              <div className="flex items-center gap-1 rounded-lg border border-[#E2DACF] bg-[#FAF8F4] p-0.5 text-xs">
                 <button
                   type="button"
                   onClick={() => setDevicePreview("desktop")}
-                  className={`px-2 py-1 rounded flex items-center gap-1 transition-colors ${
-                    devicePreview === "desktop"
-                      ? "bg-card text-foreground font-medium shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                  className={`flex items-center gap-1 rounded-md px-2.5 py-1 transition-colors ${
+                    devicePreview === "desktop" ? "bg-white font-medium text-[#232528] shadow-sm" : "text-[#656B73]"
                   }`}
-                  title="Tampilan Desktop Luas"
                 >
-                  <Monitor className="w-3 h-3" /> Desktop
+                  <Monitor className="h-3 w-3" /> Desktop
                 </button>
                 <button
                   type="button"
                   onClick={() => setDevicePreview("mobile")}
-                  className={`px-2 py-1 rounded flex items-center gap-1 transition-colors ${
-                    devicePreview === "mobile"
-                      ? "bg-card text-foreground font-medium shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                  className={`flex items-center gap-1 rounded-md px-2.5 py-1 transition-colors ${
+                    devicePreview === "mobile" ? "bg-white font-medium text-[#232528] shadow-sm" : "text-[#656B73]"
                   }`}
-                  title="Tampilan Layar Ponsel"
                 >
-                  <Smartphone className="w-3 h-3" /> Ponsel
+                  <Smartphone className="h-3 w-3" /> Ponsel
                 </button>
               </div>
             </div>
 
-            {/* Container Pratinjau menyesuaikan rasio gambar asli (tanpa space hitam) */}
-            <div className="w-full flex-1 flex items-center justify-center bg-black/10 p-4 rounded-xl border border-dashed border-border min-h-[380px]">
+            <div className="flex min-h-[380px] w-full flex-1 items-center justify-center rounded-2xl border border-dashed border-[#D8D1C6] bg-[#232528]/10 p-4">
               {previewUrl ? (
                 <div
-                  className={`relative rounded-xl overflow-hidden border border-white/20 shadow-2xl flex items-center justify-center select-none transition-all duration-300 ${
+                  className={`relative flex select-none items-center justify-center overflow-hidden rounded-xl border border-white/25 shadow-2xl transition-all duration-300 ${
                     aspectRatio === "original"
                       ? devicePreview === "desktop"
                         ? "w-fit max-w-lg max-h-[360px]"
@@ -814,65 +890,60 @@ function PromoBannerFormModal({ banner, onClose, onSaved }: FormModalProps) {
                           aspectRatio === "16/9"
                             ? "aspect-video"
                             : aspectRatio === "16/10"
-                            ? "aspect-[16/10]"
-                            : aspectRatio === "4/3"
-                            ? "aspect-[4/3]"
-                            : aspectRatio === "4/5"
-                            ? "aspect-[4/5] max-w-[290px]"
-                            : "aspect-square max-w-[340px]"
+                              ? "aspect-[16/10]"
+                              : aspectRatio === "4/3"
+                                ? "aspect-[4/3]"
+                                : aspectRatio === "4/5"
+                                  ? "aspect-[4/5] max-w-[290px]"
+                                  : "aspect-square max-w-[340px]"
                         }`
                   }`}
                 >
                   <img
                     src={previewUrl}
-                    alt="Preview Banner"
+                    alt="Pratinjau Banner"
                     className={
                       aspectRatio === "original"
-                        ? `block w-auto h-auto max-h-[360px] transition-transform duration-150 ${
+                        ? `block h-auto w-auto max-h-[360px] transition-transform duration-150 ${
                             devicePreview === "desktop" ? "max-w-lg" : "max-w-[220px]"
                           }`
-                        : "w-full h-full object-cover transition-transform duration-150"
+                        : "h-full w-full object-cover transition-transform duration-150"
                     }
                     style={{
                       transform: `scale(${zoom})`,
                       objectPosition: `${posX}% ${posY}%`,
                     }}
                   />
-
-                  {/* Close Button Preview in Frosted Glass */}
-                  <div className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-black/45 text-white/85 border border-white/25 flex items-center justify-center pointer-events-none">
-                    <X className="w-3.5 h-3.5" />
+                  <div className="pointer-events-none absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white/85">
+                    <X className="h-3.5 w-3.5" />
                   </div>
-
-                  {/* Notice link tujuan di pojok bawah */}
-                  <div className="absolute bottom-2 left-2 right-2 text-center text-[10px] text-white/85 font-mono tracking-wider bg-black/55 backdrop-blur-sm py-1 px-2 rounded-md pointer-events-none truncate">
+                  <div className="pointer-events-none absolute bottom-2 left-2 right-2 truncate rounded-md bg-black/55 px-2 py-1 text-center text-[11px] text-white/90 backdrop-blur-sm">
                     Klik → {ctaLink || "/promo"}
                   </div>
                 </div>
               ) : (
-                <div className="w-full max-w-md aspect-[16/10] rounded-xl border border-border bg-[#161616] flex flex-col items-center justify-center text-muted-foreground text-xs p-6">
-                  <ImageIcon className="w-8 h-8 opacity-40 mb-2" />
-                  <span>Unggah gambar banner untuk melihat pratinjau</span>
+                <div className="flex aspect-[16/10] w-full max-w-md flex-col items-center justify-center rounded-xl border border-[#EAE4DA] bg-white p-6 text-xs text-[#656B73]">
+                  <ImageIcon className="mb-2 h-8 w-8 text-[#5E93B8]/50" />
+                  <span>Unggah gambar poster untuk melihat pratinjau</span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Footer Submit */}
-          <div className="lg:col-span-12 flex items-center justify-end gap-3 pt-4 border-t border-border">
+          <div className="flex items-center justify-end gap-3 border-t border-[#EAE4DA] pt-4 lg:col-span-12">
             <button
               type="button"
-              onClick={onClose}
-              className="px-5 py-2.5 rounded border border-border text-xs uppercase tracking-[0.2em] hover:bg-muted"
+              onClick={() => void requestClose()}
+              className="rounded-full border border-[#E2DACF] px-5 py-2.5 text-xs font-medium text-[#232528] hover:bg-[#FAF8F4]"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-6 py-2.5 rounded bg-foreground text-background text-xs uppercase tracking-[0.2em] font-medium hover:opacity-90 disabled:opacity-50 shadow-sm"
+              className="rounded-full bg-[#232528] px-6 py-2.5 text-xs font-medium text-white shadow-sm hover:bg-[#34383D] disabled:opacity-50"
             >
-              {saving ? "Menyimpan…" : "Simpan Banner"}
+              {saving ? "Menyimpan…" : "Simpan Banner Promo"}
             </button>
           </div>
         </form>
@@ -881,33 +952,37 @@ function PromoBannerFormModal({ banner, onClose, onSaved }: FormModalProps) {
   );
 }
 
-// ── Full Live Preview Modal (Pure Image) ──
 function PromoBannerPreviewModal({ banner, onClose }: { banner: PromoBanner; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-[6px] grid place-items-center p-4 sm:p-8"
+      className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-4 backdrop-blur-[6px] sm:p-8"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-fit max-w-[92vw] sm:max-w-[86vw] lg:max-w-4xl max-h-[85vh] rounded-2xl md:rounded-[24px] overflow-hidden shadow-2xl border border-white/20 inline-flex items-center justify-center select-none"
+        className="relative inline-flex max-h-[85vh] w-fit max-w-[92vw] select-none items-center justify-center overflow-hidden rounded-2xl border border-white/20 shadow-2xl sm:max-w-[86vw] lg:max-w-4xl"
       >
         <img
           src={imgUrl(banner.image_url)}
           alt={banner.title}
-          className="block w-auto h-auto max-w-[92vw] sm:max-w-[86vw] lg:max-w-4xl max-h-[85vh]"
+          className="block max-h-[85vh] h-auto w-auto max-w-[92vw] sm:max-w-[86vw] lg:max-w-4xl"
         />
-
-        {/* Close Button */}
         <button
+          type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/45 text-white/85 border border-white/25 flex items-center justify-center hover:bg-black/70 transition-colors"
+          aria-label="Tutup pratinjau"
+          className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white/85 transition-colors hover:bg-black/70"
         >
-          <X className="w-5 h-5" />
+          <X className="h-5 w-5" />
         </button>
-
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20 text-xs text-white/90">
-          Target link: <strong>{banner.cta_link || "/promo"}</strong>
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-white/20 bg-black/60 px-4 py-1.5 text-xs text-white/90 backdrop-blur-md">
+          Tujuan klik: <strong>{banner.cta_link || "/promo"}</strong>
         </div>
       </div>
     </div>

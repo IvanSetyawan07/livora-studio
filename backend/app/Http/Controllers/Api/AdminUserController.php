@@ -29,6 +29,7 @@ class AdminUserController extends Controller
                 'phone'         => $u->phone,
                 'address'       => $u->address,
                 'role'          => $u->role,
+                'admin_role'    => $u->admin_role,
                 'provider'      => $u->provider,
                 'avatar_url'    => $u->avatar_url,
                 'login_count'   => (int) ($u->login_count ?? 0),
@@ -63,5 +64,35 @@ class AdminUserController extends Controller
             ->limit($limit)
             ->get();
         return response()->json($activities);
+    }
+
+    /** PATCH /api/admin/users/{user}/role — khusus Owner untuk mengangkat/mencabut akses admin. */
+    public function updateRole(Request $request, User $user)
+    {
+        $actor = $request->user();
+        if (\App\Services\AdminPermissions::role($actor) !== 'owner') {
+            return response()->json(['message' => 'Hanya Owner yang dapat mengubah akses admin.'], 403);
+        }
+
+        $data = $request->validate([
+            'role'       => 'required|in:user,admin',
+            'admin_role' => 'nullable|in:owner,cs,finance,production',
+        ]);
+
+        if ($actor->id === $user->id && ($data['role'] !== 'admin' || ($data['admin_role'] ?? 'owner') !== 'owner')) {
+            return response()->json(['message' => 'Anda tidak dapat mencabut akses Owner dari akun sendiri.'], 422);
+        }
+
+        $user->role = $data['role'];
+        $user->admin_role = $data['role'] === 'admin' ? ($data['admin_role'] ?? $user->admin_role ?? 'cs') : null;
+        $user->save();
+
+        return response()->json([
+            'id'         => $user->id,
+            'name'       => $user->name,
+            'email'      => $user->email,
+            'role'       => $user->role,
+            'admin_role' => $user->admin_role,
+        ]);
     }
 }

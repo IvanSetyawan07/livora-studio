@@ -23,7 +23,8 @@ class BotSimulatorController extends Controller
             'type' => 'nullable|string|in:text,image,audio,sticker,location',
         ]);
         $phone = 'sim-'.preg_replace('/\D/', '', $data['phone']);
-        $result = app(LiviBot::class)->handle($phone, $data['text'] ?? '', $data['type'] ?? 'text', [], false);
+        // Jalankan dalam mode simulasi terisolasi ($simulate = true) agar tidak memicu alert WA / order produksi
+        $result = app(LiviBot::class)->handle($phone, $data['text'] ?? '', $data['type'] ?? 'text', [], true);
 
         return $result + ['conversation' => $this->conversationState($phone)];
     }
@@ -65,6 +66,9 @@ class BotSimulatorController extends Controller
     public function logs(Request $request)
     {
         $q = DB::table('wa_ai_logs')->latest('id');
+        if (!$request->boolean('include_sim')) {
+            $q->where('phone', 'not like', 'sim-%')->where('phone', 'not like', 'test-%');
+        }
         if ($request->query('phone')) $q->where('phone', 'like', '%'.$request->query('phone').'%');
         if ($request->query('flag')) $q->where('flag', $request->query('flag'));
         if ($request->query('date')) $q->whereDate('created_at', $request->query('date'));
@@ -119,7 +123,7 @@ class BotSimulatorController extends Controller
             $last = null;
             foreach (json_decode((string) $sc->transcript, true) ?: [] as $turn) {
                 if (($turn['from'] ?? '') !== 'customer') continue;
-                $last = $bot->handle($phone, $turn['text'] ?? '', $turn['type'] ?? 'text', [], false);
+                $last = $bot->handle($phone, $turn['text'] ?? '', $turn['type'] ?? 'text', [], true);
             }
             foreach (json_decode((string) $sc->expectations, true) ?: [] as $exp) {
                 $rule = $exp['rule'] ?? '';

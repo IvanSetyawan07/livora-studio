@@ -148,13 +148,6 @@ export default function CatalogDetail() {
     return () => trackView("catalog", id, Math.round((Date.now() - start) / 1000));
   }, [(rawCatalog as any)?.id]);
 
-  useEffect(() => {
-  if (item) {
-    console.log("tagline:", item.tagline);
-    console.log("aboutTitle:", item.aboutTitle);
-    console.log("description:", item.description);
-  }
-}, [item]);
   // ── Fetch catalog by slug + hotspots
   useEffect(() => {
     if (!slug) return;
@@ -494,10 +487,14 @@ const handleDownloadPDF = async (size: CatalogPageSize) => {
   // ── Loading state (only if we have no preloaded item to show)
   if (loading && !item) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground font-light animate-pulse">
-          Loading…
-        </p>
+      <div className="min-h-screen flex flex-col bg-background">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center pt-28 pb-16">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground font-light animate-pulse">
+            Loading…
+          </p>
+        </div>
+        <Footer />
       </div>
     );
   }
@@ -505,16 +502,20 @@ const handleDownloadPDF = async (size: CatalogPageSize) => {
   // ── 404 — only when API confirmed not found (never while still fetching)
   if (notFound || (!loading && (!item || !catMeta))) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <p className="serif text-3xl font-light mb-4">Catalog not found</p>
-          <Link
-            to={`/catalog/${categoryParam ?? "living-rooms"}`}
-            className="text-xs uppercase tracking-[0.3em] text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Back to Catalog
-          </Link>
+      <div className="min-h-screen flex flex-col bg-background">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center pt-28 pb-16">
+          <div className="text-center px-6">
+            <p className="serif text-3xl font-light mb-4">Catalog not found</p>
+            <Link
+              to={`/catalog/${categoryParam ?? "living-rooms"}`}
+              className="text-xs uppercase tracking-[0.3em] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Back to Catalog
+            </Link>
+          </div>
         </div>
+        <Footer />
       </div>
     );
   }

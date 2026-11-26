@@ -17,6 +17,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { usePageContext } from "@/context/AiMarketingContext";
+import { useAdminPermission } from "@/components/admin/AdminPermissionContext";
+import { useAdminDialog } from "@/components/admin/kit";
 import { extractApiErrorMessage, useActionDecision, useAiActions, useRecommendations } from "@/hooks/useAiDashboard";
 import type { AIApproval, AIApprovalStatus, AIRisk } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
@@ -39,10 +41,14 @@ const filters: (AIApprovalStatus | "all")[] = ["all", "pending", "approved", "ex
 
 export default function ApprovalsPage() {
   usePageContext("approvals");
+  const dialog = useAdminDialog();
+  const { canEdit } = useAdminPermission();
+  const editable = canEdit("marketing");
   const [filter, setFilter] = useState<AIApprovalStatus | "all">("all");
   const [riskFilter, setRiskFilter] = useState<"all" | AIRisk>("all");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [highRiskAck, setHighRiskAck] = useState(false);
 
   const { data, isLoading, error, refetch } = useAiActions();
   const { data: allRecs } = useRecommendations();
@@ -65,22 +71,50 @@ export default function ApprovalsPage() {
   const busy = approveAndExecute.isPending || reject.isPending;
 
   async function onApprove(a: AIApproval) {
+    if (!editable) {
+      toast.error("Anda berada dalam mode lihat saja.");
+      return;
+    }
+    const ok = await dialog.confirm({
+      title: `Jalankan Aksi "${a.title}"?`,
+      description:
+        a.risk === "high"
+          ? "Aksi ini berisiko tinggi dan akan langsung diterapkan ke sistem/platform terkait. Pastikan Anda sudah memeriksa detailnya."
+          : "Aksi akan disetujui dan langsung dijalankan oleh mesin AI Marketing.",
+      confirmText: "Ya, Setujui & Jalankan",
+      cancelText: "Batal",
+      tone: a.risk === "high" ? "danger" : "default",
+    });
+    if (!ok) return;
     try {
       await approveAndExecute.mutateAsync(a.id);
-      toast.success("Approval dieksekusi", { description: a.title });
+      toast.success("Persetujuan dieksekusi", { description: a.title });
       setSelectedId(null);
+      setHighRiskAck(false);
     } catch (error) {
-      toast.error(extractApiErrorMessage(error, "Gagal mengeksekusi approval"));
+      toast.error(extractApiErrorMessage(error, "Gagal mengeksekusi persetujuan"));
     }
   }
 
   async function onReject(a: AIApproval) {
+    if (!editable) {
+      toast.error("Anda berada dalam mode lihat saja.");
+      return;
+    }
+    const ok = await dialog.confirm({
+      title: `Tolak Usulan "${a.title}"?`,
+      description: "Usulan ini akan ditandai ditolak dan tidak akan dieksekusi.",
+      confirmText: "Ya, Tolak",
+      cancelText: "Batal",
+      tone: "danger",
+    });
+    if (!ok) return;
     try {
       await reject.mutateAsync(a.id);
-      toast("Approval ditolak", { description: a.title });
+      toast("Persetujuan ditolak", { description: a.title });
       setSelectedId(null);
     } catch (err) {
-      toast.error(extractApiErrorMessage(err, "Gagal menolak approval"));
+      toast.error(extractApiErrorMessage(err, "Gagal menolak persetujuan"));
     }
   }
 
@@ -208,8 +242,16 @@ export default function ApprovalsPage() {
         </Panel>
       )}
 
-      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelectedId(null)}>
-        <DialogContent className="border-border-strong bg-popover text-foreground sm:max-w-xl">
+      <Dialog
+        open={!!selected}
+        onOpenChange={(o) => {
+          if (!o) {
+            setSelectedId(null);
+            setHighRiskAck(false);
+          }
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto border-border-strong bg-popover text-foreground sm:max-w-xl">
           {selected ? (
             <>
               <DialogHeader>
@@ -247,27 +289,40 @@ export default function ApprovalsPage() {
                 ) : null}
 
                 {selected.status === "pending" || selected.status === "approved" || selected.status === "failed" ? (
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      disabled={busy}
-                      onClick={() => onApprove(selected)}
-                      className="inline-flex items-center gap-1.5 rounded-sm bg-brass px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
-                    >
-                      {approveAndExecute.isPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                      {selected.status === "failed"
-                        ? "Retry execute"
-                        : selected.status === "approved"
-                        ? "Execute"
-                        : "Approve & execute"}
-                    </button>
-                    <button
-                      disabled={busy}
-                      onClick={() => onReject(selected)}
-                      className="inline-flex items-center gap-1.5 rounded-sm border border-border-strong px-3 py-1.5 text-xs text-muted-foreground disabled:opacity-50"
-                    >
-                      {reject.isPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                      Reject
-                    </button>
+                  <div className="space-y-3">
+                    {selected.risk === "high" ? (
+                      <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
+                        <input
+                          type="checkbox"
+                          checked={highRiskAck}
+                          onChange={(e) => setHighRiskAck(e.target.checked)}
+                          className="mt-0.5"
+                        />
+                        <span>Saya memahami aksi berisiko tinggi ini akan langsung dijalankan.</span>
+                      </label>
+                    ) : null}
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        disabled={busy || !editable || (selected.risk === "high" && !highRiskAck)}
+                        onClick={() => onApprove(selected)}
+                        className="inline-flex items-center gap-1.5 rounded-sm bg-brass px-3.5 py-2 text-xs font-medium text-background disabled:opacity-40"
+                      >
+                        {approveAndExecute.isPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
+                        {selected.status === "failed"
+                          ? "Coba Jalankan Ulang"
+                          : selected.status === "approved"
+                            ? "Jalankan Sekarang"
+                            : "Setujui & Jalankan"}
+                      </button>
+                      <button
+                        disabled={busy || !editable}
+                        onClick={() => onReject(selected)}
+                        className="inline-flex items-center gap-1.5 rounded-sm border border-border-strong px-3.5 py-2 text-xs text-muted-foreground disabled:opacity-40"
+                      >
+                        {reject.isPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
+                        Tolak
+                      </button>
+                    </div>
                   </div>
                 ) : null}
               </div>

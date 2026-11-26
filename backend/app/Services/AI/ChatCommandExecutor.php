@@ -222,8 +222,10 @@ class ChatCommandExecutor
                 ->limit(10)
                 ->get();
         } elseif ($scope === 'all_approved' || $id === 'all_approved') {
+            // Lindungi aksi risiko tinggi agar hanya bisa dieksekusi lewat konfirmasi manual di layar Aksi
             $actions = AiApproval::with('recommendation')
                 ->where('status', 'approved')
+                ->where('risk', '!=', 'high')
                 ->limit(10)
                 ->get();
         } elseif ($scope === 'retry_failed' || $id === 'retry_failed') {

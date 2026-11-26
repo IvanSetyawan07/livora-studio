@@ -1,38 +1,79 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertTriangle, Bell, CheckCheck, MonitorSmartphone, Volume2, VolumeX } from "lucide-react";
+import {
+  AlertTriangle,
+  Bell,
+  CheckCheck,
+  MessageCircle,
+  MonitorSmartphone,
+  ShoppingBag,
+  Volume2,
+  VolumeX,
+  Wallet,
+} from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { playChatSound, unlockChatSound } from "@/lib/chatSound";
 import type { ConsultationActivity } from "@/lib/consultations";
 
 type Notif = {
-  id: number; type: string; kind: string; priority: string;
-  title: string; body: string | null; link: string | null; read: boolean; created_at: string;
+  id: number;
+  type: string;
+  kind: string;
+  priority: string;
+  title: string;
+  body: string | null;
+  link: string | null;
+  read: boolean;
+  created_at: string;
 };
 
 type Props = {
   activities: ConsultationActivity[];
   unreadActivities: number;
-  /** dipanggil saat tab Konsultasi dibuka (untuk menandai sudah dibaca) */
-  onOpenActivities: () => void;
+  pageTitle?: string;
+  /** Dipanggil hanya saat admin klik "Tandai semua dibaca" di tab Konsultasi. */
+  onMarkAllActivitiesRead: () => void;
   onActivityClick: (a: ConsultationActivity) => void;
 };
 
 const SOUND_KEY = "livora.admin.notif.sound";
 
+function NotifIcon({ type, priority }: { type: string; priority: string }) {
+  if (priority === "mendesak") return <AlertTriangle className="h-3.5 w-3.5" />;
+  const t = String(type || "").toLowerCase();
+  if (t.includes("pay") || t.includes("bayar") || t.includes("refund")) return <Wallet className="h-3.5 w-3.5" />;
+  if (t.includes("order") || t.includes("pesanan")) return <ShoppingBag className="h-3.5 w-3.5" />;
+  if (t.includes("chat") || t.includes("wa") || t.includes("inbox") || t.includes("pesan")) {
+    return <MessageCircle className="h-3.5 w-3.5" />;
+  }
+  return <Bell className="h-3.5 w-3.5" />;
+}
+
 /**
  * Satu pusat notifikasi untuk admin: tab "Sistem" (alert operasional) dan "Konsultasi".
- * Dilengkapi suara chime, notifikasi desktop browser, dan judul tab berkedip untuk alert mendesak.
+ * Tidak otomatis menandai semua konsultasi sebagai dibaca hanya karena tab dibuka.
  */
-export default function AdminNotificationCenter({ activities, unreadActivities, onOpenActivities, onActivityClick }: Props) {
+export default function AdminNotificationCenter({
+  activities,
+  unreadActivities,
+  pageTitle = "Admin LIVORA",
+  onMarkAllActivitiesRead,
+  onActivityClick,
+}: Props) {
   const navigate = useNavigate();
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"system" | "consult">("system");
   const [items, setItems] = useState<Notif[]>([]);
   const [soundOn, setSoundOn] = useState<boolean>(() => {
-    try { return localStorage.getItem(SOUND_KEY) !== "0"; } catch { return true; }
+    try {
+      return localStorage.getItem(SOUND_KEY) !== "0";
+    } catch {
+      return true;
+    }
   });
   const [notifPerm, setNotifPerm] = useState<NotificationPermission>(() =>
     typeof window !== "undefined" && "Notification" in window ? Notification.permission : "denied",
@@ -44,7 +85,6 @@ export default function AdminNotificationCenter({ activities, unreadActivities, 
   const soundOnRef = useRef(soundOn);
   soundOnRef.current = soundOn;
 
-  // Buka kunci AudioContext saat interaksi pertama admin di halaman
   useEffect(() => {
     const unlock = () => unlockChatSound();
     window.addEventListener("pointerdown", unlock, { once: true });
@@ -58,7 +98,11 @@ export default function AdminNotificationCenter({ activities, unreadActivities, 
   const toggleSound = () => {
     const next = !soundOn;
     setSoundOn(next);
-    try { localStorage.setItem(SOUND_KEY, next ? "1" : "0"); } catch {}
+    try {
+      localStorage.setItem(SOUND_KEY, next ? "1" : "0");
+    } catch {
+      /* abaikan */
+    }
     if (next) {
       unlockChatSound();
       playChatSound("incoming");
@@ -71,9 +115,13 @@ export default function AdminNotificationCenter({ activities, unreadActivities, 
       const p = await Notification.requestPermission();
       setNotifPerm(p);
       if (p === "granted") {
-        new Notification("Notifikasi Admin Livora aktif", { body: "Kamu akan mendapat pemberitahuan saat ada pelanggan butuh balasan." });
+        new Notification("Notifikasi Admin Livora aktif", {
+          body: "Kamu akan mendapat pemberitahuan saat ada pelanggan butuh balasan.",
+        });
       }
-    } catch { /* abaikan */ }
+    } catch {
+      /* abaikan */
+    }
   };
 
   const load = useCallback(() => {
@@ -101,17 +149,19 @@ export default function AdminNotificationCenter({ activities, unreadActivities, 
                   const dn = new Notification(n.title, { body: n.body ?? undefined, tag: `livora-${n.id}` });
                   dn.onclick = () => {
                     window.focus();
-                    if (n.link) navigate(n.link);
+                    if (n.link) navigateRef.current(n.link);
                     dn.close();
                   };
-                } catch { /* abaikan */ }
+                } catch {
+                  /* abaikan */
+                }
               }
             });
         }
         firstLoaded.current = true;
       })
       .catch(() => {});
-  }, [navigate]);
+  }, []);
 
   useEffect(() => {
     load();
@@ -140,31 +190,26 @@ export default function AdminNotificationCenter({ activities, unreadActivities, 
   const unreadUrgent = items.filter((n) => !n.read && n.priority === "mendesak").length;
   const total = unreadSystem + unreadActivities;
 
-  // Judul tab berkedip pelan bila ada alert mendesak yang belum dibaca.
   useEffect(() => {
+    const baseTitle = `${pageTitle} — Admin LIVORA`;
     if (unreadUrgent === 0) {
-      document.title = total > 0 ? `(${total}) Admin Livora` : "Admin Livora";
+      document.title = total > 0 ? `(${total}) ${baseTitle}` : baseTitle;
       return;
     }
     let flip = false;
     const update = () => {
       flip = !flip;
-      document.title = flip ? `● (${unreadUrgent}) Butuh Respon! — Livora` : `(${total}) Admin Livora`;
+      document.title = flip ? `● (${unreadUrgent}) Butuh Respon! — LIVORA` : `(${total}) ${baseTitle}`;
     };
     update();
     const id = window.setInterval(update, 1600);
     return () => {
       window.clearInterval(id);
-      document.title = total > 0 ? `(${total}) Admin Livora` : "Admin Livora";
+      document.title = total > 0 ? `(${total}) ${baseTitle}` : baseTitle;
     };
-  }, [total, unreadUrgent]);
+  }, [total, unreadUrgent, pageTitle]);
 
-  const switchTab = (t: "system" | "consult") => {
-    setTab(t);
-    if (t === "consult") onOpenActivities();
-  };
-
-  const markAll = () => {
+  const markAllSystem = () => {
     const unread = items.filter((n) => !n.read);
     setItems((prev) => prev.map((n) => ({ ...n, read: true })));
     Promise.all(unread.map((n) => api.post(`/admin/notifications/${n.id}/read`))).catch(load);
@@ -172,7 +217,7 @@ export default function AdminNotificationCenter({ activities, unreadActivities, 
 
   const recent = [...activities]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 8);
+    .slice(0, 10);
 
   return (
     <div ref={ref} className="relative">
@@ -180,13 +225,10 @@ export default function AdminNotificationCenter({ activities, unreadActivities, 
         type="button"
         aria-label={`Notifikasi${total ? `, ${total} belum dibaca` : ""}`}
         aria-expanded={open}
-        onClick={() => {
-          if (!open && tab === "consult") onOpenActivities();
-          setOpen((v) => !v);
-        }}
-        className="relative rounded-full p-2 text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
+        onClick={() => setOpen((v) => !v)}
+        className="relative rounded-full p-2 text-[#232528]/80 transition-colors hover:bg-black/5 hover:text-[#232528]"
       >
-        <Bell className={`h-5 w-5 ${unreadUrgent > 0 ? "text-red-600 dark:text-red-400" : ""}`} />
+        <Bell className={`h-5 w-5 ${unreadUrgent > 0 ? "text-red-600" : ""}`} />
         <AnimatePresence>
           {total > 0 && (
             <motion.span
@@ -208,9 +250,9 @@ export default function AdminNotificationCenter({ activities, unreadActivities, 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
             transition={{ duration: 0.16 }}
-            className="absolute right-0 top-full z-[70] mt-2 w-[22rem] max-w-[92vw] origin-top-right overflow-hidden rounded-2xl border border-border bg-card shadow-xl"
+            className="absolute right-0 top-full z-[70] mt-2 w-[22rem] max-w-[92vw] origin-top-right overflow-hidden rounded-2xl border border-[#E5DFD5] bg-white shadow-xl"
           >
-            <div className="flex border-b border-border">
+            <div className="flex border-b border-[#EAE4DA]">
               {(
                 [
                   ["system", "Sistem", unreadSystem],
@@ -220,31 +262,39 @@ export default function AdminNotificationCenter({ activities, unreadActivities, 
                 <button
                   key={key}
                   type="button"
-                  onClick={() => switchTab(key)}
-                  className={`relative flex-1 px-4 py-3 text-sm transition-colors ${tab === key ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  onClick={() => setTab(key)}
+                  className={`relative flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                    tab === key ? "text-[#232528]" : "text-[#656B73] hover:text-[#232528]"
+                  }`}
                 >
                   {label}
-                  {n > 0 && <span className="ml-1.5 rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] leading-none text-white">{n}</span>}
-                  {tab === key && <motion.span layoutId="notif-tab" className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-foreground" />}
+                  {n > 0 && (
+                    <span className="ml-1.5 rounded-full bg-[#5E93B8] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+                      {n}
+                    </span>
+                  )}
+                  {tab === key && (
+                    <motion.span layoutId="notif-tab" className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-[#5E93B8]" />
+                  )}
                 </button>
               ))}
             </div>
 
             {/* Kontrol suara & desktop push */}
-            <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-muted/20 px-4 py-1.5 text-xs text-muted-foreground">
+            <div className="flex items-center justify-between gap-2 border-b border-[#F0EAE0] bg-[#FAF8F4]/70 px-4 py-1.5 text-xs text-[#656B73]">
               <button
                 type="button"
                 onClick={toggleSound}
-                className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
+                className="inline-flex items-center gap-1.5 transition-colors hover:text-[#232528]"
               >
-                {soundOn ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+                {soundOn ? <Volume2 className="h-3.5 w-3.5 text-[#5E93B8]" /> : <VolumeX className="h-3.5 w-3.5" />}
                 {soundOn ? "Suara aktif" : "Suara mati"}
               </button>
               {notifPerm === "default" && (
                 <button
                   type="button"
                   onClick={askDesktopNotif}
-                  className="inline-flex items-center gap-1 text-[hsl(var(--livora-bronze))] hover:underline"
+                  className="inline-flex items-center gap-1 font-medium text-[#467A9E] hover:underline"
                 >
                   <MonitorSmartphone className="h-3.5 w-3.5" /> Aktifkan notif desktop
                 </button>
@@ -257,14 +307,16 @@ export default function AdminNotificationCenter({ activities, unreadActivities, 
                 {unreadSystem > 0 && (
                   <button
                     type="button"
-                    onClick={markAll}
-                    className="flex w-full items-center justify-end gap-1.5 border-b border-border/60 px-4 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                    onClick={markAllSystem}
+                    className="flex w-full items-center justify-end gap-1.5 border-b border-[#F0EAE0] px-4 py-2 text-xs text-[#5E93B8] transition-colors hover:text-[#3A6D91]"
                   >
                     <CheckCheck className="h-3.5 w-3.5" /> Tandai semua dibaca
                   </button>
                 )}
                 <ul className="max-h-96 overflow-y-auto">
-                  {!items.length && <li className="px-4 py-8 text-center text-sm text-muted-foreground">Belum ada notifikasi.</li>}
+                  {!items.length && (
+                    <li className="px-4 py-8 text-center text-sm text-[#656B73]">Belum ada notifikasi sistem.</li>
+                  )}
                   {items.map((n) => (
                     <li key={n.id}>
                       <Link
@@ -273,23 +325,27 @@ export default function AdminNotificationCenter({ activities, unreadActivities, 
                           if (!n.read) api.post(`/admin/notifications/${n.id}/read`).then(load).catch(() => {});
                           setOpen(false);
                         }}
-                        className={`flex gap-3 border-b border-border/50 px-4 py-3 text-sm transition-colors hover:bg-muted/50 ${n.read ? "opacity-60" : ""}`}
+                        className={`flex gap-3 border-b border-[#F2EDE5] px-4 py-3 text-sm transition-colors hover:bg-[#FAF8F4] ${
+                          n.read ? "opacity-65" : ""
+                        }`}
                       >
                         <span
-                          className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                          className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
                             n.priority === "mendesak"
-                              ? "bg-red-500/15 text-red-600 dark:text-red-300"
+                              ? "bg-red-50 text-red-600"
                               : n.kind === "perlu_tindakan"
-                                ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
-                                : "bg-muted text-muted-foreground"
+                                ? "bg-amber-50 text-amber-700"
+                                : "bg-[#EDF4F8] text-[#5E93B8]"
                           }`}
                         >
-                          {n.priority === "mendesak" ? <AlertTriangle className="h-3 w-3" /> : n.type}
+                          <NotifIcon type={n.type} priority={n.priority} />
                         </span>
-                        <span className="min-w-0">
-                          <span className="block truncate font-medium">{n.title}</span>
-                          {n.body && <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground">{n.body}</span>}
-                          <span className="mt-1 block text-xs text-muted-foreground">{new Date(n.created_at).toLocaleString("id-ID")}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium text-[#232528]">{n.title}</span>
+                          {n.body && <span className="mt-0.5 line-clamp-2 block text-xs text-[#656B73]">{n.body}</span>}
+                          <span className="mt-1 block text-[11px] text-[#656B73]/80">
+                            {new Date(n.created_at).toLocaleString("id-ID")}
+                          </span>
                         </span>
                       </Link>
                     </li>
@@ -297,37 +353,54 @@ export default function AdminNotificationCenter({ activities, unreadActivities, 
                 </ul>
               </>
             ) : (
-              <ul className="max-h-96 overflow-y-auto">
-                {recent.length === 0 && <li className="px-4 py-8 text-center text-sm text-muted-foreground">Belum ada aktivitas konsultasi.</li>}
-                {recent.map((a) => {
-                  const unread = !a.admin_read_at;
-                  const who = a.consultation ? `${a.consultation.first_name} ${a.consultation.last_name ?? ""}`.trim() : null;
-                  return (
-                    <li key={a.id}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOpen(false);
-                          onActivityClick(a);
-                        }}
-                        className={`w-full border-b border-border/60 px-4 py-3 text-left transition-colors last:border-0 hover:bg-muted/50 ${unread ? "bg-muted/30" : ""}`}
-                      >
-                        <div className="flex items-start gap-2">
-                          {unread && <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />}
-                          <div className="min-w-0 flex-1">
-                            <p className={`truncate text-sm ${unread ? "font-medium" : ""}`}>{a.title}</p>
-                            {a.body && <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{a.body}</p>}
-                            <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                              {who && <span className="truncate uppercase tracking-wider">{who}</span>}
-                              <span className="shrink-0">{new Date(a.created_at).toLocaleString("id-ID")}</span>
+              <>
+                {unreadActivities > 0 && (
+                  <button
+                    type="button"
+                    onClick={onMarkAllActivitiesRead}
+                    className="flex w-full items-center justify-end gap-1.5 border-b border-[#F0EAE0] px-4 py-2 text-xs text-[#5E93B8] transition-colors hover:text-[#3A6D91]"
+                  >
+                    <CheckCheck className="h-3.5 w-3.5" /> Tandai semua dibaca
+                  </button>
+                )}
+                <ul className="max-h-96 overflow-y-auto">
+                  {recent.length === 0 && (
+                    <li className="px-4 py-8 text-center text-sm text-[#656B73]">Belum ada aktivitas konsultasi.</li>
+                  )}
+                  {recent.map((a) => {
+                    const unread = !a.admin_read_at;
+                    const who = a.consultation
+                      ? `${a.consultation.first_name} ${a.consultation.last_name ?? ""}`.trim()
+                      : null;
+                    return (
+                      <li key={a.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpen(false);
+                            onActivityClick(a);
+                          }}
+                          className={`w-full border-b border-[#F2EDE5] px-4 py-3 text-left transition-colors last:border-0 hover:bg-[#FAF8F4] ${
+                            unread ? "bg-[#EDF4F8]/40" : ""
+                          }`}
+                        >
+                          <div className="flex items-start gap-2">
+                            {unread && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#5E93B8]" />}
+                            <div className="min-w-0 flex-1">
+                              <p className={`truncate text-sm text-[#232528] ${unread ? "font-medium" : ""}`}>{a.title}</p>
+                              {a.body && <p className="mt-0.5 line-clamp-2 text-xs text-[#656B73]">{a.body}</p>}
+                              <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-[#656B73]">
+                                {who && <span className="truncate uppercase tracking-wider">{who}</span>}
+                                <span className="shrink-0">{new Date(a.created_at).toLocaleString("id-ID")}</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
             )}
           </motion.div>
         )}

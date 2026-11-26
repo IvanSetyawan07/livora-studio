@@ -13,9 +13,9 @@ import {
 } from "lucide-react";
 import {
   gsap,
-  ScrollTrigger,
   registerGsap,
   prefersReducedMotion,
+  scheduleScrollTriggerRefresh,
 } from "@/lib/motionTokens";
 
 export const Contact = () => {
@@ -48,9 +48,8 @@ export const Contact = () => {
       );
     }, section);
 
-    const tId = setTimeout(() => ScrollTrigger.refresh(), 100);
+    scheduleScrollTriggerRefresh();
     return () => {
-      clearTimeout(tId);
       ctx.revert();
     };
   }, []);
@@ -107,12 +106,13 @@ export const Contact = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-stretch">
           <div
             data-contact-reveal
+            data-lenis-prevent={mapActive ? "" : undefined}
             className="lg:col-span-7 relative overflow-hidden rounded-[26px] border border-[#232528]/10 min-h-[340px] sm:min-h-[420px] lg:min-h-[500px] bg-[#F1EFEA] shadow-[0_24px_60px_-34px_rgba(35,37,40,0.16)]"
           >
             <iframe
               title="Livora office location"
               src="https://www.google.com/maps?q=-6.2476031,106.8149678&output=embed"
-              className={`w-full h-full min-h-[340px] sm:min-h-[420px] lg:min-h-[500px] grayscale contrast-105 transition-all ${
+              className={`w-full h-full min-h-[340px] sm:min-h-[420px] lg:min-h-[500px] grayscale contrast-105 ${
                 mapActive ? "pointer-events-auto" : "pointer-events-none"
               }`}
               loading="lazy"
@@ -133,7 +133,7 @@ export const Contact = () => {
                 <button
                   type="button"
                   onClick={() => setMapActive(true)}
-                  className="self-center min-h-[44px] px-6 py-2.5 rounded-full bg-white/95 text-[#232528] text-[11px] uppercase tracking-[0.22em] backdrop-blur-md shadow-lg hover:bg-[#232528] hover:text-white active:scale-95 transition-all"
+                  className="self-center min-h-[44px] px-6 py-2.5 rounded-full bg-white/95 text-[#232528] text-[11px] uppercase tracking-[0.22em] backdrop-blur-md shadow-lg hover:bg-[#232528] hover:text-white active:scale-95 transition-colors duration-200"
                 >
                   Tap to interact with map
                 </button>

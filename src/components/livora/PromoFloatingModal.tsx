@@ -87,12 +87,22 @@ export const PromoFloatingModal: React.FC<PromoFloatingModalProps> = ({ ready = 
     return () => clearInterval(interval);
   }, [isOpen, hasMultiple, isPaused, nextSlide]);
 
-  if (!isOpen || banners.length === 0) return null;
+  // Kunci scroll halaman (termasuk Lenis) selama modal promo terbuka
+  useEffect(() => {
+    if (!isOpen || banners.length === 0) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isOpen, banners.length]);
 
+  const showModal = isOpen && banners.length > 0;
   const banner = banners[currentIndex] || banners[0];
-  const imageUrl = banner.image_url ? imgUrl(banner.image_url) : "";
+  const imageUrl = banner?.image_url ? imgUrl(banner.image_url) : "";
 
   const handleCardClick = () => {
+    if (!banner) return;
     trackLivoraEvent("promo_cta_click", { banner_id: banner.id, title: banner.title });
     setIsDismissed(true);
     setIsOpen(false);
@@ -120,12 +130,13 @@ export const PromoFloatingModal: React.FC<PromoFloatingModalProps> = ({ ready = 
 
   return (
     <AnimatePresence>
+      {showModal && banner && (
       <motion.div
         key="promo-modal-backdrop"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.35, ease: "easeOut" }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
         className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 md:p-8 bg-black/75 backdrop-blur-[6px]"
         onClick={handleClose}
         role="dialog"
@@ -137,7 +148,7 @@ export const PromoFloatingModal: React.FC<PromoFloatingModalProps> = ({ ready = 
           initial={{ opacity: 0, scale: 0.94, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 16 }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
           onClick={(e) => {
             // Seluruh area banner langsung mengarahkan ke halaman item promo
             e.stopPropagation();
@@ -160,8 +171,8 @@ export const PromoFloatingModal: React.FC<PromoFloatingModalProps> = ({ ready = 
                 initial={{ opacity: 0, scale: 1.03 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.98 }}
-                transition={{ duration: 0.45, ease: "easeOut" }}
-                className="block w-auto h-auto max-w-[92vw] sm:max-w-[86vw] lg:max-w-4xl max-h-[88vh] transition-transform duration-700 ease-out group-hover:scale-[1.015]"
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="block w-auto h-auto max-w-[92vw] sm:max-w-[86vw] lg:max-w-4xl max-h-[88vh]"
               />
             </AnimatePresence>
           </div>
@@ -234,6 +245,7 @@ export const PromoFloatingModal: React.FC<PromoFloatingModalProps> = ({ ready = 
           )}
         </motion.div>
       </motion.div>
+      )}
     </AnimatePresence>
   );
 };

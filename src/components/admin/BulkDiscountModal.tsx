@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Percent, Tag, X, Sparkles, Loader2, ArrowRight } from "lucide-react";
+import { Percent, X, Loader2, ArrowRight, Ban } from "lucide-react";
 import { bulkDiscountItems } from "@/lib/promoApi";
 
 interface BulkDiscountModalProps {
@@ -18,21 +18,41 @@ export default function BulkDiscountModal({
   onClose,
   onSuccess,
 }: BulkDiscountModalProps) {
+  const isSingle = selectedItems.length === 1;
+  const single = isSingle ? selectedItems[0] : null;
+
   const [discountValue, setDiscountValue] = useState<string>("20");
   const [badgeText, setBadgeText] = useState<string>("20% OFF");
+  const [badgeTouched, setBadgeTouched] = useState<boolean>(false);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
-  // Auto-update badge text when percentage changes
+  // Pre-fill data eksisting bila mengatur promo 1 item
   useEffect(() => {
+    if (!isOpen) return;
+    setBadgeTouched(false);
+    if (single) {
+      const existingDisc = single.discount_value && Number(single.discount_value) > 0 ? String(single.discount_value) : "20";
+      setDiscountValue(existingDisc);
+      setBadgeText(single.promo_badge_text || `${Math.round(Number(existingDisc))}% OFF`);
+      setStartDate(single.promo_start_date ? String(single.promo_start_date).slice(0, 16) : "");
+      setEndDate(single.promo_end_date ? String(single.promo_end_date).slice(0, 16) : "");
+    } else {
+      setDiscountValue("20");
+      setBadgeText("20% OFF");
+      setStartDate("");
+      setEndDate("");
+    }
+  }, [isOpen, single]);
+
+  useEffect(() => {
+    if (badgeTouched) return;
     const val = parseFloat(discountValue);
     if (!isNaN(val) && val > 0) {
       setBadgeText(`${Math.min(100, Math.round(val))}% OFF`);
-    } else {
-      setBadgeText("");
     }
-  }, [discountValue]);
+  }, [discountValue, badgeTouched]);
 
   if (!isOpen) return null;
 
@@ -40,7 +60,11 @@ export default function BulkDiscountModal({
     e.preventDefault();
     const val = parseFloat(discountValue);
     if (isNaN(val) || val <= 0 || val > 100) {
-      toast.error("Masukkan persentase diskon yang valid (1 – 100%)");
+      toast.error("Masukkan persentase diskon antara 1% – 100%.");
+      return;
+    }
+    if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
+      toast.error("Tanggal selesai promo tidak boleh lebih awal dari tanggal mulai.");
       return;
     }
 
@@ -54,10 +78,32 @@ export default function BulkDiscountModal({
         promo_start_date: startDate || undefined,
         promo_end_date: endDate || undefined,
       });
-      toast.success(res.message || `Promo berhasil diterapkan pada ${selectedIds.length} item.`);
+      toast.success(
+        res.message ||
+          (isSingle
+            ? `Promo diterapkan pada "${single?.title}".`
+            : `Promo diterapkan pada ${selectedIds.length} produk.`),
+      );
       onSuccess();
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Gagal menerapkan promo massal");
+      toast.error(err?.response?.data?.message || "Gagal menerapkan promo");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleClearPromo = async () => {
+    setSaving(true);
+    try {
+      await bulkDiscountItems({
+        item_ids: selectedIds,
+        discount_value: 0,
+        promo_badge_text: undefined,
+      });
+      toast.success(isSingle ? `Promo pada "${single?.title}" dinonaktifkan.` : "Promo dinonaktifkan.");
+      onSuccess();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Gagal menonaktifkan promo");
     } finally {
       setSaving(false);
     }
@@ -65,38 +111,48 @@ export default function BulkDiscountModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm grid place-items-center p-4 overflow-y-auto"
-      onClick={onClose}
+      className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm"
+      onClick={() => !saving && onClose()}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-card border border-border rounded-xl w-full max-w-lg overflow-hidden shadow-2xl my-auto animate-in fade-in zoom-in-95 duration-200"
+        className="my-auto w-full max-w-lg overflow-hidden rounded-2xl border border-[#EAE4DA] bg-white shadow-2xl"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/40">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-[#D7B483]/15 text-[#A88247] flex items-center justify-center">
-              <Percent className="w-4 h-4" />
+        <div className="flex items-center justify-between border-b border-[#EAE4DA] bg-[#FAF8F4] px-6 py-4">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#EDF4F8] text-[#5E93B8]">
+              <Percent className="h-4 w-4" />
             </div>
             <div>
-              <h2 className="serif text-xl font-light">Atur Diskon Massal</h2>
-              <p className="text-xs text-muted-foreground">
-                Terapkan promo sekaligus untuk <strong>{selectedIds.length} item</strong> terpilih.
+              <h2 className="font-header text-xl text-[#232528]">
+                {isSingle ? "Atur Promo Produk" : "Atur Promo Massal"}
+              </h2>
+              <p className="text-xs text-[#656B73]">
+                {isSingle ? (
+                  <>
+                    Produk: <strong>{single?.title}</strong>
+                  </>
+                ) : (
+                  <>
+                    Terapkan diskon sekaligus ke <strong>{selectedIds.length} produk</strong> terpilih.
+                  </>
+                )}
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-full text-muted-foreground">
-            <X className="w-4 h-4" />
+          <button
+            type="button"
+            disabled={saving}
+            onClick={onClose}
+            className="rounded-full p-1.5 text-[#656B73] hover:bg-black/5 hover:text-[#232528]"
+          >
+            <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Discount Percentage Value */}
+        <form onSubmit={handleSubmit} className="space-y-4 p-6">
           <div>
-            <label className="text-xs uppercase tracking-[0.16em] text-muted-foreground font-medium block mb-1">
-              Persentase Promo (%) *
-            </label>
+            <label className="mb-1 block text-xs font-medium text-[#232528]">Persentase Promo (%) *</label>
             <div className="relative">
               <input
                 required
@@ -106,95 +162,104 @@ export default function BulkDiscountModal({
                 value={discountValue}
                 onChange={(e) => setDiscountValue(e.target.value)}
                 placeholder="contoh: 20"
-                className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-foreground"
+                className="h-10 w-full rounded-lg border border-[#E2DACF] bg-[#FAF8F4] px-3 pr-8 text-sm text-[#232528] outline-none focus:border-[#5E93B8] focus:bg-white"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">
-                %
-              </span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#656B73]">%</span>
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1">
-              Harga produk tetap dikelola eksklusif di backoffice dan tidak tampil di katalog publik.
+            <p className="mt-1 text-[11px] text-[#656B73]">
+              Harga nominal tetap dirahasiakan dari katalog publik; pengunjung melihat label promo di kartu produk.
             </p>
           </div>
 
-          {/* Badge Text */}
           <div>
-            <label className="text-xs uppercase tracking-[0.16em] text-muted-foreground font-medium block mb-1">
-              Label Badge Promo
-            </label>
+            <label className="mb-1 block text-xs font-medium text-[#232528]">Teks Label Badge Promo</label>
             <input
               value={badgeText}
-              onChange={(e) => setBadgeText(e.target.value)}
-              placeholder="misal: 30% OFF / SPECIAL OFFER"
-              className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-foreground"
+              onChange={(e) => {
+                setBadgeTouched(true);
+                setBadgeText(e.target.value);
+              }}
+              placeholder="mis. 20% OFF / SPECIAL OFFER"
+              className="h-10 w-full rounded-lg border border-[#E2DACF] bg-[#FAF8F4] px-3 text-sm text-[#232528] outline-none focus:border-[#5E93B8] focus:bg-white"
             />
           </div>
 
-          {/* Schedule */}
-          <div className="grid grid-cols-2 gap-3 pt-1">
+          <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
             <div>
-              <label className="text-xs uppercase tracking-[0.16em] text-muted-foreground font-medium block mb-1">
-                Mulai Promo (Opsional)
-              </label>
+              <label className="mb-1 block text-xs font-medium text-[#232528]">Mulai Promo (Opsional)</label>
               <input
                 type="datetime-local"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-2.5 py-1.5 rounded-md border border-border bg-background text-xs focus:outline-none"
+                className="h-10 w-full rounded-lg border border-[#E2DACF] bg-[#FAF8F4] px-2.5 text-xs text-[#232528] outline-none focus:border-[#5E93B8] focus:bg-white"
               />
             </div>
             <div>
-              <label className="text-xs uppercase tracking-[0.16em] text-muted-foreground font-medium block mb-1">
-                Selesai Promo (Opsional)
-              </label>
+              <label className="mb-1 block text-xs font-medium text-[#232528]">Selesai Promo (Opsional)</label>
               <input
                 type="datetime-local"
                 value={endDate}
+                min={startDate || undefined}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-2.5 py-1.5 rounded-md border border-border bg-background text-xs focus:outline-none"
+                className="h-10 w-full rounded-lg border border-[#E2DACF] bg-[#FAF8F4] px-2.5 text-xs text-[#232528] outline-none focus:border-[#5E93B8] focus:bg-white"
               />
             </div>
           </div>
 
-          {/* Selected items preview preview pill */}
-          <div className="bg-muted/40 rounded-lg p-3 border border-border/60 text-xs">
-            <span className="text-muted-foreground block mb-1">Item yang akan terkena promo:</span>
-            <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
-              {selectedItems.map((item) => (
-                <span
-                  key={item.id}
-                  className="bg-background border border-border px-2 py-0.5 rounded text-[11px] truncate max-w-[180px]"
-                >
-                  {item.title}
-                </span>
-              ))}
+          {!isSingle && (
+            <div className="rounded-xl border border-[#EAE4DA] bg-[#FAF8F4] p-3 text-xs">
+              <span className="mb-1.5 block font-medium text-[#656B73]">Produk yang akan terkena promo:</span>
+              <div className="flex max-h-20 flex-wrap gap-1.5 overflow-y-auto">
+                {selectedItems.map((item) => (
+                  <span
+                    key={item.id}
+                    className="max-w-[180px] truncate rounded-full border border-[#E2DACF] bg-white px-2.5 py-0.5 text-[11px] text-[#232528]"
+                  >
+                    {item.title}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded border border-border text-xs uppercase tracking-wider hover:bg-muted"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-5 py-2 rounded bg-foreground text-background text-xs uppercase tracking-wider font-medium hover:opacity-90 disabled:opacity-50 inline-flex items-center gap-1.5"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Menerapkan…
-                </>
-              ) : (
-                <>
-                  Terapkan Diskon <ArrowRight className="w-3.5 h-3.5" />
-                </>
-              )}
-            </button>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#EAE4DA] pt-4">
+            {isSingle && single?.is_on_promo ? (
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => void handleClearPromo()}
+                className="inline-flex items-center gap-1.5 rounded-full border border-red-200 px-3.5 py-2 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+              >
+                <Ban className="h-3.5 w-3.5" /> Nonaktifkan Promo
+              </button>
+            ) : (
+              <span />
+            )}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={saving}
+                onClick={onClose}
+                className="rounded-full border border-[#E2DACF] px-4 py-2 text-xs font-medium text-[#232528] hover:bg-[#FAF8F4]"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#232528] px-5 py-2 text-xs font-medium text-white hover:bg-[#34383D] disabled:opacity-50"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Menerapkan…
+                  </>
+                ) : (
+                  <>
+                    Terapkan Promo <ArrowRight className="h-3.5 w-3.5" />
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </form>
       </div>

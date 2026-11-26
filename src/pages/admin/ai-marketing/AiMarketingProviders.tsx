@@ -25,9 +25,9 @@ const statusTone: Record<AIProviderStatus, "success" | "warning" | "neutral"> = 
 };
 
 const statusLabel: Record<AIProviderStatus, string> = {
-  connected: "Connected",
-  degraded: "Degraded",
-  not_connected: "Not connected",
+  connected: "Terhubung",
+  degraded: "Melambat",
+  not_connected: "Belum Terhubung",
 };
 
 const providerDisplayName: Record<string, string> = {
@@ -39,11 +39,11 @@ const providerDisplayName: Record<string, string> = {
 function formatResetIn(iso: string | null): string | null {
   if (!iso) return null;
   const diffMs = new Date(iso).getTime() - Date.now();
-  if (diffMs <= 0) return "resets now";
+  if (diffMs <= 0) return "kuota direset sekarang";
   const mins = Math.round(diffMs / 60000);
-  if (mins < 1) return "resets in <1m";
-  if (mins < 60) return `resets in ${mins}m`;
-  return `resets in ${Math.round(mins / 60)}h`;
+  if (mins < 1) return "reset dalam <1 menit";
+  if (mins < 60) return `reset dalam ${mins} menit`;
+  return `reset dalam ${Math.round(mins / 60)} jam`;
 }
 
 export default function AiMarketingProviders() {
@@ -74,7 +74,7 @@ export default function AiMarketingProviders() {
 
   function handleSyncProviders() {
     syncProvidersMutation.mutate(undefined, {
-      onSuccess: () => toast.success("Model & status provider disinkronkan dari .env server."),
+      onSuccess: () => toast.success("Model & status provider berhasil disinkronkan dari server."),
       onError: (e) => toast.error(extractApiErrorMessage(e, "Gagal menyinkronkan provider.")),
     });
   }
@@ -100,10 +100,10 @@ export default function AiMarketingProviders() {
       onSuccess: () =>
         toast.success(
           provider
-            ? `${providerDisplayName[provider] ?? provider} set as preferred provider`
-            : "Back to automatic fallback order",
+            ? `${providerDisplayName[provider] ?? provider} dipilih sebagai provider utama`
+            : "Dikembalikan ke urutan cadangan otomatis",
         ),
-      onError: () => toast.error("Failed to update provider preference"),
+      onError: () => toast.error("Gagal memperbarui preferensi provider."),
     });
   }
 
@@ -112,9 +112,9 @@ export default function AiMarketingProviders() {
   return (
     <>
       <PageHeader
-        eyebrow="AI System"
-        title="Providers & Routing"
-        description="Livora's AI infrastructure isn't locked to one provider — routing chooses the right model for each task."
+        eyebrow="Sistem AI"
+        title="Provider & Routing AI"
+        description="Mesin AI Livora dilengkapi jalur cadangan otomatis agar analisis pemasaran tetap berjalan lancar meskipun salah satu provider sedang sibuk."
         action={
           <button
             type="button"
@@ -127,7 +127,7 @@ export default function AiMarketingProviders() {
             ) : (
               <RefreshCw className="size-3.5" />
             )}
-            Sync .env
+            Sinkronkan Provider
           </button>
         }
       />
@@ -140,8 +140,8 @@ export default function AiMarketingProviders() {
 
       <section>
         <SectionHeading
-          title="Provider Preference"
-          description="Which provider gets tried first for every agent run. If it fails or hits a rate limit, the next one in line is used automatically — a run never hard-fails just because one provider is busy."
+          title="Urutan Prioritas Provider"
+          description="Pilih mesin AI yang ingin dicoba lebih dulu setiap kali agen bekerja. Jika kuota penuh atau sedang lambat, sistem otomatis beralih ke provider berikutnya."
         />
         <Panel className="p-5">
           <div className="flex flex-wrap items-center gap-2">
@@ -156,7 +156,7 @@ export default function AiMarketingProviders() {
                   : "border-border text-muted-foreground hover:text-foreground",
               )}
             >
-              Auto (config order)
+              Otomatis (Urutan Standar)
             </button>
             {configuredProviders.map((key) => (
               <button
@@ -176,16 +176,15 @@ export default function AiMarketingProviders() {
             ))}
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            Applies globally, to every agent (SEO, Content, Ads, Leads, CRO). Picking Groq here means Groq is tried
-            first, then the rest fall back in config order.
+            Berlaku untuk seluruh agen (SEO, Konten, Iklan, Prospek, dan Konversi). Provider lainnya tetap siaga sebagai cadangan otomatis.
           </p>
         </Panel>
       </section>
 
       <section className="mt-10">
         <SectionHeading
-          title="Providers"
-          description="Gemini, Groq and Anthropic, side by side — live status from the last real request each one handled."
+          title="Status Koneksi Provider"
+          description="Pantau kondisi koneksi, sisa kuota, dan kecepatan respons masing-masing provider AI."
         />
         {providersQuery.isError ? (
           <QueryError message="Daftar provider tidak bisa dimuat." onRetry={() => void providersQuery.refetch()} />
@@ -214,7 +213,7 @@ export default function AiMarketingProviders() {
                   </div>
 
                   <div className="mt-4">
-                    <AnimatedBar label="Usage share" value={p.usageShare} valueLabel={`${p.usageShare}%`} tone="ai" />
+                    <AnimatedBar label="Porsi Pemakaian" value={p.usageShare} valueLabel={`${p.usageShare}%`} tone="ai" />
                   </div>
 
                   <div className="mt-4 space-y-2 border-t border-border pt-3">
@@ -223,16 +222,16 @@ export default function AiMarketingProviders() {
                     ) : q && q.requestsUsedPct !== null ? (
                       <>
                         <AnimatedBar
-                          label="Requests quota"
+                          label="Kuota Permintaan"
                           value={q.requestsUsedPct}
-                          valueLabel={`${q.requestsRemaining}/${q.requestsLimit} left`}
+                          valueLabel={`${q.requestsRemaining}/${q.requestsLimit} tersisa`}
                           tone={q.requestsUsedPct > 85 ? "warning" : "info"}
                         />
                         {q.tokensUsedPct !== null && (
                           <AnimatedBar
-                            label="Tokens quota"
+                            label="Kuota Token"
                             value={q.tokensUsedPct}
-                            valueLabel={`${q.tokensRemaining}/${q.tokensLimit} left`}
+                            valueLabel={`${q.tokensRemaining}/${q.tokensLimit} tersisa`}
                             tone={q.tokensUsedPct > 85 ? "warning" : "info"}
                           />
                         )}
@@ -242,7 +241,7 @@ export default function AiMarketingProviders() {
                       </>
                     ) : (
                       <p className="text-[11px] text-muted-foreground">
-                        No quota reading yet — populates once this provider handles a real request.
+                        Belum ada pembacaan kuota — otomatis terisi setelah provider menangani permintaan pertama.
                       </p>
                     )}
                   </div>
@@ -251,18 +250,18 @@ export default function AiMarketingProviders() {
                     <div>
                       <p className="num text-sm text-foreground">
                         {p.untrackedRequests && p.untrackedRequests > 0
-                          ? "Not tracked yet"
+                          ? "Belum tercatat"
                           : `$${p.cost.toFixed(0)}`}
                       </p>
-                      <p className="label-eyebrow mt-0.5">Cost</p>
+                      <p className="label-eyebrow mt-0.5">Biaya</p>
                     </div>
                     <div>
                       <p className="num text-sm text-foreground">{p.latencyMs}ms</p>
-                      <p className="label-eyebrow mt-0.5">Latency</p>
+                      <p className="label-eyebrow mt-0.5">Kecepatan</p>
                     </div>
                     <div>
                       <p className="num text-sm text-foreground">{p.successRate}%</p>
-                      <p className="label-eyebrow mt-0.5">Success</p>
+                      <p className="label-eyebrow mt-0.5">Sukses</p>
                     </div>
                   </div>
 
@@ -274,7 +273,7 @@ export default function AiMarketingProviders() {
                       className="inline-flex w-full items-center justify-center gap-1.5 rounded-sm border border-border px-3 py-1.5 text-xs font-medium text-foreground/90 transition-colors hover:border-ai/40 hover:bg-ai/10 hover:text-ai disabled:opacity-50"
                     >
                       {isTesting ? <Loader2 className="size-3.5 animate-spin" /> : <Zap className="size-3.5" />}
-                      {isTesting ? "Menghubungi provider..." : "Test Koneksi"}
+                      {isTesting ? "Menghubungi provider..." : "Uji Koneksi"}
                     </button>
                   </div>
                 </Panel>
@@ -286,11 +285,11 @@ export default function AiMarketingProviders() {
 
       <section className="mt-10">
         <SectionHeading
-          title="AI Routing"
-          description="Chooses the best model for each task automatically — quality, speed and cost, balanced."
+          title="Pembagian Tugas Otomatis (Routing)"
+          description="Menyesuaikan model terbaik untuk tiap jenis tugas secara seimbang antara kualitas, kecepatan, dan efisiensi biaya."
         />
         <div className="mb-4 rounded-sm border border-border bg-surface/40 px-4 py-3 text-xs text-muted-foreground">
-          Task-specific fallback tetap mengikuti urutan "Provider Preference" di atas apabila provider utama sedang rate-limited.
+          Jalur cadangan per tugas tetap mengikuti "Urutan Prioritas Provider" di atas apabila provider utama sedang melambat.
         </div>
         {routingQuery.isError ? (
           <QueryError message="Strategi routing gagal dimuat." onRetry={() => void routingQuery.refetch()} />
@@ -301,23 +300,23 @@ export default function AiMarketingProviders() {
             <Panel className="p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="label-eyebrow">Strategy</p>
+                  <p className="label-eyebrow">Strategi</p>
                   <p className="text-display mt-1 text-xl">{routing.name}</p>
                 </div>
                 <Pill tone={routing.automatic ? "success" : "neutral"}>
                   <StatusDot tone={routing.automatic ? "success" : "neutral"} pulse={routing.automatic} />
-                  {routing.automatic ? "Automatic" : "Manual"}
+                  {routing.automatic ? "Otomatis" : "Manual"}
                 </Pill>
               </div>
               <div className="mt-5 space-y-4">
-                <AnimatedBar label="Quality" value={routing.quality} tone="insight" />
-                <AnimatedBar label="Speed" value={routing.speed} tone="info" />
-                <AnimatedBar label="Cost efficiency" value={routing.costEfficiency} tone="success" />
+                <AnimatedBar label="Kualitas" value={routing.quality} tone="insight" />
+                <AnimatedBar label="Kecepatan" value={routing.speed} tone="info" />
+                <AnimatedBar label="Efisiensi Biaya" value={routing.costEfficiency} tone="success" />
               </div>
             </Panel>
 
             <Panel className="p-5">
-              <p className="label-eyebrow mb-3">How tasks get routed</p>
+              <p className="label-eyebrow mb-3">Pembagian model per jenis tugas</p>
               <div className="space-y-3">
                 {routing.taskRouting.map((t) => (
                   <div key={t.taskType} className="border-t border-border pt-3 first:border-t-0 first:pt-0">
@@ -334,6 +333,14 @@ export default function AiMarketingProviders() {
             </Panel>
           </div>
         )}
+        <details className="mt-6 rounded-md border border-border bg-secondary/40 px-4 py-3 text-xs text-muted-foreground">
+          <summary className="cursor-pointer font-medium text-foreground/85 select-none">
+            Info Teknis untuk Tim IT
+          </summary>
+          <p className="mt-2 leading-relaxed">
+            Kunci API provider (<code className="font-mono text-[11px]">GEMINI_API_KEY</code>, <code className="font-mono text-[11px]">GROQ_API_KEY</code>, <code className="font-mono text-[11px]">ANTHROPIC_API_KEY</code>) dikelola di sisi server pada file konfigurasi backend. Gunakan tombol <strong>Sinkronkan Provider</strong> di kanan atas setelah memperbarui konfigurasi server.
+          </p>
+        </details>
       </section>
     </>
   );

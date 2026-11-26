@@ -60,10 +60,17 @@ export function AdminDialogProvider({ children }: { children: ReactNode }) {
   const [active, setActive] = useState<Active | null>(null);
   const [value, setValue] = useState("");
   const resolver = useRef<((v: string | boolean | null) => void) | null>(null);
+  const activeKindRef = useRef<Active["kind"] | null>(null);
 
   const open = useCallback((a: Active, initial = "") => {
-    // Jika ada dialog lain yang masih terbuka, anggap dibatalkan.
-    resolver.current?.(a.kind === "confirm" ? false : null);
+    // Jika ada dialog lain yang masih terbuka, batalkan sesuai tipe dialog sebelumnya.
+    if (resolver.current) {
+      const prevKind = activeKindRef.current;
+      const prevResolve = resolver.current;
+      resolver.current = null;
+      prevResolve(prevKind === "confirm" ? false : null);
+    }
+    activeKindRef.current = a.kind;
     setValue(initial);
     setActive(a);
     return new Promise<string | boolean | null>((resolve) => {
@@ -74,6 +81,7 @@ export function AdminDialogProvider({ children }: { children: ReactNode }) {
   const finish = useCallback((v: string | boolean | null) => {
     const r = resolver.current;
     resolver.current = null;
+    activeKindRef.current = null;
     setActive(null);
     r?.(v);
   }, []);
@@ -107,22 +115,22 @@ export function AdminDialogProvider({ children }: { children: ReactNode }) {
           if (!o && active) finish(active.kind === "confirm" ? false : null);
         }}
       >
-        <AlertDialogContent className="max-w-md">
+        <AlertDialogContent className="max-w-md border-[#E6DFD4] bg-[#FFFFFF] shadow-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
+            <AlertDialogTitle className="flex items-center gap-2.5 text-[#232528]">
               {active?.danger && <AlertTriangle className="h-5 w-5 shrink-0 text-destructive" />}
-              <span className="serif text-xl font-normal">{active?.title}</span>
+              <span className="font-header text-xl font-normal tracking-tight">{active?.title}</span>
             </AlertDialogTitle>
             {active?.text ? (
               <AlertDialogDescription asChild>
-                <div className="text-sm text-muted-foreground">{active.text}</div>
+                <div className="pt-1 text-sm leading-relaxed text-[#656B73]">{active.text}</div>
               </AlertDialogDescription>
             ) : null}
           </AlertDialogHeader>
 
           {isPrompt && (
             <label className="block space-y-1.5">
-              <span className="text-xs text-muted-foreground">{(active as PromptOptions).label}</span>
+              <span className="text-xs font-medium text-[#656B73]">{(active as PromptOptions).label}</span>
               {(active as PromptOptions).multiline === false ? (
                 <input
                   autoFocus
@@ -132,7 +140,7 @@ export function AdminDialogProvider({ children }: { children: ReactNode }) {
                     if (e.key === "Enter" && canSubmit) finish(value.trim());
                   }}
                   placeholder={(active as PromptOptions).placeholder}
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-foreground"
+                  className="h-10 w-full rounded-lg border border-border bg-[#FAF8F4] px-3 text-sm text-[#232528] outline-none transition-colors focus:border-[#5E93B8] focus:bg-white focus:ring-2 focus:ring-[#5E93B8]/20"
                 />
               ) : (
                 <textarea
@@ -141,14 +149,16 @@ export function AdminDialogProvider({ children }: { children: ReactNode }) {
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
                   placeholder={(active as PromptOptions).placeholder}
-                  className="w-full rounded-lg border border-border bg-background p-3 text-sm outline-none transition-colors focus:border-foreground"
+                  className="w-full rounded-lg border border-border bg-[#FAF8F4] p-3 text-sm text-[#232528] outline-none transition-colors focus:border-[#5E93B8] focus:bg-white focus:ring-2 focus:ring-[#5E93B8]/20"
                 />
               )}
             </label>
           )}
 
           <AlertDialogFooter>
-            <AlertDialogCancel>{active?.cancelLabel ?? "Batal"}</AlertDialogCancel>
+            <AlertDialogCancel className="border-[#E6DFD4] text-[#232528] hover:bg-[#FAF8F4]">
+              {active?.cancelLabel ?? "Batal"}
+            </AlertDialogCancel>
             <AlertDialogAction
               disabled={!canSubmit}
               onClick={(e) => {
@@ -156,7 +166,11 @@ export function AdminDialogProvider({ children }: { children: ReactNode }) {
                 if (!canSubmit || !active) return;
                 finish(active.kind === "prompt" ? value.trim() : true);
               }}
-              className={cn(active?.danger && buttonVariants({ variant: "destructive" }))}
+              className={cn(
+                active?.danger
+                  ? buttonVariants({ variant: "destructive" })
+                  : "bg-[#232528] text-white hover:bg-[#34383D]",
+              )}
             >
               {active?.confirmLabel ?? (active?.danger ? "Ya, lanjutkan" : "Lanjutkan")}
             </AlertDialogAction>

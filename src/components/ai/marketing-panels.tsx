@@ -96,22 +96,31 @@ export function AdsKpiGrid() {
   const roiPct = k.roiPct ?? state.data.roiAttribution?.effectiveRoiPct ?? null;
   const kpis: StatKpi[] = [
     {
-      label: `Spend (${state.data.period.days}d)`,
+      label: `Biaya Iklan (${state.data.period.days} hr)`,
       value: money(k.spend, currency),
       ...(k.spend === 0 && (life?.spend ?? 0) > 0
-        ? { delta: `All-time: ${money(life?.spend, currency)}`, direction: "flat" as const }
+        ? { delta: `Sepanjang waktu: ${money(life?.spend, currency)}`, direction: "flat" as const }
         : {}),
     },
-    { label: "Leads (Ads + Funnel)", value: fmt(k.leads, 1) },
-    { label: "Cost per Lead", value: money(k.cpl, currency) },
+    { label: "Prospek (Iklan + Funnel)", value: fmt(k.leads, 1) },
     {
-      label: "Blended ROAS & ROI",
+      label: "Biaya per Prospek (CPL)",
+      value: money(k.cpl, currency),
+      hint: "Rata-rata biaya iklan untuk 1 calon klien",
+    },
+    {
+      label: "ROAS & ROI Gabungan",
       value: k.roas == null ? "—" : `${k.roas}x`,
+      hint: "Perbandingan hasil penjualan terhadap biaya iklan",
       ...(roiPct != null
         ? { delta: `ROI ${roiPct > 0 ? "+" : ""}${roiPct}%`, direction: roiPct >= 0 ? "up" : "down" }
         : {}),
     },
-    { label: "CTR", value: k.ctr == null ? "—" : `${k.ctr}%` },
+    {
+      label: "Rasio Klik (CTR)",
+      value: k.ctr == null ? "—" : `${k.ctr}%`,
+      hint: "Persentase orang yang mengklik iklan",
+    },
   ];
   return <>{kpis.map((kpi, i) => <StatCard key={kpi.label} kpi={kpi} index={i} />)}</>;
 }
@@ -404,7 +413,7 @@ const socialMeta: { key: ContentPlatformKey; icon: LucideIcon; label: string; co
   { key: "instagram", icon: Instagram, label: "Instagram", color: "hsl(var(--ai))" },
   { key: "facebook", icon: Facebook, label: "Facebook", color: "hsl(var(--info))" },
   { key: "tiktok", icon: Music2, label: "TikTok", color: "hsl(var(--warning))" },
-  { key: "youtube", icon: Youtube, label: "YouTube", color: "hsl(var(--danger))" },
+  { key: "youtube", icon: Youtube, label: "YouTube", color: "hsl(var(--destructive))" },
 ];
 
 function SocialRow({ icon: Icon, label, p }: { icon: LucideIcon; label: string; p?: ContentPlatform }) {
@@ -575,23 +584,12 @@ export function AdRoasKpiCard({ index = 5 }: { index?: number }) {
 
   if (roi) {
     const pipeVal = roi.totalAttributedValueRp ?? 0;
-    const kpi: AIKpi = {
-      id: "ads-roas-ready",
-      label: "ROAS & ROI (Boost)",
-      value: 0,
-      decimals: 2,
-      suffix: "x",
-      deltaLabel: "Input biaya Boost IG →",
-      deltaDirection: "flat",
-      spark: [],
-      footnote: pipeVal > 0 ? `Pipeline Rp ${fmt(pipeVal)} siap dihitung` : "Klik untuk kalkulator ROI Boost IG",
-      live: true,
-    };
     return (
       <KpiCard
         label="ROAS & ROI (Boost)"
         index={index}
-        state={{ status: "data", data: kpi, lastUpdatedAt: state.lastUpdatedAt, isRefreshing: state.isRefreshing, retry: state.retry }}
+        provider={pipeVal > 0 ? `Pipeline Rp ${fmt(pipeVal)} · catat biaya Boost untuk hitung ROAS` : "Catat biaya Boost IG"}
+        state={{ status: "empty", lastUpdatedAt: state.lastUpdatedAt, isRefreshing: state.isRefreshing, retry: state.retry }}
         href="/admin/ai-marketing/ads"
       />
     );

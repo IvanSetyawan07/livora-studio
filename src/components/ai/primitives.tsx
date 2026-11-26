@@ -265,7 +265,7 @@ export function CountUp({
   return (
     <span ref={ref} className={cn("num", className)}>
       {prefix}
-      {display.toLocaleString("en-US", {
+      {display.toLocaleString("id-ID", {
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals,
       })}

@@ -48,6 +48,8 @@ import {
   lookupCategoryThumbnail,
   matchesFallbackItemCategory,
 } from "@/lib/furnitureCategoryMedia";
+import { prefersReducedMotion } from "@/lib/motionTokens";
+import { scrollToTarget } from "@/components/SmoothScroll";
 
 type SortKey = "curated" | "newest" | "name_asc" | "name_desc";
 
@@ -92,6 +94,7 @@ const Furniture: React.FC = () => {
   const [sortBy, setSortBy] = useState<SortKey>("curated");
   const [columns, setColumns] = useState<GridColumns>(4);
   const [navbarHidden, setNavbarHidden] = useState(false);
+  const [barStuck, setBarStuck] = useState(false);
   const [shortlistOpen, setShortlistOpen] = useState(false);
   const [bannersStore, setBannersStore] = useState<Record<string, ThemeBanner[]>>(() =>
     getAllBannersList(),
@@ -100,6 +103,7 @@ const Furniture: React.FC = () => {
     Record<string, ThemeThumbnail>
   >({});
 
+  const stickySentinelRef = useRef<HTMLDivElement>(null);
   const catalogRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -132,7 +136,7 @@ const Furniture: React.FC = () => {
     };
   }, []);
 
-  // Sinkron posisi sticky filter bar dengan perilaku auto-hide/reveal Navbar saat scroll
+  // Sinkron posisi sticky filter bar dengan perilaku auto-hide/reveal Navbar saat scroll (GPU transform)
   useEffect(() => {
     let lastY = window.scrollY;
     const onScroll = () => {
@@ -145,6 +149,19 @@ const Furniture: React.FC = () => {
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const sentinel = stickySentinelRef.current;
+    if (!sentinel || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setBarStuck(!entry.isIntersecting);
+      },
+      { rootMargin: "-80px 0px 0px 0px", threshold: 0 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
   }, []);
 
   // Dengarkan event buka Shortlist Drawer dari Navbar & query ?shortlist=1
@@ -297,20 +314,21 @@ const Furniture: React.FC = () => {
     ];
   }, [activeCategory, activeCategoryName, searchQuery, bannersStore, thumbnailsStore]);
 
-  // Transisi grid halus berbasis GSAP saat filter / sort / densitas kolom berubah
+  // Transisi grid halus berbasis GSAP saat filter / sort / densitas kolom berubah (dibatasi total 0.22s & hormati reduced-motion)
   useEffect(() => {
-    if (loading || !gridRef.current) return;
+    if (loading || !gridRef.current || prefersReducedMotion()) return;
     const ctx = gsap.context(() => {
       const cards = gridRef.current?.querySelectorAll(".furniture-showcase-item");
       if (!cards || cards.length === 0) return;
+      const visibleBatch = Array.from(cards).slice(0, 20);
       gsap.fromTo(
-        cards,
-        { opacity: 0, y: 16 },
+        visibleBatch,
+        { opacity: 0, y: 14 },
         {
           opacity: 1,
           y: 0,
-          duration: 0.44,
-          stagger: 0.022,
+          duration: 0.38,
+          stagger: { amount: 0.2 },
           ease: "power3.out",
           clearProps: "transform,opacity",
         },
@@ -402,16 +420,21 @@ const Furniture: React.FC = () => {
         <FurnitureSkyHero
           activeCategoryLabel={activeCategoryName}
           totalCount={items.length}
-          onScrollToCatalog={() =>
-            catalogRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
-          }
+          onScrollToCatalog={() => {
+            if (catalogRef.current) {
+              scrollToTarget(catalogRef.current, { offset: -80 });
+            }
+          }}
         />
 
-        {/* B. STICKY FILTER, SEARCH & GRID DENSITY BAR */}
+        {/* Sentinel untuk deteksi sticky tanpa getBoundingClientRect di scroll */}
+        <div ref={stickySentinelRef} className="h-px w-full" aria-hidden />
+
+        {/* B. STICKY FILTER, SEARCH & GRID DENSITY BAR (GPU translateY, zero backdrop-blur) */}
         <div
           ref={catalogRef}
-          className={`sticky z-30 bg-[#F8F9FB]/92 backdrop-blur-md border-b border-[#0B426E]/10 transition-[top] duration-500 ${
-            navbarHidden ? "top-0" : "top-20"
+          className={`sticky top-0 z-30 bg-[#F8F9FB]/92 backdrop-blur-md border-b border-[#0B426E]/10 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform ${
+            barStuck && !navbarHidden ? "translate-y-20" : "translate-y-0"
           }`}
         >
           <div className="container-livora py-3.5 md:py-4">
@@ -421,7 +444,7 @@ const Furniture: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleSelectCategory("all")}
-                  className={`px-4 py-2 rounded-full text-[12.5px] tracking-[0.02em] transition-all duration-200 whitespace-nowrap shrink-0 ${
+                  className={`px-4 py-2 rounded-full text-[12.5px] tracking-[0.02em] transition-colors duration-200 whitespace-nowrap shrink-0 ${
                     activeCategory === "all"
                       ? "bg-[#0B426E] text-white font-medium"
                       : "bg-white border border-[#0B426E]/12 text-[#4B5E71] hover:border-[#1E88C7]/50 hover:text-[#0B426E]"
@@ -439,7 +462,7 @@ const Furniture: React.FC = () => {
                       key={cat.slug}
                       type="button"
                       onClick={() => handleSelectCategory(cat.slug)}
-                      className={`px-4 py-2 rounded-full text-[12.5px] tracking-[0.02em] transition-all duration-200 whitespace-nowrap shrink-0 ${
+                      className={`px-4 py-2 rounded-full text-[12.5px] tracking-[0.02em] transition-colors duration-200 whitespace-nowrap shrink-0 ${
                         active
                           ? "bg-[#0B426E] text-white font-medium"
                           : "bg-white border border-[#0B426E]/12 text-[#4B5E71] hover:border-[#1E88C7]/50 hover:text-[#0B426E]"
@@ -522,7 +545,7 @@ const Furniture: React.FC = () => {
                         onClick={() => setColumns(cols)}
                         aria-pressed={active}
                         title={`${cols} Kolom`}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] transition-all duration-200 whitespace-nowrap ${
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] transition-colors duration-200 whitespace-nowrap ${
                           active
                             ? "bg-[#0B426E] text-white font-medium"
                             : "text-[#4B5E71] hover:text-[#0B426E]"

@@ -35,6 +35,7 @@ import {
   ScrollTrigger,
   registerGsap,
   prefersReducedMotion,
+  scheduleScrollTriggerRefresh,
 } from "@/lib/motionTokens";
 
 import fallbackHeroImg from "@/assets/_opt/furniture-hompage-800.webp";
@@ -117,7 +118,7 @@ const PermanentCategoryPlate = ({
           className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#232528]/28 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100"
         />
 
-        <span className="pointer-events-none absolute bottom-3.5 right-3.5 inline-flex items-center gap-1.5 bg-[#232528] text-[#FAF8F4] px-3.5 py-1.5 text-[9px] uppercase tracking-[0.26em] opacity-0 translate-y-1.5 transition-all duration-400 group-hover:opacity-100 group-hover:translate-y-0">
+        <span className="pointer-events-none absolute bottom-3.5 right-3.5 inline-flex items-center gap-1.5 bg-[#232528] text-[#FAF8F4] px-3.5 py-1.5 text-[9px] uppercase tracking-[0.26em] opacity-0 translate-y-1.5 transition-[opacity,transform] duration-300 group-hover:opacity-100 group-hover:translate-y-0">
           Explore {category.name} <ArrowUpRight className="h-3 w-3" />
         </span>
       </Link>
@@ -164,9 +165,26 @@ export const Furniture = () => {
   const sectionRef = useRef<HTMLElement | null>(null);
   const fanStageRef = useRef<HTMLDivElement | null>(null);
   const fanRotorRef = useRef<HTMLDivElement | null>(null);
-  const scrollSpinRef = useRef(0);
+  const fanRectRef = useRef<DOMRect | null>(null);
+  const quickRotYRef = useRef<gsap.QuickToFunc | null>(null);
+  const quickRotXRef = useRef<gsap.QuickToFunc | null>(null);
+  const quickRotZRef = useRef<gsap.QuickToFunc | null>(null);
+  const scrollSpinRef = useRef(-24);
+  const autoSpinRef = useRef(0);
   const manualSpinRef = useRef(0);
   const hoverTiltRef = useRef({ rx: -8, rz: 0 });
+  const isFanVisibleRef = useRef(true);
+  const autoPauseUntilRef = useRef(0);
+  const suppressLeafClickRef = useRef(false);
+  const dragRef = useRef({
+    active: false,
+    pointerId: -1,
+    startX: 0,
+    lastX: 0,
+    moved: false,
+    velocity: 0,
+  });
+  const [isDraggingFan, setIsDraggingFan] = useState(false);
 
   const [apiTypes, setApiTypes] = useState<ApiFurnitureType[]>([]);
   const [bannersStore, setBannersStore] = useState<Record<string, ThemeBanner[]>>(() =>
@@ -373,23 +391,40 @@ export const Furniture = () => {
     return leaves;
   }, [newArrivals, activeArrivalIdx, activeHeroImg]);
 
+  const getTotalRotY = () =>
+    scrollSpinRef.current + autoSpinRef.current + manualSpinRef.current;
+
   const applyFanTransform = () => {
+    const totalY = getTotalRotY();
+    if (quickRotYRef.current && quickRotXRef.current && quickRotZRef.current) {
+      quickRotYRef.current(totalY);
+      quickRotXRef.current(hoverTiltRef.current.rx);
+      quickRotZRef.current(hoverTiltRef.current.rz);
+      return;
+    }
     const rotor = fanRotorRef.current;
-    if (!rotor) return;
-    const totalY = scrollSpinRef.current + manualSpinRef.current;
-    gsap.to(rotor, {
-      rotateY: totalY,
-      rotateX: hoverTiltRef.current.rx,
-      rotateZ: hoverTiltRef.current.rz,
-      duration: 0.7,
-      ease: "power3.out",
-      overwrite: "auto",
-    });
+    if (rotor) {
+      gsap.set(rotor, {
+        rotationY: totalY,
+        rotationX: hoverTiltRef.current.rx,
+        rotation: hoverTiltRef.current.rz,
+      });
+    }
   };
 
-  // GSAP Scroll-Linked 3D Fan Spin + Editorial Reveals
+  // Mount-once GSAP Effect: Header reveals + 360° Idle Spin + Scroll-Spin + Drag-Ready quickTo
   useLayoutEffect(() => {
-    if (prefersReducedMotion() || typeof window === "undefined") return;
+    if (typeof window === "undefined") return;
+    const rotor = fanRotorRef.current;
+    if (rotor) {
+      gsap.set(rotor, {
+        rotationX: hoverTiltRef.current.rx,
+        rotationY: getTotalRotY(),
+        rotation: hoverTiltRef.current.rz,
+      });
+    }
+
+    if (prefersReducedMotion()) return;
     registerGsap();
     const section = sectionRef.current;
     if (!section) return;
@@ -408,76 +443,254 @@ export const Furniture = () => {
         },
       );
 
-      // Scroll-scrubbed 3D Fan rotation (spins smoothly through 180deg as you scroll past!)
       if (fanStageRef.current && fanRotorRef.current) {
+        const targetRotor = fanRotorRef.current;
+        // GSAP quickTo requires canonical transform property names (rotationY / rotationX / rotation)
+        quickRotYRef.current = gsap.quickTo(targetRotor, "rotationY", {
+          duration: 0.45,
+          ease: "power3.out",
+        });
+        quickRotXRef.current = gsap.quickTo(targetRotor, "rotationX", {
+          duration: 0.45,
+          ease: "power3.out",
+        });
+        quickRotZRef.current = gsap.quickTo(targetRotor, "rotation", {
+          duration: 0.45,
+          ease: "power3.out",
+        });
+
         ScrollTrigger.create({
           trigger: fanStageRef.current,
           start: "top bottom",
           end: "bottom top",
-          scrub: 0.3,
+          scrub: true,
           onUpdate: (self) => {
-            scrollSpinRef.current = -24 + self.progress * 165;
-            const rotor = fanRotorRef.current;
-            if (rotor) {
-              gsap.set(rotor, {
-                rotateY: scrollSpinRef.current + manualSpinRef.current,
-                rotateX: hoverTiltRef.current.rx,
-                rotateZ: hoverTiltRef.current.rz,
-              });
-            }
+            // Smooth full 360° sweep as you scroll past the stage
+            scrollSpinRef.current = -24 - self.progress * 360;
+            quickRotYRef.current?.(getTotalRotY());
           },
         });
       }
+    }, section);
 
-      // Staggered entrance for Permanent Gallery plates
-      const plates = section.querySelectorAll<HTMLElement>("[data-perm-plate]");
+    // Gentle continuous 360° turntable rotation even when not scrolling (pauses off-screen & while dragging)
+    const tickAutoSpin = (_time: number, deltaTime: number) => {
+      if (!isFanVisibleRef.current) return;
+      if (dragRef.current.active) return;
+      if (performance.now() < autoPauseUntilRef.current) return;
+      const dt = Math.min(deltaTime, 50) / 1000;
+      autoSpinRef.current -= dt * 9;
+      quickRotYRef.current?.(getTotalRotY());
+    };
+    gsap.ticker.add(tickAutoSpin);
+
+    let observer: IntersectionObserver | null = null;
+    if (fanStageRef.current && typeof IntersectionObserver !== "undefined") {
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          isFanVisibleRef.current = entry.isIntersecting;
+        },
+        { threshold: 0.01 },
+      );
+      observer.observe(fanStageRef.current);
+    }
+
+    const onResize = () => {
+      fanRectRef.current = null;
+    };
+    window.addEventListener("resize", onResize, { passive: true });
+    scheduleScrollTriggerRefresh();
+
+    return () => {
+      gsap.ticker.remove(tickAutoSpin);
+      observer?.disconnect();
+      window.removeEventListener("resize", onResize);
+      quickRotYRef.current = null;
+      quickRotXRef.current = null;
+      quickRotZRef.current = null;
+      ctx.revert();
+    };
+  }, []);
+
+  // Batched Permanent Gallery plate entrance (re-runs only if category count changes)
+  useLayoutEffect(() => {
+    if (prefersReducedMotion() || typeof window === "undefined") return;
+    registerGsap();
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const ctx = gsap.context(() => {
+      const plates = gsap.utils.toArray<HTMLElement>("[data-perm-plate]", section);
       if (plates.length) {
-        gsap.fromTo(
-          plates,
-          { opacity: 0, y: 34 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.9,
-            stagger: 0.1,
-            ease: "expo.out",
-            scrollTrigger: { trigger: plates[0], start: "top 86%", once: true },
+        gsap.set(plates, { opacity: 0, y: 30 });
+        ScrollTrigger.batch(plates, {
+          start: "top 88%",
+          once: true,
+          onEnter: (batch) => {
+            gsap.to(batch, {
+              opacity: 1,
+              y: 0,
+              duration: 0.85,
+              stagger: 0.09,
+              ease: "expo.out",
+              clearProps: "transform",
+            });
           },
-        );
+        });
       }
     }, section);
 
-    const tId = setTimeout(() => ScrollTrigger.refresh(), 120);
-    return () => {
-      clearTimeout(tId);
-      ctx.revert();
-    };
-  }, [allItems.length, permanentCategories.length]);
+    scheduleScrollTriggerRefresh();
+    return () => ctx.revert();
+  }, [permanentCategories.length]);
 
-  const selectArrival = (nextIdx: number) => {
+  const syncActivePieceFromAngle = (angleY: number) => {
     if (!newArrivals.length) return;
-    const clamped = (nextIdx + newArrivals.length) % newArrivals.length;
-    setActiveArrivalIdx(clamped);
-    // Smoothly turn the 3D fan so the chosen leaf faces forward
-    manualSpinRef.current = -clamped * 45;
+    const normalized = (((-angleY) % 360) + 360) % 360;
+    const frontLeafIdx = Math.round(normalized / 45) % 8;
+    setActiveArrivalIdx(frontLeafIdx % newArrivals.length);
+  };
+
+  // Continuous 360° step for ← / → arrows (never rewinds!)
+  const stepArrival = (direction: 1 | -1) => {
+    if (!newArrivals.length) return;
+    const stepDeg = 360 / Math.max(1, fanLeaves.length || 8);
+    setActiveArrivalIdx(
+      (prev) => (prev + direction + newArrivals.length) % newArrivals.length,
+    );
+    manualSpinRef.current -= direction * stepDeg;
+    autoPauseUntilRef.current = performance.now() + 1200;
     applyFanTransform();
   };
 
+  // Shortest-arc 360° turn when clicking a specific leaf or bottom index item (never rewinds!)
+  const selectArrival = (nextIdx: number, specificLeafAngle?: number) => {
+    if (!newArrivals.length) return;
+    if (suppressLeafClickRef.current) return;
+    const clamped = (nextIdx + newArrivals.length) % newArrivals.length;
+    setActiveArrivalIdx(clamped);
+
+    const currentY = getTotalRotY();
+    const candidateAngles =
+      specificLeafAngle !== undefined
+        ? [specificLeafAngle]
+        : fanLeaves
+            .filter((leaf) => leaf.pieceIdx === clamped)
+            .map((leaf) => leaf.angle);
+
+    if (candidateAngles.length > 0) {
+      let bestDelta = Infinity;
+      for (const angle of candidateAngles) {
+        const targetY = -angle;
+        const delta = ((((targetY - currentY) % 360) + 540) % 360) - 180;
+        if (Math.abs(delta) < Math.abs(bestDelta)) {
+          bestDelta = delta;
+        }
+      }
+      if (Number.isFinite(bestDelta)) {
+        manualSpinRef.current += bestDelta;
+      }
+    }
+
+    autoPauseUntilRef.current = performance.now() + 1200;
+    applyFanTransform();
+  };
+
+  const handleFanPointerEnter = (e: React.PointerEvent<HTMLDivElement>) => {
+    fanRectRef.current = e.currentTarget.getBoundingClientRect();
+  };
+
+  const handleFanPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    fanRectRef.current = e.currentTarget.getBoundingClientRect();
+    dragRef.current = {
+      active: true,
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      lastX: e.clientX,
+      moved: false,
+      velocity: 0,
+    };
+    suppressLeafClickRef.current = false;
+  };
+
   const handleFanPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (dragRef.current.active && dragRef.current.pointerId === e.pointerId) {
+      const dx = e.clientX - dragRef.current.lastX;
+      dragRef.current.lastX = e.clientX;
+      if (!dragRef.current.moved && Math.abs(e.clientX - dragRef.current.startX) > 5) {
+        dragRef.current.moved = true;
+        suppressLeafClickRef.current = true;
+        setIsDraggingFan(true);
+        try {
+          e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+          // ignore if pointer already released
+        }
+      }
+      if (dragRef.current.moved) {
+        const deltaDeg = dx * 0.45;
+        dragRef.current.velocity = deltaDeg;
+        manualSpinRef.current += deltaDeg;
+        applyFanTransform();
+        return;
+      }
+    }
+
     if (prefersReducedMotion()) return;
-    const rect = e.currentTarget.getBoundingClientRect();
+    const rect =
+      fanRectRef.current ??
+      (fanRectRef.current = e.currentTarget.getBoundingClientRect());
+    if (!rect.width || !rect.height) return;
     const nx = (e.clientX - rect.left) / rect.width - 0.5;
     const ny = (e.clientY - rect.top) / rect.height - 0.5;
     hoverTiltRef.current = {
       rx: -8 - ny * 10,
       rz: nx * 3.5,
     };
-    applyFanTransform();
+    quickRotXRef.current?.(hoverTiltRef.current.rx);
+    quickRotZRef.current?.(hoverTiltRef.current.rz);
+  };
+
+  const finishFanDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current.active || dragRef.current.pointerId !== e.pointerId) return;
+    const wasMoved = dragRef.current.moved;
+    const vel = dragRef.current.velocity;
+    dragRef.current.active = false;
+    dragRef.current.pointerId = -1;
+    dragRef.current.moved = false;
+    dragRef.current.velocity = 0;
+    setIsDraggingFan(false);
+
+    if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        // ignore
+      }
+    }
+
+    if (wasMoved) {
+      // Smooth inertial glide after releasing drag
+      const glide = Math.max(-75, Math.min(75, vel * 6.5));
+      manualSpinRef.current += glide;
+      autoPauseUntilRef.current = performance.now() + 900;
+      applyFanTransform();
+      syncActivePieceFromAngle(getTotalRotY());
+      window.setTimeout(() => {
+        suppressLeafClickRef.current = false;
+      }, 60);
+    }
   };
 
   const handleFanPointerLeave = () => {
+    if (dragRef.current.active && dragRef.current.moved) return;
+    dragRef.current.active = false;
+    dragRef.current.pointerId = -1;
+    fanRectRef.current = null;
     hoverTiltRef.current = { rx: -8, rz: 0 };
-    applyFanTransform();
+    quickRotXRef.current?.(-8);
+    quickRotZRef.current?.(0);
   };
 
   const row1Categories = permanentCategories.slice(0, 3);
@@ -574,7 +787,7 @@ export const Furniture = () => {
                             onClick={() => setActiveVariantIdx(idx)}
                             title={getVariantDisplayLabel(v) || v.variant_name}
                             aria-label={`Select ${getVariantDisplayLabel(v) || v.variant_name}`}
-                            className={`h-5 w-5 rounded-full border transition-all duration-200 ${
+                            className={`h-5 w-5 rounded-full border transition-transform duration-200 ${
                               isSelected
                                 ? "ring-2 ring-[#232528] ring-offset-2 ring-offset-[#FAF8F4] border-white scale-105"
                                 : "border-black/15 hover:scale-110"
@@ -620,7 +833,7 @@ export const Furniture = () => {
                     <div className="ml-auto flex items-center gap-1.5">
                       <button
                         type="button"
-                        onClick={() => selectArrival(activeArrivalIdx - 1)}
+                        onClick={() => stepArrival(-1)}
                         aria-label="Spin previous new arrival"
                         className="h-9 w-9 border border-[#232528]/18 bg-white text-[#232528] flex items-center justify-center hover:bg-[#232528] hover:text-white transition-colors"
                       >
@@ -628,7 +841,7 @@ export const Furniture = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => selectArrival(activeArrivalIdx + 1)}
+                        onClick={() => stepArrival(1)}
                         aria-label="Spin next new arrival"
                         className="h-9 w-9 border border-[#232528]/18 bg-white text-[#232528] flex items-center justify-center hover:bg-[#232528] hover:text-white transition-colors"
                       >
@@ -645,9 +858,15 @@ export const Furniture = () => {
           <div className="lg:col-span-7 order-1 lg:order-2">
             {/* Desktop / Tablet 3D Radial Spine Fan */}
             <div
+              onPointerEnter={handleFanPointerEnter}
+              onPointerDown={handleFanPointerDown}
               onPointerMove={handleFanPointerMove}
+              onPointerUp={finishFanDrag}
+              onPointerCancel={finishFanDrag}
               onPointerLeave={handleFanPointerLeave}
-              className="hidden sm:flex relative h-[430px] lg:h-[520px] w-full items-center justify-center select-none"
+              className={`hidden sm:flex relative h-[430px] lg:h-[520px] w-full items-center justify-center select-none touch-pan-y ${
+                isDraggingFan ? "cursor-grabbing" : "cursor-grab"
+              }`}
               style={{ perspective: "1450px" }}
             >
               {/* Subtle soft floor reflection shadow beneath floating 3D fan */}
@@ -660,21 +879,14 @@ export const Furniture = () => {
                 }}
               />
 
-              {/* Central 3D Hub — all pages radiate outward from the exact spine */}
+              {/* Central 3D Hub — all pages radiate smoothly from the central axis */}
               <div
                 ref={fanRotorRef}
                 className="relative w-0 h-0 will-change-transform"
                 style={{
                   transformStyle: "preserve-3d",
-                  transform: "rotateX(-8deg) rotateY(-24deg)",
                 }}
               >
-                {/* Thin vertical spine line */}
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute -top-[140px] left-0 h-[280px] w-[2px] -translate-x-1/2 bg-[#232528]/15"
-                />
-
                 {fanLeaves.map((leaf, i) => {
                   const isActiveLeaf =
                     leaf.pieceIdx === activeArrivalIdx && i < newArrivals.length;
@@ -682,18 +894,19 @@ export const Furniture = () => {
                     <button
                       key={leaf.key}
                       type="button"
-                      onClick={() => selectArrival(leaf.pieceIdx)}
+                      onClick={() => selectArrival(leaf.pieceIdx, leaf.angle)}
                       aria-label={`View ${leaf.piece.name}`}
                       style={{
                         transformStyle: "preserve-3d",
                         transformOrigin: "left center",
-                        transform: `translateY(-50%) rotateY(${leaf.angle}deg) translateX(8px)`,
+                        transform: `translateY(-50%) rotateY(${leaf.angle}deg) translateX(1.5px)`,
                         backfaceVisibility: "visible",
+                        outline: "1px solid transparent",
                       }}
-                      className={`group absolute top-0 left-0 w-[200px] md:w-[235px] xl:w-[265px] aspect-[4/3.1] bg-white border transition-colors duration-300 focus:outline-none ${
+                      className={`group absolute top-0 left-0 w-[200px] md:w-[235px] xl:w-[265px] aspect-[4/3.1] rounded-[2px] bg-white border transition-colors duration-300 focus:outline-none ${
                         isActiveLeaf
-                          ? "border-[#5E93B8]/70 shadow-[0_24px_48px_-20px_rgba(35,37,40,0.28)]"
-                          : "border-[#232528]/12 shadow-[0_18px_38px_-22px_rgba(35,37,40,0.22)] hover:border-[#5E93B8]/50"
+                          ? "border-[#5E93B8]/55 shadow-[0_24px_48px_-20px_rgba(35,37,40,0.24)]"
+                          : "border-[#232528]/8 shadow-[0_18px_38px_-22px_rgba(35,37,40,0.18)] hover:border-[#5E93B8]/45"
                       }`}
                     >
                       <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-white via-[#FAF8F4] to-[#F1EFEA] p-3.5 sm:p-4 flex items-center justify-center">
@@ -702,7 +915,8 @@ export const Furniture = () => {
                           alt={leaf.piece.name}
                           loading="eager"
                           decoding="async"
-                          className="h-full w-full object-contain drop-shadow-[0_10px_18px_rgba(35,37,40,0.08)]"
+                          draggable={false}
+                          className="h-full w-full object-contain drop-shadow-[0_10px_18px_rgba(35,37,40,0.08)] pointer-events-none"
                         />
                         <span className="pointer-events-none absolute bottom-2 left-2.5 text-[8px] font-mono uppercase tracking-[0.2em] text-[#656B73]/80">
                           [{String(leaf.pieceIdx + 1).padStart(2, "0")}]{" "}
@@ -715,7 +929,7 @@ export const Furniture = () => {
               </div>
 
               <span className="pointer-events-none absolute bottom-2 right-4 text-[10px] uppercase tracking-[0.28em] text-[#656B73]/75">
-                Scroll or click leaf to turn
+                Drag, scroll or click leaf to turn
               </span>
             </div>
 
@@ -753,7 +967,7 @@ export const Furniture = () => {
                     key={piece.slug}
                     type="button"
                     onClick={() => selectArrival(idx)}
-                    className={`shrink-0 inline-flex items-baseline gap-2.5 pb-1.5 border-b transition-all duration-300 ${
+                    className={`shrink-0 inline-flex items-baseline gap-2.5 pb-1.5 border-b transition-colors duration-300 ${
                       isAct
                         ? "border-[#232528] text-[#232528]"
                         : "border-transparent text-[#656B73]/75 hover:text-[#232528]"

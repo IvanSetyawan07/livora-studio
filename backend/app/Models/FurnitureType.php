@@ -4,6 +4,6 @@ use Illuminate\Database\Eloquent\Model;
 class FurnitureType extends Model {
     use \App\Models\Concerns\HasTranslations;
     public array $translatable = ['name'];
-    protected $fillable = ['name','slug'];
+    protected $fillable = ['name', 'slug', 'image'];
     public function items(){ return $this->hasMany(Item::class, 'type_id'); }
 }

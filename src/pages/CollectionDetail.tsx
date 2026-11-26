@@ -105,17 +105,19 @@ export default function CollectionDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen flex flex-col bg-background">
         <Navbar />
-        <div className="pt-40 text-center text-sm text-muted-foreground">Loading…</div>
+        <div className="flex-1 pt-40 pb-20 text-center text-sm text-muted-foreground">Loading…</div>
+        <Footer />
       </div>
     );
   }
   if (!collection) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen flex flex-col bg-background">
         <Navbar />
-        <div className="pt-40 text-center text-sm text-muted-foreground">Collection not found.</div>
+        <div className="flex-1 pt-40 pb-20 text-center text-sm text-muted-foreground">Collection not found.</div>
+        <Footer />
       </div>
     );
   }

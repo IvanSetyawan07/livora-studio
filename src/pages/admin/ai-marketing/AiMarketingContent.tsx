@@ -38,6 +38,7 @@ import {
   useUpdateContentDraft,
 } from "@/hooks/useAiDashboard";
 import { useAiMarketingContext, usePageContext } from "@/context/AiMarketingContext";
+import { useAdminDialog } from "@/components/admin/kit";
 import { ContentKpiGrid, EngagementTrendPanel, SocialPerformanceRows } from "@/components/ai/marketing-panels";
 import { ContentInspirationPanel } from "@/components/ai/content-inspiration";
 import type { AiContentDraftItem, MetaConnectionState } from "@/lib/ai/types";
@@ -177,6 +178,7 @@ function toDatetimeLocalValue(iso?: string | null): string {
 
 export default function ContentAgentPage() {
   usePageContext("content");
+  const dialog = useAdminDialog();
   const navigate = useNavigate();
   const { dateRange } = useAiMarketingContext();
   const { agent, isLoading: agentLoading } = useAgent("content");
@@ -304,6 +306,15 @@ export default function ContentAgentPage() {
   }
 
   async function handleDeleteDraft(id: string) {
+    const target = queue.find((q) => q.id === id);
+    const ok = await dialog.confirm({
+      title: "Hapus Draft Konten?",
+      description: `Draft "${target?.title ?? "ini"}" akan dihapus permanen dari Content Queue.`,
+      confirmText: "Ya, Hapus",
+      cancelText: "Batal",
+      tone: "danger",
+    });
+    if (!ok) return;
     setBusyDraftId(id);
     try {
       await deleteDraft.mutateAsync(id);
@@ -514,7 +525,7 @@ export default function ContentAgentPage() {
       </section>
 
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
-        <DialogContent className="border-border-strong bg-popover text-foreground sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-y-auto border-border-strong bg-popover text-foreground sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-display text-lg">Buat Draft Konten Baru</DialogTitle>
             <DialogDescription>Tambahkan ide konten baru untuk dijadwalkan atau diolah lewat Email Studio.</DialogDescription>
@@ -603,7 +614,7 @@ export default function ContentAgentPage() {
       </Dialog>
 
       <Dialog open={!!editingDraft} onOpenChange={(o) => !o && setEditingDraft(null)}>
-        <DialogContent className="border-border-strong bg-popover text-foreground sm:max-w-xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto border-border-strong bg-popover text-foreground sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="text-display text-lg">Edit & Jadwalkan Draft</DialogTitle>
             <DialogDescription>Perbarui copy, status review, atau jadwal publikasi konten.</DialogDescription>
@@ -703,8 +714,8 @@ export default function ContentAgentPage() {
 
       <section className="mt-10">
         <SectionHeading
-          title="Kredensial yang dibutuhkan"
-          description="Isi di backend/.env lalu jalankan php artisan config:clear."
+          title="Sambungan Akun Sosial Media"
+          description="Status koneksi Instagram, Facebook, TikTok, dan YouTube. Detail teknis untuk Tim IT ada di dalam kartu."
         />
         <div className="grid gap-4 lg:grid-cols-2">
           <MetaConnectionCard />

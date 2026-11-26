@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -33,37 +33,44 @@ export function DebouncedSearchInput({
 }) {
   const [text, setText] = useState(value ?? "");
   const debounced = useDebouncedValue(text, delay);
+  const lastEmitted = useRef(value ?? "");
 
   useEffect(() => {
-    if (debounced !== (value ?? "")) onSearch(debounced);
+    if (debounced !== lastEmitted.current) {
+      lastEmitted.current = debounced;
+      onSearch(debounced);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debounced]);
 
-  // Sinkron jika nilai di-reset dari luar.
+  // Sinkron penuh ketika nilai diubah dari luar (reset, pilih preset, ubah URL, dll).
   useEffect(() => {
-    if (value !== undefined && value !== text && value === "") setText("");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (value !== undefined && value !== lastEmitted.current) {
+      lastEmitted.current = value;
+      setText(value);
+    }
   }, [value]);
 
   return (
     <label className={cn("group relative block", className)}>
-      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-foreground" />
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#656B73] transition-colors group-focus-within:text-[#232528]" />
       <input
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={placeholder}
         aria-label={ariaLabel ?? placeholder}
-        className="h-10 w-full rounded-lg border border-border bg-card pl-9 pr-9 text-sm outline-none transition-all placeholder:text-muted-foreground/70 focus:border-foreground/40 focus:ring-2 focus:ring-foreground/5"
+        className="h-10 w-full rounded-lg border border-[#E5DFD5] bg-white pl-9 pr-9 text-sm text-[#232528] outline-none transition-all placeholder:text-[#656B73]/70 focus:border-[#5E93B8] focus:ring-2 focus:ring-[#5E93B8]/15"
       />
       {text && (
         <button
           type="button"
           onClick={() => {
+            lastEmitted.current = "";
             setText("");
             onSearch("");
           }}
           aria-label="Hapus pencarian"
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[#656B73] hover:text-[#232528]"
         >
           <X className="h-4 w-4" />
         </button>

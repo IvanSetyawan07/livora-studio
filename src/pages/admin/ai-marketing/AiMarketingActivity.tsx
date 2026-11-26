@@ -11,12 +11,12 @@ import { cn } from "@/lib/utils";
 
 const agentFilters: (AIAgentId | "all")[] = ["all", "seo", "content", "ads", "leads", "cro"];
 const kindFilters: { key: AIActivity["kind"] | "all"; label: string }[] = [
-  { key: "all", label: "All kinds" },
-  { key: "agent_run", label: "Agent Runs" },
-  { key: "insight", label: "Insights" },
-  { key: "approval", label: "Approvals" },
-  { key: "action", label: "Actions" },
-  { key: "alert", label: "Alerts" },
+  { key: "all", label: "Semua Jenis" },
+  { key: "agent_run", label: "Siklus Agen" },
+  { key: "insight", label: "Temuan AI" },
+  { key: "approval", label: "Persetujuan" },
+  { key: "action", label: "Tindakan" },
+  { key: "alert", label: "Peringatan" },
 ];
 
 export default function ActivityPage() {
@@ -41,9 +41,9 @@ export default function ActivityPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Governance"
-        title="Activity"
-        description="Klik baris mana pun untuk langsung membuka halaman atau fitur yang terkait dengan aktivitas AI."
+        eyebrow="Tata Kelola AI"
+        title="Log Aktivitas"
+        description="Riwayat lengkap pemindaian agen, temuan, dan persetujuan admin. Klik baris mana pun untuk membuka halaman terkait."
         action={
           unreadCount > 0 ? (
             <button
@@ -76,7 +76,7 @@ export default function ActivityPage() {
                   : "border-border text-muted-foreground hover:text-foreground",
               )}
             >
-              {f === "all" ? "All agents" : f}
+              {f === "all" ? "Semua Agen" : f}
             </button>
           ))}
         </div>

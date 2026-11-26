@@ -30,6 +30,7 @@ import { Panel, Pill, Reveal, SectionHeading, Sparkline, StatusDot } from "@/com
 import { SectionNotice } from "@/components/ai/section-state";
 import { typeMeta } from "@/components/ai/insight-card";
 import { useAiMarketingContext, usePageContext } from "@/context/AiMarketingContext";
+import { useAdminDialog } from "@/components/admin/kit";
 import { useSectionState } from "@/hooks/useSectionState";
 import { AdRoasKpiCard, AvgEngagementKpiCard, PerformanceOverviewPanel, SocialPerformanceRows } from "@/components/ai/marketing-panels";
 import {
@@ -179,6 +180,7 @@ function AdPlatformRow({ platform, campaigns }: { platform: string; campaigns: C
 
 export default function AiMarketingOverview() {
   usePageContext("overview");
+  const dialog = useAdminDialog();
   const qc = useQueryClient();
   const { dateRange, openAsk } = useAiMarketingContext();
 
@@ -527,7 +529,16 @@ export default function AiMarketingOverview() {
                           </div>
                           <button
                             type="button"
-                            onClick={() => deleteRule.mutate(r.id)}
+                            onClick={async () => {
+                              const ok = await dialog.confirm({
+                                title: "Hapus Aturan Strategi AI?",
+                                description: `Aturan "${r.rule}" akan dihapus dari memori pembelajaran AI.`,
+                                confirmText: "Ya, Hapus",
+                                cancelText: "Batal",
+                                tone: "danger",
+                              });
+                              if (ok) deleteRule.mutate(r.id);
+                            }}
                             className="shrink-0 text-muted-foreground hover:text-destructive"
                             title="Hapus aturan"
                           >

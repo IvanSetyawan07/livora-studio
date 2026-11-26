@@ -34,6 +34,7 @@ import {
 } from "@/hooks/useAiDashboard";
 import { LocalSeoSection } from "./AiMarketingSeoLocal";
 import { useAiMarketingContext, usePageContext } from "@/context/AiMarketingContext";
+import { useAdminDialog } from "@/components/admin/kit";
 import type { AIInsight, AISeverity } from "@/lib/ai/types";
 
 /**
@@ -73,6 +74,7 @@ const googleCallbackMessage: Record<string, { tone: "success" | "danger"; text: 
  * punya useState/useEffect sendiri sehingga halaman lain jadi basi.
  */
 function GoogleSearchConsoleCard() {
+  const dialog = useAdminDialog();
   const [searchParams, setSearchParams] = useSearchParams();
   const [callbackResult] = useState(() => searchParams.get("google"));
   const { data: status, isLoading: loading } = useGoogleIntegrationStatus();
@@ -96,11 +98,21 @@ function GoogleSearchConsoleCard() {
       onError: (e) => toast.error(extractApiErrorMessage(e, "Gagal mengambil authorize URL Google.")),
     });
 
-  const handleDisconnect = () =>
+  const handleDisconnect = async () => {
+    const ok = await dialog.confirm({
+      title: "Putuskan Sambungan Google Search Console?",
+      description:
+        "Data klik organik, kata kunci pencarian, dan Google Analytics (bila terhubung di akun yang sama) akan berhenti diperbarui sampai disambungkan kembali.",
+      confirmText: "Ya, Putuskan",
+      cancelText: "Batal",
+      tone: "danger",
+    });
+    if (!ok) return;
     disconnect.mutate(undefined, {
       onSuccess: () => toast.success("Google Search Console berhasil diputus."),
       onError: (e) => toast.error(extractApiErrorMessage(e, "Gagal memutus koneksi Google.")),
     });
+  };
 
   const sites = sitesQuery.data?.sites ?? [];
 
@@ -227,28 +239,26 @@ function KpiCard({
 }
 
 function SeoKpiCards() {
+  const { dateRange } = useAiMarketingContext();
   const { data, isLoading, isError } = useSearchConsoleSummary();
 
-  // Catatan "kenapa": kita TIDAK menampilkan angka apapun kalau datanya tidak
-  // ada. Lebih baik kartu kosong dengan alasan yang jelas daripada angka nol
-  // yang terlihat seperti data asli.
   const note = isLoading
-    ? "Loading Search Console…"
+    ? "Memuat Search Console…"
     : isError
       ? "Gagal memuat data Search Console"
       : !data?.connected
-        ? "Search Console not connected"
+        ? "Search Console belum terhubung"
         : !data.hasData
-          ? "Connected · belum ada data 28 hari terakhir"
-          : `Last 28 days · ${data.siteUrl ?? ""}`;
+          ? `Terhubung · belum ada data ${dateRange.days} hari terakhir`
+          : `${dateRange.days} hari terakhir · ${data.siteUrl ?? ""}`;
 
   const totals = data?.hasData ? data.totals : null;
 
   const cards: { label: string; value: string | null }[] = [
-    { label: "Organic clicks", value: totals ? totals.clicks.toLocaleString() : null },
-    { label: "Impressions", value: totals ? totals.impressions.toLocaleString() : null },
-    { label: "Average position", value: totals ? totals.position.toFixed(1) : null },
-    { label: "CTR", value: totals ? `${totals.ctr.toFixed(2)}%` : null },
+    { label: "Klik Organik", value: totals ? totals.clicks.toLocaleString("id-ID") : null },
+    { label: "Tayangan (Impressions)", value: totals ? totals.impressions.toLocaleString("id-ID") : null },
+    { label: "Posisi Rata-Rata", value: totals ? totals.position.toFixed(1) : null },
+    { label: "Rasio Klik (CTR)", value: totals ? `${totals.ctr.toFixed(2)}%` : null },
   ];
 
   return (
@@ -440,23 +450,6 @@ export default function SeoAgentPage() {
               </table>
             </div>
           )}
-        </Panel>
-      </section>
-
-      <section className="mt-10 grid gap-4 lg:grid-cols-2">
-        <Panel className="p-6">
-          <SectionHeading title="Content opportunities" />
-          <NotConnected
-            title="Content gap analysis belum dipisah dari insight umum"
-            description="Untuk sekarang temuan content gap ikut muncul di tabel AI opportunities di atas."
-          />
-        </Panel>
-        <Panel className="p-6">
-          <SectionHeading title="Technical issues" />
-          <NotConnected
-            title="Site crawl is not scheduled yet"
-            description="The Laravel backend will run the crawl and pass structured findings to the SEO Agent for reasoning."
-          />
         </Panel>
       </section>
 

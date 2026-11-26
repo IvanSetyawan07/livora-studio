@@ -22,16 +22,9 @@ export default function HeroPreloader() {
   const [textExit, setTextExit] = useState(false);
 
   useEffect(() => {
-    setVisible(true);
-    setFading(false);
-    setTextExit(false);
-
-    const tIn = setTimeout(() => setTextVisible(true), 40);
-
-    let cancelled = false;
-    const start = performance.now();
-    const MIN_MS = 450; // transisi dipercepat agar hero cepat tampil & LCP rendah
-    const MAX_MS = 1350; // hard cap – jangan pernah stuck
+    const reducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const notifyReady = () => {
       if (preloaderDone) return;
@@ -44,6 +37,26 @@ export default function HeroPreloader() {
       window.dispatchEvent(new Event(PRELOADER_READY_EVENT));
     };
 
+    if (reducedMotion) {
+      setVisible(false);
+      notifyReady();
+      return;
+    }
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    setVisible(true);
+    setFading(false);
+    setTextExit(false);
+
+    const tIn = setTimeout(() => setTextVisible(true), 40);
+
+    let cancelled = false;
+    const start = performance.now();
+    const MIN_MS = 450; // transisi dipercepat agar hero cepat tampil & LCP rendah
+    const MAX_MS = 1350; // hard cap – jangan pernah stuck
+
     const ready = () => {
       if (cancelled) return;
       const elapsed = performance.now() - start;
@@ -54,6 +67,7 @@ export default function HeroPreloader() {
         setTimeout(() => {
           if (cancelled) return;
           setFading(true);
+          document.body.style.overflow = prevOverflow;
           notifyReady();
           setTimeout(() => !cancelled && setVisible(false), 320);
         }, 260);
@@ -87,6 +101,7 @@ export default function HeroPreloader() {
     return () => {
       cancelled = true;
       clearTimeout(tIn);
+      document.body.style.overflow = prevOverflow;
     };
   }, []); // cuma jalan sekali saat pertama kali app di-load, bukan tiap ganti halaman
 

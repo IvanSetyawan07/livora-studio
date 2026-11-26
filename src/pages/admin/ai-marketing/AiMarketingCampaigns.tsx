@@ -120,6 +120,10 @@ export default function AiMarketingCampaigns() {
         }
       />
 
+      <div className="mb-5 rounded-xl border border-[#5E93B8]/25 bg-[#EDF4F8]/80 px-4 py-3 text-[13px] text-[#4C5259]">
+        <b className="text-[#232528]">Catatan Rencana Internal</b> — campaign di sini adalah rencana kerja tim; tidak otomatis memasang iklan atau memotong saldo iklan. Istilah: <b>CPL</b> = biaya per calon klien, <b>CTR</b> = persentase klik iklan, <b>ROAS</b> = hasil penjualan dibanding biaya iklan.
+      </div>
+
       {campaigns && campaigns.length > 0 ? (
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-1.5">
@@ -254,7 +258,7 @@ export default function AiMarketingCampaigns() {
       )}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="border-border-strong bg-popover text-foreground sm:max-w-md">
+        <DialogContent className="max-h-[90vh] overflow-y-auto border-border-strong bg-popover text-foreground sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-display text-lg">Buat Campaign Marketing</DialogTitle>
             <DialogDescription>Inisiatif baru akan dipantau bersama rencana langkah eksekusi AI.</DialogDescription>

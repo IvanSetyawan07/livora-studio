@@ -105,7 +105,7 @@ class MarketingController extends Controller
 
         $html = view('emails.livora.campaign', [
             ...$this->contentArray($data),
-            'greetingName' => 'Ivan Setyawan',
+            'greetingName' => 'Pelanggan Livora',
             'brand' => $this->brand(),
         ])->render();
 
@@ -113,19 +113,23 @@ class MarketingController extends Controller
     }
 
     /**
-     * Send a single test email to the currently logged-in admin.
+     * Send a single test email to the currently logged-in admin (or optional custom test_email).
      */
     public function sendTest(Request $request)
     {
-        $data = $request->validate($this->contentRules());
+        $data = $request->validate([
+            ...$this->contentRules(),
+            'test_email' => 'nullable|email|max:200',
+        ]);
 
         $admin = Auth::user();
-        if (!$admin || !$admin->email) {
-            return response()->json(['message' => 'Admin account has no email on file.'], 422);
+        $recipient = trim((string) ($data['test_email'] ?? '')) ?: ($admin->email ?? '');
+        if (!$recipient) {
+            return response()->json(['message' => 'Masukkan alamat email tujuan uji coba.'], 422);
         }
 
         try {
-            Mail::to($admin->email)->send(new LivoraCampaignMail(
+            Mail::to($recipient)->send(new LivoraCampaignMail(
                 $this->contentArray($data),
                 $this->brand(),
                 Str::before($admin->name ?? '', ' ') ?: null,
@@ -133,10 +137,10 @@ class MarketingController extends Controller
             ));
         } catch (\Throwable $e) {
             Log::error('Livora test email failed: ' . $e->getMessage());
-            return response()->json(['message' => 'Failed to send test email: ' . $e->getMessage()], 500);
+            return response()->json(['message' => 'Gagal mengirim email uji coba: ' . $e->getMessage()], 500);
         }
 
-        return response()->json(['message' => "Test email sent to {$admin->email}."]);
+        return response()->json(['message' => "Email uji coba terkirim ke {$recipient}."]);
     }
 
     /**
@@ -219,9 +223,34 @@ class MarketingController extends Controller
         ]);
     }
 
+    public function campaigns()
+    {
+        if (!Schema::hasTable('marketing_campaigns')) {
+            return response()->json(['campaigns' => []]);
+        }
+
+        $rows = MarketingCampaign::query()
+            ->orderByDesc('updated_at')
+            ->limit(60)
+            ->get([
+                'id', 'campaign_name', 'subject', 'section_label', 'headline',
+                'status', 'target', 'sent_count', 'sent_at', 'scheduled_at',
+                'created_at', 'updated_at',
+            ]);
+
+        return response()->json(['campaigns' => $rows]);
+    }
+
     public function showCampaign(MarketingCampaign $campaign)
     {
         return response()->json(['campaign' => $campaign]);
+    }
+
+    public function destroyCampaign(MarketingCampaign $campaign)
+    {
+        $campaign->delete();
+
+        return response()->json(['deleted' => true]);
     }
 
     /**

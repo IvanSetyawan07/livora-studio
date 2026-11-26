@@ -35,6 +35,23 @@ export const STAGGER = {
 /** Scrub value used for scroll-linked movement (never a fixed duration). */
 export const SCRUB = 1;
 
+let refreshTimer: number | null = null;
+/**
+ * Coalesces multiple mount/API/font/image ScrollTrigger.refresh() requests into
+ * a single debounced layout measurement pass to prevent startup reflow storms.
+ */
+export const scheduleScrollTriggerRefresh = (delayMs = 160) => {
+  if (typeof window === "undefined") return;
+  if (refreshTimer !== null) {
+    window.clearTimeout(refreshTimer);
+  }
+  refreshTimer = window.setTimeout(() => {
+    refreshTimer = null;
+    registerGsap();
+    ScrollTrigger.refresh();
+  }, delayMs);
+};
+
 export const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;

@@ -1,7 +1,37 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+
+/**
+ * Strips `src/lib/localLandingPreview.ts` (and its eager `import.meta.glob`
+ * referencing git-ignored `src/data/landingPreview.local.ts`) during production
+ * builds so 0 bytes of local preview fixtures or images ever enter `dist/`.
+ */
+function stripLocalPreviewInBuild(): Plugin {
+  const virtualId = "\0livora-empty-local-preview";
+  return {
+    name: "livora-strip-local-preview-in-build",
+    apply: "build",
+    enforce: "pre",
+    resolveId(source) {
+      if (
+        source === "@/lib/localLandingPreview" ||
+        source.endsWith("/lib/localLandingPreview") ||
+        source.endsWith("/lib/localLandingPreview.ts")
+      ) {
+        return virtualId;
+      }
+      return null;
+    },
+    load(id) {
+      if (id === virtualId) {
+        return "export const getLocalLandingPreview = () => null;\n";
+      }
+      return null;
+    },
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -28,7 +58,7 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [stripLocalPreviewInBuild(), react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

@@ -24,15 +24,15 @@ export const Footer = () => {
         { label: t("nav.projects"), to: "/projects" },
         { label: t("nav.furniture"), to: "/furniture" },
         { label: t("nav.collection"), to: "/collection" },
-        { label: t("nav.style"), href: "/#style" },
-        { label: t("nav.contact"), href: "/#contact" },
+        { label: t("nav.style"), to: "/#style" },
+        { label: t("nav.contact"), to: "/#contact" },
         { label: t("nav.appointment"), to: "/appointment" },
       ],
     },
     {
       title: t("footer.contact"),
       links: [
-        { label: t("footer.city"), href: "/#contact" },
+        { label: t("footer.city"), to: "/#contact" },
         { label: "PT. Langgeng Cipta Ruang", to: "/about" },
         {
           label: "livoralcrmarketing@gmail.com",

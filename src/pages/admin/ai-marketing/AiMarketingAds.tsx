@@ -18,6 +18,7 @@ import {
 } from "@/hooks/useAiDashboard";
 import { useAdsSummary } from "@/hooks/useMarketing";
 import { useAiMarketingContext, usePageContext } from "@/context/AiMarketingContext";
+import { useAdminDialog } from "@/components/admin/kit";
 import { ActiveCampaignsTable, AdsKpiGrid, AdsPlatformRows, BudgetSplitPanel, CtrImpressionsPanel, SpendLeadsTrendPanel } from "@/components/ai/marketing-panels";
 import { cn } from "@/lib/utils";
 
@@ -73,6 +74,7 @@ function ConnectedCredentialCard({
 }
 
 function AdsCredentialCards() {
+  const dialog = useAdminDialog();
   const { query } = useAdsSummary();
   const { data: metaOAuth } = useMetaAdsIntegrationStatus();
   const metaAuthorize = useMetaAdsAuthorize();
@@ -90,11 +92,21 @@ function AdsCredentialCards() {
           disconnecting={metaDisconnect.isPending}
           onDisconnect={
             metaOAuth?.connected
-              ? () =>
+              ? async () => {
+                  const ok = await dialog.confirm({
+                    title: "Putuskan Sambungan Meta Ads?",
+                    description:
+                      "Data pengeluaran dan performa iklan Meta/Instagram tidak akan ditarik otomatis sampai Anda menyambungkannya lagi.",
+                    confirmText: "Ya, Putuskan",
+                    cancelText: "Batal",
+                    tone: "danger",
+                  });
+                  if (!ok) return;
                   metaDisconnect.mutate(undefined, {
-                    onSuccess: () => toast.success("Meta Ads disconnected."),
-                    onError: (e) => toast.error(extractApiErrorMessage(e, "Gagal disconnect Meta Ads.")),
-                  })
+                    onSuccess: () => toast.success("Sambungan Meta Ads diputus."),
+                    onError: (e) => toast.error(extractApiErrorMessage(e, "Gagal memutus Meta Ads.")),
+                  });
+                }
               : undefined
           }
         />
@@ -144,6 +156,7 @@ function AdsCredentialCards() {
 }
 
 function IgBoostRoiAttributionPanel() {
+  const dialog = useAdminDialog();
   const { query: adsQuery } = useAdsSummary();
   const learningQuery = useLearningSummary();
   const addBoost = useAddIgBoost();
@@ -407,11 +420,19 @@ function IgBoostRoiAttributionPanel() {
                   </div>
                   <button
                     type="button"
-                    onClick={() =>
+                    onClick={async () => {
+                      const ok = await dialog.confirm({
+                        title: `Hapus Catatan Boost "${item.title}"?`,
+                        description: `Biaya ${fmtRp(item.spendRp)} pada ${item.date} akan dihapus dan perhitungan ROI/ROAS akan disesuaikan ulang.`,
+                        confirmText: "Ya, Hapus",
+                        cancelText: "Batal",
+                        tone: "danger",
+                      });
+                      if (!ok) return;
                       deleteBoost.mutate(item.id, {
                         onSuccess: () => toast.success("Catatan Boost dihapus."),
-                      })
-                    }
+                      });
+                    }}
                     disabled={deleteBoost.isPending}
                     className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive"
                     title="Hapus catatan boost"
@@ -653,8 +674,8 @@ export default function AdsAgentPage() {
 
       <section className="mt-10">
         <SectionHeading
-          title="Kredensial yang dibutuhkan"
-          description="Isi di backend/.env lalu jalankan php artisan config:clear."
+          title="Koneksi Platform Iklan"
+          description="Hubungkan akun iklan Meta atau Google agar biaya, klik, dan ROAS otomatis terbaca."
         />
         <AdsCredentialCards />
       </section>

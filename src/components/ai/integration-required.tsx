@@ -1,11 +1,7 @@
 /**
- * Blok "integrasi belum tersambung" yang JUJUR.
- *
- * Dipakai untuk semua permukaan yang datanya harus datang dari platform luar
- * (Meta Ads, Google Ads, GA4, TikTok, YouTube, Google Business Profile, dst).
- * Selama kredensialnya belum dipasang di backend, halaman TIDAK boleh
- * menampilkan angka contoh — cukup jelaskan apa yang hilang dan di mana
- * kredensialnya dipasang.
+ * Blok "integrasi belum tersambung" yang JUJUR & ramah untuk admin non-teknis.
+ * Penjelasan ramah tampil di depan, sementara nama variabel .env / file konfigurasi
+ * disembunyikan di balik accordion "Info Teknis untuk Tim IT".
  */
 import type { ReactNode } from "react";
 import { KeyRound } from "lucide-react";
@@ -32,35 +28,37 @@ export function IntegrationRequired({
     <Panel className="p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-sm border border-dashed border-border-strong px-2 py-0.5 font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
-            <KeyRound className="size-3" /> Not connected
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-border-strong bg-secondary/50 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+            <KeyRound className="size-3" /> Belum Terhubung
           </span>
-          <span className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
+          <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
             {provider}
           </span>
         </div>
         {children}
       </div>
 
-      <p className="mt-3 text-sm font-medium">{title}</p>
-      <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{description}</p>
+      <p className="mt-3 text-sm font-medium text-foreground">{title}</p>
+      <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p>
 
       {envKeys.length > 0 ? (
-        <div className="mt-4 rounded-sm border border-border bg-background/40 p-4">
-          <p className="label-eyebrow">Pasang kredensial di sini</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            <code className="font-mono">backend/.env</code> — lalu dibaca lewat{" "}
-            <code className="font-mono">{configPath}</code>
+        <details className="mt-4 rounded-lg border border-border bg-secondary/40 px-4 py-3 text-xs">
+          <summary className="cursor-pointer font-medium text-foreground">
+            Info Teknis untuk Tim IT (Kredensial Server)
+          </summary>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Pasang kredensial di <code className="rounded bg-white px-1 py-0.5 font-mono text-foreground">backend/.env</code>{" "}
+            (dibaca lewat <code className="rounded bg-white px-1 py-0.5 font-mono text-foreground">{configPath}</code>):
           </p>
-          <ul className="mt-3 space-y-1.5">
+          <ul className="mt-2.5 space-y-1.5">
             {envKeys.map((e) => (
               <li key={e.key} className="text-xs">
-                <code className="font-mono text-brass">{e.key}</code>
+                <code className="font-mono font-medium text-ai">{e.key}</code>
                 {e.note ? <span className="text-muted-foreground"> — {e.note}</span> : null}
               </li>
             ))}
           </ul>
-        </div>
+        </details>
       ) : null}
     </Panel>
   );

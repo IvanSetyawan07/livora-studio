@@ -61,9 +61,9 @@ export default function InsightsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Intelligence"
-        title="AI Insights"
-        description="Every insight carries its source data, reasoning and confidence. Recommendations are separate objects and always require approval."
+        eyebrow="Inteligensi Pemasaran"
+        title="Temuan AI"
+        description="Setiap temuan dilengkapi sumber data, alasan analisis, dan tingkat keyakinan. Rekomendasi tindakan selalu dipisahkan dan wajib mendapat persetujuan admin."
       />
 
       <AgentFilter
@@ -87,7 +87,7 @@ export default function InsightsPage() {
                   : "border-border text-muted-foreground hover:text-foreground",
               )}
             >
-              {f === "all" ? "All" : typeMeta[f].label}
+              {f === "all" ? "Semua" : typeMeta[f].label}
             </button>
           ))}
         </div>
@@ -98,7 +98,7 @@ export default function InsightsPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari insight..."
+              placeholder="Cari temuan..."
               className="h-8 w-44 rounded-sm border border-border bg-secondary/60 pl-8 pr-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-ai focus:outline-none"
             />
           </div>
@@ -107,11 +107,11 @@ export default function InsightsPage() {
             onChange={(e) => setSeverityFilter(e.target.value as "all" | AIInsight["severity"])}
             className="h-8 rounded-sm border border-border bg-secondary px-2 text-xs text-foreground focus:border-ai focus:outline-none"
           >
-            <option value="all">Semua Severity</option>
-            <option value="critical">Critical</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
+            <option value="all">Semua Prioritas</option>
+            <option value="critical">Kritis</option>
+            <option value="high">Tinggi</option>
+            <option value="medium">Sedang</option>
+            <option value="low">Rendah</option>
           </select>
         </div>
       </div>

@@ -7,6 +7,8 @@ import { Panel } from "@/components/ai/primitives";
 import { RecommendationCard } from "@/components/ai/recommendation-card";
 import { QueryError } from "@/components/ai/query-error";
 import { usePageContext } from "@/context/AiMarketingContext";
+import { useAdminPermission } from "@/components/admin/AdminPermissionContext";
+import { useAdminDialog } from "@/components/admin/kit";
 import {
   extractApiErrorMessage,
   useRecommendationDecision,
@@ -19,6 +21,9 @@ const filters: (AIApprovalStatus | "all")[] = ["all", "pending", "approved", "ex
 
 export default function AiMarketingRecommendations() {
   usePageContext("recommendations");
+  const dialog = useAdminDialog();
+  const { canEdit } = useAdminPermission();
+  const editable = canEdit("marketing");
   const [filter, setFilter] = useState<AIApprovalStatus | "all">("all");
   const [priorityFilter, setPriorityFilter] = useState<"all" | "high" | "medium" | "low">("all");
   const [riskFilter, setRiskFilter] = useState<"all" | AIRisk>("all");
@@ -29,23 +34,42 @@ export default function AiMarketingRecommendations() {
   const { data: items, isLoading, isError, refetch } = useRecommendations();
   const { approve: approveMutation, reject: rejectMutation } = useRecommendationDecision();
 
-  function approve(id: string) {
+  async function approve(id: string) {
+    if (!editable) {
+      toast.error("Anda berada dalam mode lihat saja.");
+      return;
+    }
+    const target = items?.find((r) => r.id === id);
+    if (target?.risk === "high") {
+      const ok = await dialog.confirm({
+        title: `Setujui Rekomendasi Berisiko Tinggi?`,
+        description: `"${target.title}" akan masuk ke Antrean Aksi. Eksekusi akhir tetap memerlukan konfirmasi lagi di halaman Aksi.`,
+        confirmText: "Ya, Setujui",
+        cancelText: "Batal",
+        tone: "danger",
+      });
+      if (!ok) return;
+    }
     setPendingId(id);
     approveMutation.mutate(id, {
       onSuccess: (rec) =>
-        toast.success("Recommendation approved", { description: `${rec.title} moved to Actions.` }),
+        toast.success("Rekomendasi disetujui", { description: `${rec.title} dipindahkan ke Antrean Aksi.` }),
       onError: (e: unknown) =>
-        toast.error(extractApiErrorMessage(e, "Gagal menyetujui recommendation.")),
+        toast.error(extractApiErrorMessage(e, "Gagal menyetujui rekomendasi.")),
       onSettled: () => setPendingId(null),
     });
   }
 
   function reject(id: string) {
+    if (!editable) {
+      toast.error("Anda berada dalam mode lihat saja.");
+      return;
+    }
     setPendingId(id);
     rejectMutation.mutate(id, {
-      onSuccess: (rec) => toast("Recommendation rejected", { description: rec.title }),
+      onSuccess: (rec) => toast("Rekomendasi ditolak", { description: rec.title }),
       onError: (e: unknown) =>
-        toast.error(extractApiErrorMessage(e, "Gagal menolak recommendation.")),
+        toast.error(extractApiErrorMessage(e, "Gagal menolak rekomendasi.")),
       onSettled: () => setPendingId(null),
     });
   }
@@ -82,19 +106,27 @@ export default function AiMarketingRecommendations() {
   const lowRiskPending = visible.filter((r) => r.status === "pending" && r.risk === "low");
 
   async function handleBulkApproveLowRisk() {
-    if (lowRiskPending.length === 0 || bulkApproving) return;
+    if (!editable || lowRiskPending.length === 0 || bulkApproving) return;
+    const ok = await dialog.confirm({
+      title: `Setujui ${lowRiskPending.length} Rekomendasi Berisiko Rendah?`,
+      description:
+        "Seluruh rekomendasi berisiko rendah pada filter aktif akan disetujui dan masuk ke Antrean Aksi (belum dieksekusi ke platform sampai Anda menjalankannya).",
+      confirmText: `Ya, Setujui (${lowRiskPending.length})`,
+      cancelText: "Batal",
+    });
+    if (!ok) return;
     setBulkApproving(true);
-    let ok = 0;
+    let okCount = 0;
     for (const r of lowRiskPending) {
       try {
         await approveMutation.mutateAsync(r.id);
-        ok++;
+        okCount++;
       } catch {
         // continue remaining
       }
     }
     setBulkApproving(false);
-    toast.success(`${ok}/${lowRiskPending.length} rekomendasi low-risk disetujui & dikirim ke Actions.`);
+    toast.success(`${okCount}/${lowRiskPending.length} rekomendasi risiko rendah disetujui & dikirim ke Antrean Aksi.`);
   }
 
   return (

@@ -4,9 +4,9 @@ import { useTranslation } from "react-i18next";
 import { ArrowUpRight } from "lucide-react";
 import {
   gsap,
-  ScrollTrigger,
   registerGsap,
   prefersReducedMotion,
+  scheduleScrollTriggerRefresh,
 } from "@/lib/motionTokens";
 import { scopeItems } from "@/data/scopeOfWork";
 
@@ -68,14 +68,15 @@ export const Scope = () => {
 
         cards.forEach((card, idx) => {
           const inner = card.querySelector<HTMLElement>(".scope-curtain-inner");
-          const img = card.querySelector<HTMLElement>(".scope-curtain-img");
+          const scrim = card.querySelector<HTMLElement>(".scope-curtain-scrim");
+          const imgWrap = card.querySelector<HTMLElement>(".scope-curtain-img");
           const nextCard = cards[idx + 1];
 
-          // Image slow architectural un-zoom as card enters
-          if (img) {
+          // Image slow architectural un-zoom as card enters (GPU transform on wrapper)
+          if (imgWrap) {
             gsap.fromTo(
-              img,
-              { scale: 1.12 },
+              imgWrap,
+              { scale: 1.1 },
               {
                 scale: 1.0,
                 ease: "none",
@@ -83,7 +84,7 @@ export const Scope = () => {
                   trigger: card,
                   start: "top bottom",
                   end: "top top",
-                  scrub: 0.28,
+                  scrub: true,
                 },
               },
             );
@@ -102,31 +103,46 @@ export const Scope = () => {
                   trigger: card,
                   start: "top bottom",
                   end: "top 12%",
-                  scrub: 0.25,
+                  scrub: true,
                 },
               },
             );
           }
 
           // When the next daylight stone curtain rises over this sticky card,
-          // smoothly scale & softly recede this card for calm architectural depth
+          // smoothly scale & softly dim via GPU opacity scrim (visually identical to brightness(0.86), zero filter paint)
           if (nextCard && inner) {
             gsap.fromTo(
               inner,
-              { scale: 1, y: 0, filter: "brightness(1)" },
+              { scale: 1, y: 0 },
               {
                 scale: 0.95,
                 y: -14,
-                filter: "brightness(0.86)",
                 ease: "none",
                 scrollTrigger: {
                   trigger: nextCard,
                   start: "top bottom",
                   end: "top top",
-                  scrub: 0.28,
+                  scrub: true,
                 },
               },
             );
+            if (scrim) {
+              gsap.fromTo(
+                scrim,
+                { opacity: 0 },
+                {
+                  opacity: 0.16,
+                  ease: "none",
+                  scrollTrigger: {
+                    trigger: nextCard,
+                    start: "top bottom",
+                    end: "top top",
+                    scrub: true,
+                  },
+                },
+              );
+            }
           }
         });
       });
@@ -149,9 +165,8 @@ export const Scope = () => {
       });
     }, root);
 
-    const tId = setTimeout(() => ScrollTrigger.refresh(), 120);
+    scheduleScrollTriggerRefresh();
     return () => {
-      clearTimeout(tId);
       ctx.revert();
     };
   }, []);
@@ -222,6 +237,10 @@ export const Scope = () => {
                     : undefined,
               }}
             >
+              <div
+                aria-hidden
+                className="scope-curtain-scrim pointer-events-none absolute inset-0 z-20 bg-[#232528] opacity-0"
+              />
               <div className="scope-curtain-inner relative h-full w-full grid grid-cols-1 lg:grid-cols-12 will-change-transform">
                 {/* Delicate architectural geometry watermark on Left Daylight Panel */}
                 <svg
@@ -319,17 +338,19 @@ export const Scope = () => {
                     aria-label={`${title} — ${t("common.learn_more", "Learn More")}`}
                     className="group block relative h-full w-full focus:outline-none"
                   >
-                    <img
-                      src={item.image}
-                      srcSet={`${item.imageSm} 800w, ${item.image} ${item.width}w`}
-                      sizes="(max-width: 1024px) 100vw, 60vw"
-                      width={item.width}
-                      height={item.height}
-                      alt={title}
-                      loading={index === 0 ? "eager" : "lazy"}
-                      decoding="async"
-                      className="scope-curtain-img h-full w-full object-cover transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.03]"
-                    />
+                    <div className="scope-curtain-img h-full w-full will-change-transform">
+                      <img
+                        src={item.image}
+                        srcSet={`${item.imageSm} 800w, ${item.image} ${item.width}w`}
+                        sizes="(max-width: 1024px) 100vw, 60vw"
+                        width={item.width}
+                        height={item.height}
+                        alt={title}
+                        loading={index === 0 ? "eager" : "lazy"}
+                        decoding="async"
+                        className="h-full w-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.03]"
+                      />
+                    </div>
                     {/* Soft daylight edge seam blending left stone panel into photo */}
                     <div
                       aria-hidden

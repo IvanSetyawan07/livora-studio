@@ -1,11 +1,21 @@
-// components/admin/CatalogListAdmin.tsx
-
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Trash2, Edit, Plus, Search, Filter } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { Trash2, Edit, Plus, Filter, ExternalLink, BookOpen } from "lucide-react";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { imgUrl } from "@/lib/adminApi";
 import { CatalogItem, CATALOG_CATEGORIES } from "@/types/catalog";
+import { useAdminPermission } from "@/components/admin/AdminPermissionContext";
+import {
+  AdminHelpBanner,
+  DebouncedSearchInput,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  StatusBadge,
+  TableSkeleton,
+  useAdminDialog,
+} from "@/components/admin/kit";
 
 interface PaginatedResponse {
   data: CatalogItem[];
@@ -18,9 +28,10 @@ interface PaginatedResponse {
 }
 
 export default function CatalogListAdmin() {
-  const navigate = useNavigate();
+  const dialog = useAdminDialog();
+  const { canEdit } = useAdminPermission();
+  const editable = canEdit("catalog");
 
-  // ── State
   const [catalogs, setCatalogs] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -29,343 +40,302 @@ export default function CatalogListAdmin() {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
-  // ── Fetch catalogs
-  // FIX #4: Fetch dari /admin/catalogs bukan /catalogs (public)
-  const fetchCatalogs = async (pageNum: number = 1) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const fetchCatalogs = useCallback(
+    async (pageNum = 1) => {
+      try {
+        setLoading(true);
+        setError(null);
+        const params: Record<string, any> = { page: pageNum, per_page: 10 };
+        if (searchQuery) params.search = searchQuery;
+        if (selectedCategory) params.category = selectedCategory;
 
-      const params: any = {
-        page: pageNum,
-        per_page: 10,
-      };
-
-      if (searchQuery) params.search = searchQuery;
-      if (selectedCategory) params.category = selectedCategory;
-
-      const { data } = await api.get<PaginatedResponse>("/admin/catalogs", {
-        params,
-      });
-
-      setCatalogs(data.data);
-      if (data.meta) {
-        setPage(data.meta.current_page);
-        setTotalPages(data.meta.last_page);
+        const { data } = await api.get<PaginatedResponse>("/admin/catalogs", { params });
+        setCatalogs(data.data ?? []);
+        if (data.meta) {
+          setPage(data.meta.current_page);
+          setTotalPages(data.meta.last_page);
+        } else {
+          setPage(1);
+          setTotalPages(1);
+        }
+      } catch (err: any) {
+        setError(err?.response?.data?.message || err?.message || "Gagal memuat daftar lookbook.");
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      setError(`Failed to load catalogs: ${err}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [searchQuery, selectedCategory],
+  );
 
-  // ── Initial fetch
   useEffect(() => {
-    fetchCatalogs(1);
-  }, [searchQuery, selectedCategory]);
+    void fetchCatalogs(1);
+  }, [fetchCatalogs]);
 
-  // ── Delete catalog
-  // FIX #1: Bersihkan ID dari karakter asing (misal "2:1" → "2")
-  const handleDelete = async (rawId: string) => {
-    const id = String(rawId).split(":")[0].trim();
-    if (!confirm("Yakin ingin menghapus catalog ini?")) return;
+  const handleDelete = async (catalog: CatalogItem) => {
+    if (!editable) return;
+    const id = String(catalog.id).split(":")[0].trim();
+    const ok = await dialog.confirm({
+      title: `Hapus lookbook "${catalog.title}"?`,
+      text: "Semua foto ruangan (scene) dan titik hotspot di dalam lookbook ini ikut terhapus.",
+      confirmLabel: "Ya, hapus",
+      danger: true,
+    });
+    if (!ok) return;
 
     try {
       setDeleting(id);
       await api.delete(`/admin/catalogs/${id}`);
-      setSuccess("Catalog deleted successfully");
       setCatalogs((prev) => prev.filter((c) => String(c.id).split(":")[0] !== id));
-      setTimeout(() => setSuccess(null), 3000);
+      toast.success(`Lookbook "${catalog.title}" berhasil dihapus`);
     } catch (err: any) {
-      const msg = err?.response?.data?.error ?? err?.response?.data?.message ?? String(err);
-      setError(`Failed to delete: ${msg}`);
+      toast.error(err?.response?.data?.error ?? err?.response?.data?.message ?? "Gagal menghapus lookbook");
     } finally {
       setDeleting(null);
     }
   };
 
-  // ── Get category label
-  const getCategoryLabel = (slug: string) => {
-    return CATALOG_CATEGORIES.find((c) => c.slug === slug)?.label || slug;
-  };
+  const getCategoryLabel = (slug: string) =>
+    CATALOG_CATEGORIES.find((c) => c.slug === slug)?.label || slug;
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="serif text-4xl font-light mb-1 text-foreground">
-              Catalogs
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Manage your furniture collections
-            </p>
-          </div>
-          <Link
-            to="/admin/catalogs/create"
-            className="flex items-center gap-2 bg-foreground text-background px-6 py-3 rounded hover:bg-foreground/90 transition-colors font-medium text-sm"
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Katalog & Portofolio"
+        title="Lookbook Hotspot"
+        description="Kelola katalog ruangan interaktif dengan foto scene, titik hotspot produk, dan ekspor PDF."
+        actions={
+          editable ? (
+            <Link
+              to="/admin/catalogs/create"
+              className="inline-flex items-center gap-2 rounded-full bg-[#232528] px-5 py-2.5 text-xs font-medium text-white transition-colors hover:bg-[#34383D]"
+            >
+              <Plus size={15} /> Buat Lookbook Baru
+            </Link>
+          ) : null
+        }
+      />
+
+      <AdminHelpBanner storageKey="catalogs-list-help">
+        Berbeda dengan <strong>Koleksi Furnitur</strong> (kumpulan seri produk), <strong>Lookbook Hotspot</strong>{" "}
+        adalah halaman inspirasi ruangan yang bisa diklik titik-titik produknya oleh pengunjung dan diunduh sebagai PDF.
+      </AdminHelpBanner>
+
+      {/* Filter Bar */}
+      <div className="flex flex-wrap items-center gap-3">
+        <DebouncedSearchInput
+          value={searchQuery}
+          onSearch={(q) => {
+            setSearchQuery(q);
+            setPage(1);
+          }}
+          placeholder="Cari judul lookbook…"
+          className="w-full sm:w-72"
+        />
+
+        <div className="relative min-w-[200px]">
+          <Filter
+            size={15}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#656B73]"
+          />
+          <select
+            value={selectedCategory}
+            onChange={(e) => {
+              setSelectedCategory(e.target.value);
+              setPage(1);
+            }}
+            className="h-10 w-full appearance-none rounded-lg border border-[#E5DFD5] bg-white pl-9 pr-8 text-sm text-[#232528] outline-none focus:border-[#5E93B8]"
           >
-            <Plus size={16} /> Create Catalog
-          </Link>
+            <option value="">Semua Kategori Ruangan</option>
+            {CATALOG_CATEGORIES.map((cat) => (
+              <option key={cat.slug} value={cat.slug}>
+                {cat.label}
+              </option>
+            ))}
+          </select>
         </div>
 
-        {/* Status Messages */}
-        {success && (
-          <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 text-green-700 rounded text-sm">
-            ✅ {success}
-          </div>
+        {(searchQuery || selectedCategory) && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearchQuery("");
+              setSelectedCategory("");
+              setPage(1);
+            }}
+            className="h-10 rounded-lg border border-[#E2DACF] bg-white px-4 text-xs font-medium text-[#656B73] hover:text-[#232528]"
+          >
+            Reset Filter
+          </button>
         )}
-        {error && (
-          <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 text-red-700 rounded text-sm">
-            ❌ {error}
-          </div>
-        )}
+      </div>
 
-        {/* Filters */}
-        <div className="mb-8 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-              />
-              <input
-                type="text"
-                placeholder="Search catalogs..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full pl-10 pr-4 py-2 border border-border bg-card text-foreground rounded focus:ring-2 focus:ring-foreground/50 outline-none"
-              />
-            </div>
-
-            {/* Category Filter */}
-            <div className="relative">
-              <Filter
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-              />
-              <select
-                value={selectedCategory}
-                onChange={(e) => {
-                  setSelectedCategory(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full pl-10 pr-4 py-2 border border-border bg-card text-foreground rounded focus:ring-2 focus:ring-foreground/50 outline-none appearance-none"
-              >
-                <option value="">All Categories</option>
-                {CATALOG_CATEGORIES.map((cat) => (
-                  <option key={cat.slug} value={cat.slug}>
-                    {cat.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Clear Filters */}
-            {(searchQuery || selectedCategory) && (
-              <button
-                onClick={() => {
-                  setSearchQuery("");
-                  setSelectedCategory("");
-                  setPage(1);
-                }}
-                className="px-4 py-2 border border-border rounded hover:bg-secondary transition-colors text-sm"
-              >
-                Clear Filters
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Catalogs Table */}
-        <div className="border border-border rounded-lg overflow-hidden">
-          {loading ? (
-            <div className="p-12 text-center text-muted-foreground">
-              Loading catalogs...
-            </div>
-          ) : catalogs.length === 0 ? (
-            <div className="p-12 text-center">
-              <p className="text-muted-foreground mb-4">No catalogs found</p>
+      {/* Table */}
+      {error ? (
+        <ErrorState title="Gagal memuat lookbook" description={error} onRetry={() => void fetchCatalogs(page)} />
+      ) : loading ? (
+        <TableSkeleton rows={5} cols={5} />
+      ) : catalogs.length === 0 ? (
+        <EmptyState
+          icon={BookOpen}
+          title="Belum ada lookbook"
+          description={
+            searchQuery || selectedCategory
+              ? "Tidak ada lookbook yang cocok dengan filter pencarian."
+              : "Buat lookbook ruangan interaktif pertama Anda."
+          }
+          action={
+            editable ? (
               <Link
                 to="/admin/catalogs/create"
-                className="text-foreground hover:underline text-sm"
+                className="inline-flex items-center gap-2 rounded-full bg-[#232528] px-5 py-2 text-xs font-medium text-white"
               >
-                Create your first catalog →
+                <Plus size={14} /> Buat Lookbook Pertama
               </Link>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-secondary border-b border-border">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wide">
-                      Title
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wide">
-                      Category
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wide">
-                      Style
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wide">
-                      Featured
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wide">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {catalogs.map((catalog) => (
-                    <tr
-                      key={catalog.id}
-                      className="hover:bg-secondary/50 transition-colors"
-                    >
-                      {/* Title with cover image */}
-                      <td className="px-6 py-4">
+            ) : undefined
+          }
+        />
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-[#EAE4DA] bg-white">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b border-[#EAE4DA] bg-[#FAF8F4] text-xs uppercase tracking-[0.14em] text-[#656B73]">
+                <tr>
+                  <th className="px-5 py-3.5 text-left">Judul Lookbook</th>
+                  <th className="px-5 py-3.5 text-left">Kategori Ruangan</th>
+                  <th className="px-5 py-3.5 text-left">Gaya Desain</th>
+                  <th className="px-5 py-3.5 text-left">Status</th>
+                  <th className="px-5 py-3.5 text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#F1ECE4]">
+                {catalogs.map((catalog) => {
+                  const cover = (catalog as any).cover_image || catalog.coverImage;
+                  const cleanId = String(catalog.id).split(":")[0];
+                  return (
+                    <tr key={catalog.id} className="transition-colors hover:bg-[#FAF8F4]/60">
+                      <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          {((catalog as any).cover_image || catalog.coverImage) && (
+                          {cover ? (
                             <img
-                              src={imgUrl((catalog as any).cover_image || catalog.coverImage || "")}
+                              src={imgUrl(cover)}
                               alt={catalog.title}
-                              className="w-10 h-10 object-cover rounded"
+                              className="h-11 w-14 shrink-0 rounded-lg border border-[#EAE4DA] object-cover"
                             />
+                          ) : (
+                            <div className="grid h-11 w-14 shrink-0 place-items-center rounded-lg border border-[#EAE4DA] bg-[#FAF8F4] text-[10px] text-[#656B73]">
+                              —
+                            </div>
                           )}
-                          <div>
-                            <p className="text-sm font-medium text-foreground">
-                              {catalog.title}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {catalog.slug}
-                            </p>
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-[#232528]">{catalog.title}</p>
+                            <p className="truncate text-xs text-[#656B73]">/{catalog.slug}</p>
                           </div>
                         </div>
                       </td>
 
-                      {/* Category */}
-                      <td className="px-6 py-4">
-                        <span className="text-xs text-muted-foreground">
-                          {getCategoryLabel(catalog.category)}
-                        </span>
-                      </td>
+                      <td className="px-5 py-4 text-xs text-[#4C5259]">{getCategoryLabel(catalog.category)}</td>
 
-                      {/* Taxonomy */}
-                      <td className="px-6 py-4">
-                        <span className="inline-block px-2.5 py-0.5 rounded text-xs font-medium bg-foreground/10 text-foreground">
+                      <td className="px-5 py-4">
+                        <StatusBadge tone="neutral" dot={false}>
                           {catalog.taxonomy}
-                        </span>
+                        </StatusBadge>
                       </td>
 
-                      {/* Featured */}
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-4">
                         {catalog.featured ? (
-                          <span className="text-xs font-medium text-green-600">
-                            ✓ Featured
-                          </span>
+                          <StatusBadge tone="accent">Unggulan</StatusBadge>
                         ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
+                          <span className="text-xs text-[#656B73]">Reguler</span>
                         )}
                       </td>
 
-                      {/* Actions */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          {/* Edit */}
+                      <td className="px-5 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
                           <Link
                             to={`/admin/catalogs/${catalog.id}/edit`}
-                            className="p-2 hover:bg-secondary rounded text-foreground transition-colors"
-                            title="Edit"
+                            className="inline-flex items-center gap-1 rounded-lg border border-[#E2DACF] bg-white px-2.5 py-1.5 text-xs font-medium text-[#232528] transition-colors hover:border-[#5E93B8] hover:bg-[#EDF4F8]/50"
+                            title="Ubah Lookbook & Hotspot"
                           >
-                            <Edit size={16} />
+                            <Edit size={13} className="text-[#5E93B8]" />
+                            {editable ? "Edit" : "Lihat"}
                           </Link>
 
-                          {/* Delete */}
-                          <button
-                            onClick={() => handleDelete(String(catalog.id))}
-                            disabled={deleting === String(catalog.id).split(":")[0]}
-                            className={`p-2 rounded transition-colors ${
-                              deleting === String(catalog.id).split(":")[0]
-                                ? "opacity-50 cursor-not-allowed"
-                                : "hover:bg-red-500/20 text-red-500 hover:text-red-600"
-                            }`}
-                            title="Delete"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-
-                          {/* View public */}
                           <a
                             href={`/catalog/${catalog.category}/${catalog.slug}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2 hover:bg-secondary rounded text-foreground transition-colors text-xs"
-                            title="View public page"
+                            className="rounded-lg p-1.5 text-[#656B73] transition-colors hover:bg-[#FAF8F4] hover:text-[#232528]"
+                            title="Lihat halaman publik"
                           >
-                            ↗
+                            <ExternalLink size={15} />
                           </a>
+
+                          {editable && (
+                            <button
+                              type="button"
+                              onClick={() => void handleDelete(catalog)}
+                              disabled={deleting === cleanId}
+                              className="rounded-lg p-1.5 text-red-600 transition-colors hover:bg-red-50 disabled:opacity-40"
+                              title="Hapus Lookbook"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="mt-6 flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Page {page} of {totalPages}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => fetchCatalogs(page - 1)}
-                disabled={page === 1}
-                className="px-4 py-2 border border-border rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-              >
-                ← Previous
-              </button>
-
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }).map((_, i) => {
-                  const pageNum = i + 1;
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => fetchCatalogs(pageNum)}
-                      className={`w-8 h-8 rounded text-xs font-medium transition-colors ${
-                        page === pageNum
-                          ? "bg-foreground text-background"
-                          : "border border-border hover:bg-secondary"
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
                   );
                 })}
-              </div>
-
-              <button
-                onClick={() => fetchCatalogs(page + 1)}
-                disabled={page === totalPages}
-                className="px-4 py-2 border border-border rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-              >
-                Next →
-              </button>
-            </div>
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-[#656B73]">
+            Halaman {page} dari {totalPages}
+          </p>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => void fetchCatalogs(page - 1)}
+              disabled={page === 1}
+              className="rounded-lg border border-[#E2DACF] bg-white px-3 py-1.5 text-xs font-medium text-[#232528] hover:bg-[#FAF8F4] disabled:opacity-40"
+            >
+              ← Sebelumnya
+            </button>
+            {Array.from({ length: totalPages }).map((_, i) => {
+              const pageNum = i + 1;
+              return (
+                <button
+                  key={pageNum}
+                  type="button"
+                  onClick={() => void fetchCatalogs(pageNum)}
+                  className={`h-8 w-8 rounded-lg text-xs font-medium transition-colors ${
+                    page === pageNum
+                      ? "bg-[#232528] text-white"
+                      : "border border-[#E2DACF] bg-white text-[#4C5259] hover:border-[#5E93B8]"
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => void fetchCatalogs(page + 1)}
+              disabled={page === totalPages}
+              className="rounded-lg border border-[#E2DACF] bg-white px-3 py-1.5 text-xs font-medium text-[#232528] hover:bg-[#FAF8F4] disabled:opacity-40"
+            >
+              Berikutnya →
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

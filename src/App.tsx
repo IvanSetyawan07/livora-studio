@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { MotionConfig } from "framer-motion";
 import { initAnalytics, trackPageView } from "./lib/analytics";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -103,7 +104,16 @@ const AiMarketingImpact = lazy(() => import("./pages/admin/ai-marketing/AiMarket
 const AiMarketingUsage = lazy(() => import("./pages/admin/ai-marketing/AiMarketingUsage"));
 const AiMarketingProviders = lazy(() => import("./pages/admin/ai-marketing/AiMarketingProviders"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 45_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 function AnalyticsTracker() {
   const { pathname, search } = useLocation();
@@ -121,6 +131,7 @@ function AnalyticsTracker() {
 
 function App() {
   return (
+    <MotionConfig reducedMotion="user">
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
@@ -239,6 +250,7 @@ function App() {
         </CartProvider>
       </TooltipProvider>
     </QueryClientProvider>
+    </MotionConfig>
   );
 }
 

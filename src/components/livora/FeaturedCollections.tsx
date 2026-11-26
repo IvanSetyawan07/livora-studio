@@ -5,9 +5,9 @@ import { listCollections, type Collection } from "@/lib/collectionsApi";
 import { getLocalLandingPreview } from "@/lib/localLandingPreview";
 import {
   gsap,
-  ScrollTrigger,
   registerGsap,
   prefersReducedMotion,
+  scheduleScrollTriggerRefresh,
 } from "@/lib/motionTokens";
 import fallbackImg1 from "@/assets/style-european.webp";
 import fallbackImg2 from "@/assets/style-japandi.webp";
@@ -92,23 +92,45 @@ export const FeaturedCollections = () => {
           },
         },
       );
+      const mm = gsap.matchMedia();
+      mm.add("(min-width: 1024px)", () => {
+        const rows = section.querySelectorAll<HTMLElement>("[data-col-desktop-reveal]");
+        if (rows.length) {
+          gsap.fromTo(
+            rows,
+            { opacity: 0, y: 28 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.9,
+              stagger: 0.08,
+              ease: "expo.out",
+              scrollTrigger: {
+                trigger: rows[0],
+                start: "top 82%",
+                once: true,
+              },
+            },
+          );
+        }
+      });
     }, section);
 
-    const t = setTimeout(() => ScrollTrigger.refresh(), 100);
+    scheduleScrollTriggerRefresh();
     return () => {
-      clearTimeout(t);
       ctx.revert();
     };
   }, [loaded, displayList.length]);
 
   // Silky curtain clip-path wipe + slow zoom settle whenever active collection changes
+  // (animates inner wrapper so GSAP scale never fights CSS group-hover:scale on <img>)
   useEffect(() => {
     if (prefersReducedMotion()) return;
     const frame = apertureImgRef.current;
     if (!frame) return;
 
-    const img = frame.querySelector("img");
-    gsap.killTweensOf([frame, img]);
+    const zoomWrap = frame.querySelector<HTMLElement>("[data-aperture-zoom]");
+    gsap.killTweensOf([frame, zoomWrap]);
 
     gsap.fromTo(
       frame,
@@ -116,9 +138,9 @@ export const FeaturedCollections = () => {
       { clipPath: "inset(0% 0% 0% 0%)", duration: 0.78, ease: "expo.out" },
     );
 
-    if (img) {
+    if (zoomWrap) {
       gsap.fromTo(
-        img,
+        zoomWrap,
         { scale: 1.1 },
         { scale: 1.0, duration: 1.15, ease: "expo.out" },
       );
@@ -259,7 +281,7 @@ export const FeaturedCollections = () => {
                     return (
                       <div
                         key={col.id}
-                        data-col-reveal
+                        data-col-desktop-reveal
                         onMouseEnter={() => setActiveIdx(idx)}
                         className={`group relative border-b border-[#232528]/12 transition-colors duration-500 ${
                           isAct ? "py-8" : "py-6"
@@ -285,14 +307,14 @@ export const FeaturedCollections = () => {
                           <div className="flex items-baseline justify-between gap-4">
                             <div className="flex items-baseline gap-5">
                               <span
-                                className={`text-xs font-medium tracking-[0.24em] transition-colors duration-400 ${
+                                className={`text-xs font-medium tracking-[0.24em] transition-colors duration-300 ${
                                   isAct ? "text-[#5E93B8]" : "text-[#232528]/35"
                                 }`}
                               >
                                 {String(idx + 1).padStart(2, "0")}
                               </span>
                               <h3
-                                className={`serif text-3xl xl:text-[44px] font-light leading-[1.06] transition-colors duration-400 ${
+                                className={`serif text-3xl xl:text-[44px] font-light leading-[1.06] transition-colors duration-300 ${
                                   isAct
                                     ? "text-[#232528]"
                                     : "text-[#232528]/40 group-hover:text-[#232528]/75"
@@ -375,16 +397,17 @@ export const FeaturedCollections = () => {
                     >
                       <div
                         ref={apertureImgRef}
-                        className="relative h-full w-full overflow-hidden"
+                        className="relative h-full w-full overflow-hidden will-change-[clip-path]"
                       >
-                        <img
-                          key={active.id}
-                          src={getCoverImage(active, activeIdx)}
-                          alt={active.name}
-                          loading="eager"
-                          decoding="async"
-                          className="h-full w-full object-cover transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.04]"
-                        />
+                        <div data-aperture-zoom className="h-full w-full will-change-transform">
+                          <img
+                            src={getCoverImage(active, activeIdx)}
+                            alt={active.name}
+                            loading="eager"
+                            decoding="async"
+                            className="h-full w-full object-cover transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.04]"
+                          />
+                        </div>
                         <div
                           className="pointer-events-none absolute inset-0"
                           style={{

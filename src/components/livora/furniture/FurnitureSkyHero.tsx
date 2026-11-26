@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import gsap from "gsap";
+import { prefersReducedMotion } from "@/lib/motionTokens";
 import heroSky from "@/assets/hero-update.webp";
 import heroSkySm from "@/assets/_opt/hero-update-800.webp";
 import cloud1 from "@/assets/cloud/cloud1.webp";
@@ -24,6 +25,13 @@ export const FurnitureSkyHero: React.FC<FurnitureSkyHeroProps> = ({
   const heroRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
+    if (prefersReducedMotion()) return;
+    const hero = heroRef.current;
+    if (!hero) return;
+
+    let cloudA: gsap.core.Tween | null = null;
+    let cloudB: gsap.core.Tween | null = null;
+
     const ctx = gsap.context(() => {
       gsap
         .timeline()
@@ -45,7 +53,7 @@ export const FurnitureSkyHero: React.FC<FurnitureSkyHeroProps> = ({
           "-=0.55",
         );
 
-      gsap.to(".fhero-cloud-a", {
+      cloudA = gsap.to(".fhero-cloud-a", {
         xPercent: 2.2,
         yPercent: -1.2,
         duration: 15,
@@ -54,7 +62,7 @@ export const FurnitureSkyHero: React.FC<FurnitureSkyHeroProps> = ({
         yoyo: true,
       });
 
-      gsap.to(".fhero-cloud-b", {
+      cloudB = gsap.to(".fhero-cloud-b", {
         xPercent: -2.0,
         yPercent: 1.0,
         duration: 18,
@@ -62,9 +70,30 @@ export const FurnitureSkyHero: React.FC<FurnitureSkyHeroProps> = ({
         repeat: -1,
         yoyo: true,
       });
-    }, heroRef);
+    }, hero);
 
-    return () => ctx.revert();
+    // Pause infinite cloud drift when scrolled off-screen to preserve GPU budget for catalog grid
+    let observer: IntersectionObserver | null = null;
+    if (typeof IntersectionObserver !== "undefined") {
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            cloudA?.resume();
+            cloudB?.resume();
+          } else {
+            cloudA?.pause();
+            cloudB?.pause();
+          }
+        },
+        { threshold: 0.01 },
+      );
+      observer.observe(hero);
+    }
+
+    return () => {
+      observer?.disconnect();
+      ctx.revert();
+    };
   }, []);
 
   const isCategoryView = Boolean(

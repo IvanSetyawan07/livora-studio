@@ -52,6 +52,15 @@ type Props = {
   onChanged?: ((c: Consultation) => void) | undefined;
 };
 
+function formatWaPhone(raw?: string | null): string | null {
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return null;
+  if (digits.startsWith("0")) return `62${digits.slice(1)}`;
+  if (digits.startsWith("8")) return `62${digits}`;
+  return digits;
+}
+
 export default function ConsultationStageSheet({ stage, consultation, role, onChanged }: Props) {
   return (
     <StageContent
@@ -83,13 +92,13 @@ export function StageContent({ stage, consultation, role, onChanged }: Props) {
 
   return (
     <div className="space-y-4 text-sm">
-      <StatusBadge stage={stage} isPast={isPast} isCurrent={isCurrent} />
+      <StatusBadge stage={stage} isPast={isPast} isCurrent={isCurrent} role={role} />
 
-      {stage === "new_inquiry" && <InquiryPanel consultation={consultation} />}
-      {stage === "under_review" && <ReviewPanel consultation={consultation} />}
-      {stage === "contacted" && <ContactedPanel />}
-      {stage === "meeting_scheduled" && <MeetingPanel consultation={consultation} />}
-      {stage === "in_progress" && <InProgressPanel />}
+      {stage === "new_inquiry" && <InquiryPanel consultation={consultation} role={role} />}
+      {stage === "under_review" && <ReviewPanel consultation={consultation} role={role} />}
+      {stage === "contacted" && <ContactedPanel consultation={consultation} role={role} />}
+      {stage === "meeting_scheduled" && <MeetingPanel consultation={consultation} role={role} />}
+      {stage === "in_progress" && <InProgressPanel role={role} />}
       {stage === "agreement_pending" && (
         <AgreementPanel
           consultation={consultation}
@@ -217,12 +226,17 @@ function ConsultationMiniTimeline({ consultation: c }: { consultation: Consultat
   );
 }
 
-function StatusBadge({ stage, isPast, isCurrent }: { stage: string; isPast: boolean; isCurrent: boolean }) {
-  const label = isPast ? "Completed" : isCurrent ? "In progress" : "Upcoming";
+function StatusBadge({ stage, isPast, isCurrent, role }: { stage: string; isPast: boolean; isCurrent: boolean; role?: "user" | "admin" }) {
+  const isAdmin = role === "admin";
+  const label = isPast
+    ? isAdmin ? "Selesai" : "Completed"
+    : isCurrent
+      ? isAdmin ? "Tahap saat ini" : "In progress"
+      : isAdmin ? "Tahap berikutnya" : "Upcoming";
   const cls = isPast
     ? "bg-emerald-50 text-emerald-700 border-emerald-200"
     : isCurrent
-    ? "bg-foreground/5 text-foreground border-foreground/20"
+    ? "bg-[#EDF4F8] text-[#35678B] border-[#5E93B8]/30"
     : "bg-secondary text-muted-foreground border-border";
   return (
     <div className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-wider ${cls}`}>
@@ -231,60 +245,88 @@ function StatusBadge({ stage, isPast, isCurrent }: { stage: string; isPast: bool
   );
 }
 
-function InquiryPanel({ consultation }: { consultation: Consultation }) {
+function InquiryPanel({ consultation, role }: { consultation: Consultation; role: "user" | "admin" }) {
   return (
     <div className="space-y-3">
       <div>
-        <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Message</p>
-        <p className="text-sm">{consultation.message}</p>
+        <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+          {role === "admin" ? "Pesan Awal Pelanggan" : "Message"}
+        </p>
+        <p className="mt-1 text-sm">{consultation.message || "—"}</p>
       </div>
     </div>
   );
 }
 
-function ReviewPanel({ consultation }: { consultation: Consultation }) {
+function ReviewPanel({ consultation, role }: { consultation: Consultation; role: "user" | "admin" }) {
   if (consultation.status === "rejected") {
     return (
       <div>
-        <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Inquiry declined</p>
-        <p className="text-sm">{consultation.rejection_reason || "Our team decided not to proceed."}</p>
+        <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+          {role === "admin" ? "Permintaan ditolak" : "Inquiry declined"}
+        </p>
+        <p className="text-sm">
+          {consultation.rejection_reason || (role === "admin" ? "Tidak ada alasan tercatat." : "Our team decided not to proceed.")}
+        </p>
       </div>
     );
   }
   return (
     <p className="text-sm text-muted-foreground">
-      Our design team is reviewing your inquiry. You&apos;ll be notified once it moves forward.
+      {role === "admin"
+        ? "Permintaan pelanggan sedang ditinjau oleh tim studio. Setujui di tab Tindakan Berikutnya untuk membuka percakapan."
+        : "Our design team is reviewing your inquiry. You'll be notified once it moves forward."}
     </p>
   );
 }
 
-function ContactedPanel() {
-  const waHref = `https://wa.me/${WHATSAPP_NUMBER}`;
+function ContactedPanel({ consultation, role }: { consultation: Consultation; role: "user" | "admin" }) {
+  const customerPhone = formatWaPhone(consultation.phone);
+  const waHref = role === "admin"
+    ? (customerPhone ? `https://wa.me/${customerPhone}` : null)
+    : `https://wa.me/${WHATSAPP_NUMBER}`;
+
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        Our design team has reached out and the chat room is now open — see Consultation Notes below to
-        keep talking with your designer, or reach us directly on WhatsApp.
+        {role === "admin"
+          ? "Ruang percakapan pelanggan sudah terbuka. Anda dapat menghubungi pelanggan lewat tab Percakapan atau langsung melalui WhatsApp pelanggan."
+          : "Our design team has reached out and the chat room is now open — see Consultation Notes below to keep talking with your designer, or reach us directly on WhatsApp."}
       </p>
-      <div className="flex flex-wrap gap-2">
-        <a href={waHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded bg-foreground px-4 py-2 text-xs uppercase tracking-[0.2em] text-background">
-          Chat on WhatsApp
-        </a>
-        <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-          Or scroll to Consultation Notes
-        </span>
+      <div className="flex flex-wrap items-center gap-2">
+        {waHref ? (
+          <a href={waHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded bg-foreground px-4 py-2 text-xs uppercase tracking-[0.2em] text-background">
+            {role === "admin" ? "Hubungi WhatsApp Pelanggan" : "Chat on WhatsApp"}
+          </a>
+        ) : (
+          <span className="text-xs text-muted-foreground">Nomor WhatsApp pelanggan belum tersedia.</span>
+        )}
+        {role !== "admin" && (
+          <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+            Or scroll to Consultation Notes
+          </span>
+        )}
       </div>
     </div>
   );
 }
 
 
-function MeetingPanel({ consultation }: { consultation: Consultation }) {
-  const waHref = `https://wa.me/${WHATSAPP_NUMBER}`;
+function MeetingPanel({ consultation, role }: { consultation: Consultation; role: "user" | "admin" }) {
+  const customerPhone = formatWaPhone(consultation.phone);
+  const waHref = role === "admin"
+    ? (customerPhone ? `https://wa.me/${customerPhone}` : null)
+    : `https://wa.me/${WHATSAPP_NUMBER}`;
   const type = consultation.meeting_type;
 
   if (!consultation.meeting_date && !consultation.meeting_link && !type) {
-    return <p className="text-sm text-muted-foreground">Meeting details will appear here once scheduled.</p>;
+    return (
+      <p className="text-sm text-muted-foreground">
+        {role === "admin"
+          ? "Belum ada jadwal pertemuan. Atur tanggal & jam pertemuan melalui tab Tindakan Berikutnya."
+          : "Meeting details will appear here once scheduled."}
+      </p>
+    );
   }
   return (
     <div className="space-y-3">
@@ -301,34 +343,36 @@ function MeetingPanel({ consultation }: { consultation: Consultation }) {
         </div>
       )}
 
-      {type === "call" ? (
+      {type === "call" && waHref ? (
         <a href={waHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded bg-foreground px-4 py-2 text-xs uppercase tracking-[0.2em] text-background">
-          <Phone size={14} /> Call on WhatsApp
+          <Phone size={14} /> {role === "admin" ? "Hubungi Pelanggan via WA" : "Call on WhatsApp"}
         </a>
-      ) : type === "offline" ? (
+      ) : type === "offline" && waHref ? (
         <a href={waHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded bg-foreground px-4 py-2 text-xs uppercase tracking-[0.2em] text-background">
-          <MapPin size={14} /> Contact Us on WhatsApp
+          <MapPin size={14} /> {role === "admin" ? "Konfirmasi Pelanggan via WA" : "Contact Us on WhatsApp"}
         </a>
       ) : consultation.meeting_link ? (
         <a href={consultation.meeting_link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded bg-foreground px-4 py-2 text-xs uppercase tracking-[0.2em] text-background">
-          <Video size={14} /> Join Meeting
+          <Video size={14} /> {role === "admin" ? "Buka Tautan Meeting" : "Join Meeting"}
         </a>
       ) : null}
     </div>
   );
 }
 
-function InProgressPanel() {
+function InProgressPanel({ role }: { role: "user" | "admin" }) {
   return (
     <p className="text-sm text-muted-foreground">
-      Your consultation is being conducted. No action needed — feel free to chat with your designer any time.
+      {role === "admin"
+        ? "Sesi konsultasi sedang berlangsung. Setelah konsep disepakati, buat dan kirim dokumen perjanjian di tab Tindakan Berikutnya."
+        : "Your consultation is being conducted. No action needed — feel free to chat with your designer any time."}
     </p>
   );
 }
 
 /** Reusable DP / Final-payment panel — covers: not requested, requested/unpaid,
  * proof uploaded/pending, verified, rejected. Shared by both stages & both roles. */
-function PaymentPanel({
+export function PaymentPanel({
   consultation, role, kind, files, onChanged,
 }: {
   consultation: Consultation;
@@ -351,6 +395,8 @@ function PaymentPanel({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [reviewing, setReviewing] = useState(false);
+  const [rejectMode, setRejectMode] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
 
   // Admin-only: form to request the final payment once progress has reached 85%.
   const [finalAmount, setFinalAmount] = useState(
@@ -392,12 +438,16 @@ function PaymentPanel({
 
   const handleReject = async () => {
     if (!proof) return;
-    const reason = window.prompt("Alasan penolakan bukti pembayaran:");
-    if (!reason) return;
+    if (!rejectReason.trim()) {
+      toast.error("Isi alasan penolakan terlebih dahulu.");
+      return;
+    }
     setReviewing(true);
     try {
-      const updated = await rejectProof(consultation.id, proof.id, reason);
+      const updated = await rejectProof(consultation.id, proof.id, rejectReason.trim());
       onChanged?.(updated);
+      setRejectMode(false);
+      setRejectReason("");
       toast.success("Bukti pembayaran ditolak.");
     } catch (e: any) {
       toast.error(e?.response?.data?.message || "Gagal menolak bukti.");
@@ -529,15 +579,55 @@ function PaymentPanel({
           )}
 
           {role === "admin" && proof && (
-            <div className="flex gap-2">
-              <button onClick={handleApprove} disabled={reviewing}
-                className="flex-1 rounded bg-emerald-600 text-white py-2 text-xs uppercase tracking-[0.2em] disabled:opacity-50">
-                Approve
-              </button>
-              <button onClick={handleReject} disabled={reviewing}
-                className="flex-1 rounded border border-red-300 text-red-600 py-2 text-xs uppercase tracking-[0.2em] disabled:opacity-50">
-                Reject
-              </button>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleApprove}
+                  disabled={reviewing}
+                  className="flex-1 rounded-lg bg-emerald-600 py-2 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  Verifikasi &amp; Terima
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRejectMode((v) => !v)}
+                  disabled={reviewing}
+                  className="flex-1 rounded-lg border border-red-200 py-2 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                >
+                  Tolak Bukti
+                </button>
+              </div>
+              {rejectMode && (
+                <div className="space-y-2 rounded-lg border border-red-200 bg-red-50/50 p-3">
+                  <input
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    placeholder="Tulis alasan penolakan untuk pelanggan…"
+                    className="w-full rounded border border-red-200 bg-white px-2.5 py-1.5 text-xs outline-none"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRejectMode(false);
+                        setRejectReason("");
+                      }}
+                      className="rounded border border-border bg-white px-2.5 py-1 text-xs"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleReject()}
+                      disabled={reviewing || !rejectReason.trim()}
+                      className="rounded bg-red-600 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+                    >
+                      Kirim Penolakan
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </>
@@ -678,7 +768,7 @@ function MeteraiStatus({ consultation }: { consultation: Consultation }) {
 }
 
 /** Admin: naskah perjanjian auto-generate, bisa diedit, lalu diterbitkan ke pelanggan. */
-function AgreementComposer({
+export function AgreementComposer({
   consultation, onChanged,
 }: { consultation: Consultation; onChanged?: ((c: Consultation) => void) | undefined }) {
   const [content, setContent] = useState("");

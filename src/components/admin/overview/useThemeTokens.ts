@@ -11,12 +11,12 @@ export type ThemeTokens = {
 };
 
 const FALLBACK: ThemeTokens = {
-  ink: "#211f1c",
-  bronze: "#9f7d60",
-  accent: "#b3937a",
-  muted: "#6d665c",
-  border: "#e3ddd3",
-  surface: "#faf7f1",
+  ink: "#232528",
+  bronze: "#5E93B8", // LIVORA Morning Sky (kept key name `bronze` for backwards compatibility)
+  accent: "#88B2CF", // Soft Morning Sky
+  muted: "#656B73",  // Architectural Slate
+  border: "#EAE4DA",
+  surface: "#FAF8F4",
   isDark: false,
 };
 
@@ -33,20 +33,16 @@ function readThemeTokens(): ThemeTokens {
   if (typeof window === "undefined") return FALLBACK;
   const style = getComputedStyle(document.documentElement);
   return {
-    ink: toHsl(style.getPropertyValue("--foreground"), FALLBACK.ink),
-    bronze: toHsl(style.getPropertyValue("--livora-bronze"), FALLBACK.bronze),
-    accent: toHsl(style.getPropertyValue("--accent"), FALLBACK.accent),
-    muted: toHsl(style.getPropertyValue("--muted-foreground"), FALLBACK.muted),
-    border: toHsl(style.getPropertyValue("--border"), FALLBACK.border),
-    surface: toHsl(style.getPropertyValue("--background"), FALLBACK.surface),
-    isDark: document.documentElement.classList.contains("dark"),
+    ink: "#232528",
+    bronze: toHsl(style.getPropertyValue("--livora-sky"), FALLBACK.bronze),
+    accent: FALLBACK.accent,
+    muted: toHsl(style.getPropertyValue("--livora-slate"), FALLBACK.muted),
+    border: FALLBACK.border,
+    surface: toHsl(style.getPropertyValue("--livora-limestone"), FALLBACK.surface),
+    isDark: false,
   };
 }
 
-/**
- * Warna tema (hsl string siap pakai untuk three.Color maupun SVG) yang ikut
- * berubah ketika class `dark` dipasang/dilepas di <html>.
- */
 export function useThemeTokens(): ThemeTokens {
   const [tokens, setTokens] = useState<ThemeTokens>(() => readThemeTokens());
 
