@@ -53,6 +53,7 @@ section[id] { scroll-margin-top: 96px; }
     --font-header: 'Tenor Sans', system-ui, sans-serif;
     --font-accent: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
     --font-body: 'Questrial', system-ui, -apple-system, sans-serif;
+    --font-wordmark: 'Avenir Next', 'Avenir', 'Avenir LT Pro', 'Nunito Sans', system-ui, sans-serif;
 
     --shadow-soft: 0 30px 80px -40px hsl(30 10% 15% / 0.25);
     --shadow-elegant: 0 20px 60px -20px hsl(30 15% 20% / 0.18);

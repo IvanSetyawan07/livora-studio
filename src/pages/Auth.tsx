@@ -775,7 +775,9 @@ export default function Auth() {
       localStorage.setItem("user", JSON.stringify(data.user));
       redirectAfterAuth(data.user?.role);
     } catch (error: any) {
-      toast.error(error?.response?.status === 401 ? "Email atau password salah" : error?.response?.data?.message || "Gagal masuk, coba lagi");
+      const status = error?.status ?? error?.response?.status;
+      const msg = error?.details?.message ?? error?.response?.data?.message ?? error?.message;
+      toast.error(status === 401 ? "Email atau password salah" : msg || "Gagal masuk, coba lagi");
     } finally {
       setLoading(false);
     }
@@ -826,11 +828,12 @@ export default function Auth() {
       toast.success("Register berhasil! Silakan login.");
       navigate(`/login?email=${encodeURIComponent(regEmail)}`);
     } catch (error: any) {
+      const details = error?.details ?? error?.response?.data;
       const msg =
-        error?.response?.data?.message ||
-        (error?.response?.data?.errors
-          ? Object.values(error.response.data.errors).flat().join("\n")
-          : "Register gagal");
+        details?.message ||
+        (details?.errors
+          ? Object.values(details.errors).flat().join("\n")
+          : error?.message || "Register gagal");
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -886,14 +889,16 @@ export default function Auth() {
       localStorage.setItem("user", JSON.stringify(data.user));
       redirectAfterAuth(data.user?.role);
     } catch (error: any) {
+      const status = error?.status ?? error?.response?.status;
+      const details = error?.details ?? error?.response?.data;
       // Email Google belum terdaftar: minta persetujuan Terms & Privacy dulu.
-      if (error?.response?.status === 422 && error?.response?.data?.code === "terms_required") {
+      if (status === 422 && details?.code === "terms_required") {
         pendingGoogleCredential.current = credential;
         setGoogleAgree(false);
         setPendingGoogle(true);
         return;
       }
-      toast.error(error?.response?.data?.message || "Google login gagal");
+      toast.error(details?.message || error?.message || "Google login gagal");
     } finally {
       setLoading(false);
     }

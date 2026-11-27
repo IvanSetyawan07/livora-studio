@@ -369,8 +369,11 @@ export const SkyScene = ({ ready = true }: { ready?: boolean }) => {
         </div>
 
         <div className="hero-title absolute inset-0 z-20 flex flex-col items-center justify-center px-6 will-change-transform">
-          <h1 className="serif flex overflow-hidden text-[22vw] font-light leading-[0.85] text-background sm:text-[14vw]">
-            {"Livora".split("").map((c, i) => (
+          <h1
+            className="flex overflow-hidden py-1 text-[18vw] font-bold uppercase leading-[0.92] tracking-[0.06em] text-background sm:text-[13vw]"
+            style={{ fontFamily: "var(--font-wordmark)" }}
+          >
+            {"LIVORA".split("").map((c, i) => (
               <span key={i} className="hero-letter block" style={{ textShadow: "0 2px 16px rgba(0,0,0,0.08)" }}>
                 {c}
               </span>

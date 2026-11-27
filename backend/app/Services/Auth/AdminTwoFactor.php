@@ -5,10 +5,12 @@ namespace App\Services\Auth;
 use App\Mail\AdminLoginCodeMail;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -21,7 +23,9 @@ class AdminTwoFactor
     public const CODE_TTL_MINUTES = 10;
     public const MAX_ATTEMPTS = 5;
     public const TRUST_DAYS = 30;
-    public const RESEND_COOLDOWN_SECONDS = 45;
+    public const RESEND_COOLDOWN_SECONDS = 40;
+
+    protected static ?bool $challengeTableExists = null;
 
     public function required(User $user, ?string $deviceToken): bool
     {
@@ -29,9 +33,9 @@ class AdminTwoFactor
             return false;
         }
 
-        // Tombol darurat: set ADMIN_2FA_ENABLED=false di .env server untuk
-        // mematikan sementara (misalnya email server belum dikonfigurasi).
-        if (!filter_var(env('ADMIN_2FA_ENABLED', true), FILTER_VALIDATE_BOOLEAN)) {
+        // Tombol darurat: set ADMIN_2FA_ENABLED=false di .env server (lalu php artisan config:clear)
+        // untuk mematikan sementara (misalnya email server belum dikonfigurasi).
+        if (!config('auth.admin_2fa_enabled', true)) {
             return false;
         }
 
@@ -54,12 +58,16 @@ class AdminTwoFactor
 
     public function resend(string $challenge): ?array
     {
-        $state = Cache::get($this->key($challenge));
+        $state = $this->loadState($challenge);
         if (!$state) {
             return null;
         }
-        if (now()->timestamp - ($state['sent_at'] ?? 0) < self::RESEND_COOLDOWN_SECONDS) {
-            return ['cooldown' => true];
+        $elapsed = now()->timestamp - (int) ($state['sent_at'] ?? 0);
+        if ($elapsed < self::RESEND_COOLDOWN_SECONDS) {
+            return [
+                'cooldown'    => true,
+                'retry_after' => max(1, self::RESEND_COOLDOWN_SECONDS - $elapsed),
+            ];
         }
         $user = User::find($state['user_id']);
         if (!$user) {
@@ -75,24 +83,24 @@ class AdminTwoFactor
      */
     public function verify(string $challenge, string $code): array
     {
-        $key = $this->key($challenge);
-        $state = Cache::get($key);
+        $state = $this->loadState($challenge);
         if (!$state) {
             return ['ok' => false, 'error' => 'expired'];
         }
 
         if (($state['attempts'] ?? 0) >= self::MAX_ATTEMPTS) {
-            Cache::forget($key);
+            $this->deleteState($challenge);
             return ['ok' => false, 'error' => 'locked'];
         }
 
         if (!hash_equals($state['code_hash'], hash('sha256', $challenge.'|'.trim($code)))) {
             $state['attempts'] = ($state['attempts'] ?? 0) + 1;
-            Cache::put($key, $state, now()->addSeconds(max(1, $state['expires_at'] - now()->timestamp)));
+            $expiresAt = Carbon::createFromTimestamp((int) $state['expires_at']);
+            $this->saveState($challenge, $state, $expiresAt->isFuture() ? $expiresAt : now()->addSecond());
             return ['ok' => false, 'error' => 'invalid', 'remaining' => self::MAX_ATTEMPTS - $state['attempts']];
         }
 
-        Cache::forget($key);
+        $this->deleteState($challenge);
         $user = User::find($state['user_id']);
         if (!$user) {
             return ['ok' => false, 'error' => 'expired'];
@@ -150,10 +158,36 @@ class AdminTwoFactor
 
     protected function storeAndSend(string $challenge, User $user, array $context): void
     {
+        $mailer = (string) config('mail.default', 'smtp');
+        if (app()->environment('production') && in_array($mailer, ['log', 'array'], true)) {
+            Log::error('Pengaturan MAIL_MAILER masih non-pengirim pada environment production', [
+                'user_id' => $user->id,
+                'mailer'  => $mailer,
+            ]);
+            throw new \RuntimeException(
+                "Pengaturan email server belum aktif (MAIL_MAILER={$mailer}). Atur SMTP di .env server atau nonaktifkan ADMIN_2FA_ENABLED sementara."
+            );
+        }
+
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $expiresAt = now()->addMinutes(self::CODE_TTL_MINUTES);
 
-        Cache::put($this->key($challenge), [
+        try {
+            Mail::to($user->email)->send(new AdminLoginCodeMail($user, $code, self::CODE_TTL_MINUTES));
+        } catch (\Throwable $e) {
+            Log::error('Gagal kirim kode login admin', [
+                'user_id' => $user->id,
+                'email'   => $user->email,
+                'mailer'  => $mailer,
+                'host'    => config('mail.mailers.smtp.host'),
+                'port'    => config('mail.mailers.smtp.port'),
+                'from'    => config('mail.from.address'),
+                'error'   => $e->getMessage(),
+            ]);
+            throw new \RuntimeException('Kode verifikasi gagal dikirim. Periksa pengaturan email server.');
+        }
+
+        $this->saveState($challenge, [
             'user_id'    => $user->id,
             'code_hash'  => hash('sha256', $challenge.'|'.$code),
             'attempts'   => 0,
@@ -161,13 +195,98 @@ class AdminTwoFactor
             'expires_at' => $expiresAt->timestamp,
             'context'    => $context,
         ], $expiresAt);
+    }
 
-        try {
-            Mail::to($user->email)->send(new AdminLoginCodeMail($user, $code, self::CODE_TTL_MINUTES));
-        } catch (\Throwable $e) {
-            Log::error('Gagal kirim kode login admin', ['user_id' => $user->id, 'error' => $e->getMessage()]);
-            throw new \RuntimeException('Kode verifikasi gagal dikirim. Periksa pengaturan email server.');
+    protected function hasChallengeTable(): bool
+    {
+        if (self::$challengeTableExists === null) {
+            try {
+                self::$challengeTableExists = Schema::hasTable('admin_two_factor_challenges');
+            } catch (\Throwable $e) {
+                self::$challengeTableExists = false;
+            }
         }
+
+        return self::$challengeTableExists;
+    }
+
+    protected function loadState(string $challenge): ?array
+    {
+        if ($this->hasChallengeTable()) {
+            $hash = hash('sha256', $challenge);
+            $row = DB::table('admin_two_factor_challenges')
+                ->where('challenge_hash', $hash)
+                ->first();
+
+            if (!$row) {
+                return null;
+            }
+
+            $expiresTs = Carbon::parse($row->expires_at)->timestamp;
+            if ($expiresTs <= now()->timestamp) {
+                $this->deleteState($challenge);
+                return null;
+            }
+
+            $context = json_decode((string) $row->context, true);
+
+            return [
+                'user_id'    => (int) $row->user_id,
+                'code_hash'  => (string) $row->code_hash,
+                'attempts'   => (int) $row->attempts,
+                'sent_at'    => (int) $row->sent_at,
+                'expires_at' => $expiresTs,
+                'context'    => is_array($context) ? $context : [],
+            ];
+        }
+
+        $state = Cache::get($this->key($challenge));
+        if (!is_array($state) || (int) ($state['expires_at'] ?? 0) <= now()->timestamp) {
+            return null;
+        }
+
+        return $state;
+    }
+
+    protected function saveState(string $challenge, array $state, Carbon $expiresAt): void
+    {
+        if ($this->hasChallengeTable()) {
+            $nowStr = now()->toDateTimeString();
+            try {
+                DB::table('admin_two_factor_challenges')->where('expires_at', '<', $nowStr)->delete();
+            } catch (\Throwable $e) {
+                // abaikan kegagalan pembersihan baris kedaluwarsa
+            }
+
+            DB::table('admin_two_factor_challenges')->upsert(
+                [[
+                    'challenge_hash' => hash('sha256', $challenge),
+                    'user_id'        => (int) $state['user_id'],
+                    'code_hash'      => (string) $state['code_hash'],
+                    'attempts'       => (int) ($state['attempts'] ?? 0),
+                    'sent_at'        => (int) $state['sent_at'],
+                    'expires_at'     => $expiresAt->toDateTimeString(),
+                    'context'        => json_encode($state['context'] ?? []),
+                    'created_at'     => $nowStr,
+                    'updated_at'     => $nowStr,
+                ]],
+                ['challenge_hash'],
+                ['user_id', 'code_hash', 'attempts', 'sent_at', 'expires_at', 'context', 'updated_at']
+            );
+            return;
+        }
+
+        Cache::put($this->key($challenge), $state, $expiresAt);
+    }
+
+    protected function deleteState(string $challenge): void
+    {
+        if ($this->hasChallengeTable()) {
+            DB::table('admin_two_factor_challenges')
+                ->where('challenge_hash', hash('sha256', $challenge))
+                ->delete();
+        }
+        Cache::forget($this->key($challenge));
     }
 
     protected function key(string $challenge): string

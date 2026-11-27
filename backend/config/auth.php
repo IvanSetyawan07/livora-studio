@@ -112,4 +112,16 @@ return [
 
     'password_timeout' => 10800,
 
+    /*
+    |--------------------------------------------------------------------------
+    | Admin Two-Factor Authentication
+    |--------------------------------------------------------------------------
+    |
+    | Read via config('auth.admin_2fa_enabled') so it remains respected even
+    | when `php artisan config:cache` is enabled in production.
+    |
+    */
+
+    'admin_2fa_enabled' => filter_var(env('ADMIN_2FA_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+
 ];

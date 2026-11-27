@@ -14,11 +14,23 @@ type Props = {
   onCancel: () => void;
 };
 
+function extractErr(e: any) {
+  return {
+    status: (e?.status ?? e?.response?.status ?? null) as number | null,
+    code: (e?.details?.code ?? e?.response?.data?.code ?? null) as string | null,
+    message: (e?.details?.message ?? e?.response?.data?.message ?? e?.message ?? null) as string | null,
+    retryAfter: (e?.details?.retry_after ?? e?.response?.data?.retry_after ?? e?.retryAfterSeconds ?? null) as
+      | number
+      | null,
+  };
+}
+
 /** Langkah kedua login admin: kode 6 angka yang dikirim ke email. */
 export default function AdminTwoFactorDialog({ challenge, onSuccess, onCancel }: Props) {
   const [code, setCode] = useState("");
   const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(45);
   const [masked, setMasked] = useState(challenge.email_masked);
@@ -40,13 +52,13 @@ export default function AdminTwoFactorDialog({ challenge, onSuccess, onCancel }:
       if (data.device_token) localStorage.setItem(ADMIN_DEVICE_KEY, data.device_token);
       onSuccess(data);
     } catch (e: any) {
-      const res = e?.response?.data;
-      if (res?.code === "expired" || res?.code === "locked") {
-        toast.error(res.message);
+      const err = extractErr(e);
+      if (err.code === "expired" || err.code === "locked") {
+        toast.error(err.message || "Sesi verifikasi berakhir. Silakan masuk ulang.");
         onCancel();
         return;
       }
-      setError(res?.message || "Verifikasi gagal. Coba lagi.");
+      setError(err.message || "Verifikasi gagal. Coba lagi.");
       setCode("");
       inputRef.current?.focus();
     } finally {
@@ -55,25 +67,40 @@ export default function AdminTwoFactorDialog({ challenge, onSuccess, onCancel }:
   };
 
   const resend = async () => {
+    if (resending || cooldown > 0) return;
+    setResending(true);
+    setError(null);
     try {
       const { data } = await api.post("/login/2fa/resend", { challenge: challenge.challenge });
       if (data.email_masked) setMasked(data.email_masked);
       toast.success("Kode baru telah dikirim");
       setCooldown(45);
     } catch (e: any) {
-      const res = e?.response?.data;
-      if (res?.code === "expired") {
-        toast.error(res.message);
+      const err = extractErr(e);
+      if (err.code === "expired") {
+        toast.error(err.message || "Sesi verifikasi berakhir. Silakan masuk ulang.");
         onCancel();
         return;
       }
-      toast.error(res?.message || "Gagal mengirim ulang kode");
+      if (err.status === 429) {
+        const wait = Math.max(1, Number(err.retryAfter) || 15);
+        const msg = err.message || `Tunggu ${wait} detik sebelum meminta kode baru.`;
+        setCooldown(wait);
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+      const msg = err.message || "Gagal mengirim ulang kode";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setResending(false);
     }
   };
 
   return createPortal(
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="admin-2fa-title"
@@ -85,7 +112,7 @@ export default function AdminTwoFactorDialog({ challenge, onSuccess, onCancel }:
         </div>
         <h3 id="admin-2fa-title" className="mt-3 text-[17px] font-medium text-neutral-900">Verifikasi admin</h3>
         <p className="mt-2 text-[13px] leading-relaxed text-neutral-500">
-          Kami mengirim kode 6 angka ke <span className="font-medium text-neutral-700">{masked}</span>. Kode berlaku 10 menit.
+          Kami mengirim kode 6 angka ke <span className="font-medium text-neutral-700">{masked}</span>. Kode berlaku 10 menit. Cek juga folder Spam jika belum masuk.
         </p>
 
         <input
@@ -147,8 +174,13 @@ export default function AdminTwoFactorDialog({ challenge, onSuccess, onCancel }:
           {cooldown > 0 ? (
             <span>Kirim ulang dalam {cooldown} dtk</span>
           ) : (
-            <button type="button" onClick={resend} className="font-medium text-[#C9974A] hover:underline">
-              Kirim ulang
+            <button
+              type="button"
+              disabled={resending}
+              onClick={resend}
+              className="font-medium text-[#C9974A] hover:underline disabled:opacity-50"
+            >
+              {resending ? "Mengirim..." : "Kirim ulang"}
             </button>
           )}
         </p>

@@ -421,7 +421,11 @@ public function changePassword(Request $request)
             return response()->json(['code' => 'expired', 'message' => 'Sesi verifikasi berakhir. Silakan masuk ulang.'], 422);
         }
         if (!empty($result['cooldown'])) {
-            return response()->json(['message' => 'Tunggu sebentar sebelum meminta kode baru.'], 429);
+            $wait = (int) ($result['retry_after'] ?? 15);
+            return response()->json([
+                'message'     => "Tunggu {$wait} detik sebelum meminta kode baru.",
+                'retry_after' => $wait,
+            ], 429);
         }
 
         return response()->json(['message' => 'Kode baru telah dikirim.', 'email_masked' => $result['email_masked']]);
